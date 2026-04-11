@@ -1,0 +1,121 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model FleetCategory {
+  id          Int        @id @default(autoincrement())
+  slug        String     @unique @db.VarChar(64)
+  title       String
+  description String     @db.Text
+  image       String
+  alt         String?
+  sortOrder   Int        @default(0)
+  models      CarModel[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Brand {
+  id        Int        @id @default(autoincrement())
+  name      String     @unique
+  models    CarModel[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model CarModel {
+  id            Int             @id @default(autoincrement())
+  name          String
+  brandId       Int
+  brand         Brand           @relation(fields: [brandId], references: [id])
+  categoryId    Int
+  category      FleetCategory   @relation(fields: [categoryId], references: [id])
+
+  year          Int
+  chairs        Int
+
+  engine        String
+  transmission  Transmission
+  fuel          FuelType
+
+  price         Int
+  image         String?
+  alt           String?
+  cta           String?
+  badge         String?
+
+  fleetItems      Fleet[]
+  bookingRequests BookingRequest[]
+
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([categoryId])
+  @@unique([brandId, name, year])
+}
+
+model Fleet {
+  id         Int       @id @default(autoincrement())
+  modelId     Int
+  model       CarModel  @relation(fields: [modelId], references: [id])
+  quantity    Int       @default(0)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model BookingRequest {
+  id            Int                 @id @default(autoincrement())
+  /// INQUIRY = طلب حجز من الرئيسية (بدون سيارة محددة). DIRECT = حجز مباشر بعد اختيار سيارة.
+  kind          BookingRequestKind  @default(INQUIRY)
+  /// عند الحجز المباشر فقط — ربط بموديل السيارة المختار.
+  carModelId    Int?
+  carModel      CarModel?           @relation(fields: [carModelId], references: [id])
+
+  fullName      String
+  phone         String
+  ageRange      String
+  carType       String
+  branch        String
+  pickupDate    DateTime
+  numberOfDays  Int
+  termsAccepted Boolean             @default(true)
+  status        String              @default("NEW")
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  @@index([status, createdAt])
+  @@index([branch])
+  @@index([kind, createdAt])
+  @@index([carModelId])
+}
+
+enum BookingRequestKind {
+  INQUIRY
+  DIRECT
+}
+
+enum Transmission {
+  MANUAL
+  AUTOMATIC
+}
+
+enum FuelType {
+  GASOLINE
+  DIESEL
+  HYBRID
+  ELECTRIC
+}

@@ -1,7 +1,41 @@
 import type { NextConfig } from "next";
 
+function spacesImageHostname(): string | undefined {
+  const raw = process.env.SPACES_PUBLIC_URL;
+  if (!raw) return undefined;
+  try {
+    return new URL(raw).hostname;
+  } catch {
+    return undefined;
+  }
+}
+
+const spacesHost = spacesImageHostname();
+
 const nextConfig: NextConfig = {
-  /* config options here */
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+        pathname: "/**",
+      },
+      ...(spacesHost
+        ? [
+            {
+              protocol: "https" as const,
+              hostname: spacesHost,
+              pathname: "/**",
+            },
+          ]
+        : []),
+    ],
+  },
 };
 
 export default nextConfig;

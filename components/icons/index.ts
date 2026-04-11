@@ -1,0 +1,1 @@
+export { SpecIcon } from "./SpecIcon";

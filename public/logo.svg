@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 44" role="img" aria-labelledby="title">
+  <title id="title">Rawaes</title>
+  <defs>
+    <linearGradient id="rawaes-gold" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#775927"/>
+      <stop offset="100%" stop-color="#c9a04a"/>
+    </linearGradient>
+  </defs>
+  <!-- 4'1) (3J7): -1A R /'.D %7'1 0G(J -->
+  <rect x="0" y="2" width="40" height="40" rx="10" fill="url(#rawaes-gold)" opacity="0.15"/>
+  <path
+    fill="url(#rawaes-gold)"
+    d="M12 12h10c4.4 0 7 3.1 7 6.5 0 2.4-1.2 4.3-3.1 5.3L29 32h-4.2l-2.6-6.8H15.8V32H12V12zm3.8 3.6v7.4h5.8c2.3 0 3.6-1.4 3.6-3.7 0-2.2-1.3-3.7-3.6-3.7h-5.8z"
+  />
+  <text
+    x="50"
+    y="31"
+    fill="url(#rawaes-gold)"
+    font-family="ui-sans-serif, system-ui, sans-serif"
+    font-size="22"
+    font-weight="800"
+    letter-spacing="-0.02em"
+  >Rawaes</text>
+</svg>
