@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { createFleetVehicle } from "@/app/admin/actions";
+import { AdminImageField } from "@/components/admin/AdminImageField";
 
 export type AdminCategoryOption = {
   id: number;
@@ -9,11 +10,17 @@ export type AdminCategoryOption = {
   slug: string;
 };
 
-type AdminAddCarFormProps = {
-  categories: AdminCategoryOption[];
+export type AdminBrandOption = {
+  id: number;
+  name: string;
 };
 
-export function AdminAddCarForm({ categories }: AdminAddCarFormProps) {
+type AdminAddCarFormProps = {
+  categories: AdminCategoryOption[];
+  brands: AdminBrandOption[];
+};
+
+export function AdminAddCarForm({ categories, brands }: AdminAddCarFormProps) {
   const [state, formAction, pending] = useActionState(createFleetVehicle, null);
 
   if (categories.length === 0) {
@@ -29,6 +36,24 @@ export function AdminAddCarForm({ categories }: AdminAddCarFormProps) {
             npx prisma db seed
           </code>{" "}
           بعد ضبط <code className="rounded bg-surface-container px-1">DATABASE_URL</code>.
+        </p>
+      </div>
+    );
+  }
+
+  if (brands.length === 0) {
+    return (
+      <div
+        className="rounded-2xl border border-outline-variant/30 bg-amber-50/80 p-6 text-on-surface"
+        role="alert"
+      >
+        <p className="font-bold text-primary">لا توجد ماركات في قاعدة البيانات.</p>
+        <p className="mt-2 text-sm text-on-surface-variant">
+          أضف سجلات في جدول الماركات (Brand) أو نفّذ{" "}
+          <code className="rounded bg-surface-container px-1 py-0.5 text-xs">
+            npx prisma db seed
+          </code>{" "}
+          لإدراج بيانات أولية.
         </p>
       </div>
     );
@@ -65,12 +90,21 @@ export function AdminAddCarForm({ categories }: AdminAddCarFormProps) {
 
       <label className="text-sm font-medium md:col-span-1">
         الماركة
-        <input
-          name="brandName"
+        <select
+          name="brandId"
           required
-          placeholder="مثال: Porsche"
+          defaultValue=""
           className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
-        />
+        >
+          <option value="" disabled>
+            اختر الماركة
+          </option>
+          {brands.map((b) => (
+            <option key={b.id} value={b.id}>
+              {b.name}
+            </option>
+          ))}
+        </select>
       </label>
       <label className="text-sm font-medium md:col-span-1">
         الموديل
@@ -167,18 +201,10 @@ export function AdminAddCarForm({ categories }: AdminAddCarFormProps) {
         />
       </label>
 
-      <label className="text-sm font-medium md:col-span-2">
-        صورة السيارة (اختياري — يُرفع إلى DigitalOcean Spaces)
-        <input
-          name="imageFile"
-          type="file"
-          accept="image/jpeg,image/png,image/webp,image/gif"
-          className="mt-2 block w-full text-sm text-on-surface file:me-4 file:rounded-lg file:border-0 file:bg-primary-container file:px-4 file:py-2 file:text-sm file:font-bold file:text-on-primary-container"
-        />
-        <span className="mt-1 block text-xs text-on-surface-variant">
-          بحد أقصى 5 ميجابايت — JPEG أو PNG أو WebP أو GIF.
-        </span>
-      </label>
+      <AdminImageField
+        label="صورة السيارة (اختياري — المعرض أو الرفع إلى Spaces)"
+        fileHelp="بحد أقصى 5 ميجابايت — JPEG أو PNG أو WebP أو GIF."
+      />
       <label className="text-sm font-medium md:col-span-2">
         وصف الصورة (alt)
         <input

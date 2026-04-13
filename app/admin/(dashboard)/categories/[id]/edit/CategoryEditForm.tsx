@@ -1,27 +1,38 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { createFleetCategory } from "@/app/admin/category-actions";
+import { useActionState } from "react";
+import Link from "next/link";
+import { updateFleetCategory } from "@/app/admin/category-actions";
+import { AdminImageField } from "@/components/admin/AdminImageField";
 
-export function CategoryCreateForm() {
-  const router = useRouter();
-  const [state, formAction, pending] = useActionState(createFleetCategory, null);
+type Category = {
+  id: number;
+  slug: string;
+  title: string;
+  description: string;
+  image: string;
+  alt: string | null;
+  sortOrder: number;
+};
 
-  useEffect(() => {
-    if (state?.ok) {
-      router.refresh();
-    }
-  }, [state?.ok, router]);
+type Props = {
+  category: Category;
+};
+
+export function CategoryEditForm({ category }: Props) {
+  const [state, formAction, pending] = useActionState(updateFleetCategory, null);
 
   return (
     <form
       action={formAction}
       encType="multipart/form-data"
-      className="mb-12 grid gap-4 rounded-2xl border border-outline-variant/30 bg-surface-container-low p-6 md:grid-cols-2"
+      className="grid gap-4 rounded-2xl border border-outline-variant/30 bg-surface-container-low p-6 md:grid-cols-2"
     >
+      <input type="hidden" name="id" value={category.id} />
+      <input type="hidden" name="currentImage" value={category.image} />
+
       <h2 className="md:col-span-2 text-lg font-extrabold tracking-tight">
-        إضافة فئة جديدة
+        تعديل الفئة
       </h2>
 
       <label className="text-sm font-medium md:col-span-1">
@@ -29,16 +40,16 @@ export function CategoryCreateForm() {
         <input
           name="title"
           required
-          placeholder="مثال: سيدان"
+          defaultValue={category.title}
           className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
         />
       </label>
       <label className="text-sm font-medium md:col-span-1">
-        المعرّف (slug) — إنجليزي للرابط
+        المعرّف (slug)
         <input
           name="slug"
           required
-          placeholder="مثال: sedan"
+          defaultValue={category.slug}
           dir="ltr"
           className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
         />
@@ -49,29 +60,22 @@ export function CategoryCreateForm() {
         <textarea
           name="description"
           required
-          rows={3}
+          rows={4}
+          defaultValue={category.description}
           className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
         />
       </label>
 
-      <label className="text-sm font-medium md:col-span-2">
-        صورة الفئة (DigitalOcean Spaces)
-        <input
-          name="imageFile"
-          type="file"
-          accept="image/jpeg,image/png,image/webp,image/gif"
-          required
-          className="mt-2 block w-full text-sm text-on-surface file:me-4 file:rounded-lg file:border-0 file:bg-primary-container file:px-4 file:py-2 file:text-sm file:font-bold file:text-on-primary-container"
-        />
-        <span className="mt-1 block text-xs text-on-surface-variant">
-          بحد أقصى 5 ميجابايت — JPEG أو PNG أو WebP أو GIF.
-        </span>
-      </label>
+      <AdminImageField
+        label="صورة الفئة — استبدال من المعرض أو رفع ملف (اختياري)"
+        currentImageUrl={category.image}
+        fileHelp="اترك الملف والمعرض فارغين للإبقاء على الصورة الحالية. بحد أقصى 5 ميجابايت."
+      />
       <label className="text-sm font-medium md:col-span-1">
         وصف الصورة (alt)
         <input
           name="alt"
-          placeholder="اختياري"
+          defaultValue={category.alt ?? ""}
           className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
         />
       </label>
@@ -80,7 +84,7 @@ export function CategoryCreateForm() {
         <input
           name="sortOrder"
           type="number"
-          defaultValue={0}
+          defaultValue={category.sortOrder}
           className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
         />
       </label>
@@ -91,11 +95,17 @@ export function CategoryCreateForm() {
           disabled={pending}
           className="gradient-cta rounded-xl px-6 py-2.5 text-sm font-bold text-white disabled:opacity-60"
         >
-          {pending ? "جاري الحفظ…" : "إضافة الفئة"}
+          {pending ? "جاري الحفظ…" : "حفظ التعديلات"}
         </button>
+        <Link
+          href="/admin/categories"
+          className="rounded-xl border border-outline-variant px-4 py-2.5 text-sm font-bold text-on-surface-variant hover:bg-surface-container"
+        >
+          إلغاء
+        </Link>
         {state?.ok ? (
           <p className="text-sm font-bold text-primary" role="status">
-            تم إنشاء الفئة.
+            تم حفظ التعديلات.
           </p>
         ) : null}
         {state?.error ? (

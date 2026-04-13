@@ -2,12 +2,19 @@ import type { NextConfig } from "next";
 
 function spacesImageHostname(): string | undefined {
   const raw = process.env.SPACES_PUBLIC_URL;
-  if (!raw) return undefined;
-  try {
-    return new URL(raw).hostname;
-  } catch {
-    return undefined;
+  if (raw) {
+    try {
+      return new URL(raw).hostname;
+    } catch {
+      /* fall through */
+    }
   }
+  const region = process.env.SPACES_REGION;
+  const bucket = process.env.SPACES_BUCKET;
+  if (region && bucket) {
+    return `${bucket}.${region}.digitaloceanspaces.com`;
+  }
+  return undefined;
 }
 
 const spacesHost = spacesImageHostname();

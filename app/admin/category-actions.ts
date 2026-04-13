@@ -4,7 +4,11 @@ import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { verifyAdminSession } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
-import { isSpacesConfigured, uploadImageToSpaces } from "@/lib/spaces-upload";
+import {
+  isSpacesConfigured,
+  isTrustedSpacesImageUrl,
+  uploadImageToSpaces,
+} from "@/lib/spaces-upload";
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -37,6 +41,7 @@ export async function createFleetCategory(
   const slugRaw = String(formData.get("slug") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
   const imageFile = formData.get("imageFile");
+  const galleryImageUrl = String(formData.get("galleryImageUrl") ?? "").trim();
   const alt = String(formData.get("alt") ?? "").trim() || null;
   const sortOrder = Number(formData.get("sortOrder") ?? 0);
 
@@ -62,20 +67,23 @@ export async function createFleetCategory(
     return {
       ok: false,
       error:
-        "لم يُضبط تخزين Spaces في البيئة (SPACES_REGION، المفاتيح، SPACES_BUCKET، SPACES_PUBLIC_URL).",
+        "لم يُضبط تخزين Spaces في البيئة (SPACES_REGION، المفاتيح، SPACES_BUCKET).",
     };
   }
 
-  if (!(imageFile instanceof File) || imageFile.size === 0) {
-    return { ok: false, error: "ارفع صورة للفئة." };
+  let imageUrl: string | null = null;
+  if (imageFile instanceof File && imageFile.size > 0) {
+    try {
+      imageUrl = await uploadImageToSpaces(imageFile, "categories");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "فشل رفع الصورة.";
+      return { ok: false, error: msg };
+    }
+  } else if (galleryImageUrl && isTrustedSpacesImageUrl(galleryImageUrl)) {
+    imageUrl = galleryImageUrl;
   }
-
-  let imageUrl: string;
-  try {
-    imageUrl = await uploadImageToSpaces(imageFile, "categories");
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : "فشل رفع الصورة.";
-    return { ok: false, error: msg };
+  if (!imageUrl) {
+    return { ok: false, error: "اختر صورة من المعرض أو ارفع ملفاً للفئة." };
   }
 
   try {
@@ -114,6 +122,7 @@ export async function updateFleetCategory(
   const slugRaw = String(formData.get("slug") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
   const imageFile = formData.get("imageFile");
+  const galleryImageUrl = String(formData.get("galleryImageUrl") ?? "").trim();
   const currentImage = String(formData.get("currentImage") ?? "").trim();
   const alt = String(formData.get("alt") ?? "").trim() || null;
   const sortOrder = Number(formData.get("sortOrder") ?? 0);
@@ -145,7 +154,7 @@ export async function updateFleetCategory(
       return {
         ok: false,
         error:
-          "لم يُضبط تخزين Spaces في البيئة (SPACES_REGION، المفاتيح، SPACES_BUCKET، SPACES_PUBLIC_URL).",
+          "لم يُضبط تخزين Spaces في البيئة (SPACES_REGION، المفاتيح، SPACES_BUCKET).",
       };
     }
     try {
@@ -154,6 +163,8 @@ export async function updateFleetCategory(
       const msg = e instanceof Error ? e.message : "فشل رفع الصورة.";
       return { ok: false, error: msg };
     }
+  } else if (galleryImageUrl && isTrustedSpacesImageUrl(galleryImageUrl)) {
+    imageUrl = galleryImageUrl;
   }
   if (!imageUrl) {
     return { ok: false, error: "ارفع صورة جديدة أو احتفظ بالصورة الحالية." };

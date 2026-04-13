@@ -10,7 +10,11 @@ import {
   verifyAdminSession,
 } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
-import { isSpacesConfigured, uploadImageToSpaces } from "@/lib/spaces-upload";
+import {
+  isSpacesConfigured,
+  isTrustedSpacesImageUrl,
+  uploadImageToSpaces,
+} from "@/lib/spaces-upload";
 
 export async function loginAdmin(
   _prev: { ok: boolean; error?: string } | null,
@@ -41,7 +45,7 @@ export async function createFleetVehicle(
   }
 
   const categoryId = Number(formData.get("categoryId"));
-  const brandName = String(formData.get("brandName") ?? "").trim();
+  const brandId = Number(formData.get("brandId"));
   const modelName = String(formData.get("modelName") ?? "").trim();
   const year = Number(formData.get("year"));
   const chairs = Number(formData.get("chairs"));
@@ -51,6 +55,7 @@ export async function createFleetVehicle(
   const price = Number(formData.get("price"));
   const quantity = Number(formData.get("quantity") ?? 1);
   const imageFile = formData.get("imageFile");
+  const galleryImageUrl = String(formData.get("galleryImageUrl") ?? "").trim();
   const alt = String(formData.get("alt") ?? "").trim() || null;
   const badge = String(formData.get("badge") ?? "").trim() || null;
   const cta = String(formData.get("cta") ?? "").trim() || null;
@@ -65,8 +70,17 @@ export async function createFleetVehicle(
     return { ok: false, error: "الفئة غير موجودة." };
   }
 
-  if (!brandName || !modelName) {
-    return { ok: false, error: "أدخل اسم الماركة والموديل." };
+  if (!Number.isFinite(brandId) || brandId < 1) {
+    return { ok: false, error: "اختر الماركة." };
+  }
+  const brandExists = await prisma.brand.findUnique({
+    where: { id: Math.floor(brandId) },
+  });
+  if (!brandExists) {
+    return { ok: false, error: "الماركة غير موجودة." };
+  }
+  if (!modelName) {
+    return { ok: false, error: "أدخل اسم الموديل." };
   }
   if (!Number.isFinite(year) || year < 1990 || year > 2035) {
     return { ok: false, error: "سنة غير صالحة." };
@@ -96,7 +110,7 @@ export async function createFleetVehicle(
       return {
         ok: false,
         error:
-          "لم يُضبط تخزين Spaces لرفع الصور (SPACES_REGION، المفاتيح، SPACES_BUCKET، SPACES_PUBLIC_URL).",
+          "لم يُضبط تخزين Spaces لرفع الصور (SPACES_REGION، المفاتيح، SPACES_BUCKET).",
       };
     }
     try {
@@ -105,20 +119,19 @@ export async function createFleetVehicle(
       const msg = e instanceof Error ? e.message : "فشل رفع صورة السيارة.";
       return { ok: false, error: msg };
     }
+  } else if (galleryImageUrl) {
+    if (!isTrustedSpacesImageUrl(galleryImageUrl)) {
+      return { ok: false, error: "رابط صورة المعرض غير صالح." };
+    }
+    image = galleryImageUrl;
   }
 
   try {
     await prisma.$transaction(async (tx) => {
-      const brand = await tx.brand.upsert({
-        where: { name: brandName },
-        create: { name: brandName },
-        update: {},
-      });
-
       const model = await tx.carModel.create({
         data: {
           name: modelName,
-          brandId: brand.id,
+          brandId: Math.floor(brandId),
           categoryId: Math.floor(categoryId),
           year,
           chairs,
@@ -154,5 +167,6 @@ export async function createFleetVehicle(
   revalidatePath("/fleet");
   revalidatePath("/");
   revalidatePath("/admin");
+  revalidatePath("/admin/vehicles");
   return { ok: true };
 }

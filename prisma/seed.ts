@@ -55,6 +55,17 @@ const categories = [
   },
 ];
 
+const brandNames = [
+  "Porsche",
+  "Mercedes-Benz",
+  "BMW",
+  "Toyota",
+  "Hyundai",
+  "Lexus",
+  "Audi",
+  "Land Rover",
+];
+
 async function main() {
   for (const c of categories) {
     await prisma.fleetCategory.upsert({
@@ -67,6 +78,14 @@ async function main() {
         alt: c.alt,
         sortOrder: c.sortOrder,
       },
+    });
+  }
+
+  for (const name of brandNames) {
+    await prisma.brand.upsert({
+      where: { name },
+      create: { name },
+      update: {},
     });
   }
 }

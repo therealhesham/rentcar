@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { verifyAdminSession } from "@/lib/admin-auth";
-import { LogoutButton } from "@/app/admin/LogoutButton";
-import { CategoryCreateForm } from "@/app/admin/categories/CategoryCreateForm";
-import { CategoryDeleteForm } from "@/app/admin/categories/CategoryDeleteForm";
+import { CategoryCreateForm } from "@/app/admin/(dashboard)/categories/CategoryCreateForm";
+import { CategoryDeleteForm } from "@/app/admin/(dashboard)/categories/CategoryDeleteForm";
 import { getFleetCategoriesForAdminFull } from "@/lib/fleet-category-data";
 
 export const dynamic = "force-dynamic";
@@ -16,34 +15,20 @@ export default async function AdminCategoriesPage() {
   const categories = await getFleetCategoriesForAdminFull().catch(() => []);
 
   return (
-    <div className="min-h-screen bg-surface px-6 py-16 text-on-surface">
-      <div className="mx-auto max-w-4xl">
-        <header className="mb-10 flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <Link
-              href="/admin"
-              className="mb-3 inline-block text-sm font-bold text-primary hover:underline"
-            >
-              ← العودة للوحة الإدارة
-            </Link>
-            <h1 className="text-3xl font-extrabold tracking-tight">
-              إدارة فئات الأسطول
-            </h1>
-            <p className="mt-2 text-on-surface-variant">
-              أضف أو عدّل أو احذف الفئات المعروضة في الصفحة الرئيسية وروابط التصفية.
-              لا يمكن حذف فئة ما دامت مرتبطة بسيارات.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <Link
-              href="/"
-              className="rounded-xl border border-outline-variant px-4 py-2 text-sm font-bold text-on-surface-variant transition-colors hover:bg-surface-container"
-            >
-              الموقع
-            </Link>
-            <LogoutButton />
-          </div>
-        </header>
+    <div className="mx-auto max-w-4xl">
+      <header className="mb-10">
+        <Link
+          href="/admin"
+          className="mb-3 inline-block text-sm font-bold text-primary hover:underline"
+        >
+          ← لوحة التحكم
+        </Link>
+        <h1 className="text-3xl font-extrabold tracking-tight">إدارة فئات الأسطول</h1>
+        <p className="mt-2 text-on-surface-variant">
+          أضف أو عدّل أو احذف الفئات المعروضة في الصفحة الرئيسية وروابط التصفية. لا يمكن حذف فئة ما
+          دامت مرتبطة بسيارات.
+        </p>
+      </header>
 
         <CategoryCreateForm />
 
@@ -102,7 +87,6 @@ export default async function AdminCategoriesPage() {
             </tbody>
           </table>
         </div>
-      </div>
     </div>
   );
 }
