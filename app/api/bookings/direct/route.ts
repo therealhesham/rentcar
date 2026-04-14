@@ -108,6 +108,7 @@ export async function POST(request: Request) {
   }
 
   revalidatePath("/admin");
+  revalidatePath("/admin/car-bookings");
   revalidatePath("/fleet");
 
   return NextResponse.json({ ok: true });

@@ -1,12 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { verifyAdminSession } from "@/lib/admin-auth";
-import { addDaysToYmd } from "@/lib/direct-booking";
+import { addDaysToYmd, NON_BLOCKING_BOOKING_STATUSES } from "@/lib/direct-booking";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
-
-const NON_BLOCKING = ["CANCELLED", "REJECTED"] as const;
 
 const BRANCH_LABEL: Record<string, string> = {
   jeddah: "جدة",
@@ -39,7 +37,7 @@ export default async function AdminCarBookingsPage() {
     where: {
       kind: "DIRECT",
       carModelId: { not: null },
-      NOT: { status: { in: [...NON_BLOCKING] } },
+      NOT: { status: { in: [...NON_BLOCKING_BOOKING_STATUSES] } },
     },
     include: {
       carModel: { include: { brand: true, category: true } },

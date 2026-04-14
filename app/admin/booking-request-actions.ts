@@ -2,8 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { verifyAdminSession } from "@/lib/admin-auth";
-import { getDirectBookingAvailability } from "@/lib/direct-booking";
-import { prisma } from "@/lib/prisma";
+import { convertInquiryBookingToDirect } from "@/lib/direct-booking";
 
 export async function convertInquiryToDirect(
   _prev: { ok: boolean; error?: string } | null,
@@ -23,59 +22,13 @@ export async function convertInquiryToDirect(
     return { ok: false, error: "اختر موديل السيارة." };
   }
 
-  const booking = await prisma.bookingRequest.findUnique({
-    where: { id: bookingRequestId },
-    select: {
-      id: true,
-      kind: true,
-      pickupDate: true,
-      numberOfDays: true,
-    },
-  });
-  if (!booking) {
-    return { ok: false, error: "الطلب غير موجود." };
-  }
-  if (booking.kind !== "INQUIRY") {
-    return { ok: false, error: "يمكن تحويل طلبات الاستفسار فقط." };
-  }
-
-  const model = await prisma.carModel.findUnique({
-    where: { id: carModelId },
-    include: { category: true },
-  });
-  if (!model) {
-    return { ok: false, error: "الموديل غير موجود." };
-  }
-
-  const { available, fleetUnits, overlapping } = await getDirectBookingAvailability({
-    carModelId,
-    pickupDate: booking.pickupDate,
-    numberOfDays: booking.numberOfDays,
-  });
-  if (!available) {
-    return {
-      ok: false,
-      error: `السيارة غير متاحة في فترة هذا الطلب (${booking.numberOfDays} يوم/أيام): ${overlapping} حجز متزامن والحد ${fleetUnits} وحدة/وحدات.`,
-    };
-  }
-
-  const carType = model.category.slug || model.category.title;
-
-  try {
-    await prisma.bookingRequest.update({
-      where: { id: bookingRequestId },
-      data: {
-        kind: "DIRECT",
-        carModelId,
-        carType,
-      },
-    });
-  } catch (e) {
-    console.error(e);
-    return { ok: false, error: "تعذّر تحديث الطلب." };
+  const result = await convertInquiryBookingToDirect(bookingRequestId, carModelId);
+  if (!result.ok) {
+    return { ok: false, error: result.error };
   }
 
   revalidatePath("/admin");
   revalidatePath("/fleet");
+  revalidatePath("/admin/car-bookings");
   return { ok: true };
 }

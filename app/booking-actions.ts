@@ -69,6 +69,7 @@ export async function submitDirectBookingRequest(
   }
 
   revalidatePath("/admin");
+  revalidatePath("/admin/car-bookings");
   revalidatePath("/fleet");
   return { ok: true };
 }

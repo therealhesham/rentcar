@@ -322,7 +322,7 @@ export function FleetCarCard({ car }: { car: FleetCar }) {
     createPortal(
       <dialog
         ref={dialogRef}
-        className="fixed inset-0 z-[200] m-0 flex h-dvh w-full max-w-none flex-col items-center justify-center border-0 bg-transparent p-3 shadow-none backdrop:bg-black/60 open:flex sm:p-4"
+        className="fixed inset-0 z-[200] m-0 h-dvh w-full max-w-none border-0 bg-transparent p-3 shadow-none backdrop:bg-black/60 sm:p-4 [&:not([open])]:hidden [&[open]]:flex [&[open]]:flex-col [&[open]]:items-center [&[open]]:justify-center"
       >
         {/* لا تضع dir=rtl على dialog: في المتصفحات يصبح left/transform منطقيين فيزحف المودال. */}
         <div
