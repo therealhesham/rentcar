@@ -1,16 +1,18 @@
 import Image from "next/image";
 import { BookingWidget } from "./BookingWidget";
 
-const HERO_IMAGE =
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuD_wHp6ORrYsBkgi0UyOM9QPOZM5bDcBfhhiqFUAWIi_pRppfkX3yuO9YkH7lRHPQn0zMBLvBo77J3n-avrqC22bLvZ71W4X4QAFO6YqbuEJtNyFdOIgtj8yWTFS5AkpYAADSaZIePszEqX3bSF4-QdK92ONP57oeRSrrsiQ_SQu0Z0EXEoRFknm0KQUTN9WyJSd9H9sm_nfmeIVaY9ud5JaTpCFqXlwGaNLIvs-RFTOJcu-EAu_w31N9dPlt3mVhqd6YyUdFRk3Y6M";
+export type HeroProps = {
+  imageUrl: string;
+  imageAlt: string;
+};
 
-export function Hero() {
+export function Hero({ imageUrl, imageAlt }: HeroProps) {
   return (
-    <header className="relative flex min-h-screen items-center overflow-hidden pt-20">
-      <div className="absolute inset-0 z-0">
+    <header className="relative flex min-h-screen items-start justify-center overflow-x-hidden pt-28 md:pt-32">
+      <div className="absolute inset-0 z-0 overflow-hidden">
         <Image
-          src={HERO_IMAGE}
-          alt="سيارة بورش فاخرة على طريق ساحلي عند غروب الشمس"
+          src={imageUrl}
+          alt={imageAlt}
           fill
           priority
           className="object-cover"
@@ -18,7 +20,7 @@ export function Hero() {
         />
         <div className="absolute inset-0 bg-gradient-to-l from-background via-background/40 to-transparent" />
       </div>
-      <div className="relative z-10 mx-auto w-full max-w-7xl px-8">
+      <div className="relative z-10 mx-auto w-full max-w-7xl px-8 pb-[min(28rem,45vh)]">
         <div className="max-w-2xl text-start">
           <span className="mb-4 block text-xs font-bold tracking-[0.2em] text-primary">
             التميّز في الحركة

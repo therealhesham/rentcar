@@ -9,6 +9,7 @@ import {
   setAdminSessionCookie,
   verifyAdminSession,
 } from "@/lib/admin-auth";
+import { requireGalleryFolderSlug } from "@/lib/gallery-folder";
 import { prisma } from "@/lib/prisma";
 import {
   isSpacesConfigured,
@@ -114,7 +115,8 @@ export async function createFleetVehicle(
       };
     }
     try {
-      image = await uploadImageToSpaces(imageFile, "cars");
+      await requireGalleryFolderSlug("vehicles");
+      image = await uploadImageToSpaces(imageFile, "vehicles");
     } catch (e) {
       const msg = e instanceof Error ? e.message : "فشل رفع صورة السيارة.";
       return { ok: false, error: msg };

@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminSession } from "@/lib/admin-auth";
 import {
-  isSpacesConfigured,
-  listGalleryImages,
-  uploadImageToSpaces,
-} from "@/lib/spaces-upload";
+  galleryFolderExists,
+  isValidGalleryFolderSlug,
+  listGalleryFoldersForApi,
+  requireGalleryFolderSlug,
+} from "@/lib/gallery-folder";
+import { isSpacesConfigured, listImagesInFolder, uploadImageToSpaces } from "@/lib/spaces-upload";
 
 export async function GET(req: NextRequest) {
   if (!(await verifyAdminSession())) {
@@ -16,9 +18,37 @@ export async function GET(req: NextRequest) {
       { status: 503 },
     );
   }
+
+  const folderParam = req.nextUrl.searchParams.get("folder");
   const cursor = req.nextUrl.searchParams.get("cursor") ?? undefined;
+
+  if (!folderParam) {
+    try {
+      const rows = await listGalleryFoldersForApi();
+      const folders = rows.map((r) => ({ id: r.slug, label: r.label }));
+      return NextResponse.json({ folders });
+    } catch (e) {
+      console.error(e);
+      return NextResponse.json(
+        {
+          error:
+            "تعذّر قراءة مجلدات المعرض. تأكد من إنشاء جدول GalleryFolder ومزامنة Prisma.",
+        },
+        { status: 500 },
+      );
+    }
+  }
+
+  const slug = folderParam.trim();
+  if (!isValidGalleryFolderSlug(slug)) {
+    return NextResponse.json({ error: "معرّف المجلد غير صالح." }, { status: 400 });
+  }
+  if (!(await galleryFolderExists(slug))) {
+    return NextResponse.json({ error: "المجلد غير موجود." }, { status: 404 });
+  }
+
   try {
-    const data = await listGalleryImages(cursor ?? undefined);
+    const data = await listImagesInFolder(slug, cursor);
     return NextResponse.json(data);
   } catch (e) {
     const msg = e instanceof Error ? e.message : "فشل جلب المعرض.";
@@ -47,8 +77,21 @@ export async function POST(req: NextRequest) {
   if (!(file instanceof File) || file.size === 0) {
     return NextResponse.json({ error: "لم يُرفع ملف." }, { status: 400 });
   }
+
+  const folderRaw = String(formData.get("folder") ?? "").trim();
+  if (!isValidGalleryFolderSlug(folderRaw)) {
+    return NextResponse.json({ error: "مجلد الرفع غير صالح." }, { status: 400 });
+  }
+
   try {
-    const url = await uploadImageToSpaces(file, "gallery");
+    await requireGalleryFolderSlug(folderRaw);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "المجلد غير معرّف.";
+    return NextResponse.json({ error: msg }, { status: 400 });
+  }
+
+  try {
+    const url = await uploadImageToSpaces(file, folderRaw);
     return NextResponse.json({ url });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "فشل الرفع.";

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { ConvertInquiryToDirectForm } from "@/components/admin/ConvertInquiryToDirectForm";
 import { verifyAdminSession } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
 
@@ -18,6 +19,7 @@ export default async function AdminDashboardPage() {
     bookingTotal,
     bookingNew,
     bookingRequests,
+    bookableModelsRaw,
   ] = await Promise.all([
     prisma.fleetCategory.count(),
     prisma.brand.count(),
@@ -34,7 +36,23 @@ export default async function AdminDashboardPage() {
         },
       })
       .catch(() => []),
+    prisma.carModel
+      .findMany({
+        where: { fleetItems: { some: { quantity: { gt: 0 } } } },
+        select: {
+          id: true,
+          name: true,
+          brand: { select: { name: true } },
+        },
+        orderBy: [{ brand: { name: "asc" } }, { name: "asc" }],
+      })
+      .catch(() => []),
   ]);
+
+  const bookableModels = bookableModelsRaw.map((m) => ({
+    id: m.id,
+    label: `${m.brand.name} ${m.name}`,
+  }));
 
   const fleetUnits = fleetRows.reduce((sum, row) => sum + row.quantity, 0);
 
@@ -60,6 +78,14 @@ export default async function AdminDashboardPage() {
           <Link href="/admin/categories" className="font-bold text-primary hover:underline">
             فئات الأسطول
           </Link>
+          ، ولصورة الهيرو في الرئيسية{" "}
+          <Link href="/admin/home" className="font-bold text-primary hover:underline">
+            هيرو الرئيسية
+          </Link>
+          ، ولعرض الحجوزات المباشرة حسب التاريخ{" "}
+          <Link href="/admin/car-bookings" className="font-bold text-primary hover:underline">
+            حجوزات السيارات
+          </Link>
           .
         </p>
       </header>
@@ -81,7 +107,8 @@ export default async function AdminDashboardPage() {
       <section className="mt-10 rounded-2xl border border-outline-variant/30 bg-surface-container-low p-6">
         <h2 className="text-xl font-extrabold tracking-tight">آخر طلبات الحجز</h2>
         <p className="mt-1 text-sm text-on-surface-variant">
-          طلب حجز من الرئيسية (استفسار) مقابل حجز مباشر بعد اختيار سيارة — يظهر النوع في العمود الأول.
+          طلب حجز من الرئيسية (استفسار) مقابل حجز مباشر بعد اختيار سيارة — يظهر النوع في العمود الأول. يمكن
+          ربط طلب الاستفسار بسيارة متاحة في الأسطول وتحويله إلى حجز مباشر من عمود «تحويل».
         </p>
 
         {bookingRequests.length === 0 ? (
@@ -90,7 +117,7 @@ export default async function AdminDashboardPage() {
           </p>
         ) : (
           <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[1000px] text-start text-sm">
+            <table className="w-full min-w-[1180px] text-start text-sm">
               <thead>
                 <tr className="border-b border-outline-variant/30 text-on-surface-variant">
                   <th className="px-3 py-2">النوع</th>
@@ -104,6 +131,7 @@ export default async function AdminDashboardPage() {
                   <th className="px-3 py-2">الأيام</th>
                   <th className="px-3 py-2">الحالة</th>
                   <th className="px-3 py-2">وقت الإرسال</th>
+                  <th className="px-3 py-2">تحويل</th>
                 </tr>
               </thead>
               <tbody>
@@ -131,6 +159,16 @@ export default async function AdminDashboardPage() {
                     <td className="px-3 py-2">{request.status}</td>
                     <td className="px-3 py-2">
                       {new Date(request.createdAt).toLocaleString("ar-SA")}
+                    </td>
+                    <td className="px-3 py-2 align-top">
+                      {request.kind === "INQUIRY" ? (
+                        <ConvertInquiryToDirectForm
+                          bookingRequestId={request.id}
+                          models={bookableModels}
+                        />
+                      ) : (
+                        <span className="text-on-surface-variant">—</span>
+                      )}
                     </td>
                   </tr>
                 ))}

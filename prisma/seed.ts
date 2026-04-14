@@ -88,6 +88,20 @@ async function main() {
       update: {},
     });
   }
+
+  const galleryFolders = [
+    { slug: "vehicles", label: "المركبات", sortOrder: 0 },
+    { slug: "categories", label: "الفئات", sortOrder: 1 },
+    { slug: "gallery", label: "عام", sortOrder: 2 },
+    { slug: "home", label: "الصفحة الرئيسية (هيرو)", sortOrder: 3 },
+  ];
+  for (const g of galleryFolders) {
+    await prisma.galleryFolder.upsert({
+      where: { slug: g.slug },
+      create: g,
+      update: { label: g.label, sortOrder: g.sortOrder },
+    });
+  }
 }
 
 main()

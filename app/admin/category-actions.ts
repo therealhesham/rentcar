@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { verifyAdminSession } from "@/lib/admin-auth";
+import { requireGalleryFolderSlug } from "@/lib/gallery-folder";
 import { prisma } from "@/lib/prisma";
 import {
   isSpacesConfigured,
@@ -74,6 +75,7 @@ export async function createFleetCategory(
   let imageUrl: string | null = null;
   if (imageFile instanceof File && imageFile.size > 0) {
     try {
+      await requireGalleryFolderSlug("categories");
       imageUrl = await uploadImageToSpaces(imageFile, "categories");
     } catch (e) {
       const msg = e instanceof Error ? e.message : "فشل رفع الصورة.";
@@ -158,6 +160,7 @@ export async function updateFleetCategory(
       };
     }
     try {
+      await requireGalleryFolderSlug("categories");
       imageUrl = await uploadImageToSpaces(imageFile, "categories");
     } catch (e) {
       const msg = e instanceof Error ? e.message : "فشل رفع الصورة.";

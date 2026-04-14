@@ -6,8 +6,10 @@ import { LogoutButton } from "@/app/admin/LogoutButton";
 
 const nav = [
   { href: "/admin", label: "لوحة التحكم" },
+  { href: "/admin/home", label: "هيرو الرئيسية" },
   { href: "/admin/vehicles", label: "إضافة مركبة" },
   { href: "/admin/categories", label: "فئات الأسطول" },
+  { href: "/admin/car-bookings", label: "حجوزات السيارات" },
   { href: "/fleet", label: "عرض الأسطول" },
 ] as const;
 

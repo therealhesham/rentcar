@@ -5,9 +5,12 @@ import {
 } from "@aws-sdk/client-s3";
 import { randomBytes } from "crypto";
 
+/** @deprecated استخدم بادئة مجلد محدد عبر folderPrefix */
 export const GALLERY_S3_PREFIX = "rentcar/gallery/";
 
-export type SpacesImageFolder = "categories" | "cars" | "gallery";
+function folderPrefix(slug: string): string {
+  return `rentcar/${slug}/`;
+}
 
 const MAX_BYTES = 5 * 1024 * 1024;
 
@@ -139,19 +142,27 @@ export type GalleryListItem = {
   lastModified: Date | undefined;
 };
 
-export async function listGalleryImages(
+const GALLERY_PAGE_SIZE = 10;
+
+/**
+ * يعرض صور مجلد واحد تحت `rentcar/<folder>/` مع ترقيم صفحات (افتراضي 10 لكل طلب).
+ */
+export async function listImagesInFolder(
+  folderSlug: string,
   continuationToken?: string,
+  maxKeys: number = GALLERY_PAGE_SIZE,
 ): Promise<{ items: GalleryListItem[]; nextCursor?: string }> {
   if (!isSpacesConfigured()) {
     throw new Error("لم يُضبط تخزين Spaces.");
   }
   const bucket = process.env.SPACES_BUCKET!;
   const client = getS3Client();
+  const prefix = folderPrefix(folderSlug);
   const res = await client.send(
     new ListObjectsV2Command({
       Bucket: bucket,
-      Prefix: GALLERY_S3_PREFIX,
-      MaxKeys: 48,
+      Prefix: prefix,
+      MaxKeys: Math.min(Math.max(1, maxKeys), 100),
       ContinuationToken: continuationToken || undefined,
     }),
   );
@@ -176,7 +187,7 @@ export async function listGalleryImages(
 
 export async function uploadImageToSpaces(
   file: File,
-  folder: SpacesImageFolder,
+  folderSlug: string,
 ): Promise<string> {
   if (!isSpacesConfigured()) {
     throw new Error(
@@ -204,7 +215,7 @@ export async function uploadImageToSpaces(
         ? "image/jpeg"
         : `image/${ext}`;
 
-  const key = `rentcar/${folder}/${Date.now()}-${randomBytes(8).toString("hex")}.${ext}`;
+  const key = `${folderPrefix(folderSlug)}${Date.now()}-${randomBytes(8).toString("hex")}.${ext}`;
   const buffer = Buffer.from(await file.arrayBuffer());
 
   const bucket = process.env.SPACES_BUCKET!;

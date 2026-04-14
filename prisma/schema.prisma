@@ -7,6 +7,14 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/// إعدادات عامة للموقع (مفتاح فريد + قيمة نصية).
+model SiteSetting {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique @db.VarChar(64)
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+}
+
 model User {
   id        Int      @id @default(autoincrement())
   email     String   @unique
@@ -26,6 +34,18 @@ model FleetCategory {
   models      CarModel[]
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
+}
+
+/// مجلدات معرض الصور في Spaces: `rentcar/<slug>/`
+model GalleryFolder {
+  id        Int      @id @default(autoincrement())
+  slug      String   @unique @db.VarChar(64)
+  label     String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sortOrder])
 }
 
 model Brand {

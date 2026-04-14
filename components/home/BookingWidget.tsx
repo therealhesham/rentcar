@@ -8,7 +8,7 @@ export function BookingWidget() {
   const [state, formAction, pending] = useActionState(submitBookingRequest, null);
 
   return (
-    <div className="absolute bottom-12 left-1/2 z-20 w-full max-w-6xl -translate-x-1/2 px-8">
+    <div className="absolute bottom-20 left-1/2 z-20 w-full max-w-6xl -translate-x-1/2 px-8">
       <form
         action={formAction}
         className="rounded-xl border border-outline-variant/10 bg-surface-container-lowest p-8 shadow-[0_40px_100px_rgba(119,89,39,0.1)]"
@@ -36,7 +36,7 @@ export function BookingWidget() {
               الجوال
             </label>
             <div
-              className="flex h-12 w-full overflow-hidden rounded-xl bg-surface-container-low focus-within:ring-2 focus-within:ring-primary-container"
+              className="flex h-12 w-full min-w-0 overflow-hidden rounded-xl bg-surface-container-low focus-within:ring-2 focus-within:ring-primary-container"
               dir="ltr"
             >
               <span
@@ -45,7 +45,7 @@ export function BookingWidget() {
                 +966
               </span>
               <input
-                className="h-full w-full border-none bg-transparent px-4 text-start text-sm"
+                className="h-full min-w-0 flex-1 border-none bg-transparent px-4 text-start text-sm"
                 placeholder="5XXXXXXXX"
                 type="tel"
                 name="phone"
