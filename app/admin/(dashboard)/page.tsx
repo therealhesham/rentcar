@@ -86,6 +86,18 @@ export default async function AdminDashboardPage() {
           <Link href="/admin/car-bookings" className="font-bold text-primary hover:underline">
             حجوزات السيارات
           </Link>
+          ، وللتوفر مقابل الأسطول{" "}
+          <Link href="/admin/fleet-availability" className="font-bold text-primary hover:underline">
+            توفر المركبات
+          </Link>
+          ، ولقائمة العملاء من الطلبات{" "}
+          <Link href="/admin/customers" className="font-bold text-primary hover:underline">
+            العملاء
+          </Link>
+          ، ولتسجيل حجز مباشر نيابة عن عميل{" "}
+          <Link href="/admin/direct-booking" className="font-bold text-primary hover:underline">
+            حجز مباشر (مكتب)
+          </Link>
           .
         </p>
       </header>

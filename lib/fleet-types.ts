@@ -5,7 +5,12 @@ export type FleetCar = {
   id: number;
   /** معرّف `CarModel` — للحجز المباشر */
   modelId: number;
+  /** اسم الماركة من `Brand.name` */
+  brand: string;
+  /** اسم الموديل من `CarModel.name` */
   name: string;
+  /** ماركة + موديل — للملخصات و`alt` الافتراضي */
+  fullTitle: string;
   subtitle: string;
   price: string;
   image: string;

@@ -6,10 +6,13 @@ import { LogoutButton } from "@/app/admin/LogoutButton";
 
 const nav = [
   { href: "/admin", label: "لوحة التحكم" },
+  { href: "/admin/customers", label: "العملاء" },
+  { href: "/admin/direct-booking", label: "حجز مباشر (مكتب)" },
   { href: "/admin/home", label: "هيرو الرئيسية" },
   { href: "/admin/vehicles", label: "إضافة مركبة" },
   { href: "/admin/categories", label: "فئات الأسطول" },
   { href: "/admin/car-bookings", label: "حجوزات السيارات" },
+  { href: "/admin/fleet-availability", label: "توفر المركبات" },
   { href: "/fleet", label: "عرض الأسطول" },
 ] as const;
 

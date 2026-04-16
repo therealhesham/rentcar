@@ -141,7 +141,7 @@ function DirectBookingForm({
         <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant">
           السيارة المختارة
         </p>
-        <p className="mt-1 font-bold text-on-surface">{car.name}</p>
+        <p className="mt-1 font-bold text-on-surface">{car.fullTitle}</p>
       </div>
 
       <div className="space-y-2 md:col-span-2">
@@ -352,7 +352,12 @@ export function FleetCarCard({ car }: { car: FleetCar }) {
         ) : null}
       </div>
       <div className="mb-4 flex items-start justify-between gap-4">
-        <div className="min-w-0 text-start">
+        <div className="min-w-0 flex-1 text-start">
+          {car.brand ? (
+            <p className="mb-1 text-xs font-bold uppercase tracking-wide text-primary">
+              {car.brand}
+            </p>
+          ) : null}
           <h3 className="text-2xl font-bold tracking-tight text-on-surface">
             {car.name}
           </h3>

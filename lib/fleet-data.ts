@@ -41,19 +41,22 @@ export async function getFleetCarsForDisplay(
 
   return rows.map((row) => {
     const m = row.model;
-    const brandName = m.brand.name;
-    const title = `${brandName} ${m.name}`.trim();
+    const brandName = m.brand.name.trim();
+    const modelName = m.name.trim();
+    const fullTitle = `${brandName} ${modelName}`.trim();
     const subtitle = `${m.year} • ${FUEL_AR[m.fuel]} • ${TRANS_AR[m.transmission]}`;
     const price = m.price.toLocaleString("en-US");
 
     return {
       id: row.id,
       modelId: row.modelId,
-      name: title,
+      brand: brandName,
+      name: modelName,
+      fullTitle,
       subtitle,
       price,
       image: m.image?.trim() || PLACEHOLDER_IMG,
-      alt: m.alt?.trim() || title,
+      alt: m.alt?.trim() || fullTitle,
       badge: m.badge,
       specs: [
         { icon: "mode_fan", label: m.engine },

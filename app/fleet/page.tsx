@@ -1,10 +1,5 @@
 import type { Metadata } from "next";
-import {
-  FleetCarGrid,
-  FleetFeatured,
-  FleetFilters,
-  FleetHero,
-} from "@/components/fleet";
+import { FleetCarGrid, FleetFilters } from "@/components/fleet";
 import { SiteFooter } from "@/components/home/SiteFooter";
 import { SiteNav } from "@/components/shared/SiteNav";
 import { getFleetCarsForDisplay } from "@/lib/fleet-data";
@@ -29,12 +24,12 @@ export default async function FleetPage({ searchParams }: FleetPageProps) {
   return (
     <div className="flex min-h-screen flex-col bg-surface text-on-surface">
       <SiteNav active="fleet" />
-      <FleetHero />
-      <FleetFilters />
-      <main className="mx-auto max-w-screen-2xl px-8 py-24">
-        <FleetCarGrid cars={cars} />
-        <FleetFeatured />
-      </main>
+      <div className="pt-28">
+        <FleetFilters />
+        <main className="mx-auto max-w-screen-2xl px-8 py-24">
+          <FleetCarGrid cars={cars} />
+        </main>
+      </div>
       <SiteFooter />
     </div>
   );

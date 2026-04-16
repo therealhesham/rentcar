@@ -1,5 +1,8 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 function InstagramIcon({ className }: { className?: string }) {
   return (
@@ -43,9 +46,9 @@ function TikTokIcon({ className }: { className?: string }) {
 const siteLinks = [
   { href: "/", label: "الرئيسية" },
   { href: "/fleet", label: "الاسطول" },
-  { href: "#about", label: "نبذه عنا" },
-  { href: "#", label: "المساعده والتسعير" },
-  { href: "#", label: "الشروط والاحكام" },
+  { href: "#about", label: "نبذة عنا" },
+  { href: "#", label: "السياسة والخصوصية" },
+  { href: "#", label: "الشروط والأحكام" },
 ];
 
 const socialLinks = [
@@ -54,74 +57,96 @@ const socialLinks = [
   { href: "#", label: "تيك توك", icon: TikTokIcon },
 ];
 
+/** خلفية تيل داكنة + شريط ذهبي سفلي (معايير فوتر الموقع) */
+const FOOTER_BG = "#003749";
+const FOOTER_ACCENT = "#d4b896";
+const FOOTER_GOLD = "#dbb878";
+
+function isLinkActive(pathname: string, href: string) {
+  if (href === "#" || href.startsWith("#")) return false;
+  if (href === "/") return pathname === "/";
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 export function SiteFooter() {
+  const pathname = usePathname();
+
   return (
-    <footer className="w-full bg-[#163332] text-white">
+    <footer className="w-full text-white" style={{ backgroundColor: FOOTER_BG }}>
       <div className="mx-auto grid max-w-screen-xl grid-cols-1 gap-10 px-8 py-14 md:grid-cols-3">
-        {/* Logo & Company Name */}
         <div className="flex items-center gap-4 md:justify-self-start">
-          <Image
-            src="/logo.svg"
-            alt=""
-            width={64}
-            height={64}
-            className="h-16 w-16 rounded-full bg-white/10 object-contain p-2"
-          />
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-white p-2 shadow-sm">
+            <Image
+              src="/logo.svg"
+              alt=""
+              width={48}
+              height={48}
+              className="h-12 w-12 object-contain"
+            />
+          </div>
           <div>
-            <p className="text-lg font-bold leading-tight">
+            <p className="text-lg font-bold leading-tight text-white">
               روائس لتأجير السيارات
             </p>
-            <p className="text-sm text-white/60">Rawaes Rent Car</p>
+            <p className="text-sm text-white/80">Rawaes Rent Car</p>
           </div>
         </div>
 
-        {/* Site Map */}
         <div>
-          <h4 className="mb-4 text-sm font-bold text-[#dbb878]">
-            خريطة الموقع
-          </h4>
+          <h4 className="mb-4 text-sm font-bold text-white">خريطة الموقع</h4>
           <ul className="space-y-2">
-            {siteLinks.map((link) => (
-              <li key={link.label}>
-                <Link
-                  href={link.href}
-                  className="text-sm text-white/70 transition-colors hover:text-[#dbb878]"
-                >
-                  {link.label}
-                </Link>
-              </li>
-            ))}
+            {siteLinks.map((link) => {
+              const active = isLinkActive(pathname, link.href);
+              return (
+                <li key={link.label}>
+                  <Link
+                    href={link.href}
+                    className={`text-sm transition-colors ${
+                      active
+                        ? "font-bold"
+                        : "text-white hover:opacity-90"
+                    }`}
+                    style={
+                      active
+                        ? { color: FOOTER_GOLD }
+                        : undefined
+                    }
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </div>
 
-        {/* Social Media & Branch */}
         <div>
-          <h4 className="mb-4 text-sm font-bold text-[#dbb878]">
+          <h4 className="mb-4 text-sm font-bold text-white">
             وسائل التواصل الاجتماعي
           </h4>
-          <div className="mb-6 flex items-center gap-3">
+          <div className="mb-6 inline-flex items-center gap-5 rounded-full bg-white px-5 py-2.5 shadow-sm">
             {socialLinks.map((s) => (
               <a
                 key={s.label}
                 href={s.href}
                 aria-label={s.label}
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 text-white transition-colors hover:border-[#dbb878] hover:text-[#dbb878]"
+                className="text-neutral-900 transition-opacity hover:opacity-60"
               >
-                <s.icon className="h-4 w-4" />
+                <s.icon className="h-5 w-5" />
               </a>
             ))}
           </div>
-          <p className="text-sm text-white/70">
-            الفرع الرئيسي، المدينة المنورة
+          <p className="text-sm text-white/90">
+            الفرع الرئيسي: المدينة المنورة
           </p>
         </div>
       </div>
 
-      {/* Bottom Bar */}
-      <div className="border-t border-white/10 bg-[#112928]">
-        <p className="py-4 text-center text-xs text-white/50">
-          جميع الحقوق محفوظة لشركة روائس لتأجير السيارات
-        </p>
+      <div
+        className="w-full py-4 text-center text-xs font-medium text-white"
+        style={{ backgroundColor: FOOTER_ACCENT }}
+      >
+        جميع الحقوق محفوظة لدى روائس لتأجير السيارات
       </div>
     </footer>
   );
