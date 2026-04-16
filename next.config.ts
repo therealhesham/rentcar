@@ -20,6 +20,8 @@ function spacesImageHostname(): string | undefined {
 const spacesHost = spacesImageHostname();
 
 const nextConfig: NextConfig = {
+  /** مطلوب لبناء صورة Docker التي تنسخ `.next/standalone` */
+  output: "standalone",
   images: {
     remotePatterns: [
       {
