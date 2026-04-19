@@ -54,6 +54,7 @@ export async function createFleetVehicle(
   const transmission = String(formData.get("transmission")) as Transmission;
   const fuel = String(formData.get("fuel")) as FuelType;
   const price = Number(formData.get("price"));
+  const vatRatePercentRaw = Number(formData.get("vatRatePercent"));
   const quantity = Number(formData.get("quantity") ?? 1);
   const imageFile = formData.get("imageFile");
   const galleryImageUrl = String(formData.get("galleryImageUrl") ?? "").trim();
@@ -101,6 +102,12 @@ export async function createFleetVehicle(
   if (!Number.isFinite(price) || price < 1) {
     return { ok: false, error: "السعر غير صالح." };
   }
+  const vatRatePercent = Number.isFinite(vatRatePercentRaw)
+    ? Math.round(vatRatePercentRaw)
+    : 15;
+  if (vatRatePercent < 0 || vatRatePercent > 100) {
+    return { ok: false, error: "نسبة الضريبة يجب أن تكون بين 0 و 100." };
+  }
   if (!Number.isFinite(quantity) || quantity < 1) {
     return { ok: false, error: "الكمية غير صالحة." };
   }
@@ -141,6 +148,7 @@ export async function createFleetVehicle(
           transmission,
           fuel,
           price: Math.round(price),
+          vatRatePercent,
           image,
           alt,
           cta,

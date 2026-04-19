@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { SpecIcon } from "@/components/icons";
 import type { FleetCar } from "@/lib/fleet-types";
+import { DAILY_PRICE_EXCL_TAX_AR } from "@/lib/pricing";
 
 type AvailabilityState =
   | null
@@ -372,6 +373,9 @@ export function FleetCarCard({ car }: { car: FleetCar }) {
           </span>
           <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400">
             في اليوم
+          </p>
+          <p className="mt-1 max-w-[9rem] text-end text-[10px] leading-snug text-on-surface-variant">
+            {DAILY_PRICE_EXCL_TAX_AR}
           </p>
         </div>
       </div>

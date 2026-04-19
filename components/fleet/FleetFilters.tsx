@@ -1,5 +1,6 @@
 "use client";
 
+import { DAILY_PRICE_LABEL_EXCL_TAX_AR } from "@/lib/pricing";
 import { Search } from "lucide-react";
 import { useState } from "react";
 
@@ -45,7 +46,7 @@ export function FleetFilters() {
             </div>
             <div className="space-y-2">
               <label className="ms-1 text-xs font-bold uppercase tracking-widest text-primary">
-                السعر اليومي (ر.س)
+                {DAILY_PRICE_LABEL_EXCL_TAX_AR}
               </label>
               <div className="flex items-center gap-4 py-3">
                 <span className="text-sm font-medium" dir="ltr">

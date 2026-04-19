@@ -91,7 +91,10 @@ model CarModel {
   transmission  Transmission
   fuel          FuelType
 
+  /// سعر اليوم بالريال دون ضريبة (يُعرض للزائر كغير شامل للضريبة)
   price         Int
+  /// نسبة ضريبة القيمة المضافة % المسجّلة لهذا الموديل (مثلاً 15 في السعودية) — للفوترة والأرشفة
+  vatRatePercent Int @default(15)
   image         String?
   alt           String?
   cta           String?

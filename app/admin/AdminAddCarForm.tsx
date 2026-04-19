@@ -188,6 +188,23 @@ export function AdminAddCarForm({ categories, brands }: AdminAddCarFormProps) {
           placeholder="1200"
           className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
         />
+        <span className="mt-1 block text-xs text-on-surface-variant">
+          يُسجَّل السعر دون ضريبة؛ يُعرض للعميل كسعر يومي غير شامل الضريبة.
+        </span>
+      </label>
+      <label className="text-sm font-medium">
+        نسبة ضريبة القيمة المضافة % (مخزّنة مع الموديل)
+        <input
+          name="vatRatePercent"
+          type="number"
+          min={0}
+          max={100}
+          defaultValue={15}
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+        />
+        <span className="mt-1 block text-xs text-on-surface-variant">
+          تُحفظ في قاعدة البيانات للفوترة؛ السعر المعروض للزائر يبقى بدون ضريبة.
+        </span>
       </label>
       <label className="text-sm font-medium">
         الكمية في الأسطول

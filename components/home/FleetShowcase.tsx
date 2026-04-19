@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { DAILY_PRICE_EXCL_TAX_AR } from "@/lib/pricing";
 
 const cars = [
   {
@@ -74,6 +75,9 @@ export function FleetShowcase() {
                   </span>
                   <span className="text-[10px] font-bold tracking-wide text-on-surface-variant">
                     في اليوم
+                  </span>
+                  <span className="mt-1 block max-w-[7rem] text-end text-[9px] leading-snug text-on-surface-variant/90">
+                    {DAILY_PRICE_EXCL_TAX_AR}
                   </span>
                 </div>
               </div>

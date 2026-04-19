@@ -12,6 +12,7 @@ export type FleetCar = {
   /** ماركة + موديل — للملخصات و`alt` الافتراضي */
   fullTitle: string;
   subtitle: string;
+  /** تنسيق عرض لسعر اليوم (القيمة الأصلية دون ضريبة) */
   price: string;
   image: string;
   alt: string;
