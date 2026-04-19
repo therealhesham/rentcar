@@ -11,6 +11,7 @@ const nav = [
   { href: "/admin/home", label: "هيرو الرئيسية" },
   { href: "/admin/vehicles", label: "إضافة مركبة" },
   { href: "/admin/categories", label: "فئات الأسطول" },
+  { href: "/admin/branches", label: "الفروع" },
   { href: "/admin/car-bookings", label: "حجوزات السيارات" },
   { href: "/admin/fleet-availability", label: "توفر المركبات" },
   { href: "/fleet", label: "عرض الأسطول" },

@@ -94,6 +94,7 @@ async function main() {
     { slug: "categories", label: "الفئات", sortOrder: 1 },
     { slug: "gallery", label: "عام", sortOrder: 2 },
     { slug: "home", label: "الصفحة الرئيسية (هيرو)", sortOrder: 3 },
+    { slug: "branches", label: "الفروع", sortOrder: 4 },
   ];
   for (const g of galleryFolders) {
     await prisma.galleryFolder.upsert({

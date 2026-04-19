@@ -78,6 +78,10 @@ export default async function AdminDashboardPage() {
           <Link href="/admin/categories" className="font-bold text-primary hover:underline">
             فئات الأسطول
           </Link>
+          ، وللفروع وقسم «فروعنا الجديدة»{" "}
+          <Link href="/admin/branches" className="font-bold text-primary hover:underline">
+            الفروع
+          </Link>
           ، ولصورة الهيرو في الرئيسية{" "}
           <Link href="/admin/home" className="font-bold text-primary hover:underline">
             هيرو الرئيسية

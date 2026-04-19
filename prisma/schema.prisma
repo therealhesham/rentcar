@@ -23,6 +23,26 @@ model User {
   updatedAt DateTime @updatedAt
 }
 
+/// فرع استلام / موقع (مفتاح مستقر `slug` يطابق قيم النماذج: jeddah، madinah، …)
+model Branch {
+  id        Int      @id @default(autoincrement())
+  slug      String   @unique @db.VarChar(64)
+  name      String
+  tagline   String?  @db.VarChar(255)
+  image     String?  @db.Text
+  alt       String?  @db.Text
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  /// يظهر في قسم «فروعنا الجديدة» بالصفحة الرئيسية
+  isNew     Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sortOrder])
+  @@index([isActive])
+  @@index([isNew])
+}
+
 model FleetCategory {
   id          Int        @id @default(autoincrement())
   slug        String     @unique @db.VarChar(64)
