@@ -1,4 +1,5 @@
-export type FleetCarSpec = { icon: string; label: string };
+/** أيقونة + رقم/نص قصير لعرض بطاقة الأسطول */
+export type FleetCarSpec = { icon: string; value: string };
 
 export type FleetCar = {
   /** صف `Fleet` — للعرض والمفتاح فقط */
@@ -9,6 +10,8 @@ export type FleetCar = {
   brand: string;
   /** اسم الموديل من `CarModel.name` */
   name: string;
+  /** سنة الصنع */
+  year: number;
   /** ماركة + موديل — للملخصات و`alt` الافتراضي */
   fullTitle: string;
   subtitle: string;

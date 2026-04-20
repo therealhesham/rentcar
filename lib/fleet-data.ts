@@ -46,12 +46,16 @@ export async function getFleetCarsForDisplay(
     const fullTitle = `${brandName} ${modelName}`.trim();
     const subtitle = `${m.year} • ${FUEL_AR[m.fuel]} • ${TRANS_AR[m.transmission]}`;
     const price = m.price.toLocaleString("en-US");
+    /** غير مخزّن في قاعدة البيانات — تقدير بسيط للعرض حسب حجم المركبة */
+    const displayDoors = m.chairs >= 7 ? 5 : 4;
+    const displayLuggage = m.chairs >= 7 ? 4 : m.chairs >= 6 ? 3 : 2;
 
     return {
       id: row.id,
       modelId: row.modelId,
       brand: brandName,
       name: modelName,
+      year: m.year,
       fullTitle,
       subtitle,
       price,
@@ -59,12 +63,9 @@ export async function getFleetCarsForDisplay(
       alt: m.alt?.trim() || fullTitle,
       badge: m.badge,
       specs: [
-        { icon: "mode_fan", label: m.engine },
-        { icon: "speed", label: TRANS_AR[m.transmission] },
-        {
-          icon: "airline_seat_recline_extra",
-          label: `${m.chairs} مقاعد`,
-        },
+        { icon: "door_open", value: String(displayDoors) },
+        { icon: "airline_seat_recline_extra", value: String(m.chairs) },
+        { icon: "luggage", value: String(displayLuggage) },
       ],
     };
   });

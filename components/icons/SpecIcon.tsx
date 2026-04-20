@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Armchair, Fan, Gauge, Timer, Zap } from "lucide-react";
+import { Armchair, DoorOpen, Fan, Gauge, Luggage, Timer, Zap } from "lucide-react";
 
 /** مفاتيح تطابق أسماء أيقونات Material السابقة — تُعرَض الآن عبر Lucide */
 const SPEC_ICONS: Record<string, LucideIcon> = {
@@ -8,6 +8,8 @@ const SPEC_ICONS: Record<string, LucideIcon> = {
   speed: Gauge,
   mode_fan: Fan,
   airline_seat_recline_extra: Armchair,
+  door_open: DoorOpen,
+  luggage: Luggage,
 };
 
 type SpecIconProps = {
