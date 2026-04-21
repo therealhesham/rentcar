@@ -178,5 +178,133 @@ export async function createFleetVehicle(
   revalidatePath("/");
   revalidatePath("/admin");
   revalidatePath("/admin/vehicles");
+  revalidatePath("/admin/vehicles/new");
+  return { ok: true };
+}
+
+export async function updateFleetVehicle(
+  _prev: { ok: boolean; error?: string } | null,
+  formData: FormData,
+): Promise<{ ok: boolean; error?: string }> {
+  if (!(await verifyAdminSession())) {
+    return { ok: false, error: "غير مصرّح." };
+  }
+
+  const modelId = Number(formData.get("modelId"));
+  if (!Number.isFinite(modelId) || modelId < 1) {
+    return { ok: false, error: "معرّف المركبة غير صالح." };
+  }
+
+  const existing = await prisma.carModel.findUnique({
+    where: { id: Math.floor(modelId) },
+    include: { fleetItems: { orderBy: { id: "asc" }, take: 1 } },
+  });
+  if (!existing || !existing.fleetItems[0]) {
+    return { ok: false, error: "المركبة غير موجودة في الأسطول." };
+  }
+
+  const modelName = String(formData.get("modelName") ?? "").trim();
+  const chairs = Number(formData.get("chairs"));
+  const engine = String(formData.get("engine") ?? "").trim();
+  const transmission = String(formData.get("transmission")) as Transmission;
+  const fuel = String(formData.get("fuel")) as FuelType;
+  const price = Number(formData.get("price"));
+  const vatRatePercentRaw = Number(formData.get("vatRatePercent"));
+  const quantity = Number(formData.get("quantity") ?? 0);
+  const imageFile = formData.get("imageFile");
+  const galleryImageUrl = String(formData.get("galleryImageUrl") ?? "").trim();
+  const alt = String(formData.get("alt") ?? "").trim() || null;
+  const badge = String(formData.get("badge") ?? "").trim() || null;
+
+  if (!modelName) {
+    return { ok: false, error: "أدخل اسم الموديل." };
+  }
+  if (!Number.isFinite(chairs) || chairs < 1 || chairs > 50) {
+    return { ok: false, error: "عدد المقاعد غير صالح." };
+  }
+  if (!engine) {
+    return { ok: false, error: "أدخل وصف المحرك أو الأداء." };
+  }
+  if (transmission !== "MANUAL" && transmission !== "AUTOMATIC") {
+    return { ok: false, error: "ناقل الحركة غير صالح." };
+  }
+  if (!["GASOLINE", "DIESEL", "HYBRID", "ELECTRIC"].includes(fuel)) {
+    return { ok: false, error: "نوع الوقود غير صالح." };
+  }
+  if (!Number.isFinite(price) || price < 1) {
+    return { ok: false, error: "السعر غير صالح." };
+  }
+  const vatRatePercent = Number.isFinite(vatRatePercentRaw)
+    ? Math.round(vatRatePercentRaw)
+    : existing.vatRatePercent;
+  if (vatRatePercent < 0 || vatRatePercent > 100) {
+    return { ok: false, error: "نسبة الضريبة يجب أن تكون بين 0 و 100." };
+  }
+  if (!Number.isFinite(quantity) || quantity < 0) {
+    return { ok: false, error: "الكمية غير صالحة." };
+  }
+
+  let image: string | null = existing.image;
+  if (imageFile instanceof File && imageFile.size > 0) {
+    if (!isSpacesConfigured()) {
+      return {
+        ok: false,
+        error:
+          "لم يُضبط تخزين Spaces لرفع الصور (SPACES_REGION، المفاتيح، SPACES_BUCKET).",
+      };
+    }
+    try {
+      await requireGalleryFolderSlug("vehicles");
+      image = await uploadImageToSpaces(imageFile, "vehicles");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "فشل رفع صورة السيارة.";
+      return { ok: false, error: msg };
+    }
+  } else if (galleryImageUrl) {
+    if (!isTrustedSpacesImageUrl(galleryImageUrl)) {
+      return { ok: false, error: "رابط صورة المعرض غير صالح." };
+    }
+    image = galleryImageUrl;
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.carModel.update({
+        where: { id: existing.id },
+        data: {
+          name: modelName,
+          chairs: Math.floor(chairs),
+          engine,
+          transmission,
+          fuel,
+          price: Math.round(price),
+          vatRatePercent,
+          image,
+          alt,
+          badge,
+        },
+      });
+      await tx.fleet.updateMany({
+        where: { modelId: existing.id },
+        data: { quantity: Math.max(0, Math.round(quantity)) },
+      });
+    });
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      return {
+        ok: false,
+        error: "يوجد موديل بنفس الماركة والاسم والسنة. عدّل الاسم.",
+      };
+    }
+    console.error(e);
+    return { ok: false, error: "تعذّر الحفظ. تحقق من الاتصال بقاعدة البيانات." };
+  }
+
+  revalidatePath("/fleet");
+  revalidatePath("/");
+  revalidatePath("/admin");
+  revalidatePath("/admin/vehicles");
+  revalidatePath("/admin/vehicles/new");
+  revalidatePath(`/admin/vehicles/${existing.id}/edit`);
   return { ok: true };
 }

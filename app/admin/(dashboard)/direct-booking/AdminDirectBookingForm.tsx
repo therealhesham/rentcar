@@ -99,7 +99,7 @@ export function AdminDirectBookingForm({ brands }: { brands: BrandWithBookableMo
   if (brands.length === 0) {
     return (
       <p className="rounded-xl border border-outline-variant/30 bg-surface-container px-4 py-3 text-sm text-on-surface-variant">
-        لا توجد ماركات بموديلات متاحة في الأسطول. أضف مركبة من «إضافة مركبة» أولاً.
+        لا توجد ماركات بموديلات متاحة في الأسطول. أضف مركبة من «المركبات» ← «إضافة مركبة» أولاً.
       </p>
     );
   }

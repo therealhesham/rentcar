@@ -70,9 +70,9 @@ export default async function AdminDashboardPage() {
       <header className="mb-10">
         <h1 className="text-3xl font-extrabold tracking-tight">لوحة التحكم</h1>
         <p className="mt-2 max-w-2xl text-on-surface-variant">
-          نظرة عامة على المحتوى والطلبات. لإضافة سيارة استخدم{" "}
+          نظرة عامة على المحتوى والطلبات. لإدارة الأسطول والتعديل على السيارات استخدم{" "}
           <Link href="/admin/vehicles" className="font-bold text-primary hover:underline">
-            إضافة مركبة
+            المركبات
           </Link>
           ، ولإدارة التصنيفات{" "}
           <Link href="/admin/categories" className="font-bold text-primary hover:underline">

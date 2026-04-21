@@ -9,7 +9,7 @@ const nav = [
   { href: "/admin/customers", label: "العملاء" },
   { href: "/admin/direct-booking", label: "حجز مباشر (مكتب)" },
   { href: "/admin/home", label: "هيرو الرئيسية" },
-  { href: "/admin/vehicles", label: "إضافة مركبة" },
+  { href: "/admin/vehicles", label: "المركبات" },
   { href: "/admin/categories", label: "فئات الأسطول" },
   { href: "/admin/branches", label: "الفروع" },
   { href: "/admin/car-bookings", label: "حجوزات السيارات" },

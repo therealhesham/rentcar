@@ -75,13 +75,13 @@ export function SiteFooter() {
     <footer className="w-full text-white" style={{ backgroundColor: FOOTER_BG }}>
       <div className="mx-auto grid max-w-screen-xl grid-cols-1 gap-10 px-8 py-14 md:grid-cols-3">
         <div className="flex items-center gap-4 md:justify-self-start">
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-white p-2 shadow-sm">
+          <div className="">
             <Image
-              src="/logo.svg"
+              src="/footerlogo.svg"
               alt=""
-              width={48}
-              height={48}
-              className="h-12 w-12 object-contain"
+              width={90}
+              height={90}
+              // className="h-12 w-12 object-contain"
             />
           </div>
           <div>
