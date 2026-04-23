@@ -8,7 +8,7 @@ export function BookingWidget() {
   const [state, formAction, pending] = useActionState(submitBookingRequest, null);
 
   return (
-    <div className="absolute bottom-20 left-1/2 z-20 w-full max-w-6xl -translate-x-1/2 px-8">
+    <div className="relative z-20 mx-auto w-full">
       <form
         action={formAction}
         className="rounded-xl border border-outline-variant/10 bg-surface-container-lowest p-8 shadow-[0_40px_100px_rgba(119,89,39,0.1)]"

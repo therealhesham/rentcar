@@ -14,6 +14,10 @@ type AdminImageFieldProps = {
   required?: boolean;
   /** إظهار حقل رفع الملف */
   showFileInput?: boolean;
+  /** اسم حقل المعرض المخفي في النموذج */
+  galleryFieldName?: string;
+  /** اسم حقل رفع الملف */
+  fileFieldName?: string;
 };
 
 export function AdminImageField({
@@ -22,6 +26,8 @@ export function AdminImageField({
   currentImageUrl,
   required = false,
   showFileInput = true,
+  galleryFieldName = "galleryImageUrl",
+  fileFieldName = "imageFile",
 }: AdminImageFieldProps) {
   const id = useId();
   const [galleryOpen, setGalleryOpen] = useState(false);
@@ -32,7 +38,7 @@ export function AdminImageField({
 
   return (
     <div className="md:col-span-2">
-      <input type="hidden" name="galleryImageUrl" value={galleryUrl} />
+      <input type="hidden" name={galleryFieldName} value={galleryUrl} />
 
       <p className="text-sm font-medium">{label}</p>
 
@@ -75,7 +81,7 @@ export function AdminImageField({
           رفع ملف من الجهاز {required && !galleryUrl ? "(مطلوب)" : "(اختياري)"}
           <input
             key={fileReset}
-            name="imageFile"
+            name={fileFieldName}
             type="file"
             accept="image/jpeg,image/png,image/webp,image/gif"
             required={Boolean(required && !galleryUrl)}

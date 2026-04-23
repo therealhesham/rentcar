@@ -5,11 +5,18 @@ import { updateHomeHero } from "@/app/admin/home-hero-actions";
 import { AdminImageField } from "@/components/admin/AdminImageField";
 
 type Props = {
-  currentImageUrl: string;
-  currentAlt: string;
+  currentLeftImageUrl: string;
+  currentLeftAlt: string;
+  currentRightImageUrl: string;
+  currentRightAlt: string;
 };
 
-export function HomeHeroEditForm({ currentImageUrl, currentAlt }: Props) {
+export function HomeHeroEditForm({
+  currentLeftImageUrl,
+  currentLeftAlt,
+  currentRightImageUrl,
+  currentRightAlt,
+}: Props) {
   const [state, formAction, pending] = useActionState(updateHomeHero, null);
 
   return (
@@ -18,28 +25,50 @@ export function HomeHeroEditForm({ currentImageUrl, currentAlt }: Props) {
       encType="multipart/form-data"
       className="grid gap-6 rounded-2xl border border-outline-variant/30 bg-surface-container-low p-6"
     >
-      <input type="hidden" name="currentImage" value={currentImageUrl} />
+      <input type="hidden" name="currentImageLeft" value={currentLeftImageUrl} />
+      <input type="hidden" name="currentImageRight" value={currentRightImageUrl} />
 
       <div>
-        <h2 className="text-lg font-extrabold tracking-tight">صورة الهيرو (الصفحة الرئيسية)</h2>
+        <h2 className="text-lg font-extrabold tracking-tight">صور الهيرو (الصفحة الرئيسية)</h2>
         <p className="mt-2 text-sm text-on-surface-variant">
-          تُعرض خلف عنوان الصفحة الرئيسية. يمكن الاختيار من المعرض أو رفع صورة جديدة إلى مجلد «الصفحة
-          الرئيسية (هيرو)» في Spaces. إن لم تغيّر الصورة، تبقى الحالية.
+          صورة على اليسار وصورة على اليمين مع نص في المنتصف. يمكن الاختيار من المعرض أو رفع صورة
+          جديدة إلى مجلد «الصفحة الرئيسية (هيرو)» في Spaces. اترك الملف والمعرض فارغين للإبقاء على
+          الصورة الحالية لكل جانب.
         </p>
       </div>
 
       <AdminImageField
-        label="الصورة"
-        currentImageUrl={currentImageUrl}
+        label="صورة اليسار (خارجية / معرض)"
+        currentImageUrl={currentLeftImageUrl}
+        galleryFieldName="galleryImageUrlLeft"
+        fileFieldName="imageFileLeft"
         fileHelp="اترك الملف والمعرض فارغين للإبقاء على الصورة الحالية. بحد أقصى 5 ميجابايت."
       />
 
       <label className="text-sm font-medium">
-        وصف الصورة (alt) — للوصولية ومحركات البحث
+        وصف صورة اليسار (alt)
         <input
-          name="alt"
+          name="altLeft"
           required
-          defaultValue={currentAlt}
+          defaultValue={currentLeftAlt}
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+        />
+      </label>
+
+      <AdminImageField
+        label="صورة اليمين (معرض / داخلية)"
+        currentImageUrl={currentRightImageUrl}
+        galleryFieldName="galleryImageUrlRight"
+        fileFieldName="imageFileRight"
+        fileHelp="اترك الملف والمعرض فارغين للإبقاء على الصورة الحالية. بحد أقصى 5 ميجابايت."
+      />
+
+      <label className="text-sm font-medium">
+        وصف صورة اليمين (alt)
+        <input
+          name="altRight"
+          required
+          defaultValue={currentRightAlt}
           className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
         />
       </label>
@@ -56,7 +85,7 @@ export function HomeHeroEditForm({ currentImageUrl, currentAlt }: Props) {
 
       {state?.ok ? (
         <p className="text-sm font-bold text-primary" role="status">
-          تم حفظ صورة الهيرو بنجاح.
+          تم حفظ صور الهيرو بنجاح.
         </p>
       ) : null}
       {state?.error ? (

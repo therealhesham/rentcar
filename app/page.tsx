@@ -17,7 +17,12 @@ export default async function Home() {
     <div className="flex min-h-screen flex-col">
       <TopNav />
       <main className="flex-1">
-        <Hero imageUrl={hero.imageUrl} imageAlt={hero.imageAlt} />
+        <Hero
+          leftImageUrl={hero.leftImageUrl}
+          leftImageAlt={hero.leftImageAlt}
+          rightImageUrl={hero.rightImageUrl}
+          rightImageAlt={hero.rightImageAlt}
+        />
         <FleetCategories />
         <BranchesShowcase />
         <FleetShowcase />

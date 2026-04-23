@@ -2,40 +2,59 @@ import Image from "next/image";
 import { BookingWidget } from "./BookingWidget";
 
 export type HeroProps = {
-  imageUrl: string;
-  imageAlt: string;
+  leftImageUrl: string;
+  leftImageAlt: string;
+  rightImageUrl: string;
+  rightImageAlt: string;
 };
 
-export function Hero({ imageUrl, imageAlt }: HeroProps) {
+export function Hero({ leftImageUrl, leftImageAlt, rightImageUrl, rightImageAlt }: HeroProps) {
   return (
-    <header className="relative flex min-h-screen items-start justify-center overflow-x-hidden pt-28 md:pt-32">
-      <div className="absolute inset-0 z-0 overflow-hidden">
-        <Image
-          src={imageUrl}
-          alt={imageAlt}
-          fill
-          priority
-          className="object-cover"
-          sizes="100vw"
-        />
-        <div className="absolute inset-0 bg-gradient-to-l from-background via-background/40 to-transparent" />
-      </div>
-      <div className="relative z-10 mx-auto w-full max-w-7xl px-8 pb-[min(28rem,45vh)]">
-        <div className="max-w-2xl text-start">
-          <span className="mb-4 block text-xs font-bold tracking-[0.2em] text-primary">
-            التميّز في الحركة
-          </span>
-          <h1 className="mb-8 text-[3.5rem] font-extrabold leading-[1.15] tracking-tight text-on-surface">
-            رحلتك، <br />
-            <span className="text-primary">بأسلوبٍ راقٍ</span>
+    <header className="relative flex flex-col overflow-x-hidden pt-24 md:pt-28">
+      <div
+        className="grid w-full grid-cols-1 md:min-h-[min(45vh,22rem)] md:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)_minmax(0,1fr)]"
+        dir="ltr"
+      >
+        <div className="relative aspect-[5/3] w-full md:aspect-auto md:min-h-[min(52vh,28rem)]">
+          <Image
+            src={leftImageUrl}
+            alt={leftImageAlt}
+            fill
+            priority
+            className="object-cover"
+            sizes="(min-width: 768px) 35vw, 100vw"
+          />
+        </div>
+
+        <div
+          dir="rtl"
+          className="flex min-h-[12rem] flex-col items-center justify-center bg-surface-container-lowest px-6 py-10 text-center md:min-h-0 md:py-8"
+        >
+          <h1 className="text-balance text-2xl font-extrabold leading-snug tracking-tight text-[#0f3d47] md:text-3xl lg:text-4xl">
+            روانس لتأجير السيارات
           </h1>
-          <p className="mb-12 max-w-md text-lg leading-relaxed text-on-surface-variant">
-            اختبر قمة الفخامة في تأجير السيارات: أسطول مختار، خدمة كونسيرج
-            مخصّصة، وحرية الطريق المفتوح أمامك.
+          <p className="mt-4 max-w-md text-pretty text-sm font-medium leading-relaxed text-[#0f3d47]/90 md:text-base">
+            نقدم مجموعة واسعة من السيارات لتلبية احتياجات العملاء بمختلف الفئات والميزانيات.
           </p>
         </div>
+
+        <div className="relative aspect-[5/3] w-full md:aspect-auto md:min-h-[min(52vh,28rem)]">
+          <Image
+            src={rightImageUrl}
+            alt={rightImageAlt}
+            fill
+            priority
+            className="object-cover"
+            sizes="(min-width: 768px) 35vw, 100vw"
+          />
+        </div>
       </div>
-      <BookingWidget />
+
+      <div className="h-1.5 w-full shrink-0 bg-[#ebe4d9]" aria-hidden />
+
+      <div className="relative z-10 mx-auto w-full max-w-6xl px-4 pb-10 pt-8 sm:px-6 lg:px-8">
+        <BookingWidget />
+      </div>
     </header>
   );
 }
