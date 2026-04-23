@@ -3,28 +3,21 @@
 import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useId, useState } from "react";
-import { convertInquiryToDirect } from "@/app/admin/booking-request-actions";
-
-export type BookableModelOption = {
-  id: number;
-  label: string;
-};
+import { revertDirectToInquiry } from "@/app/admin/booking-request-actions";
 
 type Props = {
   bookingRequestId: number;
-  models: BookableModelOption[];
 };
 
 type InnerProps = {
   bookingRequestId: number;
-  models: BookableModelOption[];
   onClose: () => void;
 };
 
-function ConvertInquiryModalInner({ bookingRequestId, models, onClose }: InnerProps) {
+function RevertDirectModalInner({ bookingRequestId, onClose }: InnerProps) {
   const router = useRouter();
   const titleId = useId();
-  const [state, formAction, pending] = useActionState(convertInquiryToDirect, null);
+  const [state, formAction, pending] = useActionState(revertDirectToInquiry, null);
 
   useEffect(() => {
     if (state?.ok) {
@@ -60,7 +53,7 @@ function ConvertInquiryModalInner({ bookingRequestId, models, onClose }: InnerPr
       >
         <div className="flex items-start justify-between gap-3 border-b border-outline-variant/30 pb-4">
           <h2 id={titleId} className="text-lg font-extrabold tracking-tight">
-            تحويل إلى حجز مباشر
+            إرجاع إلى طلب استفسار
           </h2>
           <button
             type="button"
@@ -75,33 +68,10 @@ function ConvertInquiryModalInner({ bookingRequestId, models, onClose }: InnerPr
 
         <form action={formAction} className="mt-4 flex flex-col gap-4">
           <input type="hidden" name="bookingRequestId" value={bookingRequestId} />
-          <div>
-            <label
-              htmlFor={`car-model-${bookingRequestId}`}
-              className="mb-2 block text-sm font-bold text-on-surface"
-            >
-              السيارة من الأسطول المتاح
-            </label>
-            <select
-              id={`car-model-${bookingRequestId}`}
-              name="carModelId"
-              required
-              disabled={pending}
-              defaultValue=""
-              className="w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2.5 text-sm text-on-surface outline-none focus:ring-2 focus:ring-primary disabled:opacity-60"
-            >
-              <option value="" disabled>
-                اختر السيارة…
-              </option>
-              {models.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <p className="text-xs text-on-surface-variant">
-            يُربَط طلب الاستفسار بهذا الموديل ويُحوَّل إلى حجز مباشر وفق بيانات العميل في الطلب.
+          <p className="text-sm leading-relaxed text-on-surface-variant">
+            يُلغى ربط السيارة المحددة من الأسطول (يُفرَّج الحجز في هذه الفترة)، ويُعاد السجل إلى{" "}
+            <strong className="text-on-surface">طلب حجز (استفسار)</strong> بحالة جديدة. بيانات العميل
+            والتواريخ تبقى كما هي.
           </p>
           {state?.error ? (
             <p className="rounded-xl bg-error-container px-3 py-2 text-sm font-medium text-error" role="alert">
@@ -120,9 +90,9 @@ function ConvertInquiryModalInner({ bookingRequestId, models, onClose }: InnerPr
             <button
               type="submit"
               disabled={pending}
-              className="rounded-xl bg-primary px-5 py-2 text-sm font-bold text-on-primary disabled:opacity-60"
+              className="rounded-xl border border-error/40 bg-error-container/50 px-5 py-2 text-sm font-bold text-error hover:bg-error-container disabled:opacity-60"
             >
-              {pending ? "جاري التحويل…" : "تأكيد التحويل"}
+              {pending ? "جاري الإرجاع…" : "تأكيد الإرجاع"}
             </button>
           </div>
         </form>
@@ -131,17 +101,9 @@ function ConvertInquiryModalInner({ bookingRequestId, models, onClose }: InnerPr
   );
 }
 
-export function ConvertInquiryToDirectForm({ bookingRequestId, models }: Props) {
+export function RevertDirectToInquiryForm({ bookingRequestId }: Props) {
   const [open, setOpen] = useState(false);
   const [innerKey, setInnerKey] = useState(0);
-
-  if (models.length === 0) {
-    return (
-      <p className="max-w-[14rem] text-xs text-on-surface-variant">
-        لا توجد مركبات بكمية متاحة في الأسطول لربطها بالطلب.
-      </p>
-    );
-  }
 
   return (
     <>
@@ -151,9 +113,9 @@ export function ConvertInquiryToDirectForm({ bookingRequestId, models }: Props) 
           setInnerKey((k) => k + 1);
           setOpen(true);
         }}
-        className="rounded-lg border border-primary/50 bg-primary-container/30 px-3 py-1.5 text-xs font-bold text-primary hover:bg-primary-container/50"
+        className="rounded-lg border border-outline-variant bg-surface-container px-3 py-1.5 text-xs font-bold text-on-surface hover:bg-surface-container-high"
       >
-        تحويل لحجز مباشر
+        إرجاع لطلب استفسار
       </button>
 
       {open ? (
@@ -161,10 +123,9 @@ export function ConvertInquiryToDirectForm({ bookingRequestId, models }: Props) 
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
           role="presentation"
         >
-          <ConvertInquiryModalInner
+          <RevertDirectModalInner
             key={innerKey}
             bookingRequestId={bookingRequestId}
-            models={models}
             onClose={() => setOpen(false)}
           />
         </div>

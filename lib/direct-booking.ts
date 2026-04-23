@@ -531,3 +531,226 @@ export async function convertInquiryBookingToDirect(
 
   return { ok: true };
 }
+
+function isBlockingBookingStatus(status: string): boolean {
+  return !(NON_BLOCKING_BOOKING_STATUSES as readonly string[]).includes(status);
+}
+
+/** تعديل طلب حجز من لوحة الإدارة — للاستفسار: فئة السيارة؛ للمباشر: التحقق من الأسطول عند الحالات المستهلكة للموعد. */
+export type AdminBookingUpdateInput = DirectBookingCommon & {
+  status: string;
+  inquiryCarTypeSlug: string | null;
+  directCarModelId: number | null;
+};
+
+export async function updateBookingRequestByAdmin(
+  bookingRequestId: number,
+  input: AdminBookingUpdateInput,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const statusTrim = input.status.trim();
+  if (!statusTrim || statusTrim.length > 50) {
+    return { ok: false, error: "الحالة غير صالحة (حتى 50 حرفاً)." };
+  }
+
+  const booking = await prisma.bookingRequest.findUnique({
+    where: { id: bookingRequestId },
+    select: { id: true, kind: true },
+  });
+  if (!booking) {
+    return { ok: false, error: "الطلب غير موجود." };
+  }
+
+  const days = safeBookingDays(input.numberOfDays);
+  const commonData = {
+    fullName: input.fullName.trim(),
+    phone: input.phone,
+    ageRange: input.ageRange,
+    branch: input.branch,
+    pickupDate: input.pickupDate,
+    numberOfDays: days,
+    termsAccepted: input.termsAccepted,
+    status: statusTrim,
+  };
+
+  if (booking.kind === "INQUIRY") {
+    const slug = input.inquiryCarTypeSlug?.trim();
+    if (!slug) {
+      return { ok: false, error: "اختر فئة السيارة." };
+    }
+    const cat = await prisma.fleetCategory.findUnique({ where: { slug } });
+    if (!cat) {
+      return { ok: false, error: "فئة السيارة غير صالحة." };
+    }
+    try {
+      const updated = await prisma.bookingRequest.updateMany({
+        where: { id: bookingRequestId, kind: "INQUIRY" },
+        data: {
+          ...commonData,
+          carType: cat.slug,
+        },
+      });
+      if (updated.count === 0) {
+        return {
+          ok: false,
+          error: "تعذّر التحديث: نوع الطلب تغيّر. حدّث الصفحة.",
+        };
+      }
+    } catch (e) {
+      console.error(e);
+      return { ok: false, error: "تعذّر حفظ التعديلات." };
+    }
+    return { ok: true };
+  }
+
+  const carModelId = input.directCarModelId;
+  if (!carModelId || carModelId < 1 || !Number.isInteger(carModelId)) {
+    return { ok: false, error: "اختر موديل السيارة." };
+  }
+
+  const runOnce = () =>
+    prisma.$transaction(
+      async (tx) => {
+        const row = await tx.bookingRequest.findUnique({
+          where: { id: bookingRequestId },
+          select: { id: true, kind: true },
+        });
+        if (!row || row.kind !== "DIRECT") {
+          throw Object.assign(new Error("NOT_DIRECT"), {
+            userMessage: "الطلب ليس حجزاً مباشراً أو غير موجود.",
+          });
+        }
+
+        const model = await tx.carModel.findUnique({
+          where: { id: carModelId },
+          include: { category: true },
+        });
+        if (!model) {
+          throw Object.assign(new Error("NO_MODEL"), {
+            userMessage: "الموديل غير موجود.",
+          });
+        }
+
+        const carType = model.category.slug || model.category.title;
+
+        if (isBlockingBookingStatus(statusTrim)) {
+          const fleetUnits = await sumFleetQuantityForModel(tx, carModelId);
+          if (fleetUnits <= 0) {
+            throw new DirectBookingCapacityError(
+              "NO_FLEET",
+              "لا توجد وحدات لهذا الموديل في الأسطول.",
+              0,
+              0,
+            );
+          }
+          const rows = await loadBlockingDirectBookings(tx, carModelId, bookingRequestId);
+          const overlapping = countOverlapsFromRows(rows, input.pickupDate, days);
+          if (overlapping >= fleetUnits) {
+            throw new DirectBookingCapacityError(
+              "SLOT_FULL",
+              "الفترة ممتلئة بالنسبة لعدد العربيات في الأسطول.",
+              fleetUnits,
+              overlapping,
+            );
+          }
+        }
+
+        const updated = await tx.bookingRequest.updateMany({
+          where: { id: bookingRequestId, kind: "DIRECT" },
+          data: {
+            ...commonData,
+            carModelId,
+            carType,
+          },
+        });
+        if (updated.count === 0) {
+          throw Object.assign(new Error("RACE"), {
+            userMessage: "تعذّر التحديث. حدّث الصفحة.",
+          });
+        }
+      },
+      {
+        maxWait: 8000,
+        timeout: 15000,
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      },
+    );
+
+  try {
+    await runOnce();
+  } catch (e) {
+    if (isSerializationConflict(e)) {
+      try {
+        await runOnce();
+      } catch (e2) {
+        return mapConvertInquiryError(e2);
+      }
+    } else {
+      return mapConvertInquiryError(e);
+    }
+  }
+
+  return { ok: true };
+}
+
+/**
+ * إرجاع حجز مباشر إلى طلب استفسار: يُلغى ربط الموديل (يُفرَّج موعد من الأسطول) ويُعاد النوع إلى INQUIRY.
+ */
+export async function convertDirectBookingToInquiry(
+  bookingRequestId: number,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const runOnce = () =>
+    prisma.$transaction(
+      async (tx) => {
+        const booking = await tx.bookingRequest.findUnique({
+          where: { id: bookingRequestId },
+          select: { id: true, kind: true },
+        });
+        if (!booking) {
+          throw Object.assign(new Error("NOT_FOUND"), {
+            userMessage: "الطلب غير موجود.",
+          });
+        }
+        if (booking.kind !== "DIRECT") {
+          throw Object.assign(new Error("NOT_DIRECT"), {
+            userMessage: "يمكن إرجاع الحجوزات المباشرة فقط إلى طلب استفسار.",
+          });
+        }
+
+        const updated = await tx.bookingRequest.updateMany({
+          where: { id: bookingRequestId, kind: "DIRECT" },
+          data: {
+            kind: "INQUIRY",
+            carModelId: null,
+            status: "NEW",
+          },
+        });
+        if (updated.count === 0) {
+          throw Object.assign(new Error("RACE"), {
+            userMessage:
+              "تعذّر التحديث: حالة الطلب تغيّرت (ربما أُعيد مسبقاً). حدّث الصفحة.",
+          });
+        }
+      },
+      {
+        maxWait: 8000,
+        timeout: 15000,
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      },
+    );
+
+  try {
+    await runOnce();
+  } catch (e) {
+    if (isSerializationConflict(e)) {
+      try {
+        await runOnce();
+      } catch (e2) {
+        return mapConvertInquiryError(e2);
+      }
+    } else {
+      return mapConvertInquiryError(e);
+    }
+  }
+
+  return { ok: true };
+}

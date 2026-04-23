@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ConvertInquiryToDirectForm } from "@/components/admin/ConvertInquiryToDirectForm";
+import { EditBookingRequestForm } from "@/components/admin/EditBookingRequestForm";
+import { RevertDirectToInquiryForm } from "@/components/admin/RevertDirectToInquiryForm";
 import { verifyAdminSession } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
 
@@ -20,6 +22,7 @@ export default async function AdminDashboardPage() {
     bookingNew,
     bookingRequests,
     bookableModelsRaw,
+    fleetCategoriesForEdit,
   ] = await Promise.all([
     prisma.fleetCategory.count(),
     prisma.brand.count(),
@@ -45,6 +48,12 @@ export default async function AdminDashboardPage() {
           brand: { select: { name: true } },
         },
         orderBy: [{ brand: { name: "asc" } }, { name: "asc" }],
+      })
+      .catch(() => []),
+    prisma.fleetCategory
+      .findMany({
+        orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+        select: { slug: true, title: true },
       })
       .catch(() => []),
   ]);
@@ -123,8 +132,9 @@ export default async function AdminDashboardPage() {
       <section className="mt-10 rounded-2xl border border-outline-variant/30 bg-surface-container-low p-6">
         <h2 className="text-xl font-extrabold tracking-tight">آخر طلبات الحجز</h2>
         <p className="mt-1 text-sm text-on-surface-variant">
-          طلب حجز من الرئيسية (استفسار) مقابل حجز مباشر بعد اختيار سيارة — يظهر النوع في العمود الأول. يمكن
-          ربط طلب الاستفسار بسيارة متاحة في الأسطول وتحويله إلى حجز مباشر من عمود «تحويل».
+          طلب حجز من الرئيسية (استفسار) مقابل حجز مباشر بعد اختيار سيارة — يظهر النوع في العمود الأول.           يمكن
+          ربط طلب الاستفسار بسيارة متاحة في الأسطول وتحويله إلى حجز مباشر من عمود «تحويل»، أو تعديل بيانات الطلب
+          من عمود «تعديل».
         </p>
 
         {bookingRequests.length === 0 ? (
@@ -133,9 +143,10 @@ export default async function AdminDashboardPage() {
           </p>
         ) : (
           <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[1180px] text-start text-sm">
+            <table className="w-full min-w-[1260px] text-start text-sm">
               <thead>
                 <tr className="border-b border-outline-variant/30 text-on-surface-variant">
+                  <th className="px-3 py-2">تعديل</th>
                   <th className="px-3 py-2">النوع</th>
                   <th className="px-3 py-2">السيارة</th>
                   <th className="px-3 py-2">الاسم</th>
@@ -147,12 +158,35 @@ export default async function AdminDashboardPage() {
                   <th className="px-3 py-2">الأيام</th>
                   <th className="px-3 py-2">الحالة</th>
                   <th className="px-3 py-2">وقت الإرسال</th>
-                  <th className="px-3 py-2">تحويل</th>
+                  <th className="px-3 py-2">تحويل / إرجاع</th>
                 </tr>
               </thead>
               <tbody>
                 {bookingRequests.map((request) => (
                   <tr key={request.id} className="border-b border-outline-variant/20">
+                    <td className="px-3 py-2 align-top">
+                      <EditBookingRequestForm
+                        request={{
+                          id: request.id,
+                          kind: request.kind,
+                          fullName: request.fullName,
+                          phone: request.phone,
+                          ageRange: request.ageRange,
+                          carType: request.carType,
+                          branch: request.branch,
+                          pickupDateYmd: request.pickupDate.toISOString().slice(0, 10),
+                          numberOfDays: request.numberOfDays,
+                          termsAccepted: request.termsAccepted,
+                          status: request.status,
+                          carModelId: request.carModelId,
+                          carModelLabel: request.carModel
+                            ? `${request.carModel.brand.name} ${request.carModel.name}`
+                            : null,
+                        }}
+                        categories={fleetCategoriesForEdit}
+                        models={bookableModels}
+                      />
+                    </td>
                     <td className="px-3 py-2">
                       {request.kind === "DIRECT" ? "حجز مباشر" : "طلب حجز"}
                     </td>
@@ -183,7 +217,7 @@ export default async function AdminDashboardPage() {
                           models={bookableModels}
                         />
                       ) : (
-                        <span className="text-on-surface-variant">—</span>
+                        <RevertDirectToInquiryForm bookingRequestId={request.id} />
                       )}
                     </td>
                   </tr>
