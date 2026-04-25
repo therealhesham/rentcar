@@ -31,7 +31,7 @@ export function Hero({ leftImageUrl, leftImageAlt, rightImageUrl, rightImageAlt 
           className="flex min-h-[12rem] flex-col items-center justify-center bg-surface-container-lowest px-6 py-10 text-center md:min-h-0 md:py-8"
         >
           <h1 className="text-balance text-2xl font-extrabold leading-snug tracking-tight text-[#0f3d47] md:text-3xl lg:text-4xl">
-            روانس لتأجير السيارات
+            روائس لتأجير السيارات
           </h1>
           <p className="mt-4 max-w-md text-pretty text-sm font-medium leading-relaxed text-[#0f3d47]/90 md:text-base">
             نقدم مجموعة واسعة من السيارات لتلبية احتياجات العملاء بمختلف الفئات والميزانيات.
