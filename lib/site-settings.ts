@@ -45,51 +45,42 @@ export type HomeHeroSettings = {
   rightImageAlt: string;
 };
 
+const HOME_HERO_SETTING_KEYS = [
+  SITE_KEY_HOME_HERO_IMAGE_URL,
+  SITE_KEY_HOME_HERO_IMAGE_ALT,
+  SITE_KEY_HOME_HERO_LEFT_IMAGE_URL,
+  SITE_KEY_HOME_HERO_LEFT_IMAGE_ALT,
+  SITE_KEY_HOME_HERO_RIGHT_IMAGE_URL,
+  SITE_KEY_HOME_HERO_RIGHT_IMAGE_ALT,
+];
+
+const DEFAULT_HOME_HERO_SETTINGS: HomeHeroSettings = {
+  leftImageUrl: DEFAULT_HOME_HERO_LEFT_IMAGE_URL,
+  leftImageAlt: DEFAULT_HOME_HERO_LEFT_IMAGE_ALT,
+  rightImageUrl: DEFAULT_HOME_HERO_RIGHT_IMAGE_URL,
+  rightImageAlt: DEFAULT_HOME_HERO_RIGHT_IMAGE_ALT,
+};
+
 export async function getHomeHeroSettings(): Promise<HomeHeroSettings> {
   try {
-    const [
-      legacyUrlRow,
-      legacyAltRow,
-      leftUrlRow,
-      leftAltRow,
-      rightUrlRow,
-      rightAltRow,
-    ] = await Promise.all([
-      prisma.siteSetting.findUnique({
-        where: { key: SITE_KEY_HOME_HERO_IMAGE_URL },
-        select: { value: true },
-      }),
-      prisma.siteSetting.findUnique({
-        where: { key: SITE_KEY_HOME_HERO_IMAGE_ALT },
-        select: { value: true },
-      }),
-      prisma.siteSetting.findUnique({
-        where: { key: SITE_KEY_HOME_HERO_LEFT_IMAGE_URL },
-        select: { value: true },
-      }),
-      prisma.siteSetting.findUnique({
-        where: { key: SITE_KEY_HOME_HERO_LEFT_IMAGE_ALT },
-        select: { value: true },
-      }),
-      prisma.siteSetting.findUnique({
-        where: { key: SITE_KEY_HOME_HERO_RIGHT_IMAGE_URL },
-        select: { value: true },
-      }),
-      prisma.siteSetting.findUnique({
-        where: { key: SITE_KEY_HOME_HERO_RIGHT_IMAGE_ALT },
-        select: { value: true },
-      }),
-    ]);
+    const rows = await prisma.siteSetting.findMany({
+      where: { key: { in: HOME_HERO_SETTING_KEYS } },
+      select: { key: true, value: true },
+    });
+    const settings = new Map(rows.map((row) => [row.key, row.value]));
 
-    const legacyUrlCandidate = legacyUrlRow?.value?.trim() ?? "";
+    const legacyUrlCandidate =
+      settings.get(SITE_KEY_HOME_HERO_IMAGE_URL)?.trim() ?? "";
     const legacyUrl = isAllowedHomeHeroImageUrl(legacyUrlCandidate)
       ? legacyUrlCandidate
       : "";
 
-    const legacyAlt = legacyAltRow?.value?.trim() || "";
+    const legacyAlt = settings.get(SITE_KEY_HOME_HERO_IMAGE_ALT)?.trim() || "";
 
-    const leftUrlCandidate = leftUrlRow?.value?.trim() ?? "";
-    const rightUrlCandidate = rightUrlRow?.value?.trim() ?? "";
+    const leftUrlCandidate =
+      settings.get(SITE_KEY_HOME_HERO_LEFT_IMAGE_URL)?.trim() ?? "";
+    const rightUrlCandidate =
+      settings.get(SITE_KEY_HOME_HERO_RIGHT_IMAGE_URL)?.trim() ?? "";
 
     const leftImageUrl = isAllowedHomeHeroImageUrl(leftUrlCandidate)
       ? leftUrlCandidate
@@ -100,21 +91,20 @@ export async function getHomeHeroSettings(): Promise<HomeHeroSettings> {
       : legacyUrl || DEFAULT_HOME_HERO_RIGHT_IMAGE_URL;
 
     const leftImageAlt =
-      leftAltRow?.value?.trim() || legacyAlt || DEFAULT_HOME_HERO_LEFT_IMAGE_ALT;
+      settings.get(SITE_KEY_HOME_HERO_LEFT_IMAGE_ALT)?.trim() ||
+      legacyAlt ||
+      DEFAULT_HOME_HERO_LEFT_IMAGE_ALT;
     const rightImageAlt =
-      rightAltRow?.value?.trim() || legacyAlt || DEFAULT_HOME_HERO_RIGHT_IMAGE_ALT;
+      settings.get(SITE_KEY_HOME_HERO_RIGHT_IMAGE_ALT)?.trim() ||
+      legacyAlt ||
+      DEFAULT_HOME_HERO_RIGHT_IMAGE_ALT;
 
     return { leftImageUrl, leftImageAlt, rightImageUrl, rightImageAlt };
   } catch (e: unknown) {
     const code =
       e && typeof e === "object" && "code" in e ? String((e as { code: string }).code) : "";
-    if (code === "P2021") {
-      return {
-        leftImageUrl: DEFAULT_HOME_HERO_LEFT_IMAGE_URL,
-        leftImageAlt: DEFAULT_HOME_HERO_LEFT_IMAGE_ALT,
-        rightImageUrl: DEFAULT_HOME_HERO_RIGHT_IMAGE_URL,
-        rightImageAlt: DEFAULT_HOME_HERO_RIGHT_IMAGE_ALT,
-      };
+    if (code === "P2021" || code === "P2024") {
+      return DEFAULT_HOME_HERO_SETTINGS;
     }
     throw e;
   }

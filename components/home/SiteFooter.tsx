@@ -46,7 +46,7 @@ function TikTokIcon({ className }: { className?: string }) {
 const siteLinks = [
   { href: "/", label: "الرئيسية" },
   { href: "/fleet", label: "الاسطول" },
-  { href: "#about", label: "نبذة عنا" },
+  { href: "/about", label: "نبذة عنا" },
   { href: "#", label: "السياسة والخصوصية" },
   { href: "#", label: "الشروط والأحكام" },
 ];
@@ -73,15 +73,15 @@ export function SiteFooter() {
 
   return (
     <footer className="w-full text-white" style={{ backgroundColor: FOOTER_BG }}>
-      <div className="mx-auto grid max-w-screen-xl grid-cols-1 gap-10 px-8 py-14 md:grid-cols-3">
-        <div className="flex items-center gap-4 md:justify-self-start">
-          <div className="">
+      <div className="mx-auto grid max-w-screen-xl grid-cols-1 gap-10 px-5 py-10 text-center sm:px-8 sm:py-14 md:grid-cols-3 md:text-right">
+        <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center md:justify-self-start">
+          <div>
             <Image
               src="/footerlogo.svg"
               alt=""
               width={90}
               height={90}
-              // className="h-12 w-12 object-contain"
+              className="h-20 w-20 object-contain sm:h-[90px] sm:w-[90px]"
             />
           </div>
           <div>
@@ -94,7 +94,7 @@ export function SiteFooter() {
 
         <div>
           <h4 className="mb-4 text-sm font-bold text-white">خريطة الموقع</h4>
-          <ul className="space-y-2">
+          <ul className="flex flex-wrap justify-center gap-x-5 gap-y-2 md:block md:space-y-2">
             {siteLinks.map((link) => {
               const active = isLinkActive(pathname, link.href);
               return (
@@ -124,7 +124,7 @@ export function SiteFooter() {
           <h4 className="mb-4 text-sm font-bold text-white">
             وسائل التواصل الاجتماعي
           </h4>
-          <div className="mb-6 inline-flex items-center gap-5 rounded-full bg-white px-5 py-2.5 shadow-sm">
+          <div className="mb-6 inline-flex items-center justify-center gap-5 rounded-full bg-white px-5 py-2.5 shadow-sm">
             {socialLinks.map((s) => (
               <a
                 key={s.label}
@@ -143,7 +143,7 @@ export function SiteFooter() {
       </div>
 
       <div
-        className="w-full py-4 text-center text-xs font-medium text-white"
+        className="w-full px-4 py-4 text-center text-xs font-medium leading-relaxed text-white"
         style={{ backgroundColor: FOOTER_ACCENT }}
       >
         جميع الحقوق محفوظة لدى روائس لتأجير السيارات
