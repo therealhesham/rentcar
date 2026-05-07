@@ -23,19 +23,19 @@ export function SiteNav({ active = "home" }: SiteNavProps) {
   return (
     <nav className="fixed left-0 right-0 top-0 z-50">
       <div className="w-full border-b border-neutral-200 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex h-16 w-full max-w-screen-xl items-center justify-between gap-3 px-4 sm:h-20 sm:px-6">
-          <Link href="/" aria-label="الصفحة الرئيسية">
+        <div className="mx-auto relative flex h-16 w-full max-w-screen-xl items-center justify-between px-4 sm:h-24 sm:px-6">
+          <Link href="/" aria-label="الصفحة الرئيسية" className="relative z-10">
             <Image
               src="/logo.avif"
               alt="Rawaes"
-              width={132}
-              height={44}
-              className="h-10 w-auto object-contain"
+              width={176}
+              height={58}
+              className="h-12 w-auto object-contain sm:h-14"
               priority
             />
           </Link>
 
-          <div className="hidden items-center gap-1 rounded-full bg-[#dbb878] p-1.5 shadow-[0_8px_32px_rgba(119,89,39,0.15)] sm:flex">
+          <div className="hidden items-center gap-1 rounded-full bg-[#dbb878] p-1.5 shadow-[0_8px_32px_rgba(119,89,39,0.15)] sm:absolute sm:left-1/2 sm:-translate-x-1/2 sm:flex">
             {links.map((l) => {
               const isActive = active === l.key;
               return (
