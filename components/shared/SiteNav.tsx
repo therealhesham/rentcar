@@ -23,7 +23,7 @@ export function SiteNav({ active = "home" }: SiteNavProps) {
   return (
     <nav className="fixed left-0 right-0 top-0 z-50">
       <div className="w-full border-b border-neutral-200 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex h-16 w-full max-w-screen-xl items-center justify-between px-4 sm:px-6">
+        <div className="mx-auto flex h-16 w-full max-w-screen-xl items-center justify-between gap-3 px-4 sm:h-20 sm:px-6">
           <Link href="/" aria-label="الصفحة الرئيسية">
             <Image
               src="/logo.avif"
@@ -34,6 +34,25 @@ export function SiteNav({ active = "home" }: SiteNavProps) {
               priority
             />
           </Link>
+
+          <div className="hidden items-center gap-1 rounded-full bg-[#dbb878] p-1.5 shadow-[0_8px_32px_rgba(119,89,39,0.15)] sm:flex">
+            {links.map((l) => {
+              const isActive = active === l.key;
+              return (
+                <Link
+                  key={l.key}
+                  href={l.href}
+                  className={`rounded-full px-5 py-2.5 text-sm font-bold transition-all duration-300 lg:px-7 ${
+                    isActive
+                      ? "bg-[#163332] text-white shadow-sm"
+                      : "text-[#2a2520] hover:bg-[#163332]/10"
+                  }`}
+                >
+                  {l.label}
+                </Link>
+              );
+            })}
+          </div>
 
           <button
             onClick={() => setOpen((v) => !v)}
@@ -64,27 +83,6 @@ export function SiteNav({ active = "home" }: SiteNavProps) {
               </svg>
             )}
           </button>
-        </div>
-      </div>
-
-      <div className="absolute left-0 right-0 top-[52px] flex justify-center px-3 sm:px-4">
-        <div className="hidden items-center gap-1 rounded-full bg-[#dbb878] p-1.5 shadow-[0_8px_32px_rgba(119,89,39,0.15)] sm:flex">
-          {links.map((l) => {
-            const isActive = active === l.key;
-            return (
-              <Link
-                key={l.key}
-                href={l.href}
-                className={`rounded-full px-5 py-2.5 text-sm font-bold transition-all duration-300 lg:px-7 ${
-                  isActive
-                    ? "bg-[#163332] text-white shadow-sm"
-                    : "text-[#2a2520] hover:bg-[#163332]/10"
-                }`}
-              >
-                {l.label}
-              </Link>
-            );
-          })}
         </div>
       </div>
 
