@@ -12,41 +12,41 @@ export async function FleetCategories() {
   return (
     <section
       id="fleet-categories"
-      className="bg-surface-bright py-24 text-on-surface"
+      className="bg-surface-bright py-20 text-on-surface sm:py-24"
       aria-labelledby="fleet-categories-heading"
     >
-      <div className="mx-auto max-w-7xl px-8">
+      <div className="mx-auto max-w-screen-xl px-4 sm:px-8">
         <h2
           id="fleet-categories-heading"
-          className="mb-16 text-center text-3xl font-extrabold tracking-tight text-primary sm:text-4xl"
+          className="mb-14 text-center text-3xl font-extrabold tracking-tight text-[#dbb878] sm:text-4xl"
         >
           فئات أسطولنا
         </h2>
 
-        <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-3">
-          {categories.map((cat) => (
+        <div className="grid grid-cols-1 gap-x-10 gap-y-12 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {categories.map((cat, index) => (
             <article
               key={cat.id}
-              className="flex flex-col border border-outline-variant/25 bg-surface-container-lowest/80 p-6 shadow-[0_8px_30px_rgba(119,89,39,0.06)] transition-shadow hover:shadow-[0_12px_40px_rgba(119,89,39,0.1)]"
+              className={`flex flex-col ${index === 4 ? "xl:col-start-4" : ""}`}
             >
-              <h3 className="mb-5 text-center text-lg font-bold text-on-surface">
+              <h3 className="mb-2 text-center text-2xl font-extrabold text-[#003749]">
                 {cat.title}
               </h3>
-              <div className="relative mb-5 aspect-[16/11] w-full overflow-hidden rounded-xl bg-surface-container">
+              <div className="relative mx-auto mb-4 aspect-[16/9] w-full max-w-[280px]">
                 <Image
                   src={cat.image}
                   alt={cat.alt?.trim() || cat.title}
                   fill
-                  className="object-cover object-center"
-                  sizes="(min-width: 1024px) 22vw, (min-width: 640px) 45vw, 100vw"
+                  className="object-contain object-center"
+                  sizes="(min-width: 1280px) 200px, (min-width: 1024px) 22vw, (min-width: 640px) 45vw, 85vw"
                 />
               </div>
-              <p className="mb-6 flex-1 text-start text-sm leading-relaxed text-on-surface-variant">
+              <p className="mb-4 flex-1 text-sm leading-7 text-on-surface-variant">
                 {cat.description}
               </p>
               <Link
                 href={`/fleet?category=${encodeURIComponent(cat.slug)}`}
-                className="mt-auto text-start text-sm font-bold text-primary underline-offset-4 transition-colors hover:text-on-primary-container hover:underline"
+                className="mt-auto text-sm font-semibold text-on-surface/80 underline-offset-4 transition-colors hover:text-primary hover:underline"
               >
                 اكتشف المزيد
               </Link>

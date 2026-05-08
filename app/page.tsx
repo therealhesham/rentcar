@@ -1,8 +1,8 @@
 import {
   BranchesShowcase,
   FleetCategories,
-  FleetShowcase,
   Hero,
+  ServicesSection,
   SiteFooter,
   TopNav,
 } from "@/components/home";
@@ -23,9 +23,9 @@ export default async function Home() {
           rightImageUrl={hero.rightImageUrl}
           rightImageAlt={hero.rightImageAlt}
         />
+        <ServicesSection />
         <FleetCategories />
         <BranchesShowcase />
-        <FleetShowcase />
       </main>
       <SiteFooter />
     </div>

@@ -29,6 +29,9 @@ model Branch {
   slug      String   @unique @db.VarChar(64)
   name      String
   tagline   String?  @db.VarChar(255)
+  address   String?  @db.VarChar(255)
+  phone     String?  @db.VarChar(32)
+  mapUrl    String?  @db.Text
   image     String?  @db.Text
   alt       String?  @db.Text
   sortOrder Int      @default(0)
@@ -60,7 +63,7 @@ model FleetCategory {
 model GalleryFolder {
   id        Int      @id @default(autoincrement())
   slug      String   @unique @db.VarChar(64)
-  label     String
+  label     String   @db.VarChar(255)
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

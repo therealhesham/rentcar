@@ -16,6 +16,19 @@ export async function getNewBranchesForHome() {
   }
 }
 
+/** كل الفروع المفعّلة (مستخدمة في صفحة من نحن) */
+export async function getActiveBranches() {
+  try {
+    return await prisma.branch.findMany({
+      where: { isActive: true },
+      orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+    });
+  } catch {
+    // لا نكسر الصفحة عند غياب الجدول أو مشاكل الاتصال
+    return [];
+  }
+}
+
 export function branchImageUrl(image: string | null | undefined): string {
   const u = image?.trim();
   return u || PLACEHOLDER_BRANCH_IMG;

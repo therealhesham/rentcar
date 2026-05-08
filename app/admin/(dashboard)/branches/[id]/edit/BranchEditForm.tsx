@@ -10,6 +10,9 @@ type Branch = {
   slug: string;
   name: string;
   tagline: string | null;
+  address: string | null;
+  phone: string | null;
+  mapUrl: string | null;
   image: string | null;
   alt: string | null;
   sortOrder: number;
@@ -62,6 +65,33 @@ export function BranchEditForm({ branch }: Props) {
         <input
           name="tagline"
           defaultValue={branch.tagline ?? ""}
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+        />
+      </label>
+      <label className="text-sm font-medium md:col-span-1">
+        رقم الجوال
+        <input
+          name="phone"
+          defaultValue={branch.phone ?? ""}
+          dir="ltr"
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+        />
+      </label>
+      <label className="text-sm font-medium md:col-span-2">
+        العنوان
+        <input
+          name="address"
+          defaultValue={branch.address ?? ""}
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+        />
+      </label>
+      <label className="text-sm font-medium md:col-span-2">
+        رابط الخرائط (https)
+        <input
+          name="mapUrl"
+          type="url"
+          defaultValue={branch.mapUrl ?? ""}
+          dir="ltr"
           className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
         />
       </label>

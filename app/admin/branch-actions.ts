@@ -32,8 +32,23 @@ function isHttpsUrl(s: string): boolean {
   }
 }
 
+function normalizePhone(raw: string): string | null {
+  const v = raw.trim();
+  return v ? v : null;
+}
+
+function normalizeMapUrl(raw: string): string | null {
+  const v = raw.trim();
+  if (!v) return null;
+  if (!isHttpsUrl(v)) {
+    throw new Error("رابط الخريطة يجب أن يبدأ بـ https://");
+  }
+  return v;
+}
+
 function revalidateBranchPaths() {
   revalidatePath("/");
+  revalidatePath("/about");
   revalidatePath("/admin");
   revalidatePath("/admin/branches");
 }
@@ -78,6 +93,14 @@ export async function createBranch(
   const name = String(formData.get("name") ?? "").trim();
   const slugRaw = String(formData.get("slug") ?? "").trim();
   const tagline = String(formData.get("tagline") ?? "").trim() || null;
+  const address = String(formData.get("address") ?? "").trim() || null;
+  const phone = normalizePhone(String(formData.get("phone") ?? ""));
+  let mapUrl: string | null = null;
+  try {
+    mapUrl = normalizeMapUrl(String(formData.get("mapUrl") ?? ""));
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "رابط الخريطة غير صالح." };
+  }
   const alt = String(formData.get("alt") ?? "").trim() || null;
   const sortOrder = Number(formData.get("sortOrder") ?? 0);
   const isActive = String(formData.get("isActive") ?? "true") === "true";
@@ -112,6 +135,9 @@ export async function createBranch(
         slug,
         name,
         tagline,
+        address,
+        phone,
+        mapUrl,
         alt,
         image,
         sortOrder: Math.round(sortOrder),
@@ -147,6 +173,14 @@ export async function updateBranch(
   const name = String(formData.get("name") ?? "").trim();
   const slugRaw = String(formData.get("slug") ?? "").trim();
   const tagline = String(formData.get("tagline") ?? "").trim() || null;
+  const address = String(formData.get("address") ?? "").trim() || null;
+  const phone = normalizePhone(String(formData.get("phone") ?? ""));
+  let mapUrl: string | null = null;
+  try {
+    mapUrl = normalizeMapUrl(String(formData.get("mapUrl") ?? ""));
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "رابط الخريطة غير صالح." };
+  }
   const alt = String(formData.get("alt") ?? "").trim() || null;
   const sortOrder = Number(formData.get("sortOrder") ?? 0);
   const isActive = String(formData.get("isActive") ?? "true") === "true";
@@ -183,6 +217,9 @@ export async function updateBranch(
         slug,
         name,
         tagline,
+        address,
+        phone,
+        mapUrl,
         alt,
         image,
         sortOrder: Math.round(sortOrder),
