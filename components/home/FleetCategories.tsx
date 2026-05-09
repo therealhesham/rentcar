@@ -12,7 +12,7 @@ export async function FleetCategories() {
   return (
     <section
       id="fleet-categories"
-      className="bg-surface-bright py-20 text-on-surface sm:py-24"
+      className="bg-white py-20 text-on-surface sm:py-24"
       aria-labelledby="fleet-categories-heading"
     >
       <div className="mx-auto max-w-screen-xl px-4 sm:px-8">
