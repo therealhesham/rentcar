@@ -1,7 +1,6 @@
 import Link from "next/link";
 
 const IMG = "/ourfleet.jpg";
-const COPIES = 6;
 
 export function FleetBanner() {
   return (
@@ -10,53 +9,43 @@ export function FleetBanner() {
       className="relative isolate overflow-hidden"
       style={{ height: "clamp(180px, 28vw, 320px)" }}
     >
-      {/* keyframe مدمج مباشرةً — يعمل في Server Components بدون مشكلة */}
       <style>{`
-        @keyframes fleet-pan {
-          from { transform: translateX(0); }
-          to   { transform: translateX(-50%); }
+        @keyframes fleet-drift {
+          0%   { transform: scale(1.12) translateX(-5%); }
+          100% { transform: scale(1.12) translateX(5%); }
         }
       `}</style>
 
       {/*
-        شريط = 6 نسخ متلاصقة من الصورة.
-        كل نسخة بعرض صريح = عرض الشاشة (100vw).
-        الشريط يتحرك من 0 إلى -50% من عرضه الكلي (= 3 نسخ = 300vw).
-        عند الـ reset ترى النسخة 4 مكان النسخة 1 — مطابقة تامة → loop سلس.
-        لا يوجد dir="ltr" لأن translateX سلبي يتحرك نحو اليسار بغض النظر عن RTL.
+        Single image scaled up 12% so edges never show during the pan.
+        Pan range ±5% with alternate direction = seamless infinite drift.
+        ease-in-out gives a soft, cinematic start/end to each swing.
+        No copies, no seam, no cut — ever.
       */}
-      <div
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={IMG}
+        alt=""
         aria-hidden
-        className="pointer-events-none absolute top-0 left-0 -z-10 flex h-full flex-row"
+        draggable={false}
+        fetchPriority="high"
+        className="pointer-events-none absolute inset-0 -z-10 h-full w-full object-cover"
         style={{
-          width: `${COPIES * 100}vw`,
-          animationName: "fleet-pan",
-          animationDuration: "28s",
-          animationTimingFunction: "linear",
+          animationName: "fleet-drift",
+          animationDuration: "14s",
+          animationTimingFunction: "ease-in-out",
           animationIterationCount: "infinite",
+          animationDirection: "alternate",
           willChange: "transform",
         }}
-      >
-        {Array.from({ length: COPIES }).map((_, i) => (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            key={i}
-            src={IMG}
-            alt=""
-            draggable={false}
-            className="block h-full flex-none object-cover"
-            style={{ width: "100vw", minWidth: "100vw", maxWidth: "100vw" }}
-            fetchPriority={i === 0 ? "high" : "low"}
-          />
-        ))}
-      </div>
+      />
 
-      {/* طبقة تعتيم */}
-      <div className="absolute inset-0" aria-hidden />
+      {/* dark overlay */}
+      <div className="absolute inset-0 " aria-hidden />
 
-      {/* المحتوى */}
+      {/* content */}
       <div className="relative z-10 flex h-full flex-col items-center justify-center gap-4 px-4 text-center">
-        <h2 className="rounded-lg  px-6 py-3 text-3xl font-black tracking-wide text-white drop-shadow-lg sm:text-4xl lg:text-5xl">
+        <h2 className="rounded-lg px-6 py-3 text-3xl font-black tracking-wide text-white drop-shadow-lg sm:text-4xl lg:text-5xl">
           تصفح اسطولنا
         </h2>
         <Link
