@@ -1,6 +1,51 @@
 import { prisma } from "@/lib/prisma";
 import { isTrustedSpacesImageUrl } from "@/lib/spaces-upload";
 
+/* ─── Promo Banner (Carousel) ──────────────────────────────── */
+export const SITE_KEY_PROMO_BANNER_SLIDES = "promo_banner_slides";
+
+export type PromoBannerSlide = {
+  imageUrl: string;
+  linkUrl: string;
+};
+
+export function isAllowedPromoBannerImageUrl(url: string): boolean {
+  const u = url.trim();
+  if (!u) return false;
+  if (isTrustedSpacesImageUrl(u)) return true;
+  try {
+    const p = new URL(u);
+    return (
+      p.protocol === "https:" &&
+      (p.hostname === "lh3.googleusercontent.com" ||
+        p.hostname === "images.unsplash.com")
+    );
+  } catch {
+    return false;
+  }
+}
+
+export async function getPromoBannerSlides(): Promise<PromoBannerSlide[]> {
+  try {
+    const row = await prisma.siteSetting.findUnique({
+      where: { key: SITE_KEY_PROMO_BANNER_SLIDES },
+      select: { value: true },
+    });
+    if (!row?.value) return [];
+    const parsed = JSON.parse(row.value) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (s): s is PromoBannerSlide =>
+        typeof s === "object" && s !== null &&
+        typeof (s as PromoBannerSlide).imageUrl === "string" &&
+        (s as PromoBannerSlide).imageUrl.trim() !== "",
+    );
+  } catch {
+    return [];
+  }
+}
+/* ──────────────────────────────────────────────────────────── */
+
 /** صورة الهيرو الافتراضية (قديمة — للتوافق مع الروابط المحفوظة) */
 export const DEFAULT_HOME_HERO_IMAGE_URL =
   "https://lh3.googleusercontent.com/aida-public/AB6AXuD_wHp6ORrYsBkgi0UyOM9QPOZM5bDcBfhhiqFUAWIi_pRppfkX3yuO9YkH7lRHPQn0zMBLvBo77J3n-avrqC22bLvZ71W4X4QAFO6YqbuEJtNyFdOIgtj8yWTFS5AkpYAADSaZIePszEqX3bSF4-QdK92ONP57oeRSrrsiQ_SQu0Z0EXEoRFknm0KQUTN9WyJSd9H9sm_nfmeIVaY9ud5JaTpCFqXlwGaNLIvs-RFTOJcu-EAu_w31N9dPlt3mVhqd6YyUdFRk3Y6M";

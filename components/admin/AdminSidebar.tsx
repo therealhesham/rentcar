@@ -9,6 +9,7 @@ const nav = [
   { href: "/admin/customers", label: "العملاء" },
   { href: "/admin/direct-booking", label: "حجز مباشر (مكتب)" },
   { href: "/admin/home", label: "هيرو الرئيسية" },
+  { href: "/admin/promo-banner", label: "البانر الترويجي" },
   { href: "/admin/vehicles", label: "المركبات" },
   { href: "/admin/categories", label: "فئات الأسطول" },
   { href: "/admin/branches", label: "الفروع" },

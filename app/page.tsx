@@ -3,6 +3,7 @@ import {
   FleetBanner,
   FleetCategories,
   Hero,
+  PromoBanner,
   ServicesSection,
   SiteFooter,
   TopNav,
@@ -24,6 +25,7 @@ export default async function Home() {
           rightImageUrl={hero.rightImageUrl}
           rightImageAlt={hero.rightImageAlt}
         />
+        <PromoBanner />
         <ServicesSection />
         <FleetBanner />
         <FleetCategories />

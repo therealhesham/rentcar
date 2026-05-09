@@ -45,6 +45,18 @@ export async function requireGalleryFolderSlug(slug: string): Promise<void> {
   }
 }
 
+/** ينشئ المجلد تلقائياً إن لم يكن موجوداً — مناسب لمجلدات النظام الداخلية */
+export async function ensureGalleryFolderSlug(
+  slug: string,
+  label: string,
+): Promise<void> {
+  await prisma.galleryFolder.upsert({
+    where: { slug },
+    create: { slug, label, sortOrder: 999 },
+    update: {},
+  });
+}
+
 export async function createGalleryFolder(input: {
   label: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
