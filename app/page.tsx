@@ -1,5 +1,6 @@
 import {
   BranchesShowcase,
+  FleetBanner,
   FleetCategories,
   Hero,
   ServicesSection,
@@ -24,6 +25,7 @@ export default async function Home() {
           rightImageAlt={hero.rightImageAlt}
         />
         <ServicesSection />
+        <FleetBanner />
         <FleetCategories />
         <BranchesShowcase />
       </main>

@@ -80,3 +80,8 @@ body {
 .editorial-shadow {
   box-shadow: 0 12px 40px rgba(119, 89, 39, 0.06);
 }
+
+@keyframes pan-left {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}

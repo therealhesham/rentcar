@@ -1,5 +1,6 @@
 export { BookingWidget } from "./BookingWidget";
 export { BranchesShowcase } from "./BranchesShowcase";
+export { FleetBanner } from "./FleetBanner";
 export { FleetCategories } from "./FleetCategories";
 export { FleetShowcase } from "./FleetShowcase";
 export { Hero } from "./Hero";
