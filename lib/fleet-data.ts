@@ -19,10 +19,15 @@ const PLACEHOLDER_IMG =
 
 export async function getFleetCarsForDisplay(
   categorySlug?: string | null,
+  modelIds?: number[] | null,
 ): Promise<FleetCar[]> {
+  const idFilter =
+    modelIds && modelIds.length > 0 ? { modelId: { in: modelIds } } : {};
+
   const rows = await prisma.fleet.findMany({
     where: {
       quantity: { gt: 0 },
+      ...idFilter,
       ...(categorySlug
         ? {
             model: {

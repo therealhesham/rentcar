@@ -1,14 +1,21 @@
 import Image from "next/image";
-import { BookingWidget } from "./BookingWidget";
+import { BookingWidget, type BookingBranchOption } from "./BookingWidget";
 
 export type HeroProps = {
   leftImageUrl: string;
   leftImageAlt: string;
   rightImageUrl: string;
   rightImageAlt: string;
+  branches: BookingBranchOption[];
 };
 
-export function Hero({ leftImageUrl, leftImageAlt, rightImageUrl, rightImageAlt }: HeroProps) {
+export function Hero({
+  leftImageUrl,
+  leftImageAlt,
+  rightImageUrl,
+  rightImageAlt,
+  branches,
+}: HeroProps) {
   return (
     <header className="relative flex flex-col overflow-x-hidden pt-24 md:pt-28">
       <div
@@ -53,7 +60,7 @@ export function Hero({ leftImageUrl, leftImageAlt, rightImageUrl, rightImageAlt 
       <div className="h-1.5 w-full shrink-0 bg-[#ebe4d9]" aria-hidden />
 
       <div className="relative z-10 mx-auto w-full max-w-6xl px-4 pb-10 pt-8 sm:px-6 lg:px-8">
-        <BookingWidget />
+        <BookingWidget branches={branches} />
       </div>
     </header>
   );

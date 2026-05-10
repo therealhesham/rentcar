@@ -100,6 +100,7 @@ export default async function AdminCarBookingsPage() {
                         <th className="px-3 py-2">الاسم</th>
                         <th className="px-3 py-2">الجوال</th>
                         <th className="px-3 py-2">الفرع</th>
+                        <th className="px-3 py-2">الاستلام</th>
                         <th className="px-3 py-2">الحالة</th>
                         <th className="px-3 py-2">رقم الطلب</th>
                       </tr>
@@ -124,6 +125,26 @@ export default async function AdminCarBookingsPage() {
                             </td>
                             <td className="px-3 py-2">
                               {BRANCH_LABEL[b.branch] ?? b.branch}
+                            </td>
+                            <td className="px-3 py-2">
+                              {b.pickupMode === "DELIVERY" &&
+                              b.deliveryLat != null &&
+                              b.deliveryLng != null ? (
+                                <span className="inline-flex flex-col gap-1">
+                                  <span className="font-bold text-primary">توصيل</span>
+                                  <a
+                                    href={`https://www.google.com/maps?q=${b.deliveryLat},${b.deliveryLng}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-xs font-bold text-on-surface-variant underline"
+                                    dir="ltr"
+                                  >
+                                    الخريطة
+                                  </a>
+                                </span>
+                              ) : (
+                                <span className="text-on-surface-variant">فرع</span>
+                              )}
                             </td>
                             <td className="px-3 py-2">{b.status}</td>
                             <td className="px-3 py-2 tabular-nums text-on-surface-variant">

@@ -3,9 +3,10 @@ import { FleetCarCard } from "./FleetCarCard";
 
 type FleetCarGridProps = {
   cars: FleetCar[];
+  branchOptions?: { slug: string; name: string }[];
 };
 
-export function FleetCarGrid({ cars }: FleetCarGridProps) {
+export function FleetCarGrid({ cars, branchOptions }: FleetCarGridProps) {
   if (cars.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-outline-variant/50 bg-surface-container-low/50 px-8 py-16 text-center">
@@ -22,7 +23,7 @@ export function FleetCarGrid({ cars }: FleetCarGridProps) {
   return (
     <div className="grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-3">
       {cars.map((car) => (
-        <FleetCarCard key={car.id} car={car} />
+        <FleetCarCard key={car.id} car={car} branchOptions={branchOptions} />
       ))}
     </div>
   );

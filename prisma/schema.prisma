@@ -136,6 +136,10 @@ model BookingRequest {
   ageRange      String
   carType       String
   branch        String
+  /// استلام من فرع الشركة أو توصيل للعميل (حجز مباشر من الموقع).
+  pickupMode    String?   @db.VarChar(16)
+  deliveryLat   Float?
+  deliveryLng   Float?
   pickupDate    DateTime
   numberOfDays  Int
   termsAccepted Boolean             @default(true)

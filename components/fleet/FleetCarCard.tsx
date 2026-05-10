@@ -4,7 +4,15 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { SpecIcon } from "@/components/icons";
 import type { FleetCar } from "@/lib/fleet-types";
+import type { StoredFleetSearchContext } from "@/lib/fleet-search-storage";
+import { FLEET_SEARCH_STORAGE_KEY } from "@/lib/fleet-search-storage";
 import { FLEET_CARD_TAX_LINE_AR } from "@/lib/pricing";
+
+const FALLBACK_BRANCH_OPTIONS: { slug: string; name: string }[] = [
+  { slug: "jeddah", name: "جدة" },
+  { slug: "madinah", name: "المدينة المنورة" },
+  { slug: "tabuk", name: "تبوك" },
+];
 
 type AvailabilityState =
   | null
@@ -19,17 +27,50 @@ type AvailabilityState =
 function DirectBookingForm({
   car,
   dialogRef,
+  branchOptions,
 }: {
   car: FleetCar;
   dialogRef: React.RefObject<HTMLDialogElement | null>;
+  branchOptions: { slug: string; name: string }[];
 }) {
+  const opts = branchOptions.length > 0 ? branchOptions : FALLBACK_BRANCH_OPTIONS;
   const [pickupDate, setPickupDate] = useState("");
   const [days, setDays] = useState("");
+  const [branch, setBranch] = useState(opts[0]?.slug ?? "jeddah");
+  const [deliveryHint, setDeliveryHint] = useState<string | null>(null);
   const [availability, setAvailability] = useState<AvailabilityState>(null);
   const [submitState, setSubmitState] = useState<{ ok?: boolean; error?: string } | null>(
     null,
   );
   const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(FLEET_SEARCH_STORAGE_KEY);
+      if (!raw) return;
+      const ctx = JSON.parse(raw) as StoredFleetSearchContext;
+      if (ctx.pickupDate) setPickupDate(ctx.pickupDate);
+      if (ctx.days) setDays(String(ctx.days));
+      if (
+        ctx.returnBranch &&
+        opts.some((b) => b.slug === ctx.returnBranch)
+      ) {
+        setBranch(ctx.returnBranch);
+      }
+      if (
+        ctx.mode === "delivery" &&
+        ctx.deliveryLat != null &&
+        ctx.deliveryLng != null
+      ) {
+        setDeliveryHint(
+          `موقع التوصيل من البحث: ${ctx.deliveryLat.toFixed(5)}, ${ctx.deliveryLng.toFixed(5)} — الإرجاع عبر الفرع أدناه.`,
+        );
+      }
+    } catch {
+      /* ignore */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- مرة واحدة عند التركيب؛ النموذج يُعاد بمفتاح formKey
+  }, []);
 
   useEffect(() => {
     if (!pickupDate || !days.trim()) {
@@ -101,7 +142,29 @@ function DirectBookingForm({
     const localPhone = String(fd.get("phone") ?? "")
       .replace(/\s+/g, "")
       .trim();
-    const body = {
+
+    let pickupMode: "BRANCH" | "DELIVERY" = "BRANCH";
+    let deliveryLat: number | undefined;
+    let deliveryLng: number | undefined;
+    try {
+      const raw = sessionStorage.getItem(FLEET_SEARCH_STORAGE_KEY);
+      if (raw) {
+        const ctx = JSON.parse(raw) as StoredFleetSearchContext;
+        if (
+          ctx.mode === "delivery" &&
+          typeof ctx.deliveryLat === "number" &&
+          typeof ctx.deliveryLng === "number"
+        ) {
+          pickupMode = "DELIVERY";
+          deliveryLat = ctx.deliveryLat;
+          deliveryLng = ctx.deliveryLng;
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+
+    const body: Record<string, unknown> = {
       carModelId: car.modelId,
       name: String(fd.get("name") ?? "").trim(),
       phone: localPhone,
@@ -110,7 +173,12 @@ function DirectBookingForm({
       pickupDate: String(fd.get("pickupDate") ?? ""),
       days: Number(fd.get("days")),
       terms: true,
+      pickupMode,
     };
+    if (pickupMode === "DELIVERY") {
+      body.deliveryLat = deliveryLat;
+      body.deliveryLng = deliveryLng;
+    }
 
     try {
       const res = await fetch("/api/bookings/direct", {
@@ -205,19 +273,25 @@ function DirectBookingForm({
 
       <div className="space-y-2">
         <label className="ms-1 text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">
-          فرع الاستلام
+          فرع الاستلام / الإرجاع
         </label>
         <select
           className="h-12 w-full appearance-none rounded-xl border border-outline-variant/30 bg-surface-container-lowest px-4 text-start text-sm outline-none focus:ring-2 focus:ring-primary-container"
           name="branch"
-          defaultValue="jeddah"
+          value={branch}
+          onChange={(ev) => setBranch(ev.target.value)}
           dir="rtl"
           required
         >
-          <option value="jeddah">جدة</option>
-          <option value="madinah">المدينة المنورة</option>
-          <option value="tabuk">تبوك</option>
+          {opts.map((b) => (
+            <option key={b.slug} value={b.slug}>
+              {b.name}
+            </option>
+          ))}
         </select>
+        {deliveryHint ? (
+          <p className="text-[11px] leading-relaxed text-on-surface-variant">{deliveryHint}</p>
+        ) : null}
       </div>
 
       <div className="space-y-2">
@@ -304,12 +378,20 @@ function DirectBookingForm({
   );
 }
 
-export function FleetCarCard({ car }: { car: FleetCar }) {
+export function FleetCarCard({
+  car,
+  branchOptions = FALLBACK_BRANCH_OPTIONS,
+}: {
+  car: FleetCar;
+  branchOptions?: { slug: string; name: string }[];
+}) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [formKey, setFormKey] = useState(0);
   const [portalReady, setPortalReady] = useState(false);
 
   useEffect(() => {
+    // بوابة الحوار إلى document.body بعد التركيب على العميل
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- متزامن مقصود لتجنّب عدم تطابق SSR
     setPortalReady(true);
   }, []);
 
@@ -331,7 +413,7 @@ export function FleetCarCard({ car }: { car: FleetCar }) {
           dir="rtl"
         >
           <h3 className="mb-4 text-xl font-extrabold text-primary">حجز مباشر</h3>
-          <DirectBookingForm key={formKey} car={car} dialogRef={dialogRef} />
+          <DirectBookingForm key={formKey} car={car} dialogRef={dialogRef} branchOptions={branchOptions} />
         </div>
       </dialog>,
       document.body,

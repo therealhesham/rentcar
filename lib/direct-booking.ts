@@ -18,10 +18,61 @@ export type DirectBookingCommon = {
   pickupDate: Date;
   numberOfDays: number;
   termsAccepted: boolean;
+  /** استلام من فرع أو توصيل للعنوان */
+  pickupMode: "BRANCH" | "DELIVERY";
+  deliveryLat: number | null;
+  deliveryLng: number | null;
 };
 
 const AGE_OPTIONS = new Set(["25-35", "35-50", "50+"]);
-const BRANCH_OPTIONS = new Set(["jeddah", "madinah", "tabuk"]);
+
+function isBranchSlugFormat(branch: string): boolean {
+  const s = branch.trim().toLowerCase();
+  return /^[a-z0-9-]{1,64}$/.test(s);
+}
+
+function parseDeliveryPartFromJson(
+  body: Record<string, unknown>,
+): { ok: true; pickupMode: "BRANCH" | "DELIVERY"; deliveryLat: number | null; deliveryLng: number | null } | { ok: false; error: string } {
+  const raw = body.pickupMode;
+  const pickupMode: "BRANCH" | "DELIVERY" =
+    raw === "DELIVERY" || raw === "delivery" ? "DELIVERY" : "BRANCH";
+
+  if (pickupMode === "BRANCH") {
+    return { ok: true, pickupMode: "BRANCH", deliveryLat: null, deliveryLng: null };
+  }
+
+  const lat = Number(body.deliveryLat);
+  const lng = Number(body.deliveryLng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return { ok: false, error: "إحداثيات موقع التوصيل مطلوبة وغير صالحة." };
+  }
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+    return { ok: false, error: "إحداثيات التوصيل خارج النطاق المسموح." };
+  }
+  return { ok: true, pickupMode: "DELIVERY", deliveryLat: lat, deliveryLng: lng };
+}
+
+function parseDeliveryPartFromFormData(
+  formData: FormData,
+): { ok: true; pickupMode: "BRANCH" | "DELIVERY"; deliveryLat: number | null; deliveryLng: number | null } | { ok: false; error: string } {
+  const modeRaw = String(formData.get("pickupMode") ?? "BRANCH").trim().toUpperCase();
+  const pickupMode: "BRANCH" | "DELIVERY" = modeRaw === "DELIVERY" ? "DELIVERY" : "BRANCH";
+
+  if (pickupMode === "BRANCH") {
+    return { ok: true, pickupMode: "BRANCH", deliveryLat: null, deliveryLng: null };
+  }
+
+  const lat = Number(String(formData.get("deliveryLat") ?? "").trim());
+  const lng = Number(String(formData.get("deliveryLng") ?? "").trim());
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return { ok: false, error: "إحداثيات موقع التوصيل مطلوبة وغير صالحة." };
+  }
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+    return { ok: false, error: "إحداثيات التوصيل خارج النطاق المسموح." };
+  }
+  return { ok: true, pickupMode: "DELIVERY", deliveryLat: lat, deliveryLng: lng };
+}
 
 function dateOnlyYmd(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -171,6 +222,32 @@ export async function getDirectBookingAvailability(input: {
   };
 }
 
+/** معرفات الموديلات التي لديها أسطول وتتوفر في الفترة المطلوبة (حجز مباشر). */
+export async function listAvailableCarModelIds(input: {
+  pickupDate: Date;
+  numberOfDays: number;
+}): Promise<number[]> {
+  const safeDays = safeBookingDays(input.numberOfDays);
+  const rows = await prisma.fleet.findMany({
+    where: { quantity: { gt: 0 } },
+    select: { modelId: true },
+    distinct: ["modelId"],
+  });
+  const modelIds = rows.map((r) => r.modelId);
+  const available: number[] = [];
+  for (const modelId of modelIds) {
+    const res = await getDirectBookingAvailability({
+      carModelId: modelId,
+      pickupDate: input.pickupDate,
+      numberOfDays: safeDays,
+    });
+    if (res.available) {
+      available.push(modelId);
+    }
+  }
+  return available;
+}
+
 export class DirectBookingCapacityError extends Error {
   readonly code: "NO_FLEET" | "SLOT_FULL";
 
@@ -213,8 +290,8 @@ export function parseCommonBookingFieldsFromFormData(
   if (!AGE_OPTIONS.has(ageRange)) {
     return { ok: false, error: "الفئة العمرية غير صالحة." };
   }
-  if (!BRANCH_OPTIONS.has(branch)) {
-    return { ok: false, error: "الفرع غير صالح." };
+  if (!isBranchSlugFormat(branch)) {
+    return { ok: false, error: "معرّف الفرع غير صالح." };
   }
 
   const pickupDate = new Date(pickupDateRaw);
@@ -228,16 +305,24 @@ export function parseCommonBookingFieldsFromFormData(
     return { ok: false, error: "يجب الموافقة على الشروط والأحكام." };
   }
 
+  const delivery = parseDeliveryPartFromFormData(formData);
+  if (!delivery.ok) {
+    return delivery;
+  }
+
   return {
     ok: true,
     data: {
       fullName,
       phone,
       ageRange,
-      branch,
+      branch: branch.trim().toLowerCase(),
       pickupDate,
       numberOfDays: safeBookingDays(days),
       termsAccepted,
+      pickupMode: delivery.pickupMode,
+      deliveryLat: delivery.deliveryLat,
+      deliveryLng: delivery.deliveryLng,
     },
   };
 }
@@ -267,8 +352,8 @@ export function parseCommonBookingFieldsFromJson(
   if (!AGE_OPTIONS.has(ageRange)) {
     return { ok: false, error: "الفئة العمرية غير صالحة." };
   }
-  if (!BRANCH_OPTIONS.has(branch)) {
-    return { ok: false, error: "الفرع غير صالح." };
+  if (!isBranchSlugFormat(branch)) {
+    return { ok: false, error: "معرّف الفرع غير صالح." };
   }
 
   const pickupDate = new Date(pickupDateRaw);
@@ -282,16 +367,24 @@ export function parseCommonBookingFieldsFromJson(
     return { ok: false, error: "يجب الموافقة على الشروط والأحكام." };
   }
 
+  const delivery = parseDeliveryPartFromJson(body);
+  if (!delivery.ok) {
+    return delivery;
+  }
+
   return {
     ok: true,
     data: {
       fullName,
       phone,
       ageRange,
-      branch,
+      branch: branch.trim().toLowerCase(),
       pickupDate,
       numberOfDays: safeBookingDays(days),
       termsAccepted,
+      pickupMode: delivery.pickupMode,
+      deliveryLat: delivery.deliveryLat,
+      deliveryLng: delivery.deliveryLng,
     },
   };
 }
@@ -320,8 +413,19 @@ export async function createDirectBooking(
     return { ok: false, error: "السيارة غير موجودة." };
   }
 
+  const branchSlug = common.branch.trim().toLowerCase();
+  const activeBranch = await prisma.branch.findFirst({
+    where: { slug: branchSlug, isActive: true },
+    select: { id: true },
+  });
+  if (!activeBranch) {
+    return { ok: false, error: "الفرع غير متاح أو غير مفعّل." };
+  }
+
+  const commonNormalized = { ...common, branch: branchSlug };
+
   const carType = model.category.slug || model.category.title;
-  const days = common.numberOfDays;
+  const days = commonNormalized.numberOfDays;
 
   const runOnce = () =>
     prisma.$transaction(
@@ -336,7 +440,7 @@ export async function createDirectBooking(
           );
         }
         const rows = await loadBlockingDirectBookings(tx, carModelId);
-        const overlapping = countOverlapsFromRows(rows, common.pickupDate, days);
+        const overlapping = countOverlapsFromRows(rows, commonNormalized.pickupDate, days);
         if (overlapping >= fleetUnits) {
           throw new DirectBookingCapacityError(
             "SLOT_FULL",
@@ -349,14 +453,17 @@ export async function createDirectBooking(
           data: {
             kind: "DIRECT",
             carModelId,
-            fullName: common.fullName,
-            phone: common.phone,
-            ageRange: common.ageRange,
+            fullName: commonNormalized.fullName,
+            phone: commonNormalized.phone,
+            ageRange: commonNormalized.ageRange,
             carType,
-            branch: common.branch,
-            pickupDate: common.pickupDate,
+            branch: commonNormalized.branch,
+            pickupMode: commonNormalized.pickupMode,
+            deliveryLat: commonNormalized.deliveryLat,
+            deliveryLng: commonNormalized.deliveryLng,
+            pickupDate: commonNormalized.pickupDate,
             numberOfDays: days,
-            termsAccepted: common.termsAccepted,
+            termsAccepted: commonNormalized.termsAccepted,
           },
         });
       },
@@ -565,7 +672,10 @@ export async function updateBookingRequestByAdmin(
     fullName: input.fullName.trim(),
     phone: input.phone,
     ageRange: input.ageRange,
-    branch: input.branch,
+    branch: input.branch.trim().toLowerCase(),
+    pickupMode: input.pickupMode,
+    deliveryLat: input.deliveryLat,
+    deliveryLng: input.deliveryLng,
     pickupDate: input.pickupDate,
     numberOfDays: days,
     termsAccepted: input.termsAccepted,

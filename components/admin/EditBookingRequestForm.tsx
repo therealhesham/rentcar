@@ -14,6 +14,9 @@ export type EditableBookingRow = {
   ageRange: string;
   carType: string;
   branch: string;
+  pickupMode: string | null;
+  deliveryLat: number | null;
+  deliveryLng: number | null;
   pickupDateYmd: string;
   numberOfDays: number;
   termsAccepted: boolean;
@@ -141,6 +144,13 @@ function EditBookingModalInner({
           className="flex min-h-0 flex-1 flex-col"
         >
           <input type="hidden" name="bookingRequestId" value={request.id} />
+          <input
+            type="hidden"
+            name="pickupMode"
+            value={request.pickupMode === "DELIVERY" ? "DELIVERY" : "BRANCH"}
+          />
+          <input type="hidden" name="deliveryLat" value={request.deliveryLat ?? ""} />
+          <input type="hidden" name="deliveryLng" value={request.deliveryLng ?? ""} />
           <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="sm:col-span-2 block text-sm font-bold text-on-surface">
@@ -184,6 +194,24 @@ function EditBookingModalInner({
                   <option value="50+">50+</option>
                 </select>
               </label>
+              {request.pickupMode === "DELIVERY" &&
+              request.deliveryLat != null &&
+              request.deliveryLng != null ? (
+                <div className="sm:col-span-2 rounded-xl border border-primary-container/40 bg-primary-container/15 px-3 py-3 text-sm">
+                  <p className="font-bold text-on-primary-container">توصيل للعميل</p>
+                  <p className="mt-1 font-mono text-xs tabular-nums text-on-surface" dir="ltr">
+                    {request.deliveryLat.toFixed(6)}, {request.deliveryLng.toFixed(6)}
+                  </p>
+                  <a
+                    href={`https://www.google.com/maps?q=${request.deliveryLat},${request.deliveryLng}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-2 inline-block text-xs font-bold text-primary underline"
+                  >
+                    فتح في Google Maps
+                  </a>
+                </div>
+              ) : null}
               <label className="block text-sm font-bold text-on-surface">
                 الفرع
                 <select
