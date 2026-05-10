@@ -59,7 +59,11 @@ export function Hero({
 
       <div className="h-1.5 w-full shrink-0 bg-[#ebe4d9]" aria-hidden />
 
-      <div className="relative z-10 mx-auto w-full max-w-6xl px-4 pb-10 pt-8 sm:px-6 lg:px-8">
+      {/* حجز بحاوية أضيق قليلاً من عرض الشاشة وموسّطة */}
+      <div
+        className="relative z-10 mx-auto w-full max-w-6xl px-4 pb-12 pt-8 sm:px-6 lg:px-8 md:pb-16 md:pt-10"
+        dir="rtl"
+      >
         <BookingWidget branches={branches} />
       </div>
     </header>

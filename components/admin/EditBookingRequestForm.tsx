@@ -23,6 +23,9 @@ export type EditableBookingRow = {
   status: string;
   carModelId: number | null;
   carModelLabel: string | null;
+  addonsJson: string | null;
+  paymentStatus: string | null;
+  paidAt: string | null;
 };
 
 type CategoryOption = { slug: string; title: string };
@@ -36,6 +39,43 @@ type Props = {
 function localPhoneFromStored(phone: string): string {
   if (phone.startsWith("+966")) return phone.slice(4);
   return phone.replace(/\D/g, "").replace(/^966/, "");
+}
+
+type AddonSnapItem = {
+  titleAr?: string;
+  lineTotalExclTax?: number;
+};
+
+function AddonsSnapshotDisplay({ raw }: { raw: string }) {
+  try {
+    const data = JSON.parse(raw) as { items?: AddonSnapItem[] };
+    const items = data.items ?? [];
+    if (items.length === 0) {
+      return <p className="mt-2 text-xs text-on-surface-variant">لا توجد بنود مسجّلة.</p>;
+    }
+    return (
+      <ul className="mt-2 space-y-2">
+        {items.map((it, i) => (
+          <li
+            key={i}
+            className="flex justify-between gap-2 border-b border-outline-variant/15 pb-2 text-xs last:border-0"
+          >
+            <span className="font-medium text-on-surface">{it.titleAr ?? "—"}</span>
+            <span dir="ltr" className="shrink-0 tabular-nums font-bold text-on-surface-variant">
+              {it.lineTotalExclTax != null ? `${it.lineTotalExclTax} ر.س` : ""}
+              <span className="ms-1 text-[10px] font-normal">غير شامل الضريبة</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    );
+  } catch {
+    return (
+      <pre className="mt-2 max-h-40 overflow-auto rounded-lg bg-inverse-surface/5 p-2 text-[10px]" dir="ltr">
+        {raw}
+      </pre>
+    );
+  }
 }
 
 function defaultInquirySlug(carType: string, categories: CategoryOption[]): string {
@@ -194,6 +234,39 @@ function EditBookingModalInner({
                   <option value="50+">50+</option>
                 </select>
               </label>
+              {request.kind === "DIRECT" ? (
+                <div className="sm:col-span-2 flex flex-wrap items-center gap-2 rounded-xl border border-outline-variant/40 bg-surface-container-low px-3 py-2 text-xs">
+                  <span className="font-bold text-on-surface">حالة الدفع:</span>
+                  {request.paymentStatus === "PAID" ? (
+                    <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 font-extrabold text-emerald-800">
+                      مدفوع
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-amber-100 px-2.5 py-0.5 font-extrabold text-amber-900">
+                      بانتظار الدفع
+                    </span>
+                  )}
+                  {request.paidAt ? (
+                    <span className="text-on-surface-variant" dir="ltr">
+                      {new Date(request.paidAt).toLocaleString("ar-SA")}
+                    </span>
+                  ) : null}
+                  <a
+                    href={`/fleet/payment/${request.id}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="ms-auto rounded-full bg-primary px-2.5 py-0.5 font-extrabold text-on-primary"
+                  >
+                    فتح صفحة الدفع
+                  </a>
+                </div>
+              ) : null}
+              {request.kind === "DIRECT" && request.addonsJson ? (
+                <div className="sm:col-span-2 rounded-xl border border-outline-variant/40 bg-surface-container-low px-3 py-3 text-sm">
+                  <p className="font-bold text-on-surface">الإضافات المختارة (عند الطلب)</p>
+                  <AddonsSnapshotDisplay raw={request.addonsJson} />
+                </div>
+              ) : null}
               {request.pickupMode === "DELIVERY" &&
               request.deliveryLat != null &&
               request.deliveryLng != null ? (

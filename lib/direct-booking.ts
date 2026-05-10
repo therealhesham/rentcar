@@ -391,15 +391,66 @@ export function parseCommonBookingFieldsFromJson(
 
 export type CreateDirectBookingInput = DirectBookingCommon & {
   carModelId: number;
+  /** معرفات إضافات نشطة من جدول RentalAddon */
+  addonIds?: number[];
 };
+
+export function parseAddonIdsFromJsonBody(
+  body: JsonBody,
+): { ok: true; addonIds: number[] | undefined } | { ok: false; error: string } {
+  const raw = body.addonIds;
+  if (raw === undefined || raw === null) {
+    return { ok: true, addonIds: undefined };
+  }
+  if (!Array.isArray(raw)) {
+    return { ok: false, error: "صيغة قائمة الإضافات غير صالحة." };
+  }
+  const ids = [
+    ...new Set(
+      raw
+        .map((x) => Number(x))
+        .filter((n) => Number.isInteger(n) && n > 0),
+    ),
+  ];
+  if (ids.length > 25) {
+    return { ok: false, error: "عدد الإضافات غير مسموح." };
+  }
+  return { ok: true, addonIds: ids.length ? ids : undefined };
+}
+
+async function buildAddonsJsonSnapshot(
+  addonIds: number[] | undefined,
+  numberOfDays: number,
+): Promise<{ ok: true; json: string | null } | { ok: false; error: string }> {
+  if (!addonIds?.length) {
+    return { ok: true, json: null };
+  }
+  const uniqueIds = [...new Set(addonIds)];
+  const days = safeBookingDays(numberOfDays);
+  const addons = await prisma.rentalAddon.findMany({
+    where: { id: { in: uniqueIds }, isActive: true },
+  });
+  if (addons.length !== uniqueIds.length) {
+    return { ok: false, error: "إحدى الإضافات المختارة غير متاحة." };
+  }
+  const items = addons.map((a) => ({
+    id: a.id,
+    slug: a.slug,
+    titleAr: a.titleAr,
+    pricePerDayExclTax: a.pricePerDay,
+    days,
+    lineTotalExclTax: a.pricePerDay * days,
+  }));
+  return { ok: true, json: JSON.stringify({ items }) };
+}
 
 /**
  * إنشاء حجز مباشر: نفس احتساب التوفر داخل معاملة Serializable مع إعادة المحاولة عند تعارض P2034.
  */
 export async function createDirectBooking(
   input: CreateDirectBookingInput,
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  const { carModelId, ...common } = input;
+): Promise<{ ok: true; bookingRequestId: number } | { ok: false; error: string }> {
+  const { carModelId, addonIds, ...common } = input;
 
   if (!Number.isInteger(carModelId) || carModelId < 1) {
     return { ok: false, error: "معرّف السيارة غير صالح." };
@@ -427,6 +478,11 @@ export async function createDirectBooking(
   const carType = model.category.slug || model.category.title;
   const days = commonNormalized.numberOfDays;
 
+  const addonsSnap = await buildAddonsJsonSnapshot(addonIds, days);
+  if (!addonsSnap.ok) {
+    return { ok: false, error: addonsSnap.error };
+  }
+
   const runOnce = () =>
     prisma.$transaction(
       async (tx) => {
@@ -449,7 +505,7 @@ export async function createDirectBooking(
             overlapping,
           );
         }
-        await tx.bookingRequest.create({
+        const created = await tx.bookingRequest.create({
           data: {
             kind: "DIRECT",
             carModelId,
@@ -464,8 +520,11 @@ export async function createDirectBooking(
             pickupDate: commonNormalized.pickupDate,
             numberOfDays: days,
             termsAccepted: commonNormalized.termsAccepted,
+            addonsJson: addonsSnap.json,
           },
+          select: { id: true },
         });
+        return created.id;
       },
       {
         maxWait: 8000,
@@ -474,12 +533,13 @@ export async function createDirectBooking(
       },
     );
 
+  let bookingRequestId: number | null = null;
   try {
-    await runOnce();
+    bookingRequestId = await runOnce();
   } catch (e) {
     if (isSerializationConflict(e)) {
       try {
-        await runOnce();
+        bookingRequestId = await runOnce();
       } catch (e2) {
         if (e2 instanceof DirectBookingCapacityError) {
           return capacityErrorToResult(e2);
@@ -502,7 +562,10 @@ export async function createDirectBooking(
     }
   }
 
-  return { ok: true };
+  if (!bookingRequestId) {
+    return { ok: false, error: "تعذّر تسجيل الطلب." };
+  }
+  return { ok: true, bookingRequestId };
 }
 
 function capacityErrorToResult(

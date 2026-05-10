@@ -123,6 +123,24 @@ model Fleet {
   updatedAt   DateTime  @updatedAt
 }
 
+/// إضافات اختيارية للتأجير (يومية، غير شامل الضريبة) — تُعرض في صفحة إتمام الحجز.
+model RentalAddon {
+  id             Int      @id @default(autoincrement())
+  slug           String   @unique @db.VarChar(64)
+  titleAr        String   @db.VarChar(255)
+  descriptionAr  String?  @db.Text
+  /// السعر لكل يوم بالريال (غير شامل الضريبة)
+  pricePerDay    Int
+  /// مفتاح أيقونة تقريبي للواجهة (مثل key، child، gauge)
+  iconKey        String?  @db.VarChar(32)
+  sortOrder      Int      @default(0)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
 model BookingRequest {
   id            Int                 @id @default(autoincrement())
   /// INQUIRY = طلب حجز من الرئيسية (بدون سيارة محددة). DIRECT = حجز مباشر بعد اختيار سيارة.
@@ -143,6 +161,12 @@ model BookingRequest {
   pickupDate    DateTime
   numberOfDays  Int
   termsAccepted Boolean             @default(true)
+  /// لقطة JSON للإضافات المختارة عند إنشاء الحجز المباشر (عناوين وأسعار وقت الطلب).
+  addonsJson    String?   @db.Text
+  /// حالة الدفع للحجز: PENDING (بانتظار الدفع) أو PAID (تم الدفع — وضع تجريبي).
+  paymentStatus String    @default("PENDING") @db.VarChar(16)
+  /// وقت تأكيد الدفع (تجريبي).
+  paidAt        DateTime?
   status        String              @default("NEW")
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt

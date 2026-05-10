@@ -111,6 +111,10 @@ export default async function AdminDashboardPage() {
           <Link href="/admin/direct-booking" className="font-bold text-primary hover:underline">
             حجز مباشر (مكتب)
           </Link>
+          ، ولإضافات صفحة إتمام الحجز (السعر اليومي){" "}
+          <Link href="/admin/rental-addons" className="font-bold text-primary hover:underline">
+            إضافات التأجير
+          </Link>
           .
         </p>
       </header>
@@ -184,6 +188,11 @@ export default async function AdminDashboardPage() {
                           carModelId: request.carModelId,
                           carModelLabel: request.carModel
                             ? `${request.carModel.brand.name} ${request.carModel.name}`
+                            : null,
+                          addonsJson: request.addonsJson ?? null,
+                          paymentStatus: request.paymentStatus ?? null,
+                          paidAt: request.paidAt
+                            ? request.paidAt.toISOString()
                             : null,
                         }}
                         categories={fleetCategoriesForEdit}

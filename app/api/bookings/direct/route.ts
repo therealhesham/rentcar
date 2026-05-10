@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import {
   createDirectBooking,
   getDirectBookingAvailability,
+  parseAddonIdsFromJsonBody,
   parseCommonBookingFieldsFromJson,
 } from "@/lib/direct-booking";
 
@@ -98,9 +99,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: parsed.error }, { status: 400 });
   }
 
+  const addonParsed = parseAddonIdsFromJsonBody(obj);
+  if (!addonParsed.ok) {
+    return NextResponse.json({ ok: false, error: addonParsed.error }, { status: 400 });
+  }
+
   const created = await createDirectBooking({
     carModelId,
     ...parsed.data,
+    addonIds: addonParsed.addonIds,
   });
 
   if (!created.ok) {
@@ -110,6 +117,7 @@ export async function POST(request: Request) {
   revalidatePath("/admin");
   revalidatePath("/admin/car-bookings");
   revalidatePath("/fleet");
+  revalidatePath("/fleet/checkout");
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, bookingRequestId: created.bookingRequestId });
 }

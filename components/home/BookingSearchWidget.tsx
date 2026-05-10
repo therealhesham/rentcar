@@ -1,6 +1,15 @@
 "use client";
 
-import { CalendarDays, Car, Search } from "lucide-react";
+import {
+  CalendarDays,
+  Car,
+  CalendarClock,
+  Clock,
+  MapPin,
+  PackageCheck,
+  Search,
+  Truck,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -16,6 +25,10 @@ export type BookingBranchOption = {
 
 type RentalTab = "daily" | "weekly";
 type ModeTab = "pickup" | "delivery";
+
+const GOLD = "#dbb878";
+const GOLD_DARK = "#c9a356";
+const TEAL = "#003749";
 
 function validateRentalMinDays(rental: RentalTab, days: number): string | null {
   if (rental === "weekly" && days < 7) {
@@ -38,9 +51,7 @@ export function BookingSearchWidget({ branches }: { branches: BookingBranchOptio
   const [error, setError] = useState<string | null>(null);
 
   const branchSelectRequired = branches.length > 0;
-
   const defaultSlug = branches[0]?.slug ?? "";
-
   const pickupBranchEffective = mode === "pickup" ? pickupBranch || defaultSlug : "";
   const returnBranchEffective = returnBranch || defaultSlug;
 
@@ -139,110 +150,72 @@ export function BookingSearchWidget({ branches }: { branches: BookingBranchOptio
     persistAndNavigate(params, ctx);
   }
 
-  const tabBtn =
-    "flex flex-1 items-center justify-center gap-2 rounded-xl px-3 py-3 text-sm font-bold transition sm:text-base";
-  const tabInactive = "border border-[#e8e4df] bg-white text-[#1c1b1b]";
-  const tabActive = "border border-transparent bg-[#dbb878] text-white shadow-sm";
-
   return (
     <>
-      <div className="relative z-20 mx-auto w-full max-w-6xl">
-        <form
-          onSubmit={handleSearch}
-          className="overflow-hidden rounded-2xl border border-[#ebe8e3] bg-white shadow-[0_12px_40px_rgba(0,0,0,0.08)]"
-          dir="rtl"
-        >
-          {/* نوع الإيجار */}
-          <div className="flex flex-wrap gap-2 border-b border-[#f0ebe4] p-3 sm:p-4">
-            <button
-              type="button"
+      <form
+        onSubmit={handleSearch}
+        className="w-full overflow-hidden rounded-3xl border border-[#e7e1d3] bg-white/95 shadow-[0_24px_60px_-20px_rgba(15,61,71,0.25),0_8px_24px_-12px_rgba(15,61,71,0.12)] backdrop-blur-sm"
+        dir="rtl"
+      >
+        {/* رأس الـ widget — تبويبات نوع الإيجار + استلام/توصيل */}
+        <div className="flex flex-col gap-3 border-b border-[#f0ebe4] bg-gradient-to-l from-[#fdfbf6] to-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          {/* segmented: نوع الإيجار */}
+          <div
+            role="tablist"
+            aria-label="نوع الإيجار"
+            className="inline-flex w-full rounded-full border border-[#ebe4d3] bg-[#fbf6ec] p-1 text-sm font-bold sm:w-auto"
+          >
+            <SegBtn
+              active={rental === "daily"}
               onClick={() => setRental("daily")}
-              className={`${tabBtn} ${rental === "daily" ? tabActive : tabInactive}`}
-            >
-              <Car className="size-5 shrink-0 opacity-90" aria-hidden />
-              يومي
-            </button>
-            <button
-              type="button"
+              icon={<Car className="size-4" aria-hidden />}
+              label="يومي"
+            />
+            <SegBtn
+              active={rental === "weekly"}
               onClick={() => setRental("weekly")}
-              className={`${tabBtn} ${rental === "weekly" ? tabActive : tabInactive}`}
-            >
-              <CalendarDays className="size-5 shrink-0 opacity-90" aria-hidden />
-              أسبوعي
-            </button>
+              icon={<CalendarDays className="size-4" aria-hidden />}
+              label="أسبوعي"
+            />
           </div>
 
-          {/* استلام / توصيل */}
-          <div className="flex gap-2 px-4 pt-4">
-            <button
-              type="button"
+          {/* segmented: استلام / توصيل */}
+          <div
+            role="tablist"
+            aria-label="طريقة الاستلام"
+            className="inline-flex w-full rounded-full border border-[#dce4ea] bg-[#f4f7fa] p-1 text-sm font-bold sm:w-auto"
+          >
+            <SegBtn
+              active={mode === "pickup"}
               onClick={() => setMode("pickup")}
-              className={`rounded-xl px-6 py-2.5 text-sm font-bold transition ${
-                mode === "pickup"
-                  ? "bg-[#dbb878] text-white"
-                  : "border-2 border-[#f97316] bg-white text-[#f97316]"
-              }`}
-            >
-              استلام
-            </button>
-            <button
-              type="button"
+              icon={<PackageCheck className="size-4" aria-hidden />}
+              label="استلام من الفرع"
+              tone="teal"
+            />
+            <SegBtn
+              active={mode === "delivery"}
               onClick={() => setMode("delivery")}
-              className={`rounded-xl px-6 py-2.5 text-sm font-bold transition ${
-                mode === "delivery"
-                  ? "bg-[#dbb878] text-white"
-                  : "border-2 border-[#f97316] bg-white text-[#f97316]"
-              }`}
-            >
-              توصيل
-            </button>
+              icon={<Truck className="size-4" aria-hidden />}
+              label="توصيل لموقعي"
+              tone="teal"
+            />
           </div>
+        </div>
 
-          <div className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-12 lg:items-end lg:gap-0 lg:divide-x lg:divide-[#ebe8e3] lg:divide-x-reverse">
+        {/* الحقول */}
+        <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 sm:p-5 lg:grid-cols-12 lg:items-stretch lg:gap-0 lg:p-0">
+          {/* الموقع (استلام أو توصيل) */}
+          <Field
+            label={mode === "pickup" ? "موقع الاستلام" : "موقع التوصيل"}
+            icon={<MapPin className="size-4" aria-hidden />}
+            className="lg:col-span-3"
+          >
             {mode === "pickup" ? (
-              <label className="flex flex-col gap-1 lg:col-span-3 lg:px-4">
-                <span className="text-xs font-bold text-[#775927]">موقع الاستلام</span>
-                <select
-                  value={pickupBranch || defaultSlug}
-                  onChange={(ev) => setPickupBranch(ev.target.value)}
-                  required={branchSelectRequired}
-                  className="rounded-lg border border-[#ebe8e3] bg-[#faf9f7] px-3 py-3 text-sm font-medium text-[#1c1b1b] outline-none focus:ring-2 focus:ring-[#f97316]/40"
-                >
-                  {branches.map((b) => (
-                    <option key={b.slug} value={b.slug}>
-                      {b.name}
-                    </option>
-                  ))}
-                </select>
-                <span className="text-[11px] text-on-surface-variant">
-                  {/* الاستلام من فرع الشركة */}
-                </span>
-              </label>
-            ) : (
-              <div className="flex flex-col gap-2 lg:col-span-3 lg:px-4">
-                <span className="text-xs font-bold text-[#775927]">موقع التوصيل</span>
-                <button
-                  type="button"
-                  onClick={() => setMapOpen(true)}
-                  className="rounded-lg border border-dashed border-[#f97316]/60 bg-[#fff7ed] px-3 py-3 text-start text-sm font-bold text-[#c2410c] transition hover:bg-[#ffedd5]"
-                >
-                  {deliveryLat != null && deliveryLng != null
-                    ? `تم تحديد الموقع (${deliveryLat.toFixed(5)}, ${deliveryLng.toFixed(5)})`
-                    : "حدّد موقع التوصيل على الخريطة"}
-                </button>
-                <span className="text-[11px] text-on-surface-variant">
-                  {/* خريطة تفاعلية (Google أو OpenStreetMap) — اسحب الدبوس أو انقر */}
-                </span>
-              </div>
-            )}
-
-            <label className="flex flex-col gap-1 lg:col-span-3 lg:px-4">
-              <span className="text-xs font-bold text-[#775927]">موقع التسليم (إرجاع المركبة)</span>
               <select
-                value={returnBranch || defaultSlug}
-                onChange={(ev) => setReturnBranch(ev.target.value)}
+                value={pickupBranch || defaultSlug}
+                onChange={(ev) => setPickupBranch(ev.target.value)}
                 required={branchSelectRequired}
-                className="rounded-lg border border-[#ebe8e3] bg-[#faf9f7] px-3 py-3 text-sm font-medium text-[#1c1b1b] outline-none focus:ring-2 focus:ring-[#f97316]/40"
+                className="w-full bg-transparent text-sm font-semibold text-[#1c1b1b] outline-none"
               >
                 {branches.map((b) => (
                   <option key={b.slug} value={b.slug}>
@@ -250,74 +223,143 @@ export function BookingSearchWidget({ branches }: { branches: BookingBranchOptio
                   </option>
                 ))}
               </select>
-            </label>
-
-            <label className="flex flex-col gap-1 lg:col-span-2 lg:px-4">
-              <span className="text-xs font-bold text-[#775927]">تاريخ / وقت الاستلام</span>
-              <input
-                type="datetime-local"
-                value={pickupDt}
-                onChange={(ev) => setPickupDt(ev.target.value)}
-                required
-                className="rounded-lg border border-[#ebe8e3] bg-[#faf9f7] px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-[#f97316]/40"
-                dir="ltr"
-              />
-            </label>
-
-            <label className="flex flex-col gap-1 lg:col-span-2 lg:px-4">
-              <span className="text-xs font-bold text-[#775927]">تاريخ / وقت التسليم</span>
-              <input
-                type="datetime-local"
-                value={dropoffDt}
-                onChange={(ev) => setDropoffDt(ev.target.value)}
-                required
-                className="rounded-lg border border-[#ebe8e3] bg-[#faf9f7] px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-[#f97316]/40"
-                dir="ltr"
-              />
-            </label>
-
-            <div className="flex flex-col gap-2 lg:col-span-2 lg:px-4">
-              {daysPreview != null ? (
-                <p className="text-[11px] font-semibold text-[#003749]">
-                  مدة الحجز:{" "}
-                  <span dir="ltr" className="tabular-nums">
-                    {daysPreview}
-                  </span>{" "}
-                  يوماً
-                </p>
-              ) : (
-                <span className="text-[11px] text-transparent">.</span>
-              )}
+            ) : (
               <button
-                type="submit"
-                className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#dbb878] text-sm font-extrabold text-white shadow-md transition hover:bg-[#ea580c]"
+                type="button"
+                onClick={() => setMapOpen(true)}
+                className="w-full text-start text-sm font-semibold text-[#1c1b1b] outline-none"
               >
-                <Search className="size-5" aria-hidden />
-                بحث
+                {deliveryLat != null && deliveryLng != null ? (
+                  <span className="block">
+                    تم تحديد الموقع{" "}
+                    <span dir="ltr" className="text-xs font-mono text-on-surface-variant">
+                      ({deliveryLat.toFixed(4)}, {deliveryLng.toFixed(4)})
+                    </span>
+                  </span>
+                ) : (
+                  <span className="text-[#9a8366]">اضغط لتحديد الموقع على الخريطة</span>
+                )}
               </button>
-            </div>
-          </div>
+            )}
+          </Field>
 
-          {branches.length === 0 ? (
-            <p className="border-t border-[#f0ebe4] px-4 py-3 text-center text-xs text-error">
-              لا توجد فروع مفعّلة في النظام. أضف فروعاً من لوحة الإدارة لاستخدام البحث.
-            </p>
-          ) : null}
+          {/* فرع الإرجاع */}
+          <Field
+            label="موقع التسليم (إرجاع المركبة)"
+            icon={<MapPin className="size-4" aria-hidden />}
+            className="lg:col-span-3"
+            withBorderStart
+          >
+            <select
+              value={returnBranch || defaultSlug}
+              onChange={(ev) => setReturnBranch(ev.target.value)}
+              required={branchSelectRequired}
+              className="w-full bg-transparent text-sm font-semibold text-[#1c1b1b] outline-none"
+            >
+              {branches.map((b) => (
+                <option key={b.slug} value={b.slug}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+          </Field>
 
-          {error ? (
-            <p className="border-t border-[#f0ebe4] px-4 py-3 text-center text-sm font-bold text-error">
-              {error}
-            </p>
-          ) : null}
+          {/* تاريخ ووقت الاستلام */}
+          <Field
+            label="تاريخ ووقت الاستلام"
+            icon={<CalendarClock className="size-4" aria-hidden />}
+            className="lg:col-span-3"
+            withBorderStart
+          >
+            <input
+              type="datetime-local"
+              value={pickupDt}
+              onChange={(ev) => setPickupDt(ev.target.value)}
+              required
+              dir="ltr"
+              className="w-full bg-transparent text-sm font-semibold text-[#1c1b1b] outline-none"
+            />
+          </Field>
 
-          <p className="border-t border-[#f0ebe4] px-4 py-2 text-center text-[10px] text-on-surface-variant">
-            البحث يعرض المركبات المتاحة للحجز المباشر في الفترة المحددة.{" "}
-            <Link href="/fleet" className="font-bold text-[#f97316] underline-offset-2 hover:underline">
-              تصفح الأسطول كاملاً
-            </Link>
+          {/* تاريخ ووقت التسليم */}
+          <Field
+            label="تاريخ ووقت التسليم"
+            icon={<Clock className="size-4" aria-hidden />}
+            className="lg:col-span-3"
+            withBorderStart
+          >
+            <input
+              type="datetime-local"
+              value={dropoffDt}
+              onChange={(ev) => setDropoffDt(ev.target.value)}
+              required
+              dir="ltr"
+              className="w-full bg-transparent text-sm font-semibold text-[#1c1b1b] outline-none"
+            />
+          </Field>
+        </div>
+
+        {/* شريط الأكشن السفلي */}
+        <div className="flex flex-col gap-3 border-t border-[#f0ebe4] bg-[#fbf6ec]/40 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <p
+            className="text-xs font-semibold text-[#6b5a3b]"
+            aria-live="polite"
+          >
+            {daysPreview != null ? (
+              <>
+                مدة الحجز:{" "}
+                <span dir="ltr" className="tabular-nums text-[#003749]">
+                  {daysPreview}
+                </span>{" "}
+                يوماً
+              </>
+            ) : (
+              <span className="text-[#9a8366]">حدّد تواريخ الاستلام والتسليم لعرض المدة</span>
+            )}
           </p>
-        </form>
-      </div>
+
+          <button
+            type="submit"
+            className="group relative inline-flex h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-full px-8 text-sm font-extrabold text-white shadow-[0_8px_20px_-6px_rgba(219,184,120,0.7)] transition-transform hover:-translate-y-0.5 active:translate-y-0 sm:w-auto"
+            style={{
+              background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)`,
+            }}
+          >
+            <span
+              className="absolute inset-0 -translate-x-full bg-gradient-to-r from-white/0 via-white/30 to-white/0 transition-transform duration-700 group-hover:translate-x-full"
+              aria-hidden
+            />
+            <Search className="size-5" aria-hidden />
+            <span>بحث المركبات المتاحة</span>
+          </button>
+        </div>
+
+        {branches.length === 0 ? (
+          <p className="border-t border-[#f0ebe4] px-4 py-3 text-center text-xs text-error">
+            لا توجد فروع مفعّلة في النظام. أضف فروعاً من لوحة الإدارة لاستخدام البحث.
+          </p>
+        ) : null}
+
+        {error ? (
+          <p
+            role="alert"
+            className="border-t border-[#fecaca] bg-[#fef2f2] px-4 py-3 text-center text-sm font-bold text-[#b91c1c]"
+          >
+            {error}
+          </p>
+        ) : null}
+
+        <p className="border-t border-[#f0ebe4] px-4 py-2.5 text-center text-[11px] text-on-surface-variant">
+          البحث يعرض المركبات المتاحة للحجز المباشر في الفترة المحددة.{" "}
+          <Link
+            href="/fleet"
+            className="font-bold text-[#003749] underline-offset-4 hover:underline"
+            style={{ textDecorationColor: GOLD }}
+          >
+            تصفح الأسطول كاملاً
+          </Link>
+        </p>
+      </form>
 
       <DeliveryMapDialog
         open={mapOpen}
@@ -334,5 +376,72 @@ export function BookingSearchWidget({ branches }: { branches: BookingBranchOptio
         }}
       />
     </>
+  );
+}
+
+/* ---------- Subcomponents ---------- */
+
+function SegBtn({
+  active,
+  onClick,
+  icon,
+  label,
+  tone = "gold",
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+  tone?: "gold" | "teal";
+}) {
+  const activeBg =
+    tone === "teal"
+      ? "bg-[#003749] text-white shadow-[0_4px_14px_-4px_rgba(0,55,73,0.5)]"
+      : "bg-[#dbb878] text-white shadow-[0_4px_14px_-4px_rgba(219,184,120,0.7)]";
+  const inactive =
+    tone === "teal"
+      ? "text-[#003749]/70 hover:text-[#003749]"
+      : "text-[#6b5a3b] hover:text-[#003749]";
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      className={`flex flex-1 items-center justify-center gap-1.5 rounded-full px-4 py-2 transition-all duration-200 ${
+        active ? activeBg : inactive
+      }`}
+    >
+      {icon}
+      <span>{label}</span>
+    </button>
+  );
+}
+
+function Field({
+  label,
+  icon,
+  className = "",
+  withBorderStart = false,
+  children,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  className?: string;
+  withBorderStart?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <label
+      className={`group flex cursor-text flex-col gap-1 rounded-2xl border border-[#ebe4d3] bg-[#fdfbf6] p-3 transition-colors hover:border-[#dbb878]/60 focus-within:border-[#dbb878] focus-within:bg-white focus-within:ring-2 focus-within:ring-[#dbb878]/30 lg:rounded-none lg:border-0 lg:bg-transparent lg:p-5 lg:hover:border-0 lg:focus-within:bg-[#fdfbf6]/40 lg:focus-within:ring-0 ${
+        withBorderStart ? "lg:border-s lg:border-s-[#f0ebe4]" : ""
+      } ${className}`}
+    >
+      <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-[#003749]/70">
+        <span className="text-[#dbb878]">{icon}</span>
+        {label}
+      </span>
+      <div className="mt-1">{children}</div>
+    </label>
   );
 }

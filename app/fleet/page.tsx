@@ -16,17 +16,15 @@ export const metadata: Metadata = {
     "مجموعة مختارة من أرقى السيارات للتأجير اليومي مع فلاتر بحث وتجربة كونسيرج.",
 };
 
-type FleetSearchParams = {
-  category?: string;
-  pickup?: string;
-  dropoff?: string;
-  rental?: string;
-  mode?: string;
-  pickupBranch?: string;
-  returnBranch?: string;
-  dlat?: string;
-  dlng?: string;
-};
+type FleetSearchParams = Record<string, string | string[] | undefined>;
+
+/** Next قد يمرّر قيمة مكررة كـ string[] — تجنّب استدعاء .trim على مصفوفة */
+function qFirst(v: string | string[] | undefined): string | undefined {
+  if (v === undefined) return undefined;
+  const s = Array.isArray(v) ? v[0] : v;
+  const t = typeof s === "string" ? s.trim() : "";
+  return t || undefined;
+}
 
 export default async function FleetPage({
   searchParams,
@@ -34,10 +32,10 @@ export default async function FleetPage({
   searchParams?: Promise<FleetSearchParams>;
 }) {
   const params = searchParams ? await searchParams : {};
-  const categorySlug = params.category?.trim() || undefined;
+  const categorySlug = qFirst(params.category);
 
-  const pickupRaw = params.pickup?.trim();
-  const dropoffRaw = params.dropoff?.trim();
+  const pickupRaw = qFirst(params.pickup);
+  const dropoffRaw = qFirst(params.dropoff);
 
   /** undefined = لا فلترة بالتوفر؛ مصفوفة (قد تكون فارغة) = نتيجة بحث */
   let availabilityModelIds: number[] | undefined;
@@ -58,8 +56,8 @@ export default async function FleetPage({
         numberOfDays: days,
       });
 
-      const modeLabel = params.mode === "delivery" ? "توصيل" : "استلام من الفرع";
-      const rental = params.rental === "weekly" ? "أسبوعي" : "يومي";
+      const modeLabel = qFirst(params.mode) === "delivery" ? "توصيل" : "استلام من الفرع";
+      const rental = qFirst(params.rental) === "weekly" ? "أسبوعي" : "يومي";
 
       searchBanner = (
         <div className="mx-auto mb-10 max-w-screen-2xl rounded-2xl border border-[#f97316]/25 bg-[#fff7ed] px-6 py-4 text-start shadow-sm">
@@ -74,31 +72,32 @@ export default async function FleetPage({
               {days}
             </span>{" "}
             يوم/أيام
-            {params.returnBranch ? (
+            {qFirst(params.returnBranch) ? (
               <>
                 {" · "}
                 فرع الإرجاع:{" "}
                 <span className="font-bold" dir="ltr">
-                  {params.returnBranch}
+                  {qFirst(params.returnBranch)}
                 </span>
               </>
             ) : null}
-            {params.mode === "delivery" &&
-            params.dlat &&
-            params.dlng &&
-            !Number.isNaN(Number(params.dlat)) &&
-            !Number.isNaN(Number(params.dlng)) ? (
+            {qFirst(params.mode) === "delivery" &&
+            qFirst(params.dlat) &&
+            qFirst(params.dlng) &&
+            !Number.isNaN(Number(qFirst(params.dlat))) &&
+            !Number.isNaN(Number(qFirst(params.dlng))) ? (
               <>
                 {" · "}
                 موقع التوصيل:{" "}
                 <span className="tabular-nums font-mono text-xs" dir="ltr">
-                  {Number(params.dlat).toFixed(5)}, {Number(params.dlng).toFixed(5)}
+                  {Number(qFirst(params.dlat)).toFixed(5)}, {Number(qFirst(params.dlng)).toFixed(5)}
                 </span>
               </>
             ) : null}
           </p>
           <p className="mt-2 text-xs text-on-surface-variant">
-            تُعرض المركبات المتاحة للحجز المباشر في هذه الفترة فقط. افتح «احجز الآن» لإكمال بياناتك.
+            تُعرض المركبات المتاحة للحجز المباشر في هذه الفترة فقط. اضغط «احجز الآن» لمراجعة السعر والإضافات وإتمام
+            الطلب.
           </p>
         </div>
       );
