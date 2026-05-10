@@ -15,12 +15,20 @@ model SiteSetting {
   updatedAt DateTime @updatedAt
 }
 
+/// حساب عميل على الموقع (تسجيل / دخول).
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           Int      @id @default(autoincrement())
+  email        String   @unique @db.VarChar(255)
+  passwordHash String?  @db.VarChar(255)
+  name         String?  @db.VarChar(255)
+  /// موحّد مع الحجز: +9665XXXXXXXX
+  phone        String?  @unique @db.VarChar(16)
+  /// حساب بصلاحيات إدارية (لوحة التحكم المستقبلية أو تقارير داخلية).
+  isAdmin      Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  bookingRequests BookingRequest[]
 }
 
 /// فرع استلام / موقع (مفتاح مستقر `slug` يطابق قيم النماذج: jeddah، madinah، …)
@@ -148,6 +156,9 @@ model BookingRequest {
   /// عند الحجز المباشر فقط — ربط بموديل السيارة المختار.
   carModelId    Int?
   carModel      CarModel?           @relation(fields: [carModelId], references: [id])
+  /// عميل مسجّل أنشأ أو يملك الطلب (اختياري).
+  customerId    Int?
+  customer      User?               @relation(fields: [customerId], references: [id])
 
   fullName      String
   phone         String
@@ -167,6 +178,8 @@ model BookingRequest {
   paymentStatus String    @default("PENDING") @db.VarChar(16)
   /// وقت تأكيد الدفع (تجريبي).
   paidAt        DateTime?
+  /// طريقة الدفع المختارة عند الإتمام: TABBY | TAMARA | CARD | POINTS (ربط البوابات لاحقاً).
+  paymentMethod String?   @db.VarChar(24)
   status        String              @default("NEW")
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
@@ -175,6 +188,7 @@ model BookingRequest {
   @@index([branch])
   @@index([kind, createdAt])
   @@index([carModelId])
+  @@index([customerId])
 }
 
 enum BookingRequestKind {

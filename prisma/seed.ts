@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { hashPassword } from "../lib/password";
 
 const prisma = new PrismaClient();
 
@@ -103,6 +104,25 @@ async function main() {
       update: { label: g.label, sortOrder: g.sortOrder },
     });
   }
+
+  const seedUserEmail = "hesham@gmail.com";
+  const seedUserPassword = "password";
+  const heshamHash = await hashPassword(seedUserPassword);
+  await prisma.user.upsert({
+    where: { email: seedUserEmail },
+    create: {
+      email: seedUserEmail,
+      passwordHash: heshamHash,
+      name: "Hesham",
+      phone: null,
+      isAdmin: false,
+    },
+    update: {
+      passwordHash: heshamHash,
+      name: "Hesham",
+    },
+  });
+  console.log(`User seeded: ${seedUserEmail} (password: ${seedUserPassword})`);
 }
 
 main()

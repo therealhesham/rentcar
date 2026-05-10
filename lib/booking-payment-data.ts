@@ -16,6 +16,8 @@ export type BookingPaymentSnapshot = {
   numberOfDays: number;
   paymentStatus: string;
   paidAt: Date | null;
+  /** TABBY | TAMARA | CARD | POINTS — يُسجَّل عند إتمام الدفع التجريبي */
+  paymentMethod: string | null;
   status: string;
   car: {
     fullTitle: string;
@@ -102,6 +104,7 @@ export async function getBookingForPayment(
     numberOfDays: row.numberOfDays,
     paymentStatus: row.paymentStatus,
     paidAt: row.paidAt,
+    paymentMethod: row.paymentMethod,
     status: row.status,
     car: {
       fullTitle: `${brandName} ${modelName}`.trim(),

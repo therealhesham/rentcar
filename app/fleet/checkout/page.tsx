@@ -4,6 +4,8 @@ import { Suspense } from "react";
 import { FleetCheckoutClient } from "@/components/fleet/FleetCheckoutClient";
 import { getCarModelForCheckout } from "@/lib/checkout-car-data";
 import { getActiveBranches } from "@/lib/branch-data";
+import { getCustomerProfile } from "@/lib/customer-auth";
+import { e164ToLocalNine } from "@/lib/normalize-saudi-phone";
 import { getActiveRentalAddons } from "@/lib/rental-addon-data";
 
 export const dynamic = "force-dynamic";
@@ -24,10 +26,11 @@ export default async function FleetCheckoutPage({
     redirect("/fleet");
   }
 
-  const [car, addons, branchRows] = await Promise.all([
+  const [car, addons, branchRows, profile] = await Promise.all([
     getCarModelForCheckout(modelId),
     getActiveRentalAddons(),
     getActiveBranches().catch(() => []),
+    getCustomerProfile(),
   ]);
 
   if (!car) {
@@ -44,6 +47,18 @@ export default async function FleetCheckoutPage({
     branchBySlug.tabuk = "تبوك";
   }
 
+  const phoneLocal = profile?.phone ? e164ToLocalNine(profile.phone) : null;
+  const sessionCustomer =
+    profile &&
+    profile.name?.trim().length >= 3 &&
+    phoneLocal
+      ? {
+          name: profile.name.trim(),
+          phoneLocal,
+          email: profile.email,
+        }
+      : null;
+
   return (
     <Suspense
       fallback={
@@ -52,7 +67,12 @@ export default async function FleetCheckoutPage({
         </div>
       }
     >
-      <FleetCheckoutClient car={car} addons={addons} branchBySlug={branchBySlug} />
+      <FleetCheckoutClient
+        car={car}
+        addons={addons}
+        branchBySlug={branchBySlug}
+        sessionCustomer={sessionCustomer}
+      />
     </Suspense>
   );
 }

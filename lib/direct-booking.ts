@@ -393,6 +393,8 @@ export type CreateDirectBookingInput = DirectBookingCommon & {
   carModelId: number;
   /** معرفات إضافات نشطة من جدول RentalAddon */
   addonIds?: number[];
+  /** عميل مسجّل مرتبط بالطلب عند تطابق الجوال */
+  customerId?: number | null;
 };
 
 export function parseAddonIdsFromJsonBody(
@@ -450,7 +452,25 @@ async function buildAddonsJsonSnapshot(
 export async function createDirectBooking(
   input: CreateDirectBookingInput,
 ): Promise<{ ok: true; bookingRequestId: number } | { ok: false; error: string }> {
-  const { carModelId, addonIds, ...common } = input;
+  const { carModelId, addonIds, customerId: customerIdRaw, ...common } = input;
+
+  let customerId: number | null =
+    customerIdRaw != null &&
+    Number.isInteger(customerIdRaw) &&
+    customerIdRaw > 0
+      ? customerIdRaw
+      : null;
+
+  if (customerId != null) {
+    const linked = await prisma.user.findUnique({
+      where: { id: customerId },
+      select: { phone: true },
+    });
+    const bookingPhone = common.phone.trim();
+    if (!linked?.phone || linked.phone !== bookingPhone) {
+      customerId = null;
+    }
+  }
 
   if (!Number.isInteger(carModelId) || carModelId < 1) {
     return { ok: false, error: "معرّف السيارة غير صالح." };
@@ -509,6 +529,7 @@ export async function createDirectBooking(
           data: {
             kind: "DIRECT",
             carModelId,
+            customerId,
             fullName: commonNormalized.fullName,
             phone: commonNormalized.phone,
             ageRange: commonNormalized.ageRange,

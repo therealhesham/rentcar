@@ -26,9 +26,25 @@ export type EditableBookingRow = {
   addonsJson: string | null;
   paymentStatus: string | null;
   paidAt: string | null;
+  paymentMethod: string | null;
 };
 
 type CategoryOption = { slug: string; title: string };
+
+function paymentMethodLabelAr(code: string | null | undefined): string {
+  switch (code) {
+    case "TABBY":
+      return "تابي";
+    case "TAMARA":
+      return "تمارا";
+    case "CARD":
+      return "بطاقة ائتمانية";
+    case "POINTS":
+      return "استبدال نقاط";
+    default:
+      return code ?? "—";
+  }
+}
 
 type Props = {
   request: EditableBookingRow;
@@ -249,6 +265,14 @@ function EditBookingModalInner({
                   {request.paidAt ? (
                     <span className="text-on-surface-variant" dir="ltr">
                       {new Date(request.paidAt).toLocaleString("ar-SA")}
+                    </span>
+                  ) : null}
+                  {request.paymentMethod ? (
+                    <span className="w-full basis-full text-on-surface-variant sm:w-auto sm:basis-auto">
+                      الطريقة:{" "}
+                      <span className="font-bold text-on-surface">
+                        {paymentMethodLabelAr(request.paymentMethod)}
+                      </span>
                     </span>
                   ) : null}
                   <a

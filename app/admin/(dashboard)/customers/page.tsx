@@ -64,6 +64,7 @@ export default async function AdminCustomersPage() {
         id: true,
         email: true,
         name: true,
+        phone: true,
         createdAt: true,
       },
     }),
@@ -154,6 +155,7 @@ export default async function AdminCustomersPage() {
                 <tr className="border-b border-outline-variant/30 text-on-surface-variant">
                   <th className="px-3 py-2">البريد</th>
                   <th className="px-3 py-2">الاسم</th>
+                  <th className="px-3 py-2">الجوال</th>
                   <th className="px-3 py-2">تاريخ الإنشاء</th>
                 </tr>
               </thead>
@@ -164,6 +166,9 @@ export default async function AdminCustomersPage() {
                       {u.email}
                     </td>
                     <td className="px-3 py-2">{u.name ?? "—"}</td>
+                    <td className="px-3 py-2 tabular-nums text-xs" dir="ltr">
+                      {u.phone ?? "—"}
+                    </td>
                     <td className="px-3 py-2 tabular-nums text-on-surface-variant">
                       {u.createdAt.toLocaleString("ar-SA")}
                     </td>

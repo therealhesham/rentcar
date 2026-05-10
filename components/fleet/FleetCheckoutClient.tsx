@@ -28,6 +28,8 @@ type Props = {
   car: CheckoutCarDTO;
   addons: RentalAddonDTO[];
   branchBySlug: Record<string, string>;
+  /** عميل مسجّل الدخول وبياناته كافية لتخطّي نموذج التواصل */
+  sessionCustomer: { name: string; phoneLocal: string; email: string } | null;
 };
 
 function AddonVisual({ iconKey }: { iconKey: string | null }) {
@@ -56,7 +58,12 @@ function fmtWhen(iso: string | null | undefined): { date: string; time: string }
   };
 }
 
-export function FleetCheckoutClient({ car, addons, branchBySlug }: Props) {
+export function FleetCheckoutClient({
+  car,
+  addons,
+  branchBySlug,
+  sessionCustomer,
+}: Props) {
   const sp = useSearchParams();
   const router = useRouter();
   const [ctxStore, setCtxStore] = useState<StoredFleetSearchContext | null>(null);
@@ -197,6 +204,7 @@ export function FleetCheckoutClient({ car, addons, branchBySlug }: Props) {
         });
         const res = await fetch(`/api/bookings/direct?${params}`, {
           signal: ctrl.signal,
+          credentials: "include",
         });
         const data = (await res.json()) as {
           ok?: boolean;
@@ -279,6 +287,7 @@ export function FleetCheckoutClient({ car, addons, branchBySlug }: Props) {
       const res = await fetch("/api/bookings/direct", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(body),
       });
       const data = (await res.json()) as {
@@ -439,54 +448,82 @@ export function FleetCheckoutClient({ car, addons, branchBySlug }: Props) {
 
               <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
                 <h2 className="text-lg font-extrabold text-[#003749]">بيانات التواصل</h2>
-                <p className="text-xs text-on-surface-variant">
-                  نحتاج اسمك ورقم جوالك لإتمام الطلب والتواصل معك.
-                </p>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="flex flex-col gap-1">
-                    <span className="text-xs font-bold text-on-surface-variant">الاسم الكامل</span>
-                    <input
-                      name="name"
-                      required
-                      minLength={3}
-                      autoComplete="name"
-                      className="rounded-lg border border-neutral-200 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#dbb878]/50"
-                      dir="rtl"
-                    />
-                  </label>
-                  <label className="flex flex-col gap-1">
-                    <span className="text-xs font-bold text-on-surface-variant">الجوال</span>
-                    <div className="flex overflow-hidden rounded-lg border border-neutral-200" dir="ltr">
-                      <span className="flex items-center border-e border-neutral-200 px-2 text-sm font-bold">
-                        +966
-                      </span>
-                      <input
-                        name="phone"
-                        required
-                        pattern="5[0-9]{8}"
-                        maxLength={9}
-                        inputMode="numeric"
-                        autoComplete="tel-national"
-                        placeholder="5XXXXXXXX"
-                        className="min-w-0 flex-1 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#dbb878]/50"
-                      />
+                {sessionCustomer ? (
+                  <>
+                    <p className="text-xs text-on-surface-variant">
+                      سيتم استخدام بيانات حسابك لإتمام الطلب والتواصل معك.
+                    </p>
+                    <div className="rounded-xl border border-[#003749]/15 bg-[#003749]/[0.04] px-4 py-3 text-sm">
+                      <p className="font-extrabold text-[#003749]">{sessionCustomer.name}</p>
+                      <p className="mt-1 text-xs text-on-surface-variant tabular-nums" dir="ltr">
+                        {sessionCustomer.email}
+                      </p>
+                      <p className="mt-1 text-xs font-bold tabular-nums text-[#003749]" dir="ltr">
+                        +966 {sessionCustomer.phoneLocal}
+                      </p>
+                      <Link
+                        href="/account"
+                        className="mt-2 inline-block text-xs font-bold text-[#ea580c] underline underline-offset-2"
+                      >
+                        تعديل البيانات من حسابي
+                      </Link>
                     </div>
-                  </label>
-                  <label className="flex flex-col gap-1 sm:col-span-2">
-                    <span className="text-xs font-bold text-on-surface-variant">الفئة العمرية</span>
-                    <select
-                      name="age"
-                      required
-                      defaultValue="25-35"
-                      className="rounded-lg border border-neutral-200 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#dbb878]/50"
-                      dir="rtl"
-                    >
-                      <option value="25-35">25-35</option>
-                      <option value="35-50">35-50</option>
-                      <option value="50+">50+</option>
-                    </select>
-                  </label>
-                </div>
+                    <input type="hidden" name="name" value={sessionCustomer.name} />
+                    <input type="hidden" name="phone" value={sessionCustomer.phoneLocal} />
+                    <input type="hidden" name="age" value="25-35" />
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xs text-on-surface-variant">
+                      نحتاج اسمك ورقم جوالك لإتمام الطلب والتواصل معك.
+                    </p>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <label className="flex flex-col gap-1">
+                        <span className="text-xs font-bold text-on-surface-variant">الاسم الكامل</span>
+                        <input
+                          name="name"
+                          required
+                          minLength={3}
+                          autoComplete="name"
+                          className="rounded-lg border border-neutral-200 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#dbb878]/50"
+                          dir="rtl"
+                        />
+                      </label>
+                      <label className="flex flex-col gap-1">
+                        <span className="text-xs font-bold text-on-surface-variant">الجوال</span>
+                        <div className="flex overflow-hidden rounded-lg border border-neutral-200" dir="ltr">
+                          <span className="flex items-center border-e border-neutral-200 px-2 text-sm font-bold">
+                            +966
+                          </span>
+                          <input
+                            name="phone"
+                            required
+                            pattern="5[0-9]{8}"
+                            maxLength={9}
+                            inputMode="numeric"
+                            autoComplete="tel-national"
+                            placeholder="5XXXXXXXX"
+                            className="min-w-0 flex-1 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#dbb878]/50"
+                          />
+                        </div>
+                      </label>
+                      <label className="flex flex-col gap-1 sm:col-span-2">
+                        <span className="text-xs font-bold text-on-surface-variant">الفئة العمرية</span>
+                        <select
+                          name="age"
+                          required
+                          defaultValue="25-35"
+                          className="rounded-lg border border-neutral-200 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#dbb878]/50"
+                          dir="rtl"
+                        >
+                          <option value="25-35">25-35</option>
+                          <option value="35-50">35-50</option>
+                          <option value="50+">50+</option>
+                        </select>
+                      </label>
+                    </div>
+                  </>
+                )}
                 <label className="flex cursor-pointer items-start gap-2 text-sm font-bold">
                   <input type="checkbox" name="terms" required className="mt-1 accent-[#003749]" />
                   <span>أوافق على الشروط والأحكام</span>

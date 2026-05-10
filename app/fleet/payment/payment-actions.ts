@@ -4,17 +4,37 @@ import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
+export type ConfirmPaymentResult =
+  | { ok: true; paymentMethod: string }
+  | { ok: false; error: string };
+
+const PAYMENT_METHODS = ["TABBY", "TAMARA", "CARD", "POINTS"] as const;
+
+function parsePaymentMethod(formData: FormData): (typeof PAYMENT_METHODS)[number] | null {
+  const raw = String(formData.get("paymentMethod") ?? "CARD")
+    .trim()
+    .toUpperCase();
+  return PAYMENT_METHODS.includes(raw as (typeof PAYMENT_METHODS)[number])
+    ? (raw as (typeof PAYMENT_METHODS)[number])
+    : null;
+}
+
 /**
- * تأكيد دفع تجريبي: يضع `paymentStatus = PAID` و `paidAt = الآن` على طلب الحجز.
- * لا يتعامل مع بوابة دفع حقيقية. الواجهة تتحقق من بطاقة وهمية فقط.
+ * تأكيد دفع تجريبي: يضع `paymentStatus = PAID` و `paidAt = الآن` و`paymentMethod` على طلب الحجز.
+ * جاهز لاحقاً لربط بوابات تابي / تمارا / بطاقة / نقاط دون تغيير شكل الطلب.
  */
 export async function confirmMockPayment(
-  _prev: { ok: boolean; error?: string } | null,
+  _prev: ConfirmPaymentResult | null,
   formData: FormData,
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<ConfirmPaymentResult> {
   const id = Number(formData.get("bookingRequestId"));
   if (!Number.isInteger(id) || id < 1) {
     return { ok: false, error: "معرّف الطلب غير صالح." };
+  }
+
+  const paymentMethod = parsePaymentMethod(formData);
+  if (!paymentMethod) {
+    return { ok: false, error: "طريقة الدفع غير صالحة." };
   }
 
   try {
@@ -23,6 +43,7 @@ export async function confirmMockPayment(
       data: {
         paymentStatus: "PAID",
         paidAt: new Date(),
+        paymentMethod,
       },
     });
     if (updated.count === 0) {
@@ -34,7 +55,14 @@ export async function confirmMockPayment(
         return { ok: false, error: "الحجز غير موجود." };
       }
       if (exists.paymentStatus === "PAID") {
-        return { ok: true };
+        const paidRow = await prisma.bookingRequest.findUnique({
+          where: { id },
+          select: { paymentMethod: true },
+        });
+        return {
+          ok: true,
+          paymentMethod: paidRow?.paymentMethod ?? paymentMethod,
+        };
       }
       return { ok: false, error: "تعذّر تحديث حالة الدفع." };
     }
@@ -47,7 +75,8 @@ export async function confirmMockPayment(
   }
 
   revalidatePath(`/fleet/payment/${id}`);
+  revalidatePath("/account");
   revalidatePath("/admin");
   revalidatePath("/admin/car-bookings");
-  return { ok: true };
+  return { ok: true, paymentMethod };
 }

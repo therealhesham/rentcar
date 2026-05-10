@@ -6,6 +6,7 @@ import {
   parseAddonIdsFromJsonBody,
   parseCommonBookingFieldsFromJson,
 } from "@/lib/direct-booking";
+import { getCustomerSessionUserId } from "@/lib/customer-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -104,10 +105,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: addonParsed.error }, { status: 400 });
   }
 
+  const sessionUserId = await getCustomerSessionUserId();
+
   const created = await createDirectBooking({
     carModelId,
     ...parsed.data,
     addonIds: addonParsed.addonIds,
+    customerId: sessionUserId ?? undefined,
   });
 
   if (!created.ok) {
@@ -118,6 +122,7 @@ export async function POST(request: Request) {
   revalidatePath("/admin/car-bookings");
   revalidatePath("/fleet");
   revalidatePath("/fleet/checkout");
+  revalidatePath("/account");
 
   return NextResponse.json({ ok: true, bookingRequestId: created.bookingRequestId });
 }

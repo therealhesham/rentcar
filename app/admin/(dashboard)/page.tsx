@@ -194,6 +194,7 @@ export default async function AdminDashboardPage() {
                           paidAt: request.paidAt
                             ? request.paidAt.toISOString()
                             : null,
+                          paymentMethod: request.paymentMethod ?? null,
                         }}
                         categories={fleetCategoriesForEdit}
                         models={bookableModels}
