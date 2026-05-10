@@ -2,7 +2,7 @@
 export const FLEET_SEARCH_STORAGE_KEY = "rawaes:fleet-search-v1";
 
 export type StoredFleetSearchContext = {
-  rental: "daily" | "weekly" | "flex";
+  rental: "daily" | "weekly";
   mode: "pickup" | "delivery";
   pickupBranch?: string;
   returnBranch: string;

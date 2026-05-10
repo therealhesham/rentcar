@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, Car, RefreshCw, Search } from "lucide-react";
+import { CalendarDays, Car, Search } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -14,15 +14,12 @@ export type BookingBranchOption = {
   name: string;
 };
 
-type RentalTab = "daily" | "weekly" | "flex";
+type RentalTab = "daily" | "weekly";
 type ModeTab = "pickup" | "delivery";
 
 function validateRentalMinDays(rental: RentalTab, days: number): string | null {
   if (rental === "weekly" && days < 7) {
     return "نوع الأسبوعي يتطلّب مدة لا تقل عن 7 أيام بين الاستلام والتسليم.";
-  }
-  if (rental === "flex" && days < 30) {
-    return "نوع فليكس (شهري) يتطلّب مدة لا تقل عن 30 يوماً بين الاستلام والتسليم.";
   }
   return null;
 }
@@ -173,14 +170,6 @@ export function BookingSearchWidget({ branches }: { branches: BookingBranchOptio
               <CalendarDays className="size-5 shrink-0 opacity-90" aria-hidden />
               أسبوعي
             </button>
-            <button
-              type="button"
-              onClick={() => setRental("flex")}
-              className={`${tabBtn} ${rental === "flex" ? tabActive : tabInactive}`}
-            >
-              <RefreshCw className="size-5 shrink-0 opacity-90" aria-hidden />
-              فليكس (شهري)
-            </button>
           </div>
 
           {/* استلام / توصيل */}
@@ -226,7 +215,7 @@ export function BookingSearchWidget({ branches }: { branches: BookingBranchOptio
                   ))}
                 </select>
                 <span className="text-[11px] text-on-surface-variant">
-                  الاستلام من فرع الشركة
+                  {/* الاستلام من فرع الشركة */}
                 </span>
               </label>
             ) : (

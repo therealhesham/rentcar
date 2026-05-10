@@ -59,7 +59,7 @@ export default async function FleetPage({
       });
 
       const modeLabel = params.mode === "delivery" ? "توصيل" : "استلام من الفرع";
-      const rental = params.rental === "weekly" ? "أسبوعي" : params.rental === "flex" ? "فليكس" : "يومي";
+      const rental = params.rental === "weekly" ? "أسبوعي" : "يومي";
 
       searchBanner = (
         <div className="mx-auto mb-10 max-w-screen-2xl rounded-2xl border border-[#f97316]/25 bg-[#fff7ed] px-6 py-4 text-start shadow-sm">
