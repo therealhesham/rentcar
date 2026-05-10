@@ -9,6 +9,7 @@ import {
   PackageCheck,
   Search,
   Truck,
+  ChevronDown,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -154,68 +155,102 @@ export function BookingSearchWidget({ branches }: { branches: BookingBranchOptio
     <>
       <form
         onSubmit={handleSearch}
-        className="w-full overflow-hidden rounded-3xl border border-[#e7e1d3] bg-white/95 shadow-[0_24px_60px_-20px_rgba(15,61,71,0.25),0_8px_24px_-12px_rgba(15,61,71,0.12)] backdrop-blur-sm"
         dir="rtl"
+        className="booking-widget w-full overflow-hidden rounded-2xl bg-white shadow-[0_32px_80px_-16px_rgba(15,61,71,0.22),0_8px_24px_-8px_rgba(15,61,71,0.10)] ring-1 ring-black/[0.04]"
       >
-        {/* رأس الـ widget — تبويبات نوع الإيجار + استلام/توصيل */}
-        <div className="flex flex-col gap-3 border-b border-[#f0ebe4] bg-gradient-to-l from-[#fdfbf6] to-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          {/* segmented: نوع الإيجار */}
-          <div
-            role="tablist"
-            aria-label="نوع الإيجار"
-            className="inline-flex w-full rounded-full border border-[#ebe4d3] bg-[#fbf6ec] p-1 text-sm font-bold sm:w-auto"
-          >
-            <SegBtn
+        {/* ─── Tab Bar ─── */}
+        <div className="booking-tabs flex flex-col gap-0 border-b border-[#f0ebe4] sm:flex-row sm:items-stretch">
+          {/* Rental type tabs */}
+          <div className="flex flex-1 border-b border-[#f0ebe4] sm:border-b-0 sm:border-e sm:border-e-[#f0ebe4]">
+            <TabButton
               active={rental === "daily"}
               onClick={() => setRental("daily")}
-              icon={<Car className="size-4" aria-hidden />}
-              label="يومي"
+              icon={<Car className="size-[18px]" />}
+              label="إيجار يومي"
+              sublabel="أقل من أسبوع"
             />
-            <SegBtn
+            <TabButton
               active={rental === "weekly"}
               onClick={() => setRental("weekly")}
-              icon={<CalendarDays className="size-4" aria-hidden />}
-              label="أسبوعي"
+              icon={<CalendarDays className="size-[18px]" />}
+              label="إيجار أسبوعي"
+              sublabel="7 أيام+"
             />
           </div>
 
-          {/* segmented: استلام / توصيل */}
-          <div
-            role="tablist"
-            aria-label="طريقة الاستلام"
-            className="inline-flex w-full rounded-full border border-[#dce4ea] bg-[#f4f7fa] p-1 text-sm font-bold sm:w-auto"
-          >
-            <SegBtn
+          {/* Mode tabs */}
+          <div className="flex flex-1">
+            <TabButton
               active={mode === "pickup"}
               onClick={() => setMode("pickup")}
-              icon={<PackageCheck className="size-4" aria-hidden />}
+              icon={<PackageCheck className="size-[18px]" />}
               label="استلام من الفرع"
+              sublabel="اختر الفرع المناسب"
               tone="teal"
             />
-            <SegBtn
+            <TabButton
               active={mode === "delivery"}
               onClick={() => setMode("delivery")}
-              icon={<Truck className="size-4" aria-hidden />}
+              icon={<Truck className="size-[18px]" />}
               label="توصيل لموقعي"
+              sublabel="نصل إليك"
               tone="teal"
             />
           </div>
         </div>
 
-        {/* الحقول */}
-        <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 sm:p-5 lg:grid-cols-12 lg:items-stretch lg:gap-0 lg:p-0">
-          {/* الموقع (استلام أو توصيل) */}
-          <Field
+        {/* ─── Fields Row ─── */}
+        <div className="booking-fields grid grid-cols-1 divide-y divide-[#f0ebe4] sm:grid-cols-2 sm:divide-x sm:divide-x-reverse sm:divide-y-0 lg:grid-cols-[1fr_1fr_1fr_1fr_auto] lg:divide-y-0">
+          {/* Field 1: Pickup / Delivery location */}
+          <BookingField
             label={mode === "pickup" ? "موقع الاستلام" : "موقع التوصيل"}
-            icon={<MapPin className="size-4" aria-hidden />}
-            className="lg:col-span-3"
+            icon={<MapPin className="size-[17px]" />}
           >
             {mode === "pickup" ? (
+              <div className="relative">
+                <select
+                  value={pickupBranch || defaultSlug}
+                  onChange={(ev) => setPickupBranch(ev.target.value)}
+                  required={branchSelectRequired}
+                  className="w-full appearance-none bg-transparent pe-6 text-[15px] font-semibold text-[#0f1923] outline-none placeholder:text-[#9a8366]"
+                >
+                  {branches.map((b) => (
+                    <option key={b.slug} value={b.slug}>
+                      {b.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute end-0 top-1/2 size-4 -translate-y-1/2 text-[#9a8366]" />
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setMapOpen(true)}
+                className="w-full text-start text-[15px] font-semibold outline-none"
+              >
+                {deliveryLat != null && deliveryLng != null ? (
+                  <span className="flex items-center gap-1.5 text-[#003749]">
+                    <span className="inline-block size-2 rounded-full bg-green-500" />
+                    تم تحديد الموقع
+                  </span>
+                ) : (
+                  <span className="text-[#9a8366]">اضغط لتحديد الموقع</span>
+                )}
+              </button>
+            )}
+          </BookingField>
+
+          {/* Field 2: Return branch */}
+          <BookingField
+            label="موقع التسليم (إرجاع)"
+            icon={<MapPin className="size-[17px]" />}
+          >
+            <div className="relative">
               <select
-                value={pickupBranch || defaultSlug}
-                onChange={(ev) => setPickupBranch(ev.target.value)}
+                value={returnBranch || defaultSlug}
+                onChange={(ev) => setReturnBranch(ev.target.value)}
                 required={branchSelectRequired}
-                className="w-full bg-transparent text-sm font-semibold text-[#1c1b1b] outline-none"
+                className="w-full appearance-none bg-transparent pe-6 text-[15px] font-semibold text-[#0f1923] outline-none"
               >
                 {branches.map((b) => (
                   <option key={b.slug} value={b.slug}>
@@ -223,53 +258,14 @@ export function BookingSearchWidget({ branches }: { branches: BookingBranchOptio
                   </option>
                 ))}
               </select>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setMapOpen(true)}
-                className="w-full text-start text-sm font-semibold text-[#1c1b1b] outline-none"
-              >
-                {deliveryLat != null && deliveryLng != null ? (
-                  <span className="block">
-                    تم تحديد الموقع{" "}
-                    <span dir="ltr" className="text-xs font-mono text-on-surface-variant">
-                      ({deliveryLat.toFixed(4)}, {deliveryLng.toFixed(4)})
-                    </span>
-                  </span>
-                ) : (
-                  <span className="text-[#9a8366]">اضغط لتحديد الموقع على الخريطة</span>
-                )}
-              </button>
-            )}
-          </Field>
+              <ChevronDown className="pointer-events-none absolute end-0 top-1/2 size-4 -translate-y-1/2 text-[#9a8366]" />
+            </div>
+          </BookingField>
 
-          {/* فرع الإرجاع */}
-          <Field
-            label="موقع التسليم (إرجاع المركبة)"
-            icon={<MapPin className="size-4" aria-hidden />}
-            className="lg:col-span-3"
-            withBorderStart
-          >
-            <select
-              value={returnBranch || defaultSlug}
-              onChange={(ev) => setReturnBranch(ev.target.value)}
-              required={branchSelectRequired}
-              className="w-full bg-transparent text-sm font-semibold text-[#1c1b1b] outline-none"
-            >
-              {branches.map((b) => (
-                <option key={b.slug} value={b.slug}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
-          </Field>
-
-          {/* تاريخ ووقت الاستلام */}
-          <Field
+          {/* Field 3: Pickup datetime */}
+          <BookingField
             label="تاريخ ووقت الاستلام"
-            icon={<CalendarClock className="size-4" aria-hidden />}
-            className="lg:col-span-3"
-            withBorderStart
+            icon={<CalendarClock className="size-[17px]" />}
           >
             <input
               type="datetime-local"
@@ -277,16 +273,14 @@ export function BookingSearchWidget({ branches }: { branches: BookingBranchOptio
               onChange={(ev) => setPickupDt(ev.target.value)}
               required
               dir="ltr"
-              className="w-full bg-transparent text-sm font-semibold text-[#1c1b1b] outline-none"
+              className="w-full bg-transparent text-[15px] font-semibold text-[#0f1923] outline-none"
             />
-          </Field>
+          </BookingField>
 
-          {/* تاريخ ووقت التسليم */}
-          <Field
+          {/* Field 4: Dropoff datetime */}
+          <BookingField
             label="تاريخ ووقت التسليم"
-            icon={<Clock className="size-4" aria-hidden />}
-            className="lg:col-span-3"
-            withBorderStart
+            icon={<Clock className="size-[17px]" />}
           >
             <input
               type="datetime-local"
@@ -294,71 +288,79 @@ export function BookingSearchWidget({ branches }: { branches: BookingBranchOptio
               onChange={(ev) => setDropoffDt(ev.target.value)}
               required
               dir="ltr"
-              className="w-full bg-transparent text-sm font-semibold text-[#1c1b1b] outline-none"
+              className="w-full bg-transparent text-[15px] font-semibold text-[#0f1923] outline-none"
             />
-          </Field>
+          </BookingField>
+
+          {/* CTA Button */}
+          <div className="flex items-stretch p-3 lg:p-3">
+            <button
+              type="submit"
+              className="group relative flex w-full flex-col items-center justify-center gap-1 overflow-hidden rounded-xl px-6 py-3 text-white transition-all duration-300 hover:shadow-[0_8px_24px_-6px_rgba(219,184,120,0.8)] hover:-translate-y-0.5 active:translate-y-0 lg:min-h-[4rem] lg:flex-col"
+              style={{
+                background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)`,
+                boxShadow: "0 4px 16px -4px rgba(219,184,120,0.55)",
+              }}
+            >
+              {/* shimmer */}
+              <span
+                className="absolute inset-0 -translate-x-full bg-gradient-to-r from-white/0 via-white/25 to-white/0 transition-transform duration-700 group-hover:translate-x-full"
+                aria-hidden
+              />
+              <Search className="size-5 shrink-0" aria-hidden />
+              <span className="text-[13px] font-extrabold leading-tight tracking-wide">
+                بحث
+              </span>
+            </button>
+          </div>
         </div>
 
-        {/* شريط الأكشن السفلي */}
-        <div className="flex flex-col gap-3 border-t border-[#f0ebe4] bg-[#fbf6ec]/40 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <p
-            className="text-xs font-semibold text-[#6b5a3b]"
-            aria-live="polite"
-          >
+        {/* ─── Footer Bar ─── */}
+        <div className="flex flex-col items-start gap-2 border-t border-[#f0ebe4] bg-[#fdfbf6] px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
+          {/* Days badge */}
+          <div aria-live="polite" className="flex items-center gap-2">
             {daysPreview != null ? (
-              <>
-                مدة الحجز:{" "}
-                <span dir="ltr" className="tabular-nums text-[#003749]">
-                  {daysPreview}
-                </span>{" "}
-                يوماً
-              </>
+              <span
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[13px] font-bold text-white"
+                style={{ background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)` }}
+              >
+                <CalendarDays className="size-3.5" aria-hidden />
+                <span dir="ltr">{daysPreview}</span>
+                <span>يوم</span>
+              </span>
             ) : (
-              <span className="text-[#9a8366]">حدّد تواريخ الاستلام والتسليم لعرض المدة</span>
+              <span className="text-[12px] text-[#9a8366]">
+                حدّد تواريخ الاستلام والتسليم لعرض المدة
+              </span>
             )}
-          </p>
+          </div>
 
-          <button
-            type="submit"
-            className="group relative inline-flex h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-full px-8 text-sm font-extrabold text-white shadow-[0_8px_20px_-6px_rgba(219,184,120,0.7)] transition-transform hover:-translate-y-0.5 active:translate-y-0 sm:w-auto"
-            style={{
-              background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)`,
-            }}
-          >
-            <span
-              className="absolute inset-0 -translate-x-full bg-gradient-to-r from-white/0 via-white/30 to-white/0 transition-transform duration-700 group-hover:translate-x-full"
-              aria-hidden
-            />
-            <Search className="size-5" aria-hidden />
-            <span>بحث المركبات المتاحة</span>
-          </button>
-        </div>
-
-        {branches.length === 0 ? (
-          <p className="border-t border-[#f0ebe4] px-4 py-3 text-center text-xs text-error">
-            لا توجد فروع مفعّلة في النظام. أضف فروعاً من لوحة الإدارة لاستخدام البحث.
-          </p>
-        ) : null}
-
-        {error ? (
-          <p
-            role="alert"
-            className="border-t border-[#fecaca] bg-[#fef2f2] px-4 py-3 text-center text-sm font-bold text-[#b91c1c]"
-          >
-            {error}
-          </p>
-        ) : null}
-
-        <p className="border-t border-[#f0ebe4] px-4 py-2.5 text-center text-[11px] text-on-surface-variant">
-          البحث يعرض المركبات المتاحة للحجز المباشر في الفترة المحددة.{" "}
           <Link
             href="/fleet"
-            className="font-bold text-[#003749] underline-offset-4 hover:underline"
+            className="text-[12px] font-semibold text-[#003749] underline-offset-4 hover:underline"
             style={{ textDecorationColor: GOLD }}
           >
-            تصفح الأسطول كاملاً
+            تصفح الأسطول كاملاً ←
           </Link>
-        </p>
+        </div>
+
+        {/* No branches warning */}
+        {branches.length === 0 && (
+          <p className="border-t border-[#f0ebe4] px-5 py-3 text-center text-xs text-red-600">
+            لا توجد فروع مفعّلة. أضف فروعاً من لوحة الإدارة.
+          </p>
+        )}
+
+        {/* Error */}
+        {error && (
+          <p
+            role="alert"
+            className="flex items-center gap-2 border-t border-red-200 bg-red-50 px-5 py-3 text-sm font-semibold text-red-700"
+          >
+            <span className="inline-block size-2 shrink-0 rounded-full bg-red-500" />
+            {error}
+          </p>
+        )}
       </form>
 
       <DeliveryMapDialog
@@ -379,69 +381,83 @@ export function BookingSearchWidget({ branches }: { branches: BookingBranchOptio
   );
 }
 
-/* ---------- Subcomponents ---------- */
+/* ─────────────────────────────────────────
+   Sub-components
+───────────────────────────────────────── */
 
-function SegBtn({
+function TabButton({
   active,
   onClick,
   icon,
   label,
+  sublabel,
   tone = "gold",
 }: {
   active: boolean;
   onClick: () => void;
   icon: React.ReactNode;
   label: string;
+  sublabel: string;
   tone?: "gold" | "teal";
 }) {
-  const activeBg =
-    tone === "teal"
-      ? "bg-[#003749] text-white shadow-[0_4px_14px_-4px_rgba(0,55,73,0.5)]"
-      : "bg-[#dbb878] text-white shadow-[0_4px_14px_-4px_rgba(219,184,120,0.7)]";
-  const inactive =
-    tone === "teal"
-      ? "text-[#003749]/70 hover:text-[#003749]"
-      : "text-[#6b5a3b] hover:text-[#003749]";
+  const activeColor = tone === "teal" ? TEAL : GOLD_DARK;
+  const activeBorderColor = tone === "teal" ? TEAL : GOLD;
+
   return (
     <button
       type="button"
       role="tab"
       aria-selected={active}
       onClick={onClick}
-      className={`flex flex-1 items-center justify-center gap-1.5 rounded-full px-4 py-2 transition-all duration-200 ${
-        active ? activeBg : inactive
-      }`}
+      className="group relative flex flex-1 items-center gap-3 px-5 py-4 text-start transition-colors duration-200 hover:bg-[#fdfbf6] focus-visible:outline-none"
     >
-      {icon}
-      <span>{label}</span>
+      {/* active indicator line at bottom */}
+      <span
+        className="absolute inset-x-0 bottom-0 h-[2.5px] rounded-full transition-all duration-300"
+        style={{
+          background: active ? activeBorderColor : "transparent",
+        }}
+      />
+      {/* icon bubble */}
+      <span
+        className="flex size-9 shrink-0 items-center justify-center rounded-xl transition-all duration-200"
+        style={{
+          background: active ? `${activeColor}18` : "#f4f0ea",
+          color: active ? activeColor : "#9a8366",
+        }}
+      >
+        {icon}
+      </span>
+      <span className="flex flex-col">
+        <span
+          className="text-[13.5px] font-bold leading-tight transition-colors duration-200"
+          style={{ color: active ? activeColor : "#6b5a3b" }}
+        >
+          {label}
+        </span>
+        <span className="text-[11px] text-[#9a8366]">{sublabel}</span>
+      </span>
     </button>
   );
 }
 
-function Field({
+function BookingField({
   label,
   icon,
-  className = "",
-  withBorderStart = false,
   children,
 }: {
   label: string;
   icon: React.ReactNode;
-  className?: string;
-  withBorderStart?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <label
-      className={`group flex cursor-text flex-col gap-1 rounded-2xl border border-[#ebe4d3] bg-[#fdfbf6] p-3 transition-colors hover:border-[#dbb878]/60 focus-within:border-[#dbb878] focus-within:bg-white focus-within:ring-2 focus-within:ring-[#dbb878]/30 lg:rounded-none lg:border-0 lg:bg-transparent lg:p-5 lg:hover:border-0 lg:focus-within:bg-[#fdfbf6]/40 lg:focus-within:ring-0 ${
-        withBorderStart ? "lg:border-s lg:border-s-[#f0ebe4]" : ""
-      } ${className}`}
-    >
-      <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-[#003749]/70">
-        <span className="text-[#dbb878]">{icon}</span>
+    <label className="group flex cursor-text flex-col gap-2 p-4 transition-colors duration-150 hover:bg-[#fdfbf6] focus-within:bg-[#fffcf7] lg:p-5">
+      <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider"
+        style={{ color: TEAL + "aa" }}>
+        <span style={{ color: GOLD }}>{icon}</span>
         {label}
       </span>
-      <div className="mt-1">{children}</div>
+      <div>{children}</div>
     </label>
   );
 }
