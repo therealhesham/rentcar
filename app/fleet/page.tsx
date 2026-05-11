@@ -57,7 +57,9 @@ export default async function FleetPage({
       });
 
       const modeLabel = qFirst(params.mode) === "delivery" ? "توصيل" : "استلام من الفرع";
-      const rental = qFirst(params.rental) === "weekly" ? "أسبوعي" : "يومي";
+      const rentalRaw = qFirst(params.rental);
+      const rental =
+        rentalRaw === "weekly" ? "أسبوعي" : rentalRaw === "monthly" ? "شهري" : "يومي";
 
       searchBanner = (
         <div className="mx-auto mb-10 max-w-screen-2xl rounded-2xl border border-[#f97316]/25 bg-[#fff7ed] px-6 py-4 text-start shadow-sm">

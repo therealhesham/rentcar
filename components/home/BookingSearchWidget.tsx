@@ -2,6 +2,7 @@
 
 import {
   CalendarDays,
+  CalendarRange,
   Car,
   CalendarClock,
   Clock,
@@ -14,7 +15,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useRef, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { DeliveryMapDialog } from "@/components/home/DeliveryMapDialog";
 import { computeBookingDays } from "@/lib/booking-days";
 import type { StoredFleetSearchContext } from "@/lib/fleet-search-storage";
@@ -25,16 +26,51 @@ export type BookingBranchOption = {
   name: string;
 };
 
-type RentalTab = "daily" | "weekly";
+type RentalTab = "daily" | "weekly" | "monthly";
 type ModeTab = "pickup" | "delivery";
 
 const GOLD = "#dbb878";
 const GOLD_DARK = "#c9a356";
 const TEAL = "#003749";
 
+function pad2(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+/** قيمة حقول `datetime-local` بالتوقيت المحلي */
+function toDatetimeLocalValue(d: Date): string {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
+function addLocalDays(base: Date, days: number): Date {
+  const d = new Date(base.getTime());
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+/** شهر تقويمي كامل؛ إن لم يوجد نفس يوم الشهر يُضبط على آخر يوم الشهر السابق (مثل 31 يناير → فبراير) */
+function addLocalCalendarMonths(base: Date, months: number): Date {
+  const d = new Date(base.getTime());
+  const day = d.getDate();
+  d.setMonth(d.getMonth() + months);
+  if (d.getDate() !== day) {
+    d.setDate(0);
+  }
+  return d;
+}
+
+function computeAutoDropoff(pickup: Date, rental: RentalTab): Date | null {
+  if (rental === "weekly") return addLocalDays(pickup, 7);
+  if (rental === "monthly") return addLocalCalendarMonths(pickup, 1);
+  return null;
+}
+
 function validateRentalMinDays(rental: RentalTab, days: number): string | null {
   if (rental === "weekly" && days < 7) {
     return "نوع الأسبوعي يتطلّب مدة لا تقل عن 7 أيام بين الاستلام والتسليم.";
+  }
+  if (rental === "monthly" && days < 28) {
+    return "نوع الشهري يتطلّب مدة لا تقل عن 28 يوماً بين الاستلام والتسليم.";
   }
   return null;
 }
@@ -54,6 +90,16 @@ export function BookingSearchWidget({ branches }: { branches: BookingBranchOptio
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    if (rental === "daily") return;
+    if (!pickupDt.trim()) return;
+    const p = new Date(pickupDt);
+    if (Number.isNaN(p.getTime())) return;
+    const auto = computeAutoDropoff(p, rental);
+    if (!auto) return;
+    setDropoffDt(toDatetimeLocalValue(auto));
+  }, [rental, pickupDt]);
 
   const branchSelectRequired = branches.length > 0;
   const defaultSlug = branches[0]?.slug ?? "";
@@ -222,7 +268,7 @@ export function BookingSearchWidget({ branches }: { branches: BookingBranchOptio
           <div className="relative flex flex-col sm:flex-row sm:items-stretch">
             {/* Rental type group */}
             <div className="flex flex-1 items-center border-b border-[#f0ebe4] sm:border-b-0 sm:border-e sm:border-e-[#f0ebe4]">
-              <div className="flex w-full items-center gap-1 p-2">
+              <div className="flex w-full flex-wrap items-center gap-1 p-2">
                 <PillTab
                   active={rental === "daily"}
                   onClick={() => setRental("daily")}
@@ -234,6 +280,12 @@ export function BookingSearchWidget({ branches }: { branches: BookingBranchOptio
                   onClick={() => setRental("weekly")}
                   icon={<CalendarDays className="size-[15px]" />}
                   label="أسبوعي"
+                />
+                <PillTab
+                  active={rental === "monthly"}
+                  onClick={() => setRental("monthly")}
+                  icon={<CalendarRange className="size-[15px]" />}
+                  label="شهري"
                 />
               </div>
             </div>
@@ -347,14 +399,17 @@ export function BookingSearchWidget({ branches }: { branches: BookingBranchOptio
             <FieldCard
               label="تاريخ ووقت التسليم"
               icon={<Clock className="size-[15px]" />}
+             
             >
               <input
                 type="datetime-local"
                 value={dropoffDt}
                 onChange={(ev) => setDropoffDt(ev.target.value)}
+                readOnly={rental !== "daily"}
                 required
                 dir="ltr"
-                className="w-full bg-transparent text-[14px] font-semibold text-[#0f1923] outline-none"
+                className={`w-full bg-transparent text-[14px] font-semibold text-[#0f1923] outline-none ${rental !== "daily" ? "cursor-default opacity-90" : ""}`}
+                aria-readonly={rental !== "daily"}
               />
             </FieldCard>
           </div>
@@ -382,7 +437,6 @@ export function BookingSearchWidget({ branches }: { branches: BookingBranchOptio
                 </div>
               ) : (
                 <span className="flex items-center gap-1.5 text-[12px] text-[#aaa08e]">
-                  <Sparkles className="size-3.5" aria-hidden />
                   حدّد التواريخ لعرض مدة الحجز
                 </span>
               )}
@@ -514,17 +568,24 @@ function PillTab({
 function FieldCard({
   label,
   icon,
+  hint,
   children,
 }: {
   label: string;
   icon: React.ReactNode;
+  hint?: string;
   children: React.ReactNode;
 }) {
   return (
     <label className="booking-field-card flex cursor-text flex-col gap-2 rounded-2xl border border-[#ebe4d3]/80 bg-[#fdfbf6] p-4">
-      <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[#003749]/55">
-        <span className="text-[#dbb878]">{icon}</span>
-        {label}
+      <span className="flex flex-col gap-0.5">
+        <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[#003749]/55">
+          <span className="text-[#dbb878]">{icon}</span>
+          {label}
+        </span>
+        {hint ? (
+          <span className="text-[10px] font-medium leading-snug text-[#8a7752]/90">{hint}</span>
+        ) : null}
       </span>
       <div className="min-h-[1.5rem]">{children}</div>
     </label>

@@ -4,6 +4,9 @@ import { prisma } from "@/lib/prisma";
 export async function getFleetCategoriesForHome() {
   return prisma.fleetCategory.findMany({
     orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+    include: {
+      _count: { select: { models: true } },
+    },
   });
 }
 
