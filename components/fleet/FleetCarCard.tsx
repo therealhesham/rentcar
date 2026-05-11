@@ -49,12 +49,12 @@ export function FleetCarCard({
 
   return (
     <article className="group overflow-hidden rounded-[18px] border border-outline-variant/50 bg-surface-container-lowest shadow-sm transition-shadow hover:shadow-md">
-      <div className="relative aspect-[5/3] bg-surface-container-lowest px-4 pt-6 pb-2">
+      <div className="relative aspect-[5/3] bg-surface-container-lowest">
         {/* eslint-disable-next-line @next/next/no-img-element -- روابط صور ديناميكية من الإدارة */}
         <img
           src={car.image}
           alt={car.alt}
-          className="mx-auto h-full max-h-[200px] w-full object-contain object-bottom transition-transform duration-500 group-hover:scale-[1.03]"
+          className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-[1.03]"
         />
         {car.badge ? (
           <div className="absolute start-4 top-4 rounded-md rounded-es-none bg-primary-fixed px-3 py-1.5 text-xs font-bold text-on-primary-fixed shadow-sm">
