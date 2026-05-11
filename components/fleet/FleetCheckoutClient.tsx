@@ -7,6 +7,12 @@ import {
   Info,
   KeyRound,
   Shield,
+  CheckCircle2,
+  CalendarDays,
+  MapPin,
+  CreditCard,
+  Check,
+  ChevronDown,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -28,12 +34,15 @@ type Props = {
   car: CheckoutCarDTO;
   addons: RentalAddonDTO[];
   branchBySlug: Record<string, string>;
-  /** عميل مسجّل الدخول وبياناته كافية لتخطّي نموذج التواصل */
   sessionCustomer: { name: string; phoneLocal: string; email: string } | null;
 };
 
+const GOLD = "#dbb878";
+const GOLD_DARK = "#c9a356";
+const TEAL = "#003749";
+
 function AddonVisual({ iconKey }: { iconKey: string | null }) {
-  const cls = "size-8 text-[#003749]";
+  const cls = "size-7";
   switch (iconKey) {
     case "key":
       return <KeyRound className={cls} aria-hidden />;
@@ -75,6 +84,9 @@ export function FleetCheckoutClient({
     | { loading: true }
     | { loading: false; available: boolean; fleetUnits: number; overlapping: number }
   >(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     try {
@@ -314,283 +326,393 @@ export function FleetCheckoutClient({
   );
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#f4f4f5] text-on-surface">
+    <div className="flex min-h-screen flex-col bg-[#fdfbf6] text-on-surface">
       <SiteNav active="fleet" />
-      <div className="pt-24 pb-16">
+      <div className={`pt-24 pb-20 transition-opacity duration-500 ease-out ${mounted ? 'opacity-100' : 'opacity-0'}`}>
         <main className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <nav className="mb-6 text-sm text-on-surface-variant">
-            <Link href="/fleet" className="font-bold text-[#003749] hover:underline">
+          {/* Breadcrumb */}
+          <nav className="mb-8 flex items-center gap-2 text-[13px] font-semibold text-[#aaa08e]">
+            <Link href="/fleet" className="transition-colors hover:text-[#dbb878]">
               الأسطول
             </Link>
-            <span className="mx-2 opacity-50">/</span>
-            <span className="font-semibold text-on-surface">إتمام الحجز</span>
+            <span>/</span>
+            <span className="text-[#003749]">إتمام الحجز</span>
           </nav>
 
-          {!trip.pickupIso ? (
-            <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900">
-              لم نجد تواريخ الاستلام من الرابط.{" "}
-              <Link href="/fleet" className="underline">
-                ارجع للأسطول
-              </Link>{" "}
-              بعد البحث من الصفحة الرئيسية، أو ابدأ بحثاً جديداً.
-            </div>
-          ) : null}
-
-          {availability?.loading ? (
-            <p className="mb-4 text-sm text-on-surface-variant">جاري التحقق من التوفر…</p>
-          ) : null}
-          {availability && !availability.loading ? (
-            <p
-              className={`mb-4 text-sm font-bold ${availability.available ? "text-primary" : "text-error"}`}
-              role="status"
-            >
-              {availability.available
-                ? `متاحة للحجز (${availability.fleetUnits} وحدة في الأسطول).`
-                : `غير متاحة في هذه الفترة (${availability.overlapping} حجز متزامن).`}
-            </p>
-          ) : null}
-
-          <div
-            dir="rtl"
-            className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(280px,340px)]"
-          >
-            {/* المحتوى الرئيسي — الإضافات والأسعار */}
-            <div className="order-2 space-y-6 lg:order-1">
-              <h1 className="text-xl font-extrabold text-[#ea580c] sm:text-2xl">
-                السعر والإضافات
-              </h1>
-
-              <div className="space-y-3">
-                {addons.length === 0 ? (
-                  <p className="rounded-xl border border-dashed border-outline-variant/50 bg-white px-4 py-8 text-center text-sm text-on-surface-variant">
-                    لا توجد إضافات مفعّلة حالياً. أضفها من{" "}
-                    <Link href="/admin/rental-addons" className="font-bold underline underline-offset-2">
-                      لوحة الإدارة — إضافات التأجير
-                    </Link>
-                    .
-                  </p>
-                ) : (
-                  addons.map((a) => {
-                    const on = selected.has(a.id);
-                    return (
-                      <label
-                        key={a.id}
-                        className={`flex cursor-pointer items-center gap-4 rounded-xl border bg-white px-4 py-4 shadow-sm transition-colors ${
-                          on ? "border-[#dbb878] ring-1 ring-[#dbb878]/40" : "border-neutral-200"
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={on}
-                          onChange={() => toggleAddon(a.id)}
-                          className="size-5 shrink-0 accent-[#003749]"
-                        />
-                        <AddonVisual iconKey={a.iconKey} />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-extrabold text-[#003749]">{a.titleAr}</span>
-                            <button
-                              type="button"
-                              className="text-on-surface-variant hover:text-[#003749]"
-                              title={a.descriptionAr ?? ""}
-                              aria-label="معلومات"
-                            >
-                              <Info className="size-4" />
-                            </button>
-                          </div>
-                          {a.descriptionAr ? (
-                            <p className="mt-1 text-xs text-on-surface-variant">{a.descriptionAr}</p>
-                          ) : null}
-                        </div>
-                        <div className="shrink-0 text-start">
-                          <p className="text-sm font-extrabold tabular-nums text-[#003749]" dir="ltr">
-                            {formatSarAmount(a.pricePerDay)} ر.س
-                          </p>
-                          <p className="text-[11px] text-on-surface-variant">في اليوم</p>
-                        </div>
-                      </label>
-                    );
-                  })
-                )}
+          {/* Core Layout */}
+          <div dir="rtl" className="grid gap-8 lg:grid-cols-[1fr_360px] xl:gap-12">
+            {/* ─── Main Content (Left side in LTR, Right side in RTL) ─── */}
+            <div className="order-2 space-y-8 lg:order-1">
+              {/* Header Title */}
+              <div>
+                <h1 className="text-2xl font-extrabold tracking-tight text-[#003749] sm:text-3xl">
+                  مراجعة الحجز 
+                </h1>
+                <p className="mt-2 text-[14px] text-[#6b5a3b]">
+                  الرجاء مراجعة الإضافات وتأكيد بيانات التواصل لإتمام عملية الدفع.
+                </p>
               </div>
 
-              <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
-                <div className="divide-y divide-neutral-100">
-                  <PriceRow
-                    label={`إجمالي الإيجار لمدة ${trip.days} يوم`}
-                    value={`${formatSarAmount(totals.rentalExclTax)} ر.س`}
-                  />
-                  <PriceRow
-                    label={`إجمالي الإضافات ${trip.days} يوم`}
-                    value={`${formatSarAmount(totals.addonsExclTax)} ر.س`}
-                  />
-                  <PriceRow label="المجموع" value={`${formatSarAmount(totals.subtotalExclTax)} ر.س`} />
-                  <PriceRow
-                    label={`ضريبة القيمة المضافة ${car.vatRatePercent}%`}
-                    value={`${formatSarAmount(totals.vatAmount)} ر.س`}
-                  />
-                  <PriceRow
-                    label="المبلغ الإجمالي"
-                    value={`${formatSarAmount(totals.totalInclTax)} ر.س`}
-                    emphasize
-                  />
+              {/* Addons Section */}
+              <section className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <span className="flex size-7 items-center justify-center rounded-full bg-[#f4f0ea] text-[#dbb878]">
+                    1
+                  </span>
+                  <h2 className="text-xl font-extrabold text-[#003749]">إضافات وتأمين (اختياري)</h2>
                 </div>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-xl border border-neutral-200 bg-white px-4 py-3 text-center text-xs font-bold text-[#003749] shadow-sm">
-                  تمارا — تقسيم المبلغ على دفعات (عرض إعلامي)
-                </div>
-                <div className="rounded-xl border border-neutral-200 bg-white px-4 py-3 text-center text-xs font-bold text-[#003749] shadow-sm">
-                  تابي — تقسيم المبلغ على دفعات (عرض إعلامي)
-                </div>
-              </div>
-
-              <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
-                <h2 className="text-lg font-extrabold text-[#003749]">بيانات التواصل</h2>
-                {sessionCustomer ? (
-                  <>
-                    <p className="text-xs text-on-surface-variant">
-                      سيتم استخدام بيانات حسابك لإتمام الطلب والتواصل معك.
-                    </p>
-                    <div className="rounded-xl border border-[#003749]/15 bg-[#003749]/[0.04] px-4 py-3 text-sm">
-                      <p className="font-extrabold text-[#003749]">{sessionCustomer.name}</p>
-                      <p className="mt-1 text-xs text-on-surface-variant tabular-nums" dir="ltr">
-                        {sessionCustomer.email}
-                      </p>
-                      <p className="mt-1 text-xs font-bold tabular-nums text-[#003749]" dir="ltr">
-                        +966 {sessionCustomer.phoneLocal}
-                      </p>
-                      <Link
-                        href="/account"
-                        className="mt-2 inline-block text-xs font-bold text-[#ea580c] underline underline-offset-2"
-                      >
-                        تعديل البيانات من حسابي
-                      </Link>
+                
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {addons.length === 0 ? (
+                    <div className="col-span-2 rounded-2xl border border-dashed border-[#ebe4d3] bg-white p-8 text-center">
+                      <p className="text-[14px] font-semibold text-[#aaa08e]">لا توجد إضافات متاحة لهذه المركبة.</p>
                     </div>
-                    <input type="hidden" name="name" value={sessionCustomer.name} />
-                    <input type="hidden" name="phone" value={sessionCustomer.phoneLocal} />
-                    <input type="hidden" name="age" value="25-35" />
-                  </>
-                ) : (
-                  <>
-                    <p className="text-xs text-on-surface-variant">
-                      نحتاج اسمك ورقم جوالك لإتمام الطلب والتواصل معك.
-                    </p>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <label className="flex flex-col gap-1">
-                        <span className="text-xs font-bold text-on-surface-variant">الاسم الكامل</span>
+                  ) : (
+                    addons.map((a) => {
+                      const on = selected.has(a.id);
+                      return (
+                        <label
+                          key={a.id}
+                          className={`group relative flex cursor-pointer flex-col justify-between overflow-hidden rounded-2xl border p-5 transition-all duration-300 hover:shadow-[0_8px_24px_-10px_rgba(219,184,120,0.25)] ${
+                            on
+                              ? "border-[#dbb878] bg-[#fefdfb] shadow-[0_0_0_1px_rgba(219,184,120,0.5)]"
+                              : "border-[#ebe4d3] bg-white hover:border-[#dbb878]/50"
+                          }`}
+                        >
+                          {/* Native hidden checkbox to make label click work */}
+                          <input
+                            type="checkbox"
+                            className="sr-only"
+                            checked={on}
+                            onChange={() => toggleAddon(a.id)}
+                          />
+
+                          {/* Selection indicator */}
+                          <div
+                            className={`absolute start-4 top-4 flex size-5 items-center justify-center rounded border transition-colors ${
+                              on ? `border-[${GOLD}] bg-[${GOLD}]` : "border-[#d1ccbf] bg-white group-hover:border-[#dbb878]"
+                            }`}
+                            style={{ backgroundColor: on ? GOLD : undefined, borderColor: on ? GOLD : undefined }}
+                          >
+                            {on && <Check className="size-3.5 text-white stroke-[3]" />}
+                          </div>
+
+                          <div className="mb-4 ps-8">
+                            <div className="mb-3 inline-flex size-12 items-center justify-center rounded-xl bg-[#f4f0ea]/60 text-[#003749] transition-colors group-hover:bg-[#f4f0ea]">
+                              <AddonVisual iconKey={a.iconKey} />
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[15px] font-extrabold text-[#003749]">{a.titleAr}</span>
+                              {a.descriptionAr && (
+                                <div className="group/tooltip relative">
+                                  <CircleHelp className="size-4 text-[#aaa08e] hover:text-[#dbb878]" />
+                                  <div className="pointer-events-none absolute bottom-full start-1/2 z-10 mb-2 w-48 -translate-x-1/2 rounded-lg bg-[#003749] p-2 text-center text-[11px] leading-tight text-white opacity-0 transition-opacity duration-200 group-hover/tooltip:opacity-100">
+                                    {a.descriptionAr}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="mt-auto flex items-end justify-between border-t border-[#f0ebe4] pt-4">
+                            <div className="flex flex-col">
+                              <span className="text-[16px] font-extrabold tracking-wide text-[#003749] tabular-nums" dir="ltr">
+                                {formatSarAmount(a.pricePerDay)} ر.س
+                              </span>
+                              <span className="text-[11px] font-bold uppercase tracking-wider text-[#aaa08e]">
+                                يومياً
+                              </span>
+                            </div>
+                            <div
+                              className={`text-[12px] font-bold transition-colors ${
+                                on ? "text-[#dbb878]" : "text-[#aaa08e] group-hover:text-[#003749]"
+                              }`}
+                            >
+                              {on ? "تم الإختيار" : "إضافة"}
+                            </div>
+                          </div>
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
+              </section>
+
+              {/* Installment Options Banner */}
+              <section className="flex flex-col gap-3 sm:flex-row">
+                <div className="flex flex-1 items-center gap-3 rounded-2xl border border-[#ebe4d3] bg-white p-4 shadow-sm">
+                  <div className="flex size-10 items-center justify-center rounded-full bg-[#f4f0ea] text-[#003749]">
+                    <CreditCard className="size-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-[13px] font-extrabold text-[#003749]">قسّمها على 4 دفعات</h3>
+                    <p className="text-[11px] font-semibold text-[#aaa08e]">متوفر عبر تابي وتمارا بدون فوائد</p>
+                  </div>
+                </div>
+              </section>
+
+              {/* Customer Details Form */}
+              <section className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <span className="flex size-7 items-center justify-center rounded-full bg-[#f4f0ea] text-[#dbb878]">
+                    2
+                  </span>
+                  <h2 className="text-xl font-extrabold text-[#003749]">بيانات التواصل</h2>
+                </div>
+
+                <form
+                  onSubmit={handleSubmit}
+                  className="rounded-3xl border border-[#ebe4d3] bg-white p-6 shadow-sm sm:p-8"
+                >
+                  {sessionCustomer ? (
+                    <div className="mb-8 rounded-2xl border border-[#ebe4d3] bg-[#fdfbf6] p-5">
+                      <div className="flex items-center gap-4">
+                        <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-[#dbb878]/20 text-[#dbb878]">
+                          <CheckCircle2 className="size-6" />
+                        </div>
+                        <div>
+                          <p className="text-[15px] font-extrabold text-[#003749]">{sessionCustomer.name}</p>
+                          <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] font-semibold text-[#8a7752]">
+                            <span dir="ltr">+966 {sessionCustomer.phoneLocal}</span>
+                            <span className="hidden opacity-40 sm:inline">•</span>
+                            <span dir="ltr">{sessionCustomer.email}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <input type="hidden" name="name" value={sessionCustomer.name} />
+                      <input type="hidden" name="phone" value={sessionCustomer.phoneLocal} />
+                      <input type="hidden" name="age" value="25-35" />
+                    </div>
+                  ) : (
+                    <div className="mb-8 grid gap-5 sm:grid-cols-2">
+                       {/* Name Field */}
+                      <div className="group relative">
                         <input
+                          type="text"
                           name="name"
+                          id="name"
                           required
                           minLength={3}
                           autoComplete="name"
-                          className="rounded-lg border border-neutral-200 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#dbb878]/50"
-                          dir="rtl"
+                          className="peer w-full rounded-xl border border-[#ebe4d3] bg-transparent px-4 pb-3 pt-6 text-[14px] font-semibold text-[#003749] outline-none transition-all focus:border-[#dbb878] focus:ring-1 focus:ring-[#dbb878]"
+                          placeholder=" "
                         />
-                      </label>
-                      <label className="flex flex-col gap-1">
-                        <span className="text-xs font-bold text-on-surface-variant">الجوال</span>
-                        <div className="flex overflow-hidden rounded-lg border border-neutral-200" dir="ltr">
-                          <span className="flex items-center border-e border-neutral-200 px-2 text-sm font-bold">
+                        <label
+                          htmlFor="name"
+                          className="absolute start-4 top-4 text-[13px] font-bold text-[#aaa08e] transition-all peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-[#dbb878] peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:text-[10px]"
+                        >
+                          الاسم الكامل
+                        </label>
+                      </div>
+
+                      {/* Phone Field */}
+                      <div className="group relative">
+                        <div className="flex w-full overflow-hidden rounded-xl border border-[#ebe4d3] transition-all focus-within:border-[#dbb878] focus-within:ring-1 focus-within:ring-[#dbb878]">
+                          <span className="flex items-center bg-[#fdfbf6] px-3 border-e border-[#ebe4d3] text-[13px] font-bold text-[#003749]" dir="ltr">
                             +966
                           </span>
-                          <input
-                            name="phone"
-                            required
-                            pattern="5[0-9]{8}"
-                            maxLength={9}
-                            inputMode="numeric"
-                            autoComplete="tel-national"
-                            placeholder="5XXXXXXXX"
-                            className="min-w-0 flex-1 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#dbb878]/50"
-                          />
+                          <div className="relative flex-1">
+                            <input
+                              type="tel"
+                              name="phone"
+                              id="phone"
+                              required
+                              pattern="5[0-9]{8}"
+                              maxLength={9}
+                              inputMode="numeric"
+                              autoComplete="tel-national"
+                              className="peer w-full bg-transparent px-4 pb-2 pt-6 text-[14px] font-semibold text-[#003749] outline-none"
+                              placeholder=" "
+                              dir="ltr"
+                            />
+                            <label
+                              htmlFor="phone"
+                              className="absolute end-4 top-4 text-[13px] font-bold text-[#aaa08e] transition-all peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-[#dbb878] peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:text-[10px]"
+                            >
+                              رقم الجوال (5XXXXXXXX)
+                            </label>
+                          </div>
                         </div>
-                      </label>
-                      <label className="flex flex-col gap-1 sm:col-span-2">
-                        <span className="text-xs font-bold text-on-surface-variant">الفئة العمرية</span>
-                        <select
+                      </div>
+
+                      {/* Age Field */}
+                      <div className="group relative sm:col-span-2">
+                         <select
                           name="age"
+                          id="age"
                           required
                           defaultValue="25-35"
-                          className="rounded-lg border border-neutral-200 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#dbb878]/50"
-                          dir="rtl"
+                          className="peer w-full appearance-none rounded-xl border border-[#ebe4d3] bg-transparent px-4 pb-3 pt-6 text-[14px] font-semibold text-[#003749] outline-none transition-all focus:border-[#dbb878] focus:ring-1 focus:ring-[#dbb878]"
                         >
-                          <option value="25-35">25-35</option>
-                          <option value="35-50">35-50</option>
-                          <option value="50+">50+</option>
+                          <option value="25-35">25-35 سنة</option>
+                          <option value="35-50">35-50 سنة</option>
+                          <option value="50+">أكبر من 50 سنة</option>
                         </select>
-                      </label>
+                        <label
+                          htmlFor="age"
+                          className="absolute start-4 top-1 text-[10px] font-bold text-[#aaa08e] transition-all peer-focus:text-[#dbb878]"
+                        >
+                          الفئة العمرية
+                        </label>
+                        <ChevronDown className="pointer-events-none absolute end-4 top-1/2 size-4 -translate-y-1/2 text-[#aaa08e]" />
+                      </div>
                     </div>
-                  </>
-                )}
-                <label className="flex cursor-pointer items-start gap-2 text-sm font-bold">
-                  <input type="checkbox" name="terms" required className="mt-1 accent-[#003749]" />
-                  <span>أوافق على الشروط والأحكام</span>
-                </label>
+                  )}
 
-                {error ? (
-                  <p className="text-sm font-bold text-error" role="alert">
-                    {error}
-                  </p>
-                ) : null}
+                  {/* Terms Checkbox */}
+                  <div className="mb-8 flex items-center gap-3">
+                    <div className="relative flex items-center justify-center">
+                      <input
+                        type="checkbox"
+                        name="terms"
+                        id="terms"
+                        required
+                        className="peer size-5 cursor-pointer appearance-none rounded border-2 border-[#ebe4d3] bg-white transition-colors checked:border-[#dbb878] checked:bg-[#dbb878]"
+                      />
+                      <Check className="pointer-events-none absolute size-3.5 text-white opacity-0 transition-opacity peer-checked:opacity-100" />
+                    </div>
+                    <label htmlFor="terms" className="cursor-pointer text-[13px] font-semibold text-[#6b5a3b] select-none">
+                      أوافق على <Link href="/terms" className="text-[#dbb878] hover:underline" target="_blank">الشروط والأحكام</Link> وسياسة التأجير.
+                    </label>
+                  </div>
 
-                <button
-                  type="submit"
-                  disabled={pending || slotBlocked || !trip.pickupIso}
-                  className="w-full rounded-xl bg-[#003749] py-3.5 text-sm font-extrabold text-white transition-opacity hover:opacity-95 disabled:opacity-50"
-                >
-                  {pending ? "جاري الإرسال…" : "تأكيد الحجز ومتابعة الدفع"}
-                </button>
-              </form>
+                  {/* Status Messages */}
+                  {!trip.pickupIso && (
+                    <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-[13px] font-bold text-red-700">
+                      لم نجد تواريخ الاستلام من الرابط. الرجاء البحث مجدداً.
+                    </div>
+                  )}
+                  {availability?.loading && (
+                    <div className="mb-6 text-[13px] font-bold text-[#aaa08e]">
+                      جاري التحقق من التوفر في الأسطول...
+                    </div>
+                  )}
+                  {availability && !availability.loading && !availability.available && (
+                    <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-[13px] font-bold text-red-700">
+                      أعتذر، هذه السيارة أصبحت غير متاحة في التواريخ المحددة.
+                    </div>
+                  )}
+                  {error && (
+                    <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-[13px] font-bold text-red-700" role="alert">
+                      {error}
+                    </div>
+                  )}
+
+                  {/* Submit CTA */}
+                  <button
+                    type="submit"
+                    disabled={pending || slotBlocked || !trip.pickupIso}
+                    className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl py-4 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5 active:translate-y-0"
+                    style={{
+                      background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)`,
+                      boxShadow: "0 8px 24px -6px rgba(219,184,120,0.5)",
+                    }}
+                  >
+                    <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-white/0 via-white/20 to-white/0 transition-transform duration-700 group-hover:translate-x-full" aria-hidden />
+                    <span className="text-[15px] font-extrabold text-white tracking-wide">
+                      {pending ? "جاري المعالجة..." : "تأكيد الطلب والدفع"}
+                    </span>
+                  </button>
+                </form>
+              </section>
             </div>
 
-            {/* الشريط الجانبي — ملخص السيارة */}
-            <aside className="order-1 space-y-4 lg:order-2">
-              <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-md">
-                <div className="relative aspect-[16/10] bg-neutral-100">
+            {/* ─── Sidebar (Checkout Summary) ─── */}
+            <aside className="order-1 lg:order-2">
+              <div className="sticky top-24 overflow-hidden rounded-3xl border border-[#ebe4d3] bg-white shadow-[0_24px_60px_-20px_rgba(15,61,71,0.12)]">
+                {/* Car Image Area */}
+                <div className="relative aspect-[16/10] bg-gradient-to-br from-[#fdfbf6] to-[#f4f0ea]">
                   <Image
                     src={car.image}
                     alt={car.alt}
                     fill
-                    className="object-contain p-4"
-                    sizes="(max-width: 1024px) 100vw, 340px"
+                    className="object-contain p-6 drop-shadow-xl"
+                    sizes="(max-width: 1024px) 100vw, 360px"
                   />
-                </div>
-                <div className="space-y-4 border-t border-neutral-100 p-5">
-                  <div>
-                    <h2 className="text-lg font-extrabold leading-snug text-[#003749]">
-                      {car.fullTitle} أو ما يشابه ذلك
-                    </h2>
-                    <p className="mt-1 text-sm font-semibold text-[#ea580c]">{car.categoryTitle}</p>
+                  <div className="absolute start-4 top-4 rounded-full bg-white/90 px-3 py-1 text-[11px] font-bold text-[#003749] backdrop-blur-sm shadow-sm ring-1 ring-black/5">
+                    {car.categoryTitle}
                   </div>
+                </div>
 
-                  <dl className="space-y-3 text-sm">
-                    <div>
-                      <dt className="font-bold text-[#003749]">الاستلام</dt>
-                      <dd className="mt-1 text-on-surface-variant">{trip.pickupLabel}</dd>
-                      <dd className="tabular-nums text-on-surface" dir="ltr">
-                        {pu.date}
-                        {pu.time ? ` · ${pu.time}` : ""}
-                      </dd>
+                {/* Content Area */}
+                <div className="p-6">
+                  <h2 className="text-xl font-extrabold leading-tight text-[#003749]">
+                    {car.fullTitle}
+                  </h2>
+                  <p className="mt-1 text-[12px] font-semibold text-[#8a7752]">أو مركبة مشابهة من نفس الفئة</p>
+
+                  <div className="mt-6 space-y-5">
+                    {/* Dates block */}
+                    <div className="relative ps-5">
+                      <div className="absolute bottom-1.5 start-1.5 top-1.5 w-0.5 rounded-full bg-gradient-to-b from-[#dbb878] to-[#003749]/20" />
+                      
+                      <div className="relative mb-4">
+                        <div className="absolute -start-[23px] top-1 size-2.5 rounded-full border-2 border-[#dbb878] bg-white ring-4 ring-white" />
+                        <p className="text-[11px] font-bold uppercase text-[#aaa08e]">الاستلام</p>
+                        <p className="font-extrabold text-[#003749]">{trip.pickupLabel}</p>
+                        <p className="text-[12px] font-semibold text-[#8a7752]" dir="ltr">
+                          {pu.date} {pu.time ? `• ${pu.time}` : ""}
+                        </p>
+                      </div>
+
+                      <div className="relative">
+                        <div className="absolute -start-[23px] top-1 size-2.5 rounded-full border-2 border-[#003749] bg-white ring-4 ring-white" />
+                        <p className="text-[11px] font-bold uppercase text-[#aaa08e]">التسليم</p>
+                        <p className="font-extrabold text-[#003749]">{trip.returnLabel}</p>
+                        <p className="text-[12px] font-semibold text-[#8a7752]" dir="ltr">
+                          {du.date} {du.time ? `• ${du.time}` : ""}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <dt className="font-bold text-[#003749]">التسليم</dt>
-                      <dd className="mt-1 text-on-surface-variant">{trip.returnLabel}</dd>
-                      <dd className="tabular-nums text-on-surface" dir="ltr">
-                        {du.date}
-                        {du.time ? ` · ${du.time}` : ""}
-                      </dd>
+
+                    <div className="my-6 border-t border-dashed border-[#ebe4d3]" />
+
+                    {/* Pricing Breakdown */}
+                    <div className="space-y-3">
+                      <div className="flex justify-between text-[13px]">
+                        <span className="font-semibold text-[#6b5a3b]">
+                          الإيجار ({trip.days} أيام)
+                        </span>
+                        <span className="font-bold text-[#003749] tabular-nums" dir="ltr">
+                          {formatSarAmount(totals.rentalExclTax)} ر.س
+                        </span>
+                      </div>
+                      
+                      {selectedRows.length > 0 && (
+                        <div className="flex justify-between text-[13px]">
+                          <span className="font-semibold text-[#6b5a3b]">
+                            الإضافات ({trip.days} أيام)
+                          </span>
+                          <span className="font-bold text-[#003749] tabular-nums" dir="ltr">
+                            {formatSarAmount(totals.addonsExclTax)} ر.س
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="flex justify-between text-[13px]">
+                        <span className="font-semibold text-[#6b5a3b]">ضريبة القيمة المضافة ({car.vatRatePercent}%)</span>
+                        <span className="font-bold text-[#003749] tabular-nums" dir="ltr">
+                          {formatSarAmount(totals.vatAmount)} ر.س
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex justify-between border-t border-neutral-100 pt-3 font-bold">
-                      <dt>مدة الإيجار</dt>
-                      <dd dir="ltr">{trip.days} يوم</dd>
+
+                    {/* Total Row */}
+                    <div className="mt-4 rounded-2xl bg-[#003749] p-5 text-white shadow-inner">
+                      <div className="flex items-end justify-between">
+                        <div>
+                          <p className="text-[12px] font-semibold text-white/70 uppercase tracking-widest">المجموع النهائي</p>
+                          <p className="text-[11px] text-white/50">شامل الضريبة</p>
+                        </div>
+                        <div className="text-end">
+                          <p className="text-2xl font-extrabold tabular-nums tracking-tight" dir="ltr">
+                            {formatSarAmount(totals.totalInclTax)}
+                          </p>
+                          <p className="text-[12px] text-[#dbb878] font-bold">ريال سعودي</p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex justify-between font-bold text-[#003749]">
-                      <dt>الإيجار اليومي</dt>
-                      <dd dir="ltr">{formatSarAmount(car.pricePerDayExclTax)} ر.س</dd>
-                    </div>
-                  </dl>
+                  </div>
                 </div>
               </div>
             </aside>
@@ -598,29 +720,6 @@ export function FleetCheckoutClient({
         </main>
       </div>
       <SiteFooter />
-    </div>
-  );
-}
-
-function PriceRow({
-  label,
-  value,
-  emphasize,
-}: {
-  label: string;
-  value: string;
-  emphasize?: boolean;
-}) {
-  return (
-    <div
-      className={`flex items-center justify-between gap-4 px-4 py-3 ${
-        emphasize ? "bg-[#52525b] text-white" : "bg-[#71717a] text-white"
-      }`}
-    >
-      <span className={`text-sm ${emphasize ? "font-extrabold" : "font-semibold"}`}>{label}</span>
-      <span className="tabular-nums text-sm font-bold" dir="ltr">
-        {value}
-      </span>
     </div>
   );
 }

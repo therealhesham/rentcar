@@ -17,14 +17,14 @@ export function Hero({
   branches,
 }: HeroProps) {
   return (
-    <header className="relative flex flex-col overflow-x-hidden pt-24 md:pt-28">
+    <header className="relative flex flex-col overflow-x-hidden bg-white pt-24 md:pt-28">
       {/* ─── Hero image strip ─── */}
       <div
-        className="grid w-full grid-cols-1 md:min-h-[min(45vh,22rem)] md:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)_minmax(0,1fr)]"
+        className="relative grid w-full grid-cols-1 md:min-h-[min(45vh,22rem)] md:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)_minmax(0,1fr)]"
         dir="ltr"
       >
-        {/* Left car image */}
-        <div className="relative aspect-[5/3] w-full md:aspect-auto md:min-h-[min(52vh,28rem)]">
+        {/* Left image */}
+        <div className="relative aspect-[5/3] w-full overflow-hidden md:aspect-auto md:min-h-[min(52vh,28rem)]">
           <Image
             src={leftImageUrl}
             alt={leftImageAlt}
@@ -33,35 +33,48 @@ export function Hero({
             className="object-cover"
             sizes="(min-width: 768px) 35vw, 100vw"
           />
-          {/* bottom fade to white */}
-          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-white/60 to-transparent md:from-white/40" />
+          {/* Dark overlay for depth */}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0f3d47]/30 via-transparent to-transparent" />
+          {/* Bottom fade to white */}
+          <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-white via-white/70 to-transparent" />
         </div>
 
         {/* Center headline */}
         <div
           dir="rtl"
-          className="relative flex min-h-[12rem] flex-col items-center justify-center bg-white px-6 py-10 text-center md:min-h-0 md:py-8"
+          className="relative flex min-h-[14rem] flex-col items-center justify-center px-6 py-10 text-center md:min-h-0 md:py-8"
         >
-          {/* Decorative gold line */}
-          <div
-            className="mb-5 h-1 w-16 rounded-full"
-            style={{ background: "linear-gradient(90deg, #dbb878, #c9a356)" }}
+          {/* Subtle pattern background */}
+          <div className="absolute inset-0 opacity-[0.03]"
+            style={{
+              backgroundImage: "radial-gradient(circle, #003749 1px, transparent 1px)",
+              backgroundSize: "20px 20px",
+            }}
           />
-          <h1 className="text-balance text-2xl font-extrabold leading-snug tracking-tight text-[#0f3d47] md:text-3xl lg:text-4xl">
+          
+          {/* Gold accent bar */}
+          <div className="relative mb-6 flex items-center gap-3">
+            <span className="h-[1.5px] w-10 rounded-full bg-gradient-to-l from-[#dbb878] to-transparent" />
+            <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#dbb878]">
+              خدمة متميزة
+            </span>
+            <span className="h-[1.5px] w-10 rounded-full bg-gradient-to-r from-[#dbb878] to-transparent" />
+          </div>
+
+          <h1 className="relative text-balance text-2xl font-extrabold leading-snug tracking-tight text-[#0f3d47] md:text-3xl lg:text-[2.5rem]">
             روائس لتأجير السيارات
           </h1>
-          <p className="mt-4 max-w-sm text-pretty text-sm font-medium leading-relaxed text-[#0f3d47]/75 md:text-base">
+
+          <p className="relative mt-4 max-w-sm text-pretty text-sm font-medium leading-relaxed text-[#0f3d47]/65 md:text-[15px]">
             مجموعة واسعة من السيارات لتلبية احتياجاتك بمختلف الفئات والميزانيات.
           </p>
-          {/* Decorative gold line */}
-          <div
-            className="mt-5 h-1 w-16 rounded-full opacity-50"
-            style={{ background: "linear-gradient(90deg, #dbb878, #c9a356)" }}
-          />
+
+          {/* Bottom accent */}
+          <div className="relative mt-6 h-[1.5px] w-12 rounded-full bg-gradient-to-r from-transparent via-[#dbb878]/50 to-transparent" />
         </div>
 
-        {/* Right car image */}
-        <div className="relative aspect-[5/3] w-full md:aspect-auto md:min-h-[min(52vh,28rem)]">
+        {/* Right image */}
+        <div className="relative aspect-[5/3] w-full overflow-hidden md:aspect-auto md:min-h-[min(52vh,28rem)]">
           <Image
             src={rightImageUrl}
             alt={rightImageAlt}
@@ -70,24 +83,28 @@ export function Hero({
             className="object-cover"
             sizes="(min-width: 768px) 35vw, 100vw"
           />
-          {/* bottom fade to white */}
-          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-white/60 to-transparent md:from-white/40" />
+          {/* Dark overlay for depth */}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0f3d47]/30 via-transparent to-transparent" />
+          {/* Bottom fade to white */}
+          <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-white via-white/70 to-transparent" />
         </div>
       </div>
 
-      {/* ─── Booking widget — floats above with pull-up on desktop ─── */}
+      {/* ─── Booking widget — overlaps hero images ─── */}
       <div
-        className="relative z-10 mx-auto w-full max-w-6xl px-4 pb-14 sm:px-6 lg:px-8 lg:pb-20"
+        className="relative z-10 mx-auto w-full max-w-[72rem] px-4 pb-16 sm:px-6 lg:px-8 lg:pb-20"
         dir="rtl"
       >
-        {/* Pull widget up to overlap images on md+ */}
-        <div className="md:-mt-10 lg:-mt-14">
-          {/* Label above widget */}
-          <p className="mb-3 flex items-center gap-2 text-[12.5px] font-bold uppercase tracking-widest text-[#003749]/60">
-            <span className="inline-block h-px w-8 bg-[#dbb878]" />
-            احجز مركبتك الآن
-            <span className="inline-block h-px w-8 bg-[#dbb878]" />
-          </p>
+        <div className="md:-mt-12 lg:-mt-16">
+          {/* Section label */}
+          <div className="mb-4 flex items-center justify-center gap-3">
+            <span className="h-px w-12 bg-gradient-to-l from-[#dbb878]/50 to-transparent" />
+            <span className="text-[11px] font-bold uppercase tracking-[0.25em] text-[#003749]/40">
+              احجز مركبتك الآن
+            </span>
+            <span className="h-px w-12 bg-gradient-to-r from-[#dbb878]/50 to-transparent" />
+          </div>
+
           <BookingWidget branches={branches} />
         </div>
       </div>

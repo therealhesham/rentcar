@@ -10,10 +10,11 @@ import {
   Search,
   Truck,
   ChevronDown,
+  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { DeliveryMapDialog } from "@/components/home/DeliveryMapDialog";
 import { computeBookingDays } from "@/lib/booking-days";
 import type { StoredFleetSearchContext } from "@/lib/fleet-search-storage";
@@ -50,6 +51,9 @@ export function BookingSearchWidget({ branches }: { branches: BookingBranchOptio
   const [deliveryLng, setDeliveryLng] = useState<number | null>(null);
   const [mapOpen, setMapOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   const branchSelectRequired = branches.length > 0;
   const defaultSlug = branches[0]?.slug ?? "";
@@ -153,66 +157,166 @@ export function BookingSearchWidget({ branches }: { branches: BookingBranchOptio
 
   return (
     <>
+      {/* ─── CSS for animations ─── */}
+      <style jsx>{`
+        @keyframes shimmer {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
+        }
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(16px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulseGlow {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(219, 184, 120, 0.4); }
+          50% { box-shadow: 0 0 0 8px rgba(219, 184, 120, 0); }
+        }
+        .booking-card {
+          animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+        .booking-field-card {
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .booking-field-card:hover {
+          background: #fffdf8;
+          border-color: #dbb87866;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px -4px rgba(219, 184, 120, 0.15);
+        }
+        .booking-field-card:focus-within {
+          border-color: #dbb878;
+          box-shadow: 0 0 0 3px rgba(219, 184, 120, 0.15), 0 4px 12px -4px rgba(219, 184, 120, 0.2);
+          background: #fffef9;
+        }
+        .cta-btn {
+          animation: pulseGlow 2.5s ease-in-out infinite;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .cta-btn:hover {
+          animation: none;
+          transform: translateY(-2px);
+          box-shadow: 0 12px 28px -6px rgba(219, 184, 120, 0.7);
+        }
+        .cta-btn:active {
+          transform: translateY(0);
+        }
+        .cta-shimmer {
+          animation: shimmer 3s ease-in-out infinite;
+        }
+      `}</style>
+
       <form
         onSubmit={handleSearch}
         dir="rtl"
-        className="booking-widget w-full overflow-hidden rounded-2xl bg-white shadow-[0_32px_80px_-16px_rgba(15,61,71,0.22),0_8px_24px_-8px_rgba(15,61,71,0.10)] ring-1 ring-black/[0.04]"
+        className={`booking-card w-full overflow-hidden rounded-3xl bg-white/[0.97] shadow-[0_40px_100px_-24px_rgba(15,61,71,0.2),0_12px_32px_-8px_rgba(15,61,71,0.08)] ring-1 ring-black/[0.03] backdrop-blur-xl ${
+          mounted ? "" : "opacity-0"
+        }`}
       >
-        {/* ─── Tab Bar ─── */}
-        <div className="booking-tabs flex flex-col gap-0 border-b border-[#f0ebe4] sm:flex-row sm:items-stretch">
-          {/* Rental type tabs */}
-          <div className="flex flex-1 border-b border-[#f0ebe4] sm:border-b-0 sm:border-e sm:border-e-[#f0ebe4]">
-            <TabButton
-              active={rental === "daily"}
-              onClick={() => setRental("daily")}
-              icon={<Car className="size-[18px]" />}
-              label="إيجار يومي"
-              sublabel="أقل من أسبوع"
-            />
-            <TabButton
-              active={rental === "weekly"}
-              onClick={() => setRental("weekly")}
-              icon={<CalendarDays className="size-[18px]" />}
-              label="إيجار أسبوعي"
-              sublabel="7 أيام+"
-            />
-          </div>
+        {/* ═══════════════════════════════════════
+            SECTION 1: Tab Header
+        ═══════════════════════════════════════ */}
+        <div className="relative">
+          {/* Subtle gradient background for the tabs */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[#fdfbf6] to-white" />
 
-          {/* Mode tabs */}
-          <div className="flex flex-1">
-            <TabButton
-              active={mode === "pickup"}
-              onClick={() => setMode("pickup")}
-              icon={<PackageCheck className="size-[18px]" />}
-              label="استلام من الفرع"
-              sublabel="اختر الفرع المناسب"
-              tone="teal"
-            />
-            <TabButton
-              active={mode === "delivery"}
-              onClick={() => setMode("delivery")}
-              icon={<Truck className="size-[18px]" />}
-              label="توصيل لموقعي"
-              sublabel="نصل إليك"
-              tone="teal"
-            />
+          <div className="relative flex flex-col sm:flex-row sm:items-stretch">
+            {/* Rental type group */}
+            <div className="flex flex-1 items-center border-b border-[#f0ebe4] sm:border-b-0 sm:border-e sm:border-e-[#f0ebe4]">
+              <div className="flex w-full items-center gap-1 p-2">
+                <PillTab
+                  active={rental === "daily"}
+                  onClick={() => setRental("daily")}
+                  icon={<Car className="size-[15px]" />}
+                  label="يومي"
+                />
+                <PillTab
+                  active={rental === "weekly"}
+                  onClick={() => setRental("weekly")}
+                  icon={<CalendarDays className="size-[15px]" />}
+                  label="أسبوعي"
+                />
+              </div>
+            </div>
+
+            {/* Mode group */}
+            <div className="flex flex-1 items-center">
+              <div className="flex w-full items-center gap-1 p-2">
+                <PillTab
+                  active={mode === "pickup"}
+                  onClick={() => setMode("pickup")}
+                  icon={<PackageCheck className="size-[15px]" />}
+                  label="استلام من الفرع"
+                  tone="teal"
+                />
+                <PillTab
+                  active={mode === "delivery"}
+                  onClick={() => setMode("delivery")}
+                  icon={<Truck className="size-[15px]" />}
+                  label="توصيل لموقعي"
+                  tone="teal"
+                />
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* ─── Fields Row ─── */}
-        <div className="booking-fields grid grid-cols-1 divide-y divide-[#f0ebe4] sm:grid-cols-2 sm:divide-x sm:divide-x-reverse sm:divide-y-0 lg:grid-cols-[1fr_1fr_1fr_1fr_auto] lg:divide-y-0">
-          {/* Field 1: Pickup / Delivery location */}
-          <BookingField
-            label={mode === "pickup" ? "موقع الاستلام" : "موقع التوصيل"}
-            icon={<MapPin className="size-[17px]" />}
-          >
-            {mode === "pickup" ? (
+        {/* ═══════════════════════════════════════
+            SECTION 2: Form Fields Grid
+        ═══════════════════════════════════════ */}
+        <div className="px-5 py-5 sm:px-6 sm:py-6">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {/* Field 1: Pickup / Delivery location */}
+            <FieldCard
+              label={mode === "pickup" ? "موقع الاستلام" : "موقع التوصيل"}
+              icon={<MapPin className="size-[15px]" />}
+            >
+              {mode === "pickup" ? (
+                <div className="relative">
+                  <select
+                    value={pickupBranch || defaultSlug}
+                    onChange={(ev) => setPickupBranch(ev.target.value)}
+                    required={branchSelectRequired}
+                    className="w-full appearance-none bg-transparent pe-5 text-[14px] font-semibold text-[#0f1923] outline-none"
+                  >
+                    {branches.map((b) => (
+                      <option key={b.slug} value={b.slug}>
+                        {b.name}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute end-0 top-1/2 size-3.5 -translate-y-1/2 text-[#aaa08e]" />
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setMapOpen(true)}
+                  className="w-full text-start text-[14px] font-semibold outline-none"
+                >
+                  {deliveryLat != null && deliveryLng != null ? (
+                    <span className="flex items-center gap-2 text-[#0f3d47]">
+                      <span className="flex size-5 items-center justify-center rounded-full bg-emerald-100">
+                        <span className="size-2 rounded-full bg-emerald-500" />
+                      </span>
+                      تم تحديد الموقع
+                    </span>
+                  ) : (
+                    <span className="text-[#aaa08e]">اضغط لتحديد الموقع ↗</span>
+                  )}
+                </button>
+              )}
+            </FieldCard>
+
+            {/* Field 2: Return branch */}
+            <FieldCard
+              label="موقع الإرجاع"
+              icon={<MapPin className="size-[15px]" />}
+            >
               <div className="relative">
                 <select
-                  value={pickupBranch || defaultSlug}
-                  onChange={(ev) => setPickupBranch(ev.target.value)}
+                  value={returnBranch || defaultSlug}
+                  onChange={(ev) => setReturnBranch(ev.target.value)}
                   required={branchSelectRequired}
-                  className="w-full appearance-none bg-transparent pe-6 text-[15px] font-semibold text-[#0f1923] outline-none placeholder:text-[#9a8366]"
+                  className="w-full appearance-none bg-transparent pe-5 text-[14px] font-semibold text-[#0f1923] outline-none"
                 >
                   {branches.map((b) => (
                     <option key={b.slug} value={b.slug}>
@@ -220,146 +324,123 @@ export function BookingSearchWidget({ branches }: { branches: BookingBranchOptio
                     </option>
                   ))}
                 </select>
-                <ChevronDown className="pointer-events-none absolute end-0 top-1/2 size-4 -translate-y-1/2 text-[#9a8366]" />
+                <ChevronDown className="pointer-events-none absolute end-0 top-1/2 size-3.5 -translate-y-1/2 text-[#aaa08e]" />
               </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setMapOpen(true)}
-                className="w-full text-start text-[15px] font-semibold outline-none"
-              >
-                {deliveryLat != null && deliveryLng != null ? (
-                  <span className="flex items-center gap-1.5 text-[#003749]">
-                    <span className="inline-block size-2 rounded-full bg-green-500" />
-                    تم تحديد الموقع
+            </FieldCard>
+
+            {/* Field 3: Pickup date/time */}
+            <FieldCard
+              label="تاريخ ووقت الاستلام"
+              icon={<CalendarClock className="size-[15px]" />}
+            >
+              <input
+                type="datetime-local"
+                value={pickupDt}
+                onChange={(ev) => setPickupDt(ev.target.value)}
+                required
+                dir="ltr"
+                className="w-full bg-transparent text-[14px] font-semibold text-[#0f1923] outline-none"
+              />
+            </FieldCard>
+
+            {/* Field 4: Dropoff date/time */}
+            <FieldCard
+              label="تاريخ ووقت التسليم"
+              icon={<Clock className="size-[15px]" />}
+            >
+              <input
+                type="datetime-local"
+                value={dropoffDt}
+                onChange={(ev) => setDropoffDt(ev.target.value)}
+                required
+                dir="ltr"
+                className="w-full bg-transparent text-[14px] font-semibold text-[#0f1923] outline-none"
+              />
+            </FieldCard>
+          </div>
+        </div>
+
+        {/* ═══════════════════════════════════════
+            SECTION 3: CTA + Info Footer
+        ═══════════════════════════════════════ */}
+        <div className="border-t border-[#f0ebe4] bg-gradient-to-b from-[#fdfbf6] to-[#f9f5ee] px-5 py-4 sm:px-6">
+          {/* CTA row */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+            {/* Duration badge + helper text */}
+            <div className="flex flex-1 items-center gap-3" aria-live="polite">
+              {daysPreview != null ? (
+                <div className="flex items-center gap-2">
+                  <span
+                    className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-bold text-white shadow-[0_2px_8px_-2px_rgba(219,184,120,0.5)]"
+                    style={{ background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)` }}
+                  >
+                    <CalendarDays className="size-3.5" aria-hidden />
+                    <span dir="ltr" className="tabular-nums">{daysPreview}</span>
+                    يوم
                   </span>
-                ) : (
-                  <span className="text-[#9a8366]">اضغط لتحديد الموقع</span>
-                )}
-              </button>
-            )}
-          </BookingField>
-
-          {/* Field 2: Return branch */}
-          <BookingField
-            label="موقع التسليم (إرجاع)"
-            icon={<MapPin className="size-[17px]" />}
-          >
-            <div className="relative">
-              <select
-                value={returnBranch || defaultSlug}
-                onChange={(ev) => setReturnBranch(ev.target.value)}
-                required={branchSelectRequired}
-                className="w-full appearance-none bg-transparent pe-6 text-[15px] font-semibold text-[#0f1923] outline-none"
-              >
-                {branches.map((b) => (
-                  <option key={b.slug} value={b.slug}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute end-0 top-1/2 size-4 -translate-y-1/2 text-[#9a8366]" />
+                  <span className="text-[12px] font-medium text-[#6b5a3b]">مدة الحجز</span>
+                </div>
+              ) : (
+                <span className="flex items-center gap-1.5 text-[12px] text-[#aaa08e]">
+                  <Sparkles className="size-3.5" aria-hidden />
+                  حدّد التواريخ لعرض مدة الحجز
+                </span>
+              )}
             </div>
-          </BookingField>
 
-          {/* Field 3: Pickup datetime */}
-          <BookingField
-            label="تاريخ ووقت الاستلام"
-            icon={<CalendarClock className="size-[17px]" />}
-          >
-            <input
-              type="datetime-local"
-              value={pickupDt}
-              onChange={(ev) => setPickupDt(ev.target.value)}
-              required
-              dir="ltr"
-              className="w-full bg-transparent text-[15px] font-semibold text-[#0f1923] outline-none"
-            />
-          </BookingField>
-
-          {/* Field 4: Dropoff datetime */}
-          <BookingField
-            label="تاريخ ووقت التسليم"
-            icon={<Clock className="size-[17px]" />}
-          >
-            <input
-              type="datetime-local"
-              value={dropoffDt}
-              onChange={(ev) => setDropoffDt(ev.target.value)}
-              required
-              dir="ltr"
-              className="w-full bg-transparent text-[15px] font-semibold text-[#0f1923] outline-none"
-            />
-          </BookingField>
-
-          {/* CTA Button */}
-          <div className="flex items-stretch p-3 lg:p-3">
+            {/* Search button */}
             <button
               type="submit"
-              className="group relative flex w-full flex-col items-center justify-center gap-1 overflow-hidden rounded-xl px-6 py-3 text-white transition-all duration-300 hover:shadow-[0_8px_24px_-6px_rgba(219,184,120,0.8)] hover:-translate-y-0.5 active:translate-y-0 lg:min-h-[4rem] lg:flex-col"
+              className="cta-btn group relative flex w-full items-center justify-center gap-2.5 overflow-hidden rounded-2xl px-10 py-4 text-white sm:w-auto"
               style={{
                 background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)`,
-                boxShadow: "0 4px 16px -4px rgba(219,184,120,0.55)",
               }}
             >
-              {/* shimmer */}
+              {/* shimmer overlay */}
               <span
-                className="absolute inset-0 -translate-x-full bg-gradient-to-r from-white/0 via-white/25 to-white/0 transition-transform duration-700 group-hover:translate-x-full"
+                className="cta-shimmer pointer-events-none absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0"
                 aria-hidden
               />
-              <Search className="size-5 shrink-0" aria-hidden />
-              <span className="text-[13px] font-extrabold leading-tight tracking-wide">
-                بحث
+              <Search className="size-[18px] shrink-0" aria-hidden />
+              <span className="text-[15px] font-extrabold tracking-wide">
+                بحث المركبات المتاحة
               </span>
             </button>
           </div>
-        </div>
 
-        {/* ─── Footer Bar ─── */}
-        <div className="flex flex-col items-start gap-2 border-t border-[#f0ebe4] bg-[#fdfbf6] px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
-          {/* Days badge */}
-          <div aria-live="polite" className="flex items-center gap-2">
-            {daysPreview != null ? (
-              <span
-                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[13px] font-bold text-white"
-                style={{ background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)` }}
-              >
-                <CalendarDays className="size-3.5" aria-hidden />
-                <span dir="ltr">{daysPreview}</span>
-                <span>يوم</span>
-              </span>
-            ) : (
-              <span className="text-[12px] text-[#9a8366]">
-                حدّد تواريخ الاستلام والتسليم لعرض المدة
-              </span>
-            )}
+          {/* Bottom info row */}
+          <div className="mt-3 flex items-center justify-between border-t border-[#ebe4d3]/60 pt-3">
+            <p className="text-[11px] text-[#aaa08e]">
+              يُعرض المتوفر للحجز المباشر حسب الفترة المحددة
+            </p>
+            <Link
+              href="/fleet"
+              className="text-[11.5px] font-bold text-[#003749] underline-offset-4 transition-colors hover:text-[#dbb878] hover:underline"
+              style={{ textDecorationColor: GOLD }}
+            >
+              تصفح الأسطول ←
+            </Link>
           </div>
-
-          <Link
-            href="/fleet"
-            className="text-[12px] font-semibold text-[#003749] underline-offset-4 hover:underline"
-            style={{ textDecorationColor: GOLD }}
-          >
-            تصفح الأسطول كاملاً ←
-          </Link>
         </div>
 
-        {/* No branches warning */}
+        {/* No branches */}
         {branches.length === 0 && (
-          <p className="border-t border-[#f0ebe4] px-5 py-3 text-center text-xs text-red-600">
+          <div className="border-t border-red-100 bg-red-50/60 px-5 py-3 text-center text-[12px] font-medium text-red-600">
             لا توجد فروع مفعّلة. أضف فروعاً من لوحة الإدارة.
-          </p>
+          </div>
         )}
 
         {/* Error */}
         {error && (
-          <p
+          <div
             role="alert"
-            className="flex items-center gap-2 border-t border-red-200 bg-red-50 px-5 py-3 text-sm font-semibold text-red-700"
+            className="flex items-center gap-2.5 border-t border-red-200 bg-gradient-to-l from-red-50 to-red-50/50 px-5 py-3 text-[13px] font-semibold text-red-700"
           >
-            <span className="inline-block size-2 shrink-0 rounded-full bg-red-500" />
+            <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-red-100">
+              <span className="size-2 rounded-full bg-red-500" />
+            </span>
             {error}
-          </p>
+          </div>
         )}
       </form>
 
@@ -385,23 +466,20 @@ export function BookingSearchWidget({ branches }: { branches: BookingBranchOptio
    Sub-components
 ───────────────────────────────────────── */
 
-function TabButton({
+function PillTab({
   active,
   onClick,
   icon,
   label,
-  sublabel,
   tone = "gold",
 }: {
   active: boolean;
   onClick: () => void;
   icon: React.ReactNode;
   label: string;
-  sublabel: string;
   tone?: "gold" | "teal";
 }) {
-  const activeColor = tone === "teal" ? TEAL : GOLD_DARK;
-  const activeBorderColor = tone === "teal" ? TEAL : GOLD;
+  const isGold = tone === "gold";
 
   return (
     <button
@@ -409,39 +487,31 @@ function TabButton({
       role="tab"
       aria-selected={active}
       onClick={onClick}
-      className="group relative flex flex-1 items-center gap-3 px-5 py-4 text-start transition-colors duration-200 hover:bg-[#fdfbf6] focus-visible:outline-none"
+      className="flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-[13px] font-bold transition-all duration-250"
+      style={
+        active
+          ? {
+              background: isGold
+                ? `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)`
+                : `linear-gradient(135deg, ${TEAL} 0%, #004d63 100%)`,
+              color: "#fff",
+              boxShadow: isGold
+                ? "0 4px 14px -4px rgba(219,184,120,0.5)"
+                : "0 4px 14px -4px rgba(0,55,73,0.4)",
+            }
+          : {
+              background: "transparent",
+              color: isGold ? "#8a7752" : "#4a7a8a",
+            }
+      }
     >
-      {/* active indicator line at bottom */}
-      <span
-        className="absolute inset-x-0 bottom-0 h-[2.5px] rounded-full transition-all duration-300"
-        style={{
-          background: active ? activeBorderColor : "transparent",
-        }}
-      />
-      {/* icon bubble */}
-      <span
-        className="flex size-9 shrink-0 items-center justify-center rounded-xl transition-all duration-200"
-        style={{
-          background: active ? `${activeColor}18` : "#f4f0ea",
-          color: active ? activeColor : "#9a8366",
-        }}
-      >
-        {icon}
-      </span>
-      <span className="flex flex-col">
-        <span
-          className="text-[13.5px] font-bold leading-tight transition-colors duration-200"
-          style={{ color: active ? activeColor : "#6b5a3b" }}
-        >
-          {label}
-        </span>
-        <span className="text-[11px] text-[#9a8366]">{sublabel}</span>
-      </span>
+      {icon}
+      <span>{label}</span>
     </button>
   );
 }
 
-function BookingField({
+function FieldCard({
   label,
   icon,
   children,
@@ -451,13 +521,12 @@ function BookingField({
   children: React.ReactNode;
 }) {
   return (
-    <label className="group flex cursor-text flex-col gap-2 p-4 transition-colors duration-150 hover:bg-[#fdfbf6] focus-within:bg-[#fffcf7] lg:p-5">
-      <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider"
-        style={{ color: TEAL + "aa" }}>
-        <span style={{ color: GOLD }}>{icon}</span>
+    <label className="booking-field-card flex cursor-text flex-col gap-2 rounded-2xl border border-[#ebe4d3]/80 bg-[#fdfbf6] p-4">
+      <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[#003749]/55">
+        <span className="text-[#dbb878]">{icon}</span>
         {label}
       </span>
-      <div>{children}</div>
+      <div className="min-h-[1.5rem]">{children}</div>
     </label>
   );
 }
