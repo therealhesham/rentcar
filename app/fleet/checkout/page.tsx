@@ -48,12 +48,11 @@ export default async function FleetCheckoutPage({
   }
 
   const phoneLocal = profile?.phone ? e164ToLocalNine(profile.phone) : null;
+  const profileNameTrimmed = profile?.name?.trim() ?? "";
   const sessionCustomer =
-    profile &&
-    profile.name?.trim().length >= 3 &&
-    phoneLocal
+    profile && profileNameTrimmed.length >= 3 && phoneLocal
       ? {
-          name: profile.name.trim(),
+          name: profileNameTrimmed,
           phoneLocal,
           email: profile.email,
         }
