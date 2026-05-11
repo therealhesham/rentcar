@@ -1,4 +1,8 @@
 import { Prisma } from "@prisma/client";
+import {
+  DIRECT_BOOKING_MSG_NO_FLEET,
+  DIRECT_BOOKING_MSG_UNAVAILABLE_PERIOD,
+} from "@/lib/direct-booking-user-messages";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -7,7 +11,6 @@ import { prisma } from "@/lib/prisma";
  * يُحسب التداخل بتقاطع [تاريخ البداية، تاريخ البداية + عدد الأيام) بتقويم UTC.
  */
 
-/** حالات لا تستهلك وحدة من أسطول الموديل عند احتساب التداخل */
 export const NON_BLOCKING_BOOKING_STATUSES = ["CANCELLED", "REJECTED"] as const;
 
 export type DirectBookingCommon = {
@@ -593,11 +596,11 @@ function capacityErrorToResult(
   e: DirectBookingCapacityError,
 ): { ok: false; error: string } {
   if (e.code === "NO_FLEET") {
-    return { ok: false, error: "هذه السيارة غير متاحة للحجز حالياً (لا كمية في الأسطول)." };
+    return { ok: false, error: DIRECT_BOOKING_MSG_NO_FLEET };
   }
   return {
     ok: false,
-    error: `السيارة غير متاحة في هذه الفترة: يوجد ${e.overlapping} حجز(وز) متزامن(ة) والحد الأقصى للوحدات في الأسطول هو ${e.fleetUnits}.`,
+    error: DIRECT_BOOKING_MSG_UNAVAILABLE_PERIOD,
   };
 }
 

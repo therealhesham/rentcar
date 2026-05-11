@@ -18,6 +18,14 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, useEffect } from "react";
 import { DeliveryMapDialog } from "@/components/home/DeliveryMapDialog";
 import { computeBookingDays } from "@/lib/booking-days";
+import {
+  computeAutoDropoff,
+  computeDaysPreview,
+  toDatetimeLocalValue,
+  validateRentalMinDays,
+  type ModeTab,
+  type RentalTab,
+} from "@/lib/booking-search-shared";
 import type { StoredFleetSearchContext } from "@/lib/fleet-search-storage";
 import { FLEET_SEARCH_STORAGE_KEY } from "@/lib/fleet-search-storage";
 
@@ -26,54 +34,9 @@ export type BookingBranchOption = {
   name: string;
 };
 
-type RentalTab = "daily" | "weekly" | "monthly";
-type ModeTab = "pickup" | "delivery";
-
 const GOLD = "#dbb878";
 const GOLD_DARK = "#c9a356";
 const TEAL = "#003749";
-
-function pad2(n: number): string {
-  return String(n).padStart(2, "0");
-}
-
-/** قيمة حقول `datetime-local` بالتوقيت المحلي */
-function toDatetimeLocalValue(d: Date): string {
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-}
-
-function addLocalDays(base: Date, days: number): Date {
-  const d = new Date(base.getTime());
-  d.setDate(d.getDate() + days);
-  return d;
-}
-
-/** شهر تقويمي كامل؛ إن لم يوجد نفس يوم الشهر يُضبط على آخر يوم الشهر السابق (مثل 31 يناير → فبراير) */
-function addLocalCalendarMonths(base: Date, months: number): Date {
-  const d = new Date(base.getTime());
-  const day = d.getDate();
-  d.setMonth(d.getMonth() + months);
-  if (d.getDate() !== day) {
-    d.setDate(0);
-  }
-  return d;
-}
-
-function computeAutoDropoff(pickup: Date, rental: RentalTab): Date | null {
-  if (rental === "weekly") return addLocalDays(pickup, 7);
-  if (rental === "monthly") return addLocalCalendarMonths(pickup, 1);
-  return null;
-}
-
-function validateRentalMinDays(rental: RentalTab, days: number): string | null {
-  if (rental === "weekly" && days < 7) {
-    return "نوع الأسبوعي يتطلّب مدة لا تقل عن 7 أيام بين الاستلام والتسليم.";
-  }
-  if (rental === "monthly" && days < 28) {
-    return "نوع الشهري يتطلّب مدة لا تقل عن 28 يوماً بين الاستلام والتسليم.";
-  }
-  return null;
-}
 
 export function BookingSearchWidget({ branches }: { branches: BookingBranchOption[] }) {
   const router = useRouter();
@@ -106,13 +69,10 @@ export function BookingSearchWidget({ branches }: { branches: BookingBranchOptio
   const pickupBranchEffective = mode === "pickup" ? pickupBranch || defaultSlug : "";
   const returnBranchEffective = returnBranch || defaultSlug;
 
-  const daysPreview = useMemo(() => {
-    if (!pickupDt || !dropoffDt) return null;
-    const p = new Date(pickupDt);
-    const d = new Date(dropoffDt);
-    if (Number.isNaN(p.getTime()) || Number.isNaN(d.getTime())) return null;
-    return computeBookingDays(p, d);
-  }, [pickupDt, dropoffDt]);
+  const daysPreview = useMemo(
+    () => computeDaysPreview(pickupDt, dropoffDt),
+    [pickupDt, dropoffDt],
+  );
 
   function persistAndNavigate(search: URLSearchParams, ctx: StoredFleetSearchContext) {
     try {
@@ -399,7 +359,13 @@ export function BookingSearchWidget({ branches }: { branches: BookingBranchOptio
             <FieldCard
               label="تاريخ ووقت التسليم"
               icon={<Clock className="size-[15px]" />}
-             
+              // hint={
+              //   rental === "weekly"
+              //     ? "يُحسب تلقائياً (+٧ أيام من الاستلام)"
+              //     : rental === "monthly"
+              //       ? "يُحسب تلقائياً (+شهر تقويمي من الاستلام)"
+              //       : undefined
+              // }
             >
               <input
                 type="datetime-local"

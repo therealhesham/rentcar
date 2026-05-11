@@ -6,6 +6,18 @@ export async function getFleetCategoriesForHome() {
     orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
     include: {
       _count: { select: { models: true } },
+      models: {
+        take: 3,
+        orderBy: [{ id: "asc" }],
+        select: {
+          id: true,
+          name: true,
+          chairs: true,
+          image: true,
+          alt: true,
+          brand: { select: { name: true } },
+        },
+      },
     },
   });
 }

@@ -20,6 +20,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { SiteFooter } from "@/components/home/SiteFooter";
 import { SiteNav } from "@/components/shared/SiteNav";
+import { FleetCheckoutBookingPanel } from "@/components/fleet/FleetCheckoutBookingPanel";
+import { CarUnavailableModal } from "@/components/fleet/CarUnavailableModal";
+import { isDirectBookingCapacityMessage } from "@/lib/direct-booking-user-messages";
 import {
   computeCheckoutTotals,
   formatSarAmount,
@@ -85,6 +88,8 @@ export function FleetCheckoutClient({
     | { loading: false; available: boolean; fleetUnits: number; overlapping: number }
   >(null);
   const [mounted, setMounted] = useState(false);
+  const [unavailableDismissed, setUnavailableDismissed] = useState(false);
+  const [postCapacityModal, setPostCapacityModal] = useState(false);
 
   useEffect(() => setMounted(true), []);
 
@@ -187,6 +192,16 @@ export function FleetCheckoutClient({
     };
   }, [sp, ctxStore, branchBySlug]);
 
+  useEffect(() => {
+    setUnavailableDismissed(false);
+    setPostCapacityModal(false);
+  }, [trip.pickupIso, trip.days, car.modelId]);
+
+  const branchOptions = useMemo(
+    () => Object.entries(branchBySlug).map(([slug, name]) => ({ slug, name })),
+    [branchBySlug],
+  );
+
   const selectedRows = useMemo(
     () => addons.filter((a) => selected.has(a.id)),
     [addons, selected],
@@ -257,8 +272,7 @@ export function FleetCheckoutClient({
       setError("لم يُعثر على تواريخ الحجز. ارجع إلى الأسطول أو الصفحة الرئيسية وابحث مجدداً.");
       return;
     }
-    if (availability && !availability.loading && !availability.available) {
-      setError("هذه السيارة غير متاحة في الفترة المحددة.");
+    if (slotBlocked) {
       return;
     }
 
@@ -311,6 +325,10 @@ export function FleetCheckoutClient({
         router.push(`/fleet/payment/${data.bookingRequestId}`);
         return;
       }
+      if (isDirectBookingCapacityMessage(data.error)) {
+        setPostCapacityModal(true);
+        return;
+      }
       setError(data.error ?? "تعذّر إرسال الطلب.");
     } catch {
       setError("تعذّر الاتصال بالخادم.");
@@ -325,6 +343,9 @@ export function FleetCheckoutClient({
     availability && !availability.loading && !availability.available,
   );
 
+  const showCarUnavailableModal =
+    (slotBlocked && !unavailableDismissed) || postCapacityModal;
+
   return (
     <div className="flex min-h-screen flex-col bg-[#fdfbf6] text-on-surface">
       <SiteNav active="fleet" />
@@ -338,6 +359,12 @@ export function FleetCheckoutClient({
             <span>/</span>
             <span className="text-[#003749]">إتمام الحجز</span>
           </nav>
+
+          {!trip.pickupIso ? (
+            <div className="mb-10">
+              <FleetCheckoutBookingPanel modelId={car.modelId} branches={branchOptions} />
+            </div>
+          ) : null}
 
           {/* Core Layout */}
           <div dir="rtl" className="grid gap-8 lg:grid-cols-[1fr_360px] xl:gap-12">
@@ -577,19 +604,9 @@ export function FleetCheckoutClient({
                   </div>
 
                   {/* Status Messages */}
-                  {!trip.pickupIso && (
-                    <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-[13px] font-bold text-red-700">
-                      لم نجد تواريخ الاستلام من الرابط. الرجاء البحث مجدداً.
-                    </div>
-                  )}
                   {availability?.loading && (
                     <div className="mb-6 text-[13px] font-bold text-[#aaa08e]">
                       جاري التحقق من التوفر في الأسطول...
-                    </div>
-                  )}
-                  {availability && !availability.loading && !availability.available && (
-                    <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-[13px] font-bold text-red-700">
-                      أعتذر، هذه السيارة أصبحت غير متاحة في التواريخ المحددة.
                     </div>
                   )}
                   {error && (
@@ -720,6 +737,17 @@ export function FleetCheckoutClient({
         </main>
       </div>
       <SiteFooter />
+
+      <CarUnavailableModal
+        open={showCarUnavailableModal}
+        onClose={() => {
+          setUnavailableDismissed(true);
+          setPostCapacityModal(false);
+        }}
+        onChangeDates={() => {
+          router.replace(`/fleet/checkout?modelId=${car.modelId}`);
+        }}
+      />
     </div>
   );
 }

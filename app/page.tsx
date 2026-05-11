@@ -28,10 +28,10 @@ export default async function Home() {
           rightImageAlt={hero.rightImageAlt}
           branches={branches.map((b) => ({ slug: b.slug, name: b.name }))}
         />
+        <FleetCategories />
+
         <PromoBanner />
         <ServicesSection />
-        <FleetBanner />
-        <FleetCategories />
         <BranchesShowcase />
       </main>
       <SiteFooter />
