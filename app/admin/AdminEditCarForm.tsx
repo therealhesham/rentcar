@@ -6,6 +6,10 @@ import { AdminImageField } from "@/components/admin/AdminImageField";
 import { SarCurrencyGlyph } from "@/components/ui/SarCurrencyGlyph";
 import type { AdminFleetVehicleEditPayload } from "@/lib/fleet-vehicle-admin-data";
 
+type AdminEditCarFormProps = {
+  vehicle: AdminFleetVehicleEditPayload;
+};
+
 export function AdminEditCarForm({ vehicle }: AdminEditCarFormProps) {
   const [state, formAction, pending] = useActionState(updateFleetVehicle, null);
 
