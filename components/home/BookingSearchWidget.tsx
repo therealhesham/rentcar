@@ -6,6 +6,7 @@ import {
   Car,
   CalendarClock,
   Clock,
+  Layers,
   MapPin,
   PackageCheck,
   Search,
@@ -20,6 +21,7 @@ import { computeBookingDays } from "@/lib/booking-days";
 import {
   computeAutoDropoff,
   computeDaysPreview,
+  rentalDropoffHint,
   toDatetimeLocalValue,
   validateRentalMinDays,
   type ModeTab,
@@ -38,12 +40,6 @@ export type { BookingBranchOption, BookingCityBranchesOption } from "@/lib/booki
 const GOLD = "#dbb878";
 const GOLD_DARK = "#c9a356";
 const TEAL = "#003749";
-
-function dropoffHint(rental: RentalTab): string | undefined {
-  if (rental === "weekly") return "يُحدَّد تلقائياً بعد أسبوع من وقت الاستلام.";
-  if (rental === "monthly") return "يُحدَّد تلقائياً بعد شهر تقويمي من الاستلام.";
-  return undefined;
-}
 
 function CityBranchSelects({
   dateCities,
@@ -425,6 +421,12 @@ export function BookingSearchWidget({ cities }: { cities: BookingCityBranchesOpt
                   icon={<CalendarRange className="size-3.5 shrink-0" />}
                   label="شهري"
                 />
+                <PillTab
+                  active={rental === "monthly_packages"}
+                  onClick={() => setRental("monthly_packages")}
+                  icon={<Layers className="size-3.5 shrink-0" />}
+                  label="الباقات الشهرية"
+                />
               </div>
             </div>
 
@@ -545,7 +547,7 @@ export function BookingSearchWidget({ cities }: { cities: BookingCityBranchesOpt
                 }}
                 onBranchChange={setReturnBranch}
               />
-              {mode === "pickup" && dateCities.length > 0 ? (
+              {/* {mode === "pickup" && dateCities.length > 0 ? (
                 <button
                   type="button"
                   onClick={syncReturnToPickup}
@@ -553,7 +555,7 @@ export function BookingSearchWidget({ cities }: { cities: BookingCityBranchesOpt
                 >
                   جعل الإرجاع مطابقاً لموقع الاستلام
                 </button>
-              ) : null}
+              ) : null} */}
             </FieldCard>
 
             {/* Field 3: Pickup date/time */}
@@ -579,7 +581,7 @@ export function BookingSearchWidget({ cities }: { cities: BookingCityBranchesOpt
               groupLabelId={`${uid}-field-dropoff-dt`}
               label="تاريخ ووقت التسليم"
               icon={<Clock className="size-3.5" />}
-              hint={dropoffHint(rental)}
+              hint={rentalDropoffHint(rental)}
               controlHtmlFor={dropoffDtId}
             >
               <input

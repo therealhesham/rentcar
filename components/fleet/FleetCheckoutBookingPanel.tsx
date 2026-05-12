@@ -7,6 +7,7 @@ import {
   Car,
   ChevronDown,
   Clock,
+  Layers,
   MapPin,
   PackageCheck,
   Truck,
@@ -24,6 +25,7 @@ import { computeBookingDays } from "@/lib/booking-days";
 import {
   computeAutoDropoff,
   computeDaysPreview,
+  rentalDropoffHint,
   toDatetimeLocalValue,
   validateRentalMinDays,
   type ModeTab,
@@ -294,6 +296,12 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
                     icon={<CalendarRange className="size-[15px]" />}
                     label="شهري"
                   />
+                  <CoPillTab
+                    active={rental === "monthly_packages"}
+                    onClick={() => setRental("monthly_packages")}
+                    icon={<Layers className="size-[15px]" />}
+                    label="الباقات الشهرية"
+                  />
                 </div>
               </div>
               <div className="flex flex-1 items-center">
@@ -470,13 +478,7 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
               <CoFieldCard
                 label="تاريخ ووقت التسليم"
                 icon={<Clock className="size-[15px]" />}
-                // hint={
-                //   rental === "weekly"
-                //     ? "يُحسب تلقائياً (+٧ أيام من الاستلام)"
-                //     : rental === "monthly"
-                //       ? "يُحسب تلقائياً (+شهر تقويمي من الاستلام)"
-                //       : undefined
-                // }
+                hint={rentalDropoffHint(rental)}
               >
                 <input
                   type="datetime-local"
