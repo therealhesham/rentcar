@@ -2,13 +2,13 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { verifyAdminSession } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
-import { BranchEditForm } from "@/app/admin/(dashboard)/branches/[id]/edit/BranchEditForm";
+import { CityEditForm } from "@/app/admin/(dashboard)/cities/[id]/edit/CityEditForm";
 
 export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ id: string }> };
 
-export default async function AdminBranchEditPage({ params }: Props) {
+export default async function AdminCityEditPage({ params }: Props) {
   if (!(await verifyAdminSession())) {
     redirect("/admin/login");
   }
@@ -19,16 +19,8 @@ export default async function AdminBranchEditPage({ params }: Props) {
     notFound();
   }
 
-  const [branch, cities] = await Promise.all([
-    prisma.branch.findUnique({ where: { id } }).catch(() => null),
-    prisma.city
-      .findMany({
-        orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
-        select: { id: true, name: true },
-      })
-      .catch(() => []),
-  ]);
-  if (!branch) {
+  const city = await prisma.city.findUnique({ where: { id } }).catch(() => null);
+  if (!city) {
     notFound();
   }
 
@@ -36,16 +28,16 @@ export default async function AdminBranchEditPage({ params }: Props) {
     <div className="mx-auto max-w-4xl">
       <header className="mb-10">
         <Link
-          href="/admin/branches"
+          href="/admin/cities"
           className="mb-3 inline-block text-sm font-bold text-primary hover:underline"
         >
-          ← الفروع
+          ← المدن
         </Link>
-        <h1 className="text-3xl font-extrabold tracking-tight">تعديل فرع</h1>
-        <p className="mt-2 text-on-surface-variant">{branch.name}</p>
+        <h1 className="text-3xl font-extrabold tracking-tight">تعديل مدينة</h1>
+        <p className="mt-2 text-on-surface-variant">{city.name}</p>
       </header>
 
-      <BranchEditForm branch={branch} cities={cities} />
+      <CityEditForm city={city} />
     </div>
   );
 }

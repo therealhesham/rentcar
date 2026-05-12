@@ -4,6 +4,10 @@ import {
   DIRECT_BOOKING_MSG_UNAVAILABLE_PERIOD,
 } from "@/lib/direct-booking-user-messages";
 import { prisma } from "@/lib/prisma";
+import {
+  DELIVERY_ADDRESS_MAX_CHARS,
+  DELIVERY_ADDRESS_MIN_CHARS,
+} from "@/lib/delivery-address";
 
 /**
  * منطق التوفر: مجموع quantity في Fleet للموديل = أقصى عدد حجوزات DIRECT متزامنة
@@ -25,6 +29,8 @@ export type DirectBookingCommon = {
   pickupMode: "BRANCH" | "DELIVERY";
   deliveryLat: number | null;
   deliveryLng: number | null;
+  /** عنوان توصيل نصّي إن وُجد (بدون إحداثيات أو معها). */
+  deliveryAddress: string | null;
 };
 
 const AGE_OPTIONS = new Set(["25-35", "35-50", "50+"]);
@@ -34,47 +40,169 @@ function isBranchSlugFormat(branch: string): boolean {
   return /^[a-z0-9-]{1,64}$/.test(s);
 }
 
+type DeliveryParsed =
+  | {
+      pickupMode: "BRANCH";
+      deliveryLat: null;
+      deliveryLng: null;
+      deliveryAddress: null;
+    }
+  | {
+      pickupMode: "DELIVERY";
+      deliveryLat: number | null;
+      deliveryLng: number | null;
+      deliveryAddress: string | null;
+    };
+
+function normalizeDeliveryAddressInput(raw: unknown): string {
+  return String(raw ?? "")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+/** null = غير مُدخَل؛ رفض الإحداثيات الناقصة عبر hasLat !== hasLng */
+function parseOptionalCoord(raw: unknown): number | null {
+  if (raw === undefined || raw === null) return null;
+  if (typeof raw === "string" && raw.trim() === "") return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
+function parseDeliveryPayload(
+  pickupMode: "BRANCH" | "DELIVERY",
+  latRaw: unknown,
+  lngRaw: unknown,
+  addrRaw: unknown,
+): { ok: true; value: DeliveryParsed } | { ok: false; error: string } {
+  if (pickupMode === "BRANCH") {
+    return {
+      ok: true,
+      value: {
+        pickupMode: "BRANCH",
+        deliveryLat: null,
+        deliveryLng: null,
+        deliveryAddress: null,
+      },
+    };
+  }
+
+  const latOpt = parseOptionalCoord(latRaw);
+  const lngOpt = parseOptionalCoord(lngRaw);
+  const hasLat = latOpt !== null;
+  const hasLng = lngOpt !== null;
+
+  if (hasLat !== hasLng) {
+    return {
+      ok: false,
+      error:
+        "حدد موقع التوصيل بالكامل على الخريطة (خطّي الطول والعرض)، أو امسح الإحداثيات وأدخل عنواناً تفصيلياً.",
+    };
+  }
+
+  const addr = normalizeDeliveryAddressInput(addrRaw);
+  if (addr.length > DELIVERY_ADDRESS_MAX_CHARS) {
+    return {
+      ok: false,
+      error: `عنوان التوصيل طويل جداً (بحد أقصى ${DELIVERY_ADDRESS_MAX_CHARS} حرفاً).`,
+    };
+  }
+
+  if (hasLat && hasLng) {
+    const latVal = latOpt as number;
+    const lngVal = lngOpt as number;
+    if (latVal < -90 || latVal > 90 || lngVal < -180 || lngVal > 180) {
+      return { ok: false, error: "إحداثيات التوصيل خارج النطاق المسموح." };
+    }
+  }
+
+  const hasCoords = Boolean(hasLat && hasLng);
+
+  const hasMeaningfulAddress = addr.length >= DELIVERY_ADDRESS_MIN_CHARS;
+
+  if (!hasCoords && !hasMeaningfulAddress) {
+    if (addr.length > 0) {
+      return {
+        ok: false,
+        error: `أدخل عنواناً أوضح (على الأقل ${DELIVERY_ADDRESS_MIN_CHARS} أحرف)، أو حدّد الموقع على الخريطة.`,
+      };
+    }
+    return {
+      ok: false,
+      error:
+        "حدد موقع التوصيل على الخريطة، أو اكتب عنوان التوصيل التفصيلي (الحي، الشارع، معلم قريب).",
+    };
+  }
+
+  if (hasCoords && !hasMeaningfulAddress) {
+    return {
+      ok: true,
+      value: {
+        pickupMode: "DELIVERY",
+        deliveryLat: latOpt,
+        deliveryLng: lngOpt,
+        deliveryAddress: null,
+      },
+    };
+  }
+
+  if (!hasCoords && hasMeaningfulAddress) {
+    return {
+      ok: true,
+      value: {
+        pickupMode: "DELIVERY",
+        deliveryLat: null,
+        deliveryLng: null,
+        deliveryAddress: addr,
+      },
+    };
+  }
+
+  return {
+    ok: true,
+    value: {
+      pickupMode: "DELIVERY",
+      deliveryLat: latOpt,
+      deliveryLng: lngOpt,
+      deliveryAddress: addr.length > 0 ? addr : null,
+    },
+  };
+}
+
 function parseDeliveryPartFromJson(
   body: Record<string, unknown>,
-): { ok: true; pickupMode: "BRANCH" | "DELIVERY"; deliveryLat: number | null; deliveryLng: number | null } | { ok: false; error: string } {
+):
+  | ({ ok: true } & DeliveryParsed)
+  | { ok: false; error: string } {
   const raw = body.pickupMode;
   const pickupMode: "BRANCH" | "DELIVERY" =
     raw === "DELIVERY" || raw === "delivery" ? "DELIVERY" : "BRANCH";
 
-  if (pickupMode === "BRANCH") {
-    return { ok: true, pickupMode: "BRANCH", deliveryLat: null, deliveryLng: null };
-  }
-
-  const lat = Number(body.deliveryLat);
-  const lng = Number(body.deliveryLng);
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-    return { ok: false, error: "إحداثيات موقع التوصيل مطلوبة وغير صالحة." };
-  }
-  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-    return { ok: false, error: "إحداثيات التوصيل خارج النطاق المسموح." };
-  }
-  return { ok: true, pickupMode: "DELIVERY", deliveryLat: lat, deliveryLng: lng };
+  const p = parseDeliveryPayload(
+    pickupMode,
+    body.deliveryLat,
+    body.deliveryLng,
+    body.deliveryAddress,
+  );
+  if (!p.ok) return p;
+  return { ok: true, ...p.value };
 }
 
 function parseDeliveryPartFromFormData(
   formData: FormData,
-): { ok: true; pickupMode: "BRANCH" | "DELIVERY"; deliveryLat: number | null; deliveryLng: number | null } | { ok: false; error: string } {
+):
+  | ({ ok: true } & DeliveryParsed)
+  | { ok: false; error: string } {
   const modeRaw = String(formData.get("pickupMode") ?? "BRANCH").trim().toUpperCase();
   const pickupMode: "BRANCH" | "DELIVERY" = modeRaw === "DELIVERY" ? "DELIVERY" : "BRANCH";
 
-  if (pickupMode === "BRANCH") {
-    return { ok: true, pickupMode: "BRANCH", deliveryLat: null, deliveryLng: null };
-  }
-
-  const lat = Number(String(formData.get("deliveryLat") ?? "").trim());
-  const lng = Number(String(formData.get("deliveryLng") ?? "").trim());
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-    return { ok: false, error: "إحداثيات موقع التوصيل مطلوبة وغير صالحة." };
-  }
-  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-    return { ok: false, error: "إحداثيات التوصيل خارج النطاق المسموح." };
-  }
-  return { ok: true, pickupMode: "DELIVERY", deliveryLat: lat, deliveryLng: lng };
+  const p = parseDeliveryPayload(
+    pickupMode,
+    formData.get("deliveryLat"),
+    formData.get("deliveryLng"),
+    formData.get("deliveryAddress"),
+  );
+  if (!p.ok) return p;
+  return { ok: true, ...p.value };
 }
 
 function dateOnlyYmd(d: Date): string {
@@ -324,8 +452,10 @@ export function parseCommonBookingFieldsFromFormData(
       numberOfDays: safeBookingDays(days),
       termsAccepted,
       pickupMode: delivery.pickupMode,
-      deliveryLat: delivery.deliveryLat,
-      deliveryLng: delivery.deliveryLng,
+      deliveryLat: delivery.pickupMode === "BRANCH" ? null : delivery.deliveryLat,
+      deliveryLng: delivery.pickupMode === "BRANCH" ? null : delivery.deliveryLng,
+      deliveryAddress:
+        delivery.pickupMode === "BRANCH" ? null : delivery.deliveryAddress,
     },
   };
 }
@@ -386,8 +516,10 @@ export function parseCommonBookingFieldsFromJson(
       numberOfDays: safeBookingDays(days),
       termsAccepted,
       pickupMode: delivery.pickupMode,
-      deliveryLat: delivery.deliveryLat,
-      deliveryLng: delivery.deliveryLng,
+      deliveryLat: delivery.pickupMode === "BRANCH" ? null : delivery.deliveryLat,
+      deliveryLng: delivery.pickupMode === "BRANCH" ? null : delivery.deliveryLng,
+      deliveryAddress:
+        delivery.pickupMode === "BRANCH" ? null : delivery.deliveryAddress,
     },
   };
 }
@@ -541,6 +673,7 @@ export async function createDirectBooking(
             pickupMode: commonNormalized.pickupMode,
             deliveryLat: commonNormalized.deliveryLat,
             deliveryLng: commonNormalized.deliveryLng,
+            deliveryAddress: commonNormalized.deliveryAddress,
             pickupDate: commonNormalized.pickupDate,
             numberOfDays: days,
             termsAccepted: commonNormalized.termsAccepted,
@@ -763,6 +896,7 @@ export async function updateBookingRequestByAdmin(
     pickupMode: input.pickupMode,
     deliveryLat: input.deliveryLat,
     deliveryLng: input.deliveryLng,
+    deliveryAddress: input.deliveryAddress,
     pickupDate: input.pickupDate,
     numberOfDays: days,
     termsAccepted: input.termsAccepted,

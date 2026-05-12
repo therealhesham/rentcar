@@ -1,12 +1,15 @@
 import Image from "next/image";
-import { BookingWidget, type BookingBranchOption } from "./BookingWidget";
+import {
+  BookingWidget,
+  type BookingCityBranchesOption,
+} from "./BookingWidget";
 
 export type HeroProps = {
   leftImageUrl: string;
   leftImageAlt: string;
   rightImageUrl: string;
   rightImageAlt: string;
-  branches: BookingBranchOption[];
+  cities: BookingCityBranchesOption[];
 };
 
 export function Hero({
@@ -14,7 +17,7 @@ export function Hero({
   leftImageAlt,
   rightImageUrl,
   rightImageAlt,
-  branches,
+  cities,
 }: HeroProps) {
   return (
     <>
@@ -97,8 +100,8 @@ export function Hero({
         className="sticky top-16 z-40 -mt-8 border-b border-[#ebe4d3]/70 bg-white/92 shadow-[0_8px_28px_-6px_rgba(15,61,71,0.1)] backdrop-blur-md sm:top-24 sm:-mt-12 md:-mt-12 lg:-mt-16"
         dir="rtl"
       >
-        <div className="mx-auto w-full max-w-[72rem] px-4 pb-4 pt-3 sm:px-6 sm:pb-5 sm:pt-4 lg:px-8 lg:pb-6">
-          <div className="mb-3 flex items-center justify-center gap-3 sm:mb-4">
+        <div className="mx-auto w-full max-w-[72rem] px-4 pb-3 pt-2.5 sm:px-6 sm:pb-3.5 sm:pt-3 lg:px-8 lg:pb-4">
+          <div className="mb-2 flex items-center justify-center gap-3 sm:mb-3">
             <span className="h-px w-12 bg-gradient-to-l from-[#dbb878]/50 to-transparent" />
             <span className="text-[11px] font-bold uppercase tracking-[0.25em] text-[#003749]/40">
               احجز مركبتك الآن
@@ -106,7 +109,7 @@ export function Hero({
             <span className="h-px w-12 bg-gradient-to-r from-[#dbb878]/50 to-transparent" />
           </div>
 
-          <BookingWidget branches={branches} />
+          <BookingWidget cities={cities} />
         </div>
       </div>
     </>

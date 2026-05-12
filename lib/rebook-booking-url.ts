@@ -9,6 +9,7 @@ export type BookingLikeForRebook = {
   branch: string;
   deliveryLat: number | null;
   deliveryLng: number | null;
+  deliveryAddress?: string | null;
 };
 
 function clampDays(n: number): number {
@@ -57,6 +58,10 @@ export function buildRebookSearchParams(b: BookingLikeForRebook): URLSearchParam
     if (b.deliveryLat != null && b.deliveryLng != null) {
       params.set("dlat", String(b.deliveryLat));
       params.set("dlng", String(b.deliveryLng));
+    }
+    const adr = typeof b.deliveryAddress === "string" ? b.deliveryAddress.trim() : "";
+    if (adr) {
+      params.set("daddr", adr);
     }
   }
 

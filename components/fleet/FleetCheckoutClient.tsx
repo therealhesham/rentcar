@@ -31,14 +31,9 @@ import { computeBookingDays } from "@/lib/booking-days";
 import type { CheckoutCarDTO } from "@/lib/checkout-car-data";
 import type { StoredFleetSearchContext } from "@/lib/fleet-search-storage";
 import { FLEET_SEARCH_STORAGE_KEY } from "@/lib/fleet-search-storage";
+import { DELIVERY_ADDRESS_MIN_CHARS } from "@/lib/delivery-address";
+import type { BookingCityBranchesOption } from "@/lib/booking-location-options";
 import type { RentalAddonDTO } from "@/lib/rental-addon-data";
-
-type Props = {
-  car: CheckoutCarDTO;
-  addons: RentalAddonDTO[];
-  branchBySlug: Record<string, string>;
-  sessionCustomer: { name: string; phoneLocal: string; email: string } | null;
-};
 
 const GOLD = "#dbb878";
 const GOLD_DARK = "#c9a356";
@@ -70,10 +65,19 @@ function fmtWhen(iso: string | null | undefined): { date: string; time: string }
   };
 }
 
+type Props = {
+  car: CheckoutCarDTO;
+  addons: RentalAddonDTO[];
+  branchBySlug: Record<string, string>;
+  bookingCities: BookingCityBranchesOption[];
+  sessionCustomer: { name: string; phoneLocal: string; email: string } | null;
+};
+
 export function FleetCheckoutClient({
   car,
   addons,
   branchBySlug,
+  bookingCities,
   sessionCustomer,
 }: Props) {
   const sp = useSearchParams();
@@ -112,8 +116,33 @@ export function FleetCheckoutClient({
       sp.get("pickupBranch")?.trim() || ctxStore?.pickupBranch || undefined;
     const returnBranch =
       sp.get("returnBranch")?.trim() || ctxStore?.returnBranch || undefined;
-    const dlat = sp.get("dlat");
-    const dlng = sp.get("dlng");
+    const dlatRaw = sp.get("dlat");
+    const dlngRaw = sp.get("dlng");
+    const daddrFromUrl = (sp.get("daddr") ?? "").trim();
+
+    const ctxLat = ctxStore?.deliveryLat;
+    const ctxLng = ctxStore?.deliveryLng;
+    const ctxAddrRaw =
+      typeof ctxStore?.deliveryAddress === "string" ? ctxStore.deliveryAddress.trim() : "";
+
+    function coordFromSearchOrCtx(
+      raw: string | null,
+      ctxVal: number | undefined,
+    ): number | undefined {
+      if (raw != null && raw.trim() !== "") {
+        const n = Number(raw);
+        return Number.isFinite(n) ? n : undefined;
+      }
+      return typeof ctxVal === "number" && Number.isFinite(ctxVal) ? ctxVal : undefined;
+    }
+
+    const deliveryLat =
+      mode === "delivery" ? coordFromSearchOrCtx(dlatRaw, ctxLat) : undefined;
+    const deliveryLng =
+      mode === "delivery" ? coordFromSearchOrCtx(dlngRaw, ctxLng) : undefined;
+
+    const deliveryAddressMerged =
+      mode === "delivery" ? (daddrFromUrl || ctxAddrRaw).trim() : "";
 
     let pickupIso = pickupUrl;
     if (!pickupIso && ctxStore?.pickupDate) {
@@ -144,14 +173,11 @@ export function FleetCheckoutClient({
       }
     }
 
-    const deliveryLat =
-      mode === "delivery"
-        ? (dlat != null ? Number(dlat) : ctxStore?.deliveryLat)
-        : undefined;
-    const deliveryLng =
-      mode === "delivery"
-        ? (dlng != null ? Number(dlng) : ctxStore?.deliveryLng)
-        : undefined;
+    const coordsOk =
+      deliveryLat !== undefined &&
+      deliveryLng !== undefined &&
+      Number.isFinite(deliveryLat) &&
+      Number.isFinite(deliveryLng);
 
     const branchSlug =
       returnBranch?.trim().toLowerCase() ||
@@ -161,17 +187,28 @@ export function FleetCheckoutClient({
 
     const pickupLabel =
       mode === "delivery"
-        ? deliveryLat != null &&
-          deliveryLng != null &&
-          Number.isFinite(deliveryLat) &&
-          Number.isFinite(deliveryLng)
-          ? `توصيل (${deliveryLat.toFixed(4)}, ${deliveryLng.toFixed(4)})`
-          : "توصيل للموقع"
+        ? (() => {
+            const parts: string[] = [];
+            if (deliveryAddressMerged.length > 0) {
+              parts.push(deliveryAddressMerged);
+            }
+            if (coordsOk) {
+              parts.push(
+                `${(deliveryLat as number).toFixed(4)}, ${(deliveryLng as number).toFixed(4)}`,
+              );
+            }
+            return parts.length > 0 ? `توصيل — ${parts.join(" · ")}` : "توصيل";
+          })()
         : pickupBranch
           ? (branchBySlug[pickupBranch] ?? pickupBranch)
           : (branchBySlug[branchSlug] ?? branchSlug);
 
     const returnLabel = branchBySlug[branchSlug] ?? branchSlug;
+
+    const deliveryAddressForTrip =
+      mode === "delivery" && deliveryAddressMerged.length > 0
+        ? deliveryAddressMerged
+        : undefined;
 
     return {
       pickupIso,
@@ -189,6 +226,7 @@ export function FleetCheckoutClient({
         typeof deliveryLng === "number" && Number.isFinite(deliveryLng)
           ? deliveryLng
           : undefined,
+      deliveryAddress: deliveryAddressForTrip,
     };
   }, [sp, ctxStore, branchBySlug]);
 
@@ -286,8 +324,11 @@ export function FleetCheckoutClient({
 
     const pickupMode: "BRANCH" | "DELIVERY" =
       trip.mode === "delivery" &&
-      trip.deliveryLat != null &&
-      trip.deliveryLng != null
+      (((trip.deliveryLat != null &&
+        trip.deliveryLng != null &&
+        Number.isFinite(trip.deliveryLat) &&
+        Number.isFinite(trip.deliveryLng)) ||
+        (trip.deliveryAddress?.trim().length ?? 0) >= DELIVERY_ADDRESS_MIN_CHARS))
         ? "DELIVERY"
         : "BRANCH";
 
@@ -304,8 +345,19 @@ export function FleetCheckoutClient({
       addonIds: [...selected],
     };
     if (pickupMode === "DELIVERY") {
-      body.deliveryLat = trip.deliveryLat;
-      body.deliveryLng = trip.deliveryLng;
+      if (
+        trip.deliveryLat != null &&
+        trip.deliveryLng != null &&
+        Number.isFinite(trip.deliveryLat) &&
+        Number.isFinite(trip.deliveryLng)
+      ) {
+        body.deliveryLat = trip.deliveryLat;
+        body.deliveryLng = trip.deliveryLng;
+      }
+      const addr = trip.deliveryAddress?.trim();
+      if (addr) {
+        body.deliveryAddress = addr;
+      }
     }
 
     setPending(true);
@@ -362,7 +414,7 @@ export function FleetCheckoutClient({
 
           {!trip.pickupIso ? (
             <div className="mb-10">
-              <FleetCheckoutBookingPanel modelId={car.modelId} branches={branchOptions} />
+              <FleetCheckoutBookingPanel modelId={car.modelId} cities={bookingCities} />
             </div>
           ) : null}
 

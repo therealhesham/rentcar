@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { FleetCheckoutClient } from "@/components/fleet/FleetCheckoutClient";
 import { getCarModelForCheckout } from "@/lib/checkout-car-data";
-import { getActiveBranches } from "@/lib/branch-data";
+import { getActiveBranches, getActiveBookingCitiesWithBranches } from "@/lib/branch-data";
 import { getCustomerProfile } from "@/lib/customer-auth";
 import { e164ToLocalNine } from "@/lib/normalize-saudi-phone";
 import { getActiveRentalAddons } from "@/lib/rental-addon-data";
@@ -26,10 +26,11 @@ export default async function FleetCheckoutPage({
     redirect("/fleet");
   }
 
-  const [car, addons, branchRows, profile] = await Promise.all([
+  const [car, addons, branchRows, bookingCities, profile] = await Promise.all([
     getCarModelForCheckout(modelId),
     getActiveRentalAddons(),
     getActiveBranches().catch(() => []),
+    getActiveBookingCitiesWithBranches().catch(() => []),
     getCustomerProfile(),
   ]);
 
@@ -70,6 +71,7 @@ export default async function FleetCheckoutPage({
         car={car}
         addons={addons}
         branchBySlug={branchBySlug}
+        bookingCities={bookingCities}
         sessionCustomer={sessionCustomer}
       />
     </Suspense>

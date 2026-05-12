@@ -8,14 +8,14 @@ import {
   SiteFooter,
   TopNav,
 } from "@/components/home";
-import { getActiveBranches } from "@/lib/branch-data";
+import { getActiveBookingCitiesWithBranches } from "@/lib/branch-data";
 import { getHomeHeroSettings } from "@/lib/site-settings";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const hero = await getHomeHeroSettings();
-  const branches = await getActiveBranches().catch(() => []);
+  const cities = await getActiveBookingCitiesWithBranches().catch(() => []);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -26,7 +26,7 @@ export default async function Home() {
           leftImageAlt={hero.leftImageAlt}
           rightImageUrl={hero.rightImageUrl}
           rightImageAlt={hero.rightImageAlt}
-          branches={branches.map((b) => ({ slug: b.slug, name: b.name }))}
+          cities={cities}
         />
         <FleetCategories />
 

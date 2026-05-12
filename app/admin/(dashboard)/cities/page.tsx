@@ -2,30 +2,22 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { verifyAdminSession } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
-import { BranchCreateForm } from "@/app/admin/(dashboard)/branches/BranchCreateForm";
-import { BranchDeleteForm } from "@/app/admin/(dashboard)/branches/BranchDeleteForm";
+import { CityCreateForm } from "@/app/admin/(dashboard)/cities/CityCreateForm";
+import { CityDeleteForm } from "@/app/admin/(dashboard)/cities/CityDeleteForm";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminBranchesPage() {
+export default async function AdminCitiesPage() {
   if (!(await verifyAdminSession())) {
     redirect("/admin/login");
   }
 
-  const [branches, cities] = await Promise.all([
-    prisma.branch
-      .findMany({
-        orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
-        include: { city: { select: { name: true } } },
-      })
-      .catch(() => []),
-    prisma.city
-      .findMany({
-        orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
-        select: { id: true, name: true },
-      })
-      .catch(() => []),
-  ]);
+  const cities = await prisma.city
+    .findMany({
+      orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+      include: { _count: { select: { branches: true } } },
+    })
+    .catch(() => []);
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -36,76 +28,69 @@ export default async function AdminBranchesPage() {
         >
           ← لوحة التحكم
         </Link>
-        <h1 className="text-3xl font-extrabold tracking-tight">إدارة الفروع</h1>
+        <h1 className="text-3xl font-extrabold tracking-tight">إدارة المدن</h1>
         <p className="mt-2 text-on-surface-variant">
-          أضف فروع الاستلام تحت كل مدينة من{" "}
-          <Link href="/admin/cities" className="font-bold text-primary hover:underline">
-            إدارة المدن
+          أضف المدن ثم اربط كل فرع بمدينة من{" "}
+          <Link href="/admin/branches" className="font-bold text-primary hover:underline">
+            إدارة الفروع
           </Link>
-          . المعرّف (slug) يجب أن يبقى مستقراً للحجز (مثل jeddah-north). حقل «فروعنا الجديدة» يتحكم في ظهور
-          الفرع في الصفحة الرئيسية.
+          . يظهر في نموذج الحجز: اختيار المدينة ثم الفرع.
         </p>
       </header>
 
-      <BranchCreateForm cities={cities} />
+      <CityCreateForm />
 
       <div className="overflow-x-auto rounded-2xl border border-outline-variant/30 bg-surface-container-low">
-        <table className="w-full min-w-[720px] text-start text-sm">
+        <table className="w-full min-w-[640px] text-start text-sm">
           <thead>
             <tr className="border-b border-outline-variant/40 bg-surface-container/80">
-              <th className="px-4 py-3 font-bold">المدينة</th>
               <th className="px-4 py-3 font-bold">الترتيب</th>
               <th className="px-4 py-3 font-bold">الاسم</th>
               <th className="px-4 py-3 font-bold" dir="ltr">
                 slug
               </th>
+              <th className="px-4 py-3 font-bold">فروع</th>
               <th className="px-4 py-3 font-bold">نشط</th>
-              <th className="px-4 py-3 font-bold">جديد بالرئيسية</th>
               <th className="px-4 py-3 font-bold">إجراءات</th>
             </tr>
           </thead>
           <tbody>
-            {branches.length === 0 ? (
+            {cities.length === 0 ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={6}
                   className="px-4 py-10 text-center text-on-surface-variant"
                 >
-                  لا توجد فروع. أضف فرعًا أعلاه أو أنشئ جدول Branch في قاعدة البيانات ثم{" "}
-                  <code className="rounded bg-surface-container px-1 text-xs">
-                    npx prisma generate
-                  </code>
-                  .
+                  لا توجد مدن بعد. أضف مدينة أعلاه.
                 </td>
               </tr>
             ) : (
-              branches.map((b) => (
+              cities.map((c) => (
                 <tr
-                  key={b.id}
+                  key={c.id}
                   className="border-b border-outline-variant/20 last:border-0"
                 >
-                  <td className="px-4 py-3 text-on-surface-variant">{b.city.name}</td>
                   <td className="px-4 py-3 tabular-nums text-on-surface-variant">
-                    {b.sortOrder}
+                    {c.sortOrder}
                   </td>
-                  <td className="px-4 py-3 font-medium">{b.name}</td>
+                  <td className="px-4 py-3 font-medium">{c.name}</td>
                   <td
                     className="px-4 py-3 font-mono text-xs text-on-surface-variant"
                     dir="ltr"
                   >
-                    {b.slug}
+                    {c.slug}
                   </td>
-                  <td className="px-4 py-3">{b.isActive ? "نعم" : "لا"}</td>
-                  <td className="px-4 py-3">{b.isNew ? "نعم" : "لا"}</td>
+                  <td className="px-4 py-3 tabular-nums">{c._count.branches}</td>
+                  <td className="px-4 py-3">{c.isActive ? "نعم" : "لا"}</td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap items-center gap-3">
                       <Link
-                        href={`/admin/branches/${b.id}/edit`}
+                        href={`/admin/cities/${c.id}/edit`}
                         className="rounded-lg border border-outline-variant px-3 py-1.5 text-xs font-bold text-primary hover:bg-surface-container"
                       >
                         تعديل
                       </Link>
-                      <BranchDeleteForm id={b.id} name={b.name} />
+                      <CityDeleteForm id={c.id} name={c.name} />
                     </div>
                   </td>
                 </tr>

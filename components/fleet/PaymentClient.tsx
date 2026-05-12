@@ -70,6 +70,12 @@ function formatExpiry(v: string): string {
   return `${d.slice(0, 2)}/${d.slice(2)}`;
 }
 
+const BRANCH_LABEL_AR: Record<string, string> = {
+  jeddah: "جدة",
+  madinah: "المدينة المنورة",
+  tabuk: "تبوك",
+};
+
 type MethodOption =
   | {
       id: CheckoutPaymentMethod;
@@ -232,15 +238,50 @@ export function PaymentClient({ booking }: Props) {
                     طريقة الدفع: {paymentMethodLabelAr(resolvedMethodCode)}
                   </p>
                 ) : null}
-                <dl className="mt-3 grid w-full max-w-md grid-cols-2 gap-3 text-start text-xs sm:text-sm">
-                  <div className="rounded-lg bg-white/70 px-3 py-2">
-                    <dt className="text-on-surface-variant">الاسم</dt>
-                    <dd className="font-bold text-[#003749]">{booking.fullName}</dd>
+                <dl className="mt-3 grid w-full max-w-md gap-3 text-start text-xs sm:text-sm">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-lg bg-white/70 px-3 py-2">
+                      <dt className="text-on-surface-variant">الاسم</dt>
+                      <dd className="font-bold text-[#003749]">{booking.fullName}</dd>
+                    </div>
+                    <div className="rounded-lg bg-white/70 px-3 py-2">
+                      <dt className="text-on-surface-variant">الجوال</dt>
+                      <dd className="tabular-nums font-bold text-[#003749]" dir="ltr">
+                        {maskPhone(booking.phone)}
+                      </dd>
+                    </div>
                   </div>
                   <div className="rounded-lg bg-white/70 px-3 py-2">
-                    <dt className="text-on-surface-variant">الجوال</dt>
-                    <dd className="tabular-nums font-bold text-[#003749]" dir="ltr">
-                      {maskPhone(booking.phone)}
+                    <dt className="text-on-surface-variant">
+                      {booking.pickupMode === "DELIVERY" ? "موقع التوصيل" : "الفرع"}
+                    </dt>
+                    <dd className="mt-0.5 text-[#003749]">
+                        {booking.pickupMode === "DELIVERY" ? (
+                          <span className="flex flex-col gap-1">
+                            {booking.deliveryAddress?.trim() ? (
+                              <span className="whitespace-pre-wrap font-bold">
+                                {booking.deliveryAddress.trim()}
+                              </span>
+                            ) : null}
+                            {booking.deliveryLat != null && booking.deliveryLng != null ? (
+                              <a
+                                href={`https://www.google.com/maps?q=${booking.deliveryLat},${booking.deliveryLng}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-xs font-bold text-emerald-800 underline"
+                                dir="ltr"
+                              >
+                                فتح الخريطة
+                              </a>
+                            ) : !booking.deliveryAddress?.trim() ? (
+                              <span className="text-on-surface-variant">—</span>
+                            ) : null}
+                          </span>
+                        ) : (
+                          <span className="font-bold">
+                            {BRANCH_LABEL_AR[booking.branch] ?? booking.branch}
+                          </span>
+                        )}
                     </dd>
                   </div>
                 </dl>
@@ -492,6 +533,36 @@ export function PaymentClient({ booking }: Props) {
                     {dropoff.date} · {dropoff.time}
                   </dd>
                 </div>
+                {booking.pickupMode === "DELIVERY" ? (
+                  <div>
+                    <dt className="font-bold text-[#003749]">موقع التوصيل</dt>
+                    <dd className="mt-1 text-on-surface">
+                      {booking.deliveryAddress?.trim() ? (
+                        <p className="whitespace-pre-wrap text-sm">{booking.deliveryAddress.trim()}</p>
+                      ) : null}
+                      {booking.deliveryLat != null && booking.deliveryLng != null ? (
+                        <a
+                          href={`https://www.google.com/maps?q=${booking.deliveryLat},${booking.deliveryLng}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-1 inline-block text-xs font-bold text-[#003749] underline"
+                          dir="ltr"
+                        >
+                          فتح الموقع على الخريطة
+                        </a>
+                      ) : !booking.deliveryAddress?.trim() ? (
+                        <span className="text-sm text-on-surface-variant">—</span>
+                      ) : null}
+                    </dd>
+                  </div>
+                ) : (
+                  <div>
+                    <dt className="font-bold text-[#003749]">الفرع</dt>
+                    <dd className="text-on-surface">
+                      {BRANCH_LABEL_AR[booking.branch] ?? booking.branch}
+                    </dd>
+                  </div>
+                )}
                 <div className="flex justify-between border-t border-neutral-100 pt-3 font-bold">
                   <dt>مدة الإيجار</dt>
                   <dd dir="ltr">{booking.numberOfDays} يوم</dd>

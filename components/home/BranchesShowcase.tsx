@@ -26,14 +26,6 @@ function resolveBranchEmbedUrl(branch: {
   return `https://maps.google.com/maps?q=${encodeURIComponent(query)}&hl=ar&z=14&output=embed`;
 }
 
-function isMadinahBranch(branch: { slug: string; name: string }) {
-  return (
-    branch.slug.includes("madinah") ||
-    branch.slug.includes("madina") ||
-    branch.name.includes("المدينة")
-  );
-}
-
 type Branch = {
   id: number;
   slug: string;
@@ -101,7 +93,6 @@ function BranchGroup({
 
   return (
     <div className="bg-white py-12 sm:py-16">
-      {/* سهم يمين + عنوان + سهم يسار */}
       <div className="relative flex items-center justify-center gap-4 px-4">
         <div className="text-center">
           <p className="text-base font-extrabold tracking-widest text-[#dbb878]">{title}</p>
@@ -109,7 +100,6 @@ function BranchGroup({
         </div>
       </div>
 
-      {/* كروت الفروع */}
       <div className="mx-auto mt-10 w-full max-w-screen-xl px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {branches.map((branch) => (
@@ -121,54 +111,49 @@ function BranchGroup({
   );
 }
 
-function GoldArrow({ direction }: { direction: "left" | "right" }) {
-  return (
-    <svg
-      viewBox="0 0 40 60"
-      className="hidden h-12 w-7 shrink-0 sm:block"
-      aria-hidden
-    >
-      {direction === "right" ? (
-        <polygon points="0,0 40,30 0,60" fill="#c9a84c" />
-      ) : (
-        <polygon points="40,0 0,30 40,60" fill="#c9a84c" />
-      )}
-    </svg>
-  );
+function groupBranchesByCity(
+  branches: Array<
+    Branch & {
+      city: { id: number; name: string; slug: string; sortOrder: number };
+    }
+  >,
+) {
+  const map = new Map<
+    number,
+    { cityName: string; citySort: number; branches: Branch[] }
+  >();
+  for (const b of branches) {
+    const cid = b.city.id;
+    if (!map.has(cid)) {
+      map.set(cid, {
+        cityName: b.city.name,
+        citySort: b.city.sortOrder,
+        branches: [],
+      });
+    }
+    map.get(cid)!.branches.push(b);
+  }
+  return [...map.values()].sort((a, b) => a.citySort - b.citySort || a.cityName.localeCompare(b.cityName, "ar"));
 }
 
 export async function BranchesShowcase() {
   const newBranches = await getNewBranchesForHome();
-  const branches = newBranches.length > 0 ? newBranches : await getActiveBranches();
+  const branchesRaw = newBranches.length > 0 ? newBranches : await getActiveBranches();
 
-  if (branches.length === 0) {
+  if (branchesRaw.length === 0) {
     return null;
   }
 
-  const madinahBranches = branches.filter(isMadinahBranch);
-  const otherBranches = branches.filter((b) => !isMadinahBranch(b));
-
-  /* استخرج أسماء المدن الأخرى للعنوان الفرعي */
-  const otherCityNames = Array.from(
-    new Set(
-      otherBranches.map((b) => {
-        if (b.slug.includes("jeddah") || b.name.includes("جدة")) return "جدة";
-        if (b.slug.includes("tabuk") || b.name.includes("تبوك")) return "تبوك";
-        if (b.slug.includes("yanbu") || b.name.includes("ينبع")) return "ينبع";
-        if (b.slug.includes("makkah") || b.name.includes("مكة")) return "مكة";
-        if (b.slug.includes("riyadh") || b.name.includes("الرياض")) return "الرياض";
-        if (b.slug.includes("dammam") || b.name.includes("الدمام")) return "الدمام";
-        return null;
-      })
-    )
-  ).filter(Boolean);
-
-  const otherSubtitle =
-    otherCityNames.length > 0 ? otherCityNames.join(" - ") : "فروع أخرى";
+  const groups = groupBranchesByCity(
+    branchesRaw as Array<
+      Branch & {
+        city: { id: number; name: string; slug: string; sortOrder: number };
+      }
+    >,
+  );
 
   return (
     <section id="branches-new" className="overflow-x-clip">
-      {/* هيدر رئيسي */}
       <div className="relative overflow-hidden bg-[#003749] px-4 py-14 text-center sm:px-6 sm:py-16 lg:px-8">
         <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
           فروعنا
@@ -179,24 +164,12 @@ export async function BranchesShowcase() {
         <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-[#dbb878]" aria-hidden />
       </div>
 
-      {/* المجموعة الأولى: المدينة المنورة */}
-      <BranchGroup
-        title="فروعنا"
-        subtitle="المدينة المنورة"
-        branches={madinahBranches}
-      />
-
-      {/* فاصل ذهبي */}
-      {madinahBranches.length > 0 && otherBranches.length > 0 && (
-        <div className="h-1 bg-[#dbb878]/40" aria-hidden />
-      )}
-
-      {/* المجموعة الثانية: باقي الفروع */}
-      <BranchGroup
-        title="فروعنا"
-        subtitle={otherSubtitle}
-        branches={otherBranches}
-      />
+      {groups.map((g, i) => (
+        <div key={`${g.cityName}-${i}`}>
+          {i > 0 ? <div className="h-1 bg-[#dbb878]/40" aria-hidden /> : null}
+          <BranchGroup title="فروعنا" subtitle={g.cityName} branches={g.branches} />
+        </div>
+      ))}
     </section>
   );
 }

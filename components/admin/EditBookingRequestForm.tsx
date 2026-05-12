@@ -3,7 +3,10 @@
 import { Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useId, useMemo, useState } from "react";
-import { updateBookingRequest } from "@/app/admin/booking-request-actions";
+import {
+  DELIVERY_ADDRESS_MAX_CHARS,
+  DELIVERY_ADDRESS_MIN_CHARS,
+} from "@/lib/delivery-address";
 import type { BookableModelOption } from "@/components/admin/ConvertInquiryToDirectForm";
 
 export type EditableBookingRow = {
@@ -17,6 +20,7 @@ export type EditableBookingRow = {
   pickupMode: string | null;
   deliveryLat: number | null;
   deliveryLng: number | null;
+  deliveryAddress: string | null;
   pickupDateYmd: string;
   numberOfDays: number;
   termsAccepted: boolean;
@@ -292,22 +296,51 @@ function EditBookingModalInner({
                 </div>
               ) : null}
               {request.pickupMode === "DELIVERY" &&
-              request.deliveryLat != null &&
-              request.deliveryLng != null ? (
+              (request.deliveryLat != null && request.deliveryLng != null
+                ? true
+                : Boolean(request.deliveryAddress?.trim())) ? (
                 <div className="sm:col-span-2 rounded-xl border border-primary-container/40 bg-primary-container/15 px-3 py-3 text-sm">
                   <p className="font-bold text-on-primary-container">توصيل للعميل</p>
-                  <p className="mt-1 font-mono text-xs tabular-nums text-on-surface" dir="ltr">
-                    {request.deliveryLat.toFixed(6)}, {request.deliveryLng.toFixed(6)}
-                  </p>
-                  <a
-                    href={`https://www.google.com/maps?q=${request.deliveryLat},${request.deliveryLng}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-2 inline-block text-xs font-bold text-primary underline"
-                  >
-                    فتح في Google Maps
-                  </a>
+                  {request.deliveryAddress?.trim() ? (
+                    <p className="mt-2 whitespace-pre-wrap text-on-surface">{request.deliveryAddress.trim()}</p>
+                  ) : null}
+                  {request.deliveryLat != null && request.deliveryLng != null ? (
+                    <>
+                      <p className="mt-2 font-mono text-xs tabular-nums text-on-surface" dir="ltr">
+                        {request.deliveryLat.toFixed(6)}, {request.deliveryLng.toFixed(6)}
+                      </p>
+                      <a
+                        href={`https://www.google.com/maps?q=${request.deliveryLat},${request.deliveryLng}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-2 inline-block text-xs font-bold text-primary underline"
+                      >
+                        فتح في Google Maps
+                      </a>
+                    </>
+                  ) : (
+                    <p className="mt-2 text-xs text-on-surface-variant">
+                      بدون نقطة على الخريطة — العنوان النصّي أعلاه للتوجيه.
+                    </p>
+                  )}
                 </div>
+              ) : null}
+              {request.pickupMode === "DELIVERY" ? (
+                <label className="sm:col-span-2 block text-sm font-bold text-on-surface">
+                  عنوان التوصيل (نصّي)
+                  <textarea
+                    name="deliveryAddress"
+                    dir="rtl"
+                    rows={3}
+                    maxLength={DELIVERY_ADDRESS_MAX_CHARS}
+                    defaultValue={request.deliveryAddress ?? ""}
+                    placeholder={`عنوان واضح (الحي، الشارع، علامة مميزة) — إن لم تُستخدم الخريطة`}
+                    className="mt-1 w-full resize-y rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+                  />
+                  <span className="mt-1 block text-[11px] font-normal text-on-surface-variant">
+                    إن لم تُحدَّد الخريطة: يُعتمد هذا الحقل؛ يُستحسن {DELIVERY_ADDRESS_MIN_CHARS}+ أحرف.
+                  </span>
+                </label>
               ) : null}
               <label className="block text-sm font-bold text-on-surface">
                 الفرع

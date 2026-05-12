@@ -12,6 +12,7 @@ export type BookingPaymentSnapshot = {
   pickupMode: string | null;
   deliveryLat: number | null;
   deliveryLng: number | null;
+  deliveryAddress: string | null;
   pickupDate: Date;
   numberOfDays: number;
   paymentStatus: string;
@@ -100,6 +101,7 @@ export async function getBookingForPayment(
     pickupMode: row.pickupMode,
     deliveryLat: row.deliveryLat,
     deliveryLng: row.deliveryLng,
+    deliveryAddress: row.deliveryAddress,
     pickupDate: row.pickupDate,
     numberOfDays: row.numberOfDays,
     paymentStatus: row.paymentStatus,

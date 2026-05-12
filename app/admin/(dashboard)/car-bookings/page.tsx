@@ -127,20 +127,27 @@ export default async function AdminCarBookingsPage() {
                               {BRANCH_LABEL[b.branch] ?? b.branch}
                             </td>
                             <td className="px-3 py-2">
-                              {b.pickupMode === "DELIVERY" &&
-                              b.deliveryLat != null &&
-                              b.deliveryLng != null ? (
-                                <span className="inline-flex flex-col gap-1">
+                              {b.pickupMode === "DELIVERY" ? (
+                                <span className="inline-flex max-w-[min(100%,280px)] flex-col gap-1">
                                   <span className="font-bold text-primary">توصيل</span>
-                                  <a
-                                    href={`https://www.google.com/maps?q=${b.deliveryLat},${b.deliveryLng}`}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="text-xs font-bold text-on-surface-variant underline"
-                                    dir="ltr"
-                                  >
-                                    الخريطة
-                                  </a>
+                                  {b.deliveryAddress?.trim() ? (
+                                    <span className="whitespace-pre-wrap text-xs leading-snug text-on-surface">
+                                      {b.deliveryAddress.trim()}
+                                    </span>
+                                  ) : null}
+                                  {b.deliveryLat != null && b.deliveryLng != null ? (
+                                    <a
+                                      href={`https://www.google.com/maps?q=${b.deliveryLat},${b.deliveryLng}`}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-xs font-bold text-on-surface-variant underline"
+                                      dir="ltr"
+                                    >
+                                      الخريطة
+                                    </a>
+                                  ) : !b.deliveryAddress?.trim() ? (
+                                    <span className="text-xs text-on-surface-variant">بدون عنوان/خريطة</span>
+                                  ) : null}
                                 </span>
                               ) : (
                                 <span className="text-on-surface-variant">فرع</span>

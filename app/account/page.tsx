@@ -103,8 +103,7 @@ export default async function AccountDashboardPage() {
                 href="/fleet"
                 className="inline-flex items-center justify-center rounded-xl bg-[#003749] px-5 py-2.5 text-sm font-extrabold text-white shadow-md transition-opacity hover:opacity-95"
               >
-                تصفح الأسطول
-              </Link>
+                احجز الآن              </Link>
               <form action={logoutCustomer} className="w-full sm:w-auto">
                 <button
                   type="submit"
@@ -182,11 +181,10 @@ export default async function AccountDashboardPage() {
                         </span>
                         {b.kind === "DIRECT" ? (
                           <span
-                            className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${
-                              b.paymentStatus === "PAID"
+                            className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${b.paymentStatus === "PAID"
                                 ? "border-emerald-200 bg-emerald-50 text-emerald-950"
                                 : "border-orange-200 bg-orange-50 text-orange-900"
-                            }`}
+                              }`}
                           >
                             {b.paymentStatus === "PAID" ? "مدفوع" : "بانتظار الدفع"}
                           </span>

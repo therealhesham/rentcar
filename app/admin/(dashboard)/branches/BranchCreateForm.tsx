@@ -1,10 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import { createBranch } from "@/app/admin/branch-actions";
 import { AdminImageField } from "@/components/admin/AdminImageField";
 
-export function BranchCreateForm() {
+type CityOption = { id: number; name: string };
+
+export function BranchCreateForm({ cities }: { cities: CityOption[] }) {
   const [state, formAction, pending] = useActionState(createBranch, null);
 
   return (
@@ -16,6 +19,32 @@ export function BranchCreateForm() {
       <h2 className="md:col-span-2 text-lg font-extrabold tracking-tight">
         إضافة فرع
       </h2>
+
+      <label className="text-sm font-medium md:col-span-2">
+        المدينة
+        {cities.length === 0 ? (
+          <p className="mt-2 text-sm font-medium text-error">
+            لا توجد مدن بعد.{" "}
+            <Link href="/admin/cities" className="font-bold underline hover:no-underline">
+              أضف مدينة
+            </Link>{" "}
+            ثم ارجع لإضافة الفرع.
+          </p>
+        ) : (
+          <select
+            name="cityId"
+            required
+            defaultValue={cities[0]?.id}
+            className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+          >
+            {cities.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        )}
+      </label>
 
       <label className="text-sm font-medium md:col-span-1">
         اسم الفرع (عربي)
@@ -132,7 +161,7 @@ export function BranchCreateForm() {
       <div className="md:col-span-2 flex flex-wrap items-center gap-4">
         <button
           type="submit"
-          disabled={pending}
+          disabled={pending || cities.length === 0}
           className="gradient-cta rounded-xl px-6 py-2.5 text-sm font-bold text-white disabled:opacity-60"
         >
           {pending ? "جاري الإضافة…" : "إضافة الفرع"}

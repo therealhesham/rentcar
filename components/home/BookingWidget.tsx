@@ -1,10 +1,8 @@
-import {
-  BookingSearchWidget,
-  type BookingBranchOption,
-} from "@/components/home/BookingSearchWidget";
+import { BookingSearchWidget } from "@/components/home/BookingSearchWidget";
+import type { BookingCityBranchesOption } from "@/lib/booking-location-options";
 
-export type { BookingBranchOption };
+export type { BookingBranchOption, BookingCityBranchesOption } from "@/lib/booking-location-options";
 
-export function BookingWidget({ branches }: { branches: BookingBranchOption[] }) {
-  return <BookingSearchWidget branches={branches} />;
+export function BookingWidget({ cities }: { cities: BookingCityBranchesOption[] }) {
+  return <BookingSearchWidget cities={cities} />;
 }

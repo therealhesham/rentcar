@@ -8,6 +8,8 @@ export type StoredFleetSearchContext = {
   returnBranch: string;
   deliveryLat?: number;
   deliveryLng?: number;
+  /** عنوان توصيل نصّي (بديل أو إضافة للخريطة). */
+  deliveryAddress?: string;
   /** YYYY-MM-DD لحقل تاريخ الحجز */
   pickupDate: string;
   days: number;

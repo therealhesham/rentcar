@@ -96,6 +96,15 @@ export default async function FleetPage({
                 </span>
               </>
             ) : null}
+            {qFirst(params.mode) === "delivery" && qFirst(params.daddr) ? (
+              <>
+                {" · "}
+                عنوان التوصيل:{" "}
+                <span className="max-w-[16rem] truncate font-bold align-bottom" dir="rtl" title={qFirst(params.daddr)}>
+                  {qFirst(params.daddr)}
+                </span>
+              </>
+            ) : null}
           </p>
           <p className="mt-2 text-xs text-on-surface-variant">
             تُعرض المركبات المتاحة للحجز المباشر في هذه الفترة فقط. اضغط «احجز الآن» لمراجعة السعر والإضافات وإتمام

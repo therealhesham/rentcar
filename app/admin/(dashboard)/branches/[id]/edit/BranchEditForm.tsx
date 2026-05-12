@@ -7,6 +7,7 @@ import { AdminImageField } from "@/components/admin/AdminImageField";
 
 type Branch = {
   id: number;
+  cityId: number;
   slug: string;
   name: string;
   tagline: string | null;
@@ -20,11 +21,14 @@ type Branch = {
   isNew: boolean;
 };
 
+type CityOption = { id: number; name: string };
+
 type Props = {
   branch: Branch;
+  cities: CityOption[];
 };
 
-export function BranchEditForm({ branch }: Props) {
+export function BranchEditForm({ branch, cities }: Props) {
   const [state, formAction, pending] = useActionState(updateBranch, null);
 
   return (
@@ -39,6 +43,22 @@ export function BranchEditForm({ branch }: Props) {
       <h2 className="md:col-span-2 text-lg font-extrabold tracking-tight">
         تعديل الفرع
       </h2>
+
+      <label className="text-sm font-medium md:col-span-2">
+        المدينة
+        <select
+          name="cityId"
+          required
+          defaultValue={branch.cityId}
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+        >
+          {cities.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+      </label>
 
       <label className="text-sm font-medium md:col-span-1">
         اسم الفرع

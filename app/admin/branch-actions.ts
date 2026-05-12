@@ -49,8 +49,11 @@ function normalizeMapUrl(raw: string): string | null {
 function revalidateBranchPaths() {
   revalidatePath("/");
   revalidatePath("/about");
+  revalidatePath("/fleet");
+  revalidatePath("/fleet/checkout");
   revalidatePath("/admin");
   revalidatePath("/admin/branches");
+  revalidatePath("/admin/cities");
 }
 
 async function resolveImageFromForm(
@@ -105,9 +108,17 @@ export async function createBranch(
   const sortOrder = Number(formData.get("sortOrder") ?? 0);
   const isActive = String(formData.get("isActive") ?? "true") === "true";
   const isNew = String(formData.get("isNew") ?? "false") === "true";
+  const cityId = Number(formData.get("cityId"));
 
   if (!name) {
     return { ok: false, error: "أدخل اسم الفرع." };
+  }
+  if (!Number.isFinite(cityId) || cityId < 1) {
+    return { ok: false, error: "اختر المدينة." };
+  }
+  const cityExists = await prisma.city.findUnique({ where: { id: cityId } }).catch(() => null);
+  if (!cityExists) {
+    return { ok: false, error: "المدينة غير موجودة." };
   }
   const slug = normalizeSlug(slugRaw);
   if (!slug || !SLUG_RE.test(slug)) {
@@ -132,6 +143,7 @@ export async function createBranch(
   try {
     await prisma.branch.create({
       data: {
+        cityId,
         slug,
         name,
         tagline,
@@ -186,9 +198,17 @@ export async function updateBranch(
   const isActive = String(formData.get("isActive") ?? "true") === "true";
   const isNew = String(formData.get("isNew") ?? "false") === "true";
   const currentImage = String(formData.get("currentImage") ?? "").trim() || null;
+  const cityId = Number(formData.get("cityId"));
 
   if (!name) {
     return { ok: false, error: "أدخل اسم الفرع." };
+  }
+  if (!Number.isFinite(cityId) || cityId < 1) {
+    return { ok: false, error: "اختر المدينة." };
+  }
+  const cityExists = await prisma.city.findUnique({ where: { id: cityId } }).catch(() => null);
+  if (!cityExists) {
+    return { ok: false, error: "المدينة غير موجودة." };
   }
   const slug = normalizeSlug(slugRaw);
   if (!slug || !SLUG_RE.test(slug)) {
@@ -214,6 +234,7 @@ export async function updateBranch(
     await prisma.branch.update({
       where: { id },
       data: {
+        cityId,
         slug,
         name,
         tagline,

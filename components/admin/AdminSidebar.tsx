@@ -13,6 +13,7 @@ const nav = [
   { href: "/admin/vehicles", label: "المركبات" },
   { href: "/admin/categories", label: "فئات الأسطول" },
   { href: "/admin/rental-addons", label: "إضافات التأجير" },
+  { href: "/admin/cities", label: "المدن" },
   { href: "/admin/branches", label: "الفروع" },
   { href: "/admin/car-bookings", label: "حجوزات السيارات" },
   { href: "/admin/fleet-availability", label: "توفر المركبات" },

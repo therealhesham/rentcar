@@ -181,6 +181,8 @@ export default async function AdminDashboardPage() {
                           pickupMode: request.pickupMode,
                           deliveryLat: request.deliveryLat,
                           deliveryLng: request.deliveryLng,
+                          deliveryAddress:
+                            (request as { deliveryAddress?: string | null }).deliveryAddress ?? null,
                           pickupDateYmd: request.pickupDate.toISOString().slice(0, 10),
                           numberOfDays: request.numberOfDays,
                           termsAccepted: request.termsAccepted,
