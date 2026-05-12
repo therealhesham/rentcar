@@ -103,7 +103,20 @@ export default async function AccountDashboardPage() {
                 href="/fleet"
                 className="inline-flex items-center justify-center rounded-xl bg-[#003749] px-5 py-2.5 text-sm font-extrabold text-white shadow-md transition-opacity hover:opacity-95"
               >
-                احجز الآن              </Link>
+                احجز الآن
+              </Link>
+              <Link
+                href="/subscriptions"
+                className="inline-flex items-center justify-center rounded-xl border border-[#163332]/25 bg-[#f0fbfb] px-5 py-2.5 text-sm font-extrabold text-[#003749] shadow-sm transition-colors hover:bg-white"
+              >
+                الاشتراك الشهري
+              </Link>
+              <Link
+                href="/account/subscription"
+                className="inline-flex items-center justify-center rounded-xl border border-neutral-300 bg-white px-5 py-2.5 text-sm font-bold text-on-surface shadow-sm transition-colors hover:bg-neutral-50"
+              >
+                اشتراكي
+              </Link>
               <form action={logoutCustomer} className="w-full sm:w-auto">
                 <button
                   type="submit"

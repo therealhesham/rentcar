@@ -16,6 +16,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import { DeliveryMapDialog } from "@/components/home/DeliveryMapDialog";
+import { SubscriptionPackagesInWidget } from "@/components/subscriptions/SubscriptionPackagesInWidget";
 import type { BookingCityBranchesOption } from "@/lib/booking-location-options";
 import {
   DELIVERY_ADDRESS_MAX_CHARS,
@@ -31,8 +32,15 @@ import {
   type ModeTab,
   type RentalTab,
 } from "@/lib/booking-search-shared";
+import { fleetDatetimesFromSubscriptionPack } from "@/lib/subscription-fleet-bridge";
+import type { SubscriptionPackMonths } from "@/lib/subscription-fleet-bridge";
 import type { StoredFleetSearchContext } from "@/lib/fleet-search-storage";
 import { FLEET_SEARCH_STORAGE_KEY } from "@/lib/fleet-search-storage";
+
+function todayYmdLocalCo(): string {
+  const t = new Date();
+  return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+}
 
 const GOLD = "#dbb878";
 const GOLD_DARK = "#c9a356";
@@ -54,6 +62,8 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
   const [returnBranch, setReturnBranch] = useState("");
   const [pickupDt, setPickupDt] = useState("");
   const [dropoffDt, setDropoffDt] = useState("");
+  const [subPackMonths, setSubPackMonths] = useState<SubscriptionPackMonths>(3);
+  const [subPackStartYmd, setSubPackStartYmd] = useState(todayYmdLocalCo);
   const [deliveryLat, setDeliveryLat] = useState<number | null>(null);
   const [deliveryLng, setDeliveryLng] = useState<number | null>(null);
   const [deliveryAddressText, setDeliveryAddressText] = useState("");
@@ -72,7 +82,7 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
   }, [mode]);
 
   useEffect(() => {
-    if (rental === "daily") return;
+    if (rental === "daily" || rental === "monthly_packages") return;
     if (!pickupDt.trim()) return;
     const p = new Date(pickupDt);
     if (Number.isNaN(p.getTime())) return;
@@ -106,22 +116,42 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
     mode === "pickup" ? pickupBranch || defaultPickupBranchSlug : "";
   const returnBranchEffective = returnBranch || defaultReturnBranchSlug;
 
-  const daysPreview = useMemo(
-    () => computeDaysPreview(pickupDt, dropoffDt),
-    [pickupDt, dropoffDt],
-  );
+  const daysPreview = useMemo(() => {
+    if (rental === "monthly_packages") {
+      const r = fleetDatetimesFromSubscriptionPack(subPackStartYmd, subPackMonths);
+      if (!r) return null;
+      return computeDaysPreview(r.pickupDt, r.dropoffDt);
+    }
+    return computeDaysPreview(pickupDt, dropoffDt);
+  }, [rental, subPackStartYmd, subPackMonths, pickupDt, dropoffDt]);
 
   function applyDates(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
 
-    if (!pickupDt.trim() || !dropoffDt.trim()) {
-      setError("يرجى تحديد تاريخ ووقت الاستلام والتسليم.");
+    let effPickupDt = pickupDt;
+    let effDropoffDt = dropoffDt;
+    if (rental === "monthly_packages") {
+      const r = fleetDatetimesFromSubscriptionPack(subPackStartYmd, subPackMonths);
+      if (!r) {
+        setError("يوم بدء الباقة غير صالح.");
+        return;
+      }
+      effPickupDt = r.pickupDt;
+      effDropoffDt = r.dropoffDt;
+    }
+
+    if (!effPickupDt.trim() || !effDropoffDt.trim()) {
+      setError(
+        rental === "monthly_packages"
+          ? "تعذّر احتساب التواريخ من يوم بدء الباقة — راجع التاريخ أعلاه."
+          : "يرجى تحديد تاريخ ووقت الاستلام والتسليم.",
+      );
       return;
     }
 
-    const pickupDate = new Date(pickupDt);
-    const dropoffDate = new Date(dropoffDt);
+    const pickupDate = new Date(effPickupDt);
+    const dropoffDate = new Date(effDropoffDt);
     if (Number.isNaN(pickupDate.getTime()) || Number.isNaN(dropoffDate.getTime())) {
       setError("صيغة التاريخ غير صالحة.");
       return;
@@ -169,8 +199,8 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
 
     const params = new URLSearchParams();
     params.set("modelId", String(modelId));
-    params.set("pickup", pickupDt);
-    params.set("dropoff", dropoffDt);
+    params.set("pickup", effPickupDt);
+    params.set("dropoff", effDropoffDt);
     params.set("rental", rental);
     params.set("mode", mode);
     params.set("days", String(days));
@@ -207,7 +237,7 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
         mode === "delivery" && deliveryAddrNorm.length > 0
           ? deliveryAddrNorm
           : undefined,
-      pickupDate: pickupDt.slice(0, 10),
+      pickupDate: effPickupDt.slice(0, 10),
       days,
     };
 
@@ -326,7 +356,217 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
           </div>
 
           <div className="px-5 py-5 sm:px-6 sm:py-6">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {rental === "monthly_packages" ? (
+              <SubscriptionPackagesInWidget
+                months={subPackMonths}
+                startYmd={subPackStartYmd}
+                onMonthsChange={setSubPackMonths}
+                onStartYmdChange={setSubPackStartYmd}
+              >
+                <div
+                  className="flex flex-col gap-4"
+                  role="group"
+                  aria-label="مواقع الاستلام والإرجاع"
+                >
+                  <p className="text-[10px] font-black uppercase tracking-wide text-[#003749]/65">
+                    {mode === "pickup" ? "مواقع الاستلام والإرجاع" : "التوصيل وموقع الإرجاع"}
+                  </p>
+                  {mode === "pickup" ? (
+                    <>
+                      <div>
+                        <p className="mb-1.5 text-[10px] font-black uppercase tracking-wide text-[#003749]/45">
+                          استلام المركبة
+                        </p>
+                        <div className="flex flex-col gap-2.5">
+                          <div className="relative">
+                            <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-[#003749]/45">
+                              المدينة
+                            </span>
+                            <select
+                              value={pickupCity || defaultCitySlug}
+                              onChange={(ev) => {
+                                const slug = ev.target.value;
+                                setPickupCity(slug);
+                                const list = dateCities.find((c) => c.slug === slug)?.branches ?? [];
+                                setPickupBranch(list[0]?.slug ?? "");
+                              }}
+                              required={branchSelectRequired}
+                              className="w-full appearance-none rounded-lg border border-transparent bg-transparent py-0.5 pe-5 text-[14px] font-semibold text-[#0f1923] outline-none"
+                            >
+                              {dateCities.map((c) => (
+                                <option key={c.slug} value={c.slug}>
+                                  {c.name}
+                                </option>
+                              ))}
+                            </select>
+                            <ChevronDown className="pointer-events-none absolute end-0 top-[calc(50%+6px)] size-3.5 -translate-y-1/2 text-[#aaa08e]" />
+                          </div>
+                          <div className="relative border-t border-[#ebe4d3]/60 pt-2">
+                            <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-[#003749]/45">
+                              الفرع
+                            </span>
+                            <select
+                              value={pickupBranch || defaultPickupBranchSlug}
+                              onChange={(ev) => setPickupBranch(ev.target.value)}
+                              required={branchSelectRequired}
+                              disabled={pickupCityBranches.length === 0}
+                              className="w-full appearance-none bg-transparent pe-5 text-[14px] font-semibold text-[#0f1923] outline-none disabled:opacity-50"
+                            >
+                              {pickupCityBranches.map((b) => (
+                                <option key={b.slug} value={b.slug}>
+                                  {b.name}
+                                </option>
+                              ))}
+                            </select>
+                            <ChevronDown className="pointer-events-none absolute end-0 top-[calc(50%+6px)] size-3.5 -translate-y-1/2 text-[#aaa08e]" />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="rounded-xl border border-[#ebe4d3]/60 bg-white/50 p-3">
+                        <p className="mb-1.5 text-[10px] font-black uppercase tracking-wide text-[#003749]/45">
+                          إرجاع المركبة
+                        </p>
+                        <div className="flex flex-col gap-2.5">
+                          <div className="relative">
+                            <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-[#003749]/45">
+                              المدينة
+                            </span>
+                            <select
+                              value={returnCity || defaultCitySlug}
+                              onChange={(ev) => {
+                                const slug = ev.target.value;
+                                setReturnCity(slug);
+                                const list = dateCities.find((c) => c.slug === slug)?.branches ?? [];
+                                setReturnBranch(list[0]?.slug ?? "");
+                              }}
+                              required={branchSelectRequired}
+                              className="w-full appearance-none rounded-lg border border-transparent bg-transparent py-0.5 pe-5 text-[14px] font-semibold text-[#0f1923] outline-none"
+                            >
+                              {dateCities.map((c) => (
+                                <option key={c.slug} value={c.slug}>
+                                  {c.name}
+                                </option>
+                              ))}
+                            </select>
+                            <ChevronDown className="pointer-events-none absolute end-0 top-[calc(50%+6px)] size-3.5 -translate-y-1/2 text-[#aaa08e]" />
+                          </div>
+                          <div className="relative border-t border-[#ebe4d3]/60 pt-2">
+                            <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-[#003749]/45">
+                              الفرع
+                            </span>
+                            <select
+                              value={returnBranch || defaultReturnBranchSlug}
+                              onChange={(ev) => setReturnBranch(ev.target.value)}
+                              required={branchSelectRequired}
+                              disabled={returnCityBranches.length === 0}
+                              className="w-full appearance-none bg-transparent pe-5 text-[14px] font-semibold text-[#0f1923] outline-none disabled:opacity-50"
+                            >
+                              {returnCityBranches.map((b) => (
+                                <option key={b.slug} value={b.slug}>
+                                  {b.name}
+                                </option>
+                              ))}
+                            </select>
+                            <ChevronDown className="pointer-events-none absolute end-0 top-[calc(50%+6px)] size-3.5 -translate-y-1/2 text-[#aaa08e]" />
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex flex-col gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setMapOpen(true)}
+                          className="group flex w-full items-center justify-between gap-2 rounded-lg border border-dashed border-[#c9a356]/55 bg-white/60 px-2.5 py-2 text-start text-[14px] font-semibold text-[#0f1923] outline-none transition-[border-color,background-color] hover:border-[#dbb878] hover:bg-[#fffdf8] focus-visible:ring-2 focus-visible:ring-[#dbb878]/35"
+                        >
+                          {deliveryLat != null && deliveryLng != null ? (
+                            <span className="flex items-center gap-2 text-[#0f3d47]">
+                              <span className="flex size-5 items-center justify-center rounded-full bg-emerald-100">
+                                <span className="size-2 rounded-full bg-emerald-500" />
+                              </span>
+                              تم تحديد الموقع على الخريطة
+                            </span>
+                          ) : (
+                            <span className="text-[#6b5a3b]">تحديد على الخريطة (اختياري)</span>
+                          )}
+                          <MapPin className="size-4 shrink-0 text-[#dbb878]" aria-hidden />
+                        </button>
+                        <div>
+                          <label
+                            htmlFor={`${coUid}-co-delivery-addr`}
+                            className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-[#003749]/45"
+                          >
+                            أو اكتب عنوان التوصيل
+                          </label>
+                          <textarea
+                            id={`${coUid}-co-delivery-addr`}
+                            value={deliveryAddressText}
+                            onChange={(ev) => setDeliveryAddressText(ev.target.value)}
+                            dir="rtl"
+                            rows={2}
+                            maxLength={DELIVERY_ADDRESS_MAX_CHARS}
+                            placeholder={`المدينة، الحي، الشارع… (${DELIVERY_ADDRESS_MIN_CHARS} أحرف على الأقل بدون خريطة)`}
+                            className="mt-0.5 w-full resize-y rounded-lg border border-[#ebe4d3]/70 bg-white/80 px-2.5 py-2 text-[13px] outline-none placeholder:text-[#aaa08e] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25"
+                          />
+                        </div>
+                      </div>
+                      <div className="rounded-xl border border-[#ebe4d3]/60 bg-white/50 p-3">
+                        <p className="mb-1.5 text-[10px] font-black uppercase tracking-wide text-[#003749]/45">
+                          فرع إرجاع المركبة
+                        </p>
+                        <div className="flex flex-col gap-2.5">
+                          <div className="relative">
+                            <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-[#003749]/45">
+                              المدينة
+                            </span>
+                            <select
+                              value={returnCity || defaultCitySlug}
+                              onChange={(ev) => {
+                                const slug = ev.target.value;
+                                setReturnCity(slug);
+                                const list = dateCities.find((c) => c.slug === slug)?.branches ?? [];
+                                setReturnBranch(list[0]?.slug ?? "");
+                              }}
+                              required={branchSelectRequired}
+                              className="w-full appearance-none rounded-lg border border-transparent bg-transparent py-0.5 pe-5 text-[14px] font-semibold text-[#0f1923] outline-none"
+                            >
+                              {dateCities.map((c) => (
+                                <option key={c.slug} value={c.slug}>
+                                  {c.name}
+                                </option>
+                              ))}
+                            </select>
+                            <ChevronDown className="pointer-events-none absolute end-0 top-[calc(50%+6px)] size-3.5 -translate-y-1/2 text-[#aaa08e]" />
+                          </div>
+                          <div className="relative border-t border-[#ebe4d3]/60 pt-2">
+                            <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-[#003749]/45">
+                              الفرع
+                            </span>
+                            <select
+                              value={returnBranch || defaultReturnBranchSlug}
+                              onChange={(ev) => setReturnBranch(ev.target.value)}
+                              required={branchSelectRequired}
+                              disabled={returnCityBranches.length === 0}
+                              className="w-full appearance-none bg-transparent pe-5 text-[14px] font-semibold text-[#0f1923] outline-none disabled:opacity-50"
+                            >
+                              {returnCityBranches.map((b) => (
+                                <option key={b.slug} value={b.slug}>
+                                  {b.name}
+                                </option>
+                              ))}
+                            </select>
+                            <ChevronDown className="pointer-events-none absolute end-0 top-[calc(50%+6px)] size-3.5 -translate-y-1/2 text-[#aaa08e]" />
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </SubscriptionPackagesInWidget>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <>
               <CoFieldCard
                 label={mode === "pickup" ? "موقع الاستلام" : "موقع التوصيل"}
                 icon={<MapPin className="size-[15px]" />}
@@ -491,9 +731,10 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
                   aria-readonly={rental !== "daily"}
                 />
               </CoFieldCard>
+                </>
             </div>
+              )}
           </div>
-
           <div className="border-t border-[#f0ebe4] bg-gradient-to-b from-[#fdfbf6] to-[#f9f5ee] px-5 py-4 sm:px-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
               <div className="flex flex-1 items-center gap-3" aria-live="polite">
@@ -514,7 +755,9 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
                 ) : (
                   <span className="flex items-center gap-1.5 text-[12px] text-[#aaa08e]">
                     <CalendarCheck2 className="size-3.5" aria-hidden />
-                    حدّد التواريخ لعرض المدة
+                    {rental === "monthly_packages"
+                      ? "تُشتق المدة من يوم بدء الباقة ومدة الاشتراك أعلاه"
+                      : "حدّد التواريخ لعرض المدة"}
                   </span>
                 )}
               </div>

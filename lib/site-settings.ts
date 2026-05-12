@@ -1,4 +1,8 @@
 import { prisma } from "@/lib/prisma";
+import {
+  parseRentalPriceDisplayMode,
+  type RentalPriceDisplayMode,
+} from "@/lib/pricing";
 import { isTrustedSpacesImageUrl } from "@/lib/spaces-upload";
 
 /* ─── Promo Banner (Carousel) ──────────────────────────────── */
@@ -152,5 +156,19 @@ export async function getHomeHeroSettings(): Promise<HomeHeroSettings> {
       return DEFAULT_HOME_HERO_SETTINGS;
     }
     throw e;
+  }
+}
+
+export const SITE_KEY_RENTAL_PRICE_DISPLAY = "rental_price_display";
+
+export async function getRentalPriceDisplayMode(): Promise<RentalPriceDisplayMode> {
+  try {
+    const row = await prisma.siteSetting.findUnique({
+      where: { key: SITE_KEY_RENTAL_PRICE_DISPLAY },
+      select: { value: true },
+    });
+    return parseRentalPriceDisplayMode(row?.value);
+  } catch {
+    return "EX_TAX";
   }
 }

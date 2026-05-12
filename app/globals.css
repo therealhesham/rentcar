@@ -64,6 +64,20 @@ body {
   font-family: var(--font-cairo), "Cairo", ui-sans-serif, system-ui, sans-serif;
 }
 
+/* لفّ الرمز U+20C1 بخط saudi_riyal حتى لا يظهر كمربع (tofu) مع Cairo */
+.sar-currency-glyph {
+  font-family: "saudi_riyal", sans-serif;
+  font-style: normal;
+  font-weight: normal;
+  display: inline-block;
+  vertical-align: -0.06em;
+  line-height: 1;
+}
+
+.sar-currency-glyph--bold {
+  font-family: "saudi_riyal_bold", sans-serif;
+}
+
 .glass-nav {
   background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(24px);

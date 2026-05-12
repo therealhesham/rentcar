@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { createFleetVehicle } from "@/app/admin/actions";
 import { AdminImageField } from "@/components/admin/AdminImageField";
+import { SarCurrencyGlyph } from "@/components/ui/SarCurrencyGlyph";
 
 export type AdminCategoryOption = {
   id: number;
@@ -179,7 +180,7 @@ export function AdminAddCarForm({ categories, brands }: AdminAddCarFormProps) {
       </label>
 
       <label className="text-sm font-medium">
-        السعر (ر.س / يوم)
+        السعر (<SarCurrencyGlyph /> / يوم)
         <input
           name="price"
           type="number"

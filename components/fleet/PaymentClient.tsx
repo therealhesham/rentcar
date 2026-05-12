@@ -3,8 +3,9 @@
 import { CheckCircle2, CreditCard, Gift, Lock, Shield } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useMemo, useState, type ReactNode } from "react";
 import { confirmMockPayment, type ConfirmPaymentResult } from "@/app/fleet/payment/payment-actions";
+import { SarCurrencyGlyph } from "@/components/ui/SarCurrencyGlyph";
 import { formatSarAmount } from "@/lib/booking-checkout-pricing";
 import type { BookingPaymentSnapshot } from "@/lib/booking-payment-data";
 
@@ -183,14 +184,18 @@ export function PaymentClient({ booking }: Props) {
     }
   }
 
-  const submitLabel =
+  const submitLabel: ReactNode =
     method === "TABBY"
       ? "المتابعة عبر تابي (تجريبي)"
       : method === "TAMARA"
         ? "المتابعة عبر تمارا (تجريبي)"
         : method === "POINTS"
           ? "تأكيد استبدال النقاط (تجريبي)"
-          : `ادفع ${formatSarAmount(booking.totals.totalInclTax)} ر.س`;
+          : (
+              <>
+                ادفع {formatSarAmount(booking.totals.totalInclTax)} <SarCurrencyGlyph />
+              </>
+            );
 
   return (
     <main dir="rtl" className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
@@ -577,7 +582,7 @@ export function PaymentClient({ booking }: Props) {
                       <li key={i} className="flex justify-between gap-3">
                         <span>{a.titleAr}</span>
                         <span className="tabular-nums font-bold text-[#003749]" dir="ltr">
-                          {formatSarAmount(a.lineTotalExclTax)} ر.س
+                          {formatSarAmount(a.lineTotalExclTax)} <SarCurrencyGlyph />
                         </span>
                       </li>
                     ))}
@@ -586,15 +591,37 @@ export function PaymentClient({ booking }: Props) {
               ) : null}
 
               <div className="space-y-2 border-t border-neutral-100 pt-3 text-sm">
-                <Row label="الإيجار (غير شامل الضريبة)" value={`${formatSarAmount(booking.totals.rentalExclTax)} ر.س`} />
-                <Row label="الإضافات" value={`${formatSarAmount(booking.totals.addonsExclTax)} ر.س`} />
+                <Row
+                  label="الإيجار (غير شامل الضريبة)"
+                  value={
+                    <>
+                      {formatSarAmount(booking.totals.rentalExclTax)} <SarCurrencyGlyph />
+                    </>
+                  }
+                />
+                <Row
+                  label="الإضافات"
+                  value={
+                    <>
+                      {formatSarAmount(booking.totals.addonsExclTax)} <SarCurrencyGlyph />
+                    </>
+                  }
+                />
                 <Row
                   label={`ضريبة القيمة المضافة ${booking.car.vatRatePercent}%`}
-                  value={`${formatSarAmount(booking.totals.vatAmount)} ر.س`}
+                  value={
+                    <>
+                      {formatSarAmount(booking.totals.vatAmount)} <SarCurrencyGlyph />
+                    </>
+                  }
                 />
                 <Row
                   label="المبلغ الإجمالي"
-                  value={`${formatSarAmount(booking.totals.totalInclTax)} ر.س`}
+                  value={
+                    <>
+                      {formatSarAmount(booking.totals.totalInclTax)} <SarCurrencyGlyph />
+                    </>
+                  }
                   emphasize
                 />
               </div>
@@ -612,7 +639,7 @@ function Row({
   emphasize,
 }: {
   label: string;
-  value: string;
+  value: ReactNode;
   emphasize?: boolean;
 }) {
   return (

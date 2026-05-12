@@ -6,7 +6,7 @@ import { getCarModelForCheckout } from "@/lib/checkout-car-data";
 import { getActiveBranches, getActiveBookingCitiesWithBranches } from "@/lib/branch-data";
 import { getCustomerProfile } from "@/lib/customer-auth";
 import { e164ToLocalNine } from "@/lib/normalize-saudi-phone";
-import { getActiveRentalAddons } from "@/lib/rental-addon-data";
+import { getRentalPriceDisplayMode } from "@/lib/site-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -26,13 +26,15 @@ export default async function FleetCheckoutPage({
     redirect("/fleet");
   }
 
-  const [car, addons, branchRows, bookingCities, profile] = await Promise.all([
-    getCarModelForCheckout(modelId),
-    getActiveRentalAddons(),
-    getActiveBranches().catch(() => []),
-    getActiveBookingCitiesWithBranches().catch(() => []),
-    getCustomerProfile(),
-  ]);
+  const [car, addons, branchRows, bookingCities, profile, rentalPriceDisplayMode] =
+    await Promise.all([
+      getCarModelForCheckout(modelId),
+      getActiveRentalAddons(),
+      getActiveBranches().catch(() => []),
+      getActiveBookingCitiesWithBranches().catch(() => []),
+      getCustomerProfile(),
+      getRentalPriceDisplayMode(),
+    ]);
 
   if (!car) {
     redirect("/fleet");
@@ -73,6 +75,7 @@ export default async function FleetCheckoutPage({
         branchBySlug={branchBySlug}
         bookingCities={bookingCities}
         sessionCustomer={sessionCustomer}
+        rentalPriceDisplayMode={rentalPriceDisplayMode}
       />
     </Suspense>
   );

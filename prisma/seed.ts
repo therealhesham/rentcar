@@ -123,6 +123,67 @@ async function main() {
     },
   });
   console.log(`User seeded: ${seedUserEmail} (password: ${seedUserPassword})`);
+
+  /**
+   * خطط اشتراك شهرية تجريبية مشروطة بوجود موديل في الجدول Fleet.
+   */
+  const carModel = await prisma.carModel.findFirst({
+    orderBy: { id: "asc" },
+    include: { brand: true },
+  });
+  if (carModel) {
+    await prisma.subscriptionPlan.upsert({
+      where: { slug: "seed-flex-sedan-plus" },
+      create: {
+        slug: "seed-flex-sedan-plus",
+        carModelId: carModel.id,
+        marketingTitleAr: `اشتراك شهرى — ${carModel.brand.name} ${carModel.name}`,
+        descriptionAr:
+          "باقة لتجربة واجهة الاشتراك الشهري، ببدلات حقيقية ومتصلة بسيارة مسجّلة فعلياً في الأسطول.",
+        monthlyPriceSar: 2800,
+        mileageKmPerMonth: 3500,
+        insuranceIncluded: true,
+        maintenanceIncluded: true,
+        depositAmountSar: 4000,
+        extraKmFeeSarPerKm: 5,
+        durationOptionsCsv: "1,3,6",
+        isActive: true,
+        sortOrder: 0,
+      },
+      update: {
+        monthlyPriceSar: 2800,
+        mileageKmPerMonth: 3500,
+        marketingTitleAr: `اشتراك شهرى — ${carModel.brand.name} ${carModel.name}`,
+      },
+    });
+
+    await prisma.subscriptionPlan.upsert({
+      where: { slug: "seed-urban-compact" },
+      create: {
+        slug: "seed-urban-compact",
+        carModelId: carModel.id,
+        marketingTitleAr: `اشتراك حضري — ${carModel.brand.name} ${carModel.name}`,
+        descriptionAr: "صف ثانٍ لعرض المقارنة داخل نفس صفحة الأسطول الاشتراكي.",
+        monthlyPriceSar: 1800,
+        mileageKmPerMonth: 2500,
+        insuranceIncluded: true,
+        maintenanceIncluded: false,
+        depositAmountSar: 2200,
+        extraKmFeeSarPerKm: 4,
+        durationOptionsCsv: "1,3,6",
+        isActive: true,
+        sortOrder: 10,
+      },
+      update: {
+        monthlyPriceSar: 1800,
+      },
+    });
+    console.log(`Subscription plans seeded for CarModel #${carModel.id}`);
+  } else {
+    console.warn(
+      "لم يُعرَف موديل سيارة — أكمل إدخال مركبة في لوحة التحكم لتوليد بيانات seed للاشتراك.",
+    );
+  }
 }
 
 main()

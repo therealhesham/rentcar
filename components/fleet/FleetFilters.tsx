@@ -1,10 +1,21 @@
 "use client";
 
-import { DAILY_PRICE_LABEL_EXCL_TAX_AR } from "@/lib/pricing";
+import type { ReactNode } from "react";
+import { SarCurrencyGlyph } from "@/components/ui/SarCurrencyGlyph";
 import { Search } from "lucide-react";
 import { useState } from "react";
 
-export function FleetFilters() {
+const DEFAULT_DAILY_PRICE_LABEL: ReactNode = (
+  <>السعر اليومي (<SarCurrencyGlyph />، غير شامل الضريبة)</>
+);
+
+type FleetFiltersProps = {
+  dailyPriceLabel?: ReactNode;
+};
+
+export function FleetFilters({
+  dailyPriceLabel = DEFAULT_DAILY_PRICE_LABEL,
+}: FleetFiltersProps) {
   const [maxDaily, setMaxDaily] = useState(2500);
 
   return (
@@ -46,7 +57,7 @@ export function FleetFilters() {
             </div>
             <div className="space-y-2">
               <label className="ms-1 text-xs font-bold uppercase tracking-widest text-primary">
-                {DAILY_PRICE_LABEL_EXCL_TAX_AR}
+                {dailyPriceLabel}
               </label>
               <div className="flex items-center gap-4 py-3">
                 <span className="text-sm font-medium" dir="ltr">

@@ -7,6 +7,8 @@ import { getActiveBranches } from "@/lib/branch-data";
 import { computeBookingDays } from "@/lib/booking-days";
 import { listAvailableCarModelIds } from "@/lib/direct-booking";
 import { getFleetCarsForDisplay } from "@/lib/fleet-data";
+import { fleetDailyPriceFilterLabel } from "@/components/fleet/FleetDailyPriceFilterLabel";
+import { getRentalPriceDisplayMode } from "@/lib/site-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -121,7 +123,8 @@ export default async function FleetPage({
     }
   }
 
-  const cars = await getFleetCarsForDisplay(categorySlug, availabilityModelIds);
+  const priceMode = await getRentalPriceDisplayMode();
+  const cars = await getFleetCarsForDisplay(categorySlug, availabilityModelIds, priceMode);
 
   const branchRows = await getActiveBranches().catch(() => []);
   const branchOptions =
@@ -137,7 +140,7 @@ export default async function FleetPage({
     <div className="flex min-h-screen flex-col bg-surface text-on-surface">
       <SiteNav active="fleet" />
       <div className="pt-28">
-        <FleetFilters />
+        <FleetFilters dailyPriceLabel={fleetDailyPriceFilterLabel(priceMode)} />
         <main className="mx-auto max-w-screen-2xl px-8 py-24">
           {searchBanner}
           {availabilityModelIds && cars.length === 0 ? (

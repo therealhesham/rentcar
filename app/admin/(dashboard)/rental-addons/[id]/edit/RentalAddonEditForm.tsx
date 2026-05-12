@@ -4,6 +4,7 @@ import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { updateRentalAddon } from "@/app/admin/rental-addon-actions";
 import type { RentalAddonAdminRow } from "@/lib/rental-addon-admin-data";
+import { SarCurrencyGlyph } from "@/components/ui/SarCurrencyGlyph";
 
 const iconOptions: { value: string; label: string }[] = [
   { value: "", label: "افتراضي (عام)" },
@@ -65,7 +66,7 @@ export function RentalAddonEditForm({ addon }: { addon: RentalAddonAdminRow }) {
       </label>
 
       <label className="text-sm font-medium md:col-span-1">
-        السعر لكل يوم (ر.س، غير شامل الضريبة)
+        السعر لكل يوم (<SarCurrencyGlyph />، غير شامل الضريبة)
         <input
           name="pricePerDay"
           type="number"

@@ -1,6 +1,8 @@
 import type { FuelType, Transmission } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { FleetCar } from "@/lib/fleet-types";
+import { buildFleetCardPriceParts, type RentalPriceDisplayMode } from "@/lib/pricing";
+import { getRentalPriceDisplayMode } from "@/lib/site-settings";
 
 const FUEL_AR: Record<FuelType, string> = {
   GASOLINE: "بنزين",
@@ -20,9 +22,12 @@ const PLACEHOLDER_IMG =
 export async function getFleetCarsForDisplay(
   categorySlug?: string | null,
   modelIds?: number[] | null,
+  priceDisplayMode?: RentalPriceDisplayMode,
 ): Promise<FleetCar[]> {
   const idFilter =
     modelIds && modelIds.length > 0 ? { modelId: { in: modelIds } } : {};
+
+  const priceMode = priceDisplayMode ?? (await getRentalPriceDisplayMode());
 
   const rows = await prisma.fleet.findMany({
     where: {
@@ -50,7 +55,7 @@ export async function getFleetCarsForDisplay(
     const modelName = m.name.trim();
     const fullTitle = `${brandName} ${modelName}`.trim();
     const subtitle = `${m.year} • ${FUEL_AR[m.fuel]} • ${TRANS_AR[m.transmission]}`;
-    const price = m.price.toLocaleString("en-US");
+    const priceUi = buildFleetCardPriceParts(m.price, m.vatRatePercent, priceMode);
     /** غير مخزّن في قاعدة البيانات — تقدير بسيط للعرض حسب حجم المركبة */
     const displayDoors = m.chairs >= 7 ? 5 : 4;
     const displayLuggage = m.chairs >= 7 ? 4 : m.chairs >= 6 ? 3 : 2;
@@ -63,7 +68,7 @@ export async function getFleetCarsForDisplay(
       year: m.year,
       fullTitle,
       subtitle,
-      price,
+      priceUi,
       image: m.image?.trim() || PLACEHOLDER_IMG,
       alt: m.alt?.trim() || fullTitle,
       badge: m.badge,

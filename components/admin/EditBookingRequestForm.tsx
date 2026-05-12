@@ -3,10 +3,12 @@
 import { Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useId, useMemo, useState } from "react";
+import { updateBookingRequest } from "@/app/admin/booking-request-actions";
 import {
   DELIVERY_ADDRESS_MAX_CHARS,
   DELIVERY_ADDRESS_MIN_CHARS,
 } from "@/lib/delivery-address";
+import { SarCurrencyGlyph } from "@/components/ui/SarCurrencyGlyph";
 import type { BookableModelOption } from "@/components/admin/ConvertInquiryToDirectForm";
 
 export type EditableBookingRow = {
@@ -82,7 +84,13 @@ function AddonsSnapshotDisplay({ raw }: { raw: string }) {
           >
             <span className="font-medium text-on-surface">{it.titleAr ?? "—"}</span>
             <span dir="ltr" className="shrink-0 tabular-nums font-bold text-on-surface-variant">
-              {it.lineTotalExclTax != null ? `${it.lineTotalExclTax} ر.س` : ""}
+              {it.lineTotalExclTax != null ? (
+                <>
+                  {it.lineTotalExclTax} <SarCurrencyGlyph />
+                </>
+              ) : (
+                ""
+              )}
               <span className="ms-1 text-[10px] font-normal">غير شامل الضريبة</span>
             </span>
           </li>

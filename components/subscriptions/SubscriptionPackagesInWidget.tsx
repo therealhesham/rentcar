@@ -1,0 +1,199 @@
+"use client";
+
+import Image from "next/image";
+import Link from "next/link";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  SUBSCRIPTION_PACK_MONTHS,
+  type SubscriptionPackMonths,
+} from "@/lib/subscription-fleet-bridge";
+import { SarCurrencyGlyph } from "@/components/ui/SarCurrencyGlyph";
+
+function pad2(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+function todayYmdLocal(): string {
+  const t = new Date();
+  return `${t.getFullYear()}-${pad2(t.getMonth() + 1)}-${pad2(t.getDate())}`;
+}
+
+type ApiPlan = {
+  slug: string;
+  marketingTitleAr: string;
+  monthlyPriceSar: number;
+  car: { name: string; image: string | null; alt: string | null };
+};
+
+function durationLabel(m: number): string {
+  if (m === 1) return "شهر";
+  return `${m} أشهر`;
+}
+
+type Props = {
+  months: SubscriptionPackMonths;
+  startYmd: string;
+  onMonthsChange: (m: SubscriptionPackMonths) => void;
+  onStartYmdChange: (ymd: string) => void;
+  /** مواقع الاستلام/الإرجاع أو التوصيل — داخل نفس السكشن البصري */
+  children?: ReactNode;
+};
+
+/**
+ * شريط داخل widget الحجز عند تبويب «الباقات الشهرية»: مدة الاشتراك، يوم البداية، وبطاقات سريعة للخطط.
+ * الحالة (المدة ويوم البداية) تُدار من الأب لربطها ببحث الأسطول دون حقول تاريخ مكررة.
+ */
+export function SubscriptionPackagesInWidget({
+  months,
+  startYmd,
+  onMonthsChange,
+  onStartYmdChange,
+  children,
+}: Props) {
+  const [plans, setPlans] = useState<ApiPlan[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/subscriptions/plans?limit=8&page=1", {
+          cache: "no-store",
+        });
+        const j = await res.json();
+        if (!j.ok) throw new Error(j.error ?? "bad");
+        if (!cancelled) {
+          setPlans(Array.isArray(j.plans) ? j.plans : []);
+          setLoadError(null);
+        }
+      } catch {
+        if (!cancelled) {
+          setPlans([]);
+          setLoadError("تعذّر تحميل باقات الاشتراك.");
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const querySuffix = useMemo(() => {
+    const q = new URLSearchParams();
+    q.set("months", String(months));
+    q.set("start", startYmd);
+    return `?${q.toString()}`;
+  }, [months, startYmd]);
+
+  return (
+    <div className="col-span-full mb-1 rounded-2xl border border-[#dbb878]/35 bg-gradient-to-br from-[#fffdf8] via-white to-[#f0faf9] p-3.5 shadow-inner sm:p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-wide text-[#775927]/90">
+            اشتراك شهري بالسيارة
+          </p>
+          <h3 className="mt-0.5 text-sm font-extrabold text-[#003749] sm:text-[15px]">
+            باقات شهرية — اختر المدة ويوم البداية ثم الباقة
+          </h3>
+          <p className="mt-1 max-w-xl text-[11px] leading-relaxed text-on-surface-variant">
+            تُحسب نهاية الباقة تلقائياً من تاريخ البداية وعدد الأشهر، وتُستخدم أيضاً لحساب مدة البحث في الأسطول
+            دون إدخال تاريخ تسليم منفصل.
+          </p>
+        </div>
+        <Link
+          href={`/subscriptions${querySuffix}`}
+          className="shrink-0 rounded-xl border border-[#003749]/20 bg-white px-3 py-1.5 text-[11px] font-extrabold text-[#003749] shadow-sm transition-colors hover:border-[#dbb878]"
+        >
+          كل الباقات ←
+        </Link>
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-end gap-3">
+        <div>
+          <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-[#003749]/55">
+            مدة الاشتراك
+          </span>
+          <div className="flex flex-wrap gap-1.5">
+            {SUBSCRIPTION_PACK_MONTHS.map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => onMonthsChange(m)}
+                className={`rounded-full px-3 py-1.5 text-[11px] font-extrabold transition-colors ${months === m
+                    ? "bg-[#003749] text-white shadow-sm"
+                    : "border border-[#003749]/20 bg-white text-[#003749]"
+                  }`}
+              >
+                {durationLabel(m)}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <label
+            htmlFor="widget-sub-start"
+            className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-[#003749]/55"
+          >
+            يوم بدء الباقة
+          </label>
+          <input
+            id="widget-sub-start"
+            type="date"
+            min={todayYmdLocal()}
+            value={startYmd}
+            onChange={(e) => onStartYmdChange(e.target.value)}
+            className="rounded-xl border border-[#ebe4d3]/90 bg-white px-2.5 py-1.5 text-[13px] font-semibold shadow-sm"
+            dir="ltr"
+          />
+        </div>
+      </div>
+
+      {loadError ? (
+        <p className="mt-2 text-[11px] font-bold text-red-700">{loadError}</p>
+      ) : plans.length === 0 ? (
+        <p className="mt-2 text-[11px] text-on-surface-variant">جاري تحميل الباقات…</p>
+      ) : (
+        <ul className="mt-3 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {plans.map((p) => {
+            const img = p.car.image?.trim() || null;
+            return (
+              <li key={p.slug} className="w-[min(11rem,72vw)] shrink-0">
+                <Link
+                  href={`/subscriptions/${encodeURIComponent(p.slug)}${querySuffix}`}
+                  className="flex flex-col overflow-hidden rounded-xl border border-[#ebe4d3]/80 bg-white shadow-sm transition-[box-shadow,transform] hover:-translate-y-0.5 hover:shadow-md"
+                >
+                  <div className="relative aspect-[16/10] bg-neutral-100">
+                    {img ? (
+                      <Image
+                        src={img}
+                        alt={p.car.alt?.trim() || p.marketingTitleAr}
+                        fill
+                        className="object-cover"
+                        sizes="176px"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-[10px] font-bold text-neutral-400">
+                        بدون صورة
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-2">
+                    <p className="line-clamp-2 text-[11px] font-extrabold leading-snug text-[#003749]">
+                      {p.marketingTitleAr}
+                    </p>
+                    <p className="mt-1 text-[10px] font-bold tabular-nums text-[#ea580c]" dir="ltr">
+                      {p.monthlyPriceSar} <SarCurrencyGlyph /> / شهر
+                    </p>
+                  </div>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {children ? (
+        <div className="mt-4 border-t border-[#dbb878]/30 pt-4 sm:mt-5 sm:pt-5">{children}</div>
+      ) : null}
+    </div>
+  );
+}

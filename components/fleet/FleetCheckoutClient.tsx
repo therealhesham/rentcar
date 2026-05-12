@@ -21,6 +21,7 @@ import { useEffect, useMemo, useState } from "react";
 import { SiteFooter } from "@/components/home/SiteFooter";
 import { SiteNav } from "@/components/shared/SiteNav";
 import { FleetCheckoutBookingPanel } from "@/components/fleet/FleetCheckoutBookingPanel";
+import { SarCurrencyGlyph } from "@/components/ui/SarCurrencyGlyph";
 import { CarUnavailableModal } from "@/components/fleet/CarUnavailableModal";
 import { isDirectBookingCapacityMessage } from "@/lib/direct-booking-user-messages";
 import {
@@ -29,6 +30,7 @@ import {
 } from "@/lib/booking-checkout-pricing";
 import { computeBookingDays } from "@/lib/booking-days";
 import type { CheckoutCarDTO } from "@/lib/checkout-car-data";
+import { dailyRentalInclTaxSar, type RentalPriceDisplayMode } from "@/lib/pricing";
 import type { StoredFleetSearchContext } from "@/lib/fleet-search-storage";
 import { FLEET_SEARCH_STORAGE_KEY } from "@/lib/fleet-search-storage";
 import { DELIVERY_ADDRESS_MIN_CHARS } from "@/lib/delivery-address";
@@ -71,6 +73,7 @@ type Props = {
   branchBySlug: Record<string, string>;
   bookingCities: BookingCityBranchesOption[];
   sessionCustomer: { name: string; phoneLocal: string; email: string } | null;
+  rentalPriceDisplayMode: RentalPriceDisplayMode;
 };
 
 export function FleetCheckoutClient({
@@ -79,6 +82,7 @@ export function FleetCheckoutClient({
   branchBySlug,
   bookingCities,
   sessionCustomer,
+  rentalPriceDisplayMode,
 }: Props) {
   const sp = useSearchParams();
   const router = useRouter();
@@ -496,7 +500,7 @@ export function FleetCheckoutClient({
                           <div className="mt-auto flex items-end justify-between border-t border-[#f0ebe4] pt-4">
                             <div className="flex flex-col">
                               <span className="text-[16px] font-extrabold tracking-wide text-[#003749] tabular-nums" dir="ltr">
-                                {formatSarAmount(a.pricePerDay)} ر.س
+                                {formatSarAmount(a.pricePerDay)} <SarCurrencyGlyph />
                               </span>
                               <span className="text-[11px] font-bold uppercase tracking-wider text-[#aaa08e]">
                                 يومياً
@@ -710,6 +714,47 @@ export function FleetCheckoutClient({
                   </h2>
                   <p className="mt-1 text-[12px] font-semibold text-[#8a7752]">أو مركبة مشابهة من نفس الفئة</p>
 
+                  <div className="mt-3 rounded-xl border border-[#ebe4d3] bg-[#fdfbf6] px-3 py-2.5 text-[11px] font-semibold leading-relaxed text-[#5c4d38]">
+                    {rentalPriceDisplayMode === "INCLUSIVE" ? (
+                      <p dir="ltr" className="text-end">
+                        السعر اليومي المرجعي:{" "}
+                        <span className="font-extrabold text-[#003749]">
+                          {formatSarAmount(
+                            dailyRentalInclTaxSar(car.pricePerDayExclTax, car.vatRatePercent),
+                          )}{" "}
+                          <SarCurrencyGlyph />
+                        </span>{" "}
+                        <span className="text-[#8a7752]">(شامل الضريبة {car.vatRatePercent}%)</span>
+                      </p>
+                    ) : rentalPriceDisplayMode === "SPLIT" ? (
+                      <div className="space-y-1.5" dir="ltr">
+                        <p className="text-end">
+                          قبل الضريبة:{" "}
+                          <span className="font-extrabold text-[#003749]">
+                            {formatSarAmount(car.pricePerDayExclTax)} <SarCurrencyGlyph />
+                          </span>
+                        </p>
+                        <p className="text-end">
+                          بعد الضريبة ({car.vatRatePercent}%):{" "}
+                          <span className="font-extrabold text-[#003749]">
+                            {formatSarAmount(
+                              dailyRentalInclTaxSar(car.pricePerDayExclTax, car.vatRatePercent),
+                            )}{" "}
+                            <SarCurrencyGlyph />
+                          </span>
+                        </p>
+                      </div>
+                    ) : (
+                      <p dir="ltr" className="text-end">
+                        السعر اليومي المرجعي:{" "}
+                        <span className="font-extrabold text-[#003749]">
+                          {formatSarAmount(car.pricePerDayExclTax)} <SarCurrencyGlyph />
+                        </span>{" "}
+                        <span className="text-[#8a7752]">(غير شامل الضريبة)</span>
+                      </p>
+                    )}
+                  </div>
+
                   <div className="mt-6 space-y-5">
                     {/* Dates block */}
                     <div className="relative ps-5">
@@ -743,7 +788,7 @@ export function FleetCheckoutClient({
                           الإيجار ({trip.days} أيام)
                         </span>
                         <span className="font-bold text-[#003749] tabular-nums" dir="ltr">
-                          {formatSarAmount(totals.rentalExclTax)} ر.س
+                          {formatSarAmount(totals.rentalExclTax)} <SarCurrencyGlyph />
                         </span>
                       </div>
                       
@@ -753,7 +798,7 @@ export function FleetCheckoutClient({
                             الإضافات ({trip.days} أيام)
                           </span>
                           <span className="font-bold text-[#003749] tabular-nums" dir="ltr">
-                            {formatSarAmount(totals.addonsExclTax)} ر.س
+                            {formatSarAmount(totals.addonsExclTax)} <SarCurrencyGlyph />
                           </span>
                         </div>
                       )}
@@ -761,7 +806,7 @@ export function FleetCheckoutClient({
                       <div className="flex justify-between text-[13px]">
                         <span className="font-semibold text-[#6b5a3b]">ضريبة القيمة المضافة ({car.vatRatePercent}%)</span>
                         <span className="font-bold text-[#003749] tabular-nums" dir="ltr">
-                          {formatSarAmount(totals.vatAmount)} ر.س
+                          {formatSarAmount(totals.vatAmount)} <SarCurrencyGlyph />
                         </span>
                       </div>
                     </div>
@@ -774,10 +819,16 @@ export function FleetCheckoutClient({
                           <p className="text-[11px] text-white/50">شامل الضريبة</p>
                         </div>
                         <div className="text-end">
-                          <p className="text-2xl font-extrabold tabular-nums tracking-tight" dir="ltr">
-                            {formatSarAmount(totals.totalInclTax)}
+                          <p
+                            className="text-2xl font-extrabold tabular-nums tracking-tight"
+                            dir="ltr"
+                            aria-label={`${formatSarAmount(totals.totalInclTax)} ريال سعودي`}
+                          >
+                            {formatSarAmount(totals.totalInclTax)}{" "}
+                            <span className="text-[#dbb878]" aria-hidden>
+                              <SarCurrencyGlyph />
+                            </span>
                           </p>
-                          <p className="text-[12px] text-[#dbb878] font-bold">ريال سعودي</p>
                         </div>
                       </div>
                     </div>

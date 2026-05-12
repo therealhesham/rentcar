@@ -21,6 +21,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ar" dir="rtl" className={`light ${cairo.variable}`}>
+      <head>
+        <link
+          rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/@emran-alhaddad/saudi-riyal-font@1.1.0/index.css"
+        />
+      </head>
       <body
         className={`${cairo.className} min-h-full bg-surface text-on-surface antialiased`}
       >
