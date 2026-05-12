@@ -1178,8 +1178,7 @@ export function BookingSearchWidget({ cities }: { cities: BookingCityBranchesOpt
               className="text-[10.5px] font-bold text-[#003749] underline-offset-4 transition-colors hover:text-[#dbb878] hover:underline"
               style={{ textDecorationColor: GOLD }}
             >
-              تصفح الأسطول ←
-            </Link>
+احجز الآن            </Link>
             )}
           </div>
         </div>
