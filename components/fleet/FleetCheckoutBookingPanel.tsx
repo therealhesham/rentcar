@@ -14,7 +14,7 @@ import {
   CalendarCheck2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { DeliveryMapDialog } from "@/components/home/DeliveryMapDialog";
 import { SubscriptionPackagesInWidget } from "@/components/subscriptions/SubscriptionPackagesInWidget";
 import type { BookingCityBranchesOption } from "@/lib/booking-location-options";
@@ -56,6 +56,7 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
   const coUid = useId();
   const [rental, setRental] = useState<RentalTab>("daily");
   const [mode, setMode] = useState<ModeTab>("pickup");
+  const prevModeRef = useRef<ModeTab>("pickup");
   const [pickupCity, setPickupCity] = useState("");
   const [pickupBranch, setPickupBranch] = useState("");
   const [returnCity, setReturnCity] = useState("");
@@ -67,6 +68,7 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
   const [deliveryLat, setDeliveryLat] = useState<number | null>(null);
   const [deliveryLng, setDeliveryLng] = useState<number | null>(null);
   const [deliveryAddressText, setDeliveryAddressText] = useState("");
+  const [deliveryOriginCitySlug, setDeliveryOriginCitySlug] = useState("");
   const [mapOpen, setMapOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -110,6 +112,14 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
 
   const defaultPickupBranchSlug = pickupCityBranches[0]?.slug ?? "";
   const defaultReturnBranchSlug = returnCityBranches[0]?.slug ?? "";
+
+  useEffect(() => {
+    if (prevModeRef.current !== "delivery" && mode === "delivery") {
+      const ret = returnCity || defaultCitySlug;
+      setDeliveryOriginCitySlug((s) => s || ret || defaultCitySlug);
+    }
+    prevModeRef.current = mode;
+  }, [mode, returnCity, defaultCitySlug]);
 
   const branchSelectRequired = dateCities.some((c) => c.branches.length > 0);
   const pickupBranchEffective =
@@ -221,6 +231,14 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
       }
     }
 
+    const originCityForFee =
+      mode === "pickup"
+        ? pickupCityEff
+        : deliveryOriginCitySlug || returnCityEff || defaultCitySlug;
+    if (originCityForFee) {
+      params.set("pickupCity", originCityForFee);
+    }
+
     const deliveryAddrNorm =
       mode === "delivery"
         ? deliveryAddressText.trim().replace(/\s+/g, " ")
@@ -231,6 +249,7 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
       mode,
       pickupBranch: mode === "pickup" ? pickupBranchEffective : undefined,
       returnBranch: returnBranchEffective,
+      pickupCitySlug: originCityForFee,
       deliveryLat: mode === "delivery" ? deliveryLat ?? undefined : undefined,
       deliveryLng: mode === "delivery" ? deliveryLng ?? undefined : undefined,
       deliveryAddress:
@@ -510,6 +529,26 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
                             className="mt-0.5 w-full resize-y rounded-lg border border-[#ebe4d3]/70 bg-white/80 px-2.5 py-2 text-[13px] outline-none placeholder:text-[#aaa08e] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25"
                           />
                         </div>
+                        <div className="rounded-lg border border-[#ebe4d3]/60 bg-white/50 p-2.5">
+                          <label
+                            htmlFor={`${coUid}-co-delivery-fee-city-pkg`}
+                            className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-[#003749]/45"
+                          >
+                            مدينة التوصيل (لرسوم الشحن بين المدن)
+                          </label>
+                          <select
+                            id={`${coUid}-co-delivery-fee-city-pkg`}
+                            value={deliveryOriginCitySlug || returnCityEff}
+                            onChange={(ev) => setDeliveryOriginCitySlug(ev.target.value)}
+                            className="w-full cursor-pointer rounded-md border border-[#ebe4d3]/80 bg-white px-2 py-1.5 text-[13px] font-semibold text-[#0f1923] outline-none focus-visible:ring-2 focus-visible:ring-[#dbb878]/30"
+                          >
+                            {dateCities.map((c) => (
+                              <option key={`co-pkg-${c.slug}`} value={c.slug}>
+                                {c.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
                       <div className="rounded-xl border border-[#ebe4d3]/60 bg-white/50 p-3">
                         <p className="mb-1.5 text-[10px] font-black uppercase tracking-wide text-[#003749]/45">
@@ -652,6 +691,26 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
                         placeholder={`المدينة، الحي، الشارع… (${DELIVERY_ADDRESS_MIN_CHARS} أحرف على الأقل بدون خريطة)`}
                         className="mt-0.5 w-full resize-y rounded-lg border border-[#ebe4d3]/70 bg-white/80 px-2.5 py-2 text-[13px] outline-none placeholder:text-[#aaa08e] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25"
                       />
+                    </div>
+                    <div className="rounded-lg border border-[#ebe4d3]/60 bg-white/50 p-2.5">
+                      <label
+                        htmlFor={`${coUid}-co-delivery-fee-city-main`}
+                        className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-[#003749]/45"
+                      >
+                        مدينة التوصيل (لرسوم الشحن بين المدن)
+                      </label>
+                      <select
+                        id={`${coUid}-co-delivery-fee-city-main`}
+                        value={deliveryOriginCitySlug || returnCityEff}
+                        onChange={(ev) => setDeliveryOriginCitySlug(ev.target.value)}
+                        className="w-full cursor-pointer rounded-md border border-[#ebe4d3]/80 bg-white px-2 py-1.5 text-[13px] font-semibold text-[#0f1923] outline-none focus-visible:ring-2 focus-visible:ring-[#dbb878]/30"
+                      >
+                        {dateCities.map((c) => (
+                          <option key={`co-main-${c.slug}`} value={c.slug}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   </div>
                 )}
@@ -837,7 +896,7 @@ function CoPillTab({
       role="tab"
       aria-selected={active}
       onClick={onClick}
-      className="flex flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-[12px] font-bold transition-all duration-200 sm:px-4 sm:text-[13px]"
+      className="flex flex-1 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-3 py-2.5 text-[12px] font-bold transition-all duration-200 sm:px-4 sm:text-[13px]"
       style={
         active
           ? {

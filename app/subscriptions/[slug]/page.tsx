@@ -7,7 +7,7 @@ import { SiteNav } from "@/components/shared/SiteNav";
 import type { SubscribeFormPlan } from "@/components/subscriptions/SubscribeForm";
 import { SubscribeForm } from "@/components/subscriptions/SubscribeForm";
 import { prisma } from "@/lib/prisma";
-import { SarCurrencyGlyph } from "@/components/ui/SarCurrencyGlyph";
+import { SarAmountWithSymbol } from "@/components/ui/SarAmountWithSymbol";
 
 export const dynamic = "force-dynamic";
 
@@ -125,11 +125,16 @@ export default async function SubscriptionPlanDetailPage(ctx: {
                   </li>
                   <li className="font-semibold">
                     رسوم الزيادة:{" "}
-                    <span dir="ltr">{plan.extraKmFeeSarPerKm} <SarCurrencyGlyph /> / كم</span>
+                    <span dir="ltr">
+                      <SarAmountWithSymbol amountClassName="font-semibold">{plan.extraKmFeeSarPerKm}</SarAmountWithSymbol>{" "}
+                      / كم
+                    </span>
                   </li>
                   <li className="font-semibold sm:col-span-2">
                     عربون مقدّمی:{" "}
-                    <span dir="ltr" className="text-[#003749]">{plan.depositAmountSar} <SarCurrencyGlyph /></span>
+                    <span dir="ltr" className="text-[#003749]">
+                      <SarAmountWithSymbol amountClassName="font-semibold">{plan.depositAmountSar}</SarAmountWithSymbol>
+                    </span>
                   </li>
                 </ul>
               </section>
@@ -147,9 +152,11 @@ export default async function SubscriptionPlanDetailPage(ctx: {
                 </p>
               </div>
               <p className="mt-4 text-center text-4xl font-black text-[#003749]" dir="ltr">
-                {plan.monthlyPriceSar}
-                <span className="ms-2 text-lg font-semibold text-on-surface-variant">
-                  <SarCurrencyGlyph /> / شهراً
+                <span className="inline-flex flex-row flex-wrap items-baseline justify-center gap-2">
+                  <SarAmountWithSymbol amountClassName="text-4xl font-black text-[#003749] tabular-nums">
+                    {plan.monthlyPriceSar}
+                  </SarAmountWithSymbol>
+                  <span className="text-lg font-semibold text-on-surface-variant">/ شهراً</span>
                 </span>
               </p>
             </div>

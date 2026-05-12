@@ -34,6 +34,7 @@ import { dailyRentalInclTaxSar, type RentalPriceDisplayMode } from "@/lib/pricin
 import type { StoredFleetSearchContext } from "@/lib/fleet-search-storage";
 import { FLEET_SEARCH_STORAGE_KEY } from "@/lib/fleet-search-storage";
 import { DELIVERY_ADDRESS_MIN_CHARS } from "@/lib/delivery-address";
+import { citySlugForBranchSlug, lookupInterCityFeeSar } from "@/lib/inter-city-shipping-client";
 import type { BookingCityBranchesOption } from "@/lib/booking-location-options";
 import type { RentalAddonDTO } from "@/lib/rental-addon-data";
 
@@ -67,11 +68,18 @@ function fmtWhen(iso: string | null | undefined): { date: string; time: string }
   };
 }
 
+function cityArName(slug: string | undefined, cities: BookingCityBranchesOption[]) {
+  if (!slug) return "";
+  const c = cities.find((x) => x.slug.toLowerCase() === slug.toLowerCase());
+  return c?.name ?? slug;
+}
+
 type Props = {
   car: CheckoutCarDTO;
   addons: RentalAddonDTO[];
   branchBySlug: Record<string, string>;
   bookingCities: BookingCityBranchesOption[];
+  interCityShippingRules: Array<{ fromSlug: string; toSlug: string; feeExclVatSar: number }>;
   sessionCustomer: { name: string; phoneLocal: string; email: string } | null;
   rentalPriceDisplayMode: RentalPriceDisplayMode;
 };
@@ -81,6 +89,7 @@ export function FleetCheckoutClient({
   addons,
   branchBySlug,
   bookingCities,
+  interCityShippingRules,
   sessionCustomer,
   rentalPriceDisplayMode,
 }: Props) {
@@ -189,6 +198,15 @@ export function FleetCheckoutClient({
       Object.keys(branchBySlug)[0] ||
       "jeddah";
 
+    const pickupCityFromUrl = sp.get("pickupCity")?.trim().toLowerCase() || undefined;
+    const pickupCitySlug =
+      pickupCityFromUrl ||
+      (typeof ctxStore?.pickupCitySlug === "string"
+        ? ctxStore.pickupCitySlug.trim().toLowerCase()
+        : undefined);
+
+    const returnCitySlug = citySlugForBranchSlug(branchSlug, bookingCities);
+
     const pickupLabel =
       mode === "delivery"
         ? (() => {
@@ -231,8 +249,10 @@ export function FleetCheckoutClient({
           ? deliveryLng
           : undefined,
       deliveryAddress: deliveryAddressForTrip,
+      pickupCitySlug,
+      returnCitySlug,
     };
-  }, [sp, ctxStore, branchBySlug]);
+  }, [sp, ctxStore, branchBySlug, bookingCities]);
 
   useEffect(() => {
     setUnavailableDismissed(false);
@@ -249,11 +269,29 @@ export function FleetCheckoutClient({
     [addons, selected],
   );
 
+  const interCityShippingFeeSar = useMemo(
+    () =>
+      lookupInterCityFeeSar(
+        interCityShippingRules,
+        trip.pickupCitySlug,
+        trip.returnCitySlug,
+      ),
+    [interCityShippingRules, trip.pickupCitySlug, trip.returnCitySlug],
+  );
+
+  const interCityShippingLabelAr = useMemo(() => {
+    if (interCityShippingFeeSar <= 0) return null;
+    const a = cityArName(trip.pickupCitySlug, bookingCities);
+    const b = cityArName(trip.returnCitySlug, bookingCities);
+    return `رسوم شحن بين المدن (${a} → ${b})`;
+  }, [interCityShippingFeeSar, trip.pickupCitySlug, trip.returnCitySlug, bookingCities]);
+
   const totals = computeCheckoutTotals(
     car.pricePerDayExclTax,
     trip.days,
     car.vatRatePercent,
     selectedRows.map((a) => ({ pricePerDay: a.pricePerDay })),
+    { oneTimeFeesExclTax: interCityShippingFeeSar },
   );
 
   useEffect(() => {
@@ -362,6 +400,9 @@ export function FleetCheckoutClient({
       if (addr) {
         body.deliveryAddress = addr;
       }
+    }
+    if (trip.pickupCitySlug) {
+      body.pickupCity = trip.pickupCitySlug;
     }
 
     setPending(true);
@@ -802,6 +843,17 @@ export function FleetCheckoutClient({
                           </span>
                         </div>
                       )}
+
+                      {interCityShippingFeeSar > 0 && interCityShippingLabelAr ? (
+                        <div className="flex justify-between text-[13px]">
+                          <span className="max-w-[60%] text-end text-[12px] font-semibold leading-snug text-[#6b5a3b]">
+                            {interCityShippingLabelAr}
+                          </span>
+                          <span className="shrink-0 font-bold text-[#003749] tabular-nums" dir="ltr">
+                            {formatSarAmount(totals.oneTimeFeesExclTax)} <SarCurrencyGlyph />
+                          </span>
+                        </div>
+                      ) : null}
 
                       <div className="flex justify-between text-[13px]">
                         <span className="font-semibold text-[#6b5a3b]">ضريبة القيمة المضافة ({car.vatRatePercent}%)</span>

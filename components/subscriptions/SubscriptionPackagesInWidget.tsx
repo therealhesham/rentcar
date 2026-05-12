@@ -3,11 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { DdMmYyDateWithPicker } from "@/components/ui/DdMmYyDateWithPicker";
+import { formatYmdAsDdMmYy, parseDdMmYyToYmd } from "@/lib/booking-search-shared";
 import {
   SUBSCRIPTION_PACK_MONTHS,
   type SubscriptionPackMonths,
 } from "@/lib/subscription-fleet-bridge";
-import { SarCurrencyGlyph } from "@/components/ui/SarCurrencyGlyph";
+import { SarAmountWithSymbol } from "@/components/ui/SarAmountWithSymbol";
 
 function pad2(n: number): string {
   return String(n).padStart(2, "0");
@@ -52,6 +54,11 @@ export function SubscriptionPackagesInWidget({
 }: Props) {
   const [plans, setPlans] = useState<ApiPlan[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [startDraft, setStartDraft] = useState(() => formatYmdAsDdMmYy(startYmd));
+
+  useEffect(() => {
+    setStartDraft(formatYmdAsDdMmYy(startYmd));
+  }, [startYmd]);
 
   useEffect(() => {
     let cancelled = false;
@@ -89,7 +96,7 @@ export function SubscriptionPackagesInWidget({
     <div className="col-span-full mb-1 rounded-2xl border border-[#dbb878]/35 bg-gradient-to-br from-[#fffdf8] via-white to-[#f0faf9] p-3.5 shadow-inner sm:p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-[10px] font-black uppercase tracking-wide text-[#775927]/90">
+          <p className="text-[10px] font-black uppercase tracking-wide text-[#775927]/90 whitespace-nowrap">
             اشتراك شهري بالسيارة
           </p>
           <h3 className="mt-0.5 text-sm font-extrabold text-[#003749] sm:text-[15px]">
@@ -136,14 +143,41 @@ export function SubscriptionPackagesInWidget({
           >
             يوم بدء الباقة
           </label>
-          <input
+          <DdMmYyDateWithPicker
             id="widget-sub-start"
-            type="date"
-            min={todayYmdLocal()}
-            value={startYmd}
-            onChange={(e) => onStartYmdChange(e.target.value)}
-            className="rounded-xl border border-[#ebe4d3]/90 bg-white px-2.5 py-1.5 text-[13px] font-semibold shadow-sm"
-            dir="ltr"
+            value={startDraft}
+            onChange={(e) => setStartDraft(e.target.value)}
+            onBlur={() => {
+              if (!startDraft.trim()) {
+                const t = todayYmdLocal();
+                onStartYmdChange(t);
+                setStartDraft(formatYmdAsDdMmYy(t));
+                return;
+              }
+              const y = parseDdMmYyToYmd(startDraft);
+              if (!y) {
+                setStartDraft(formatYmdAsDdMmYy(startYmd));
+                return;
+              }
+              const min = todayYmdLocal();
+              if (y < min) {
+                onStartYmdChange(min);
+                setStartDraft(formatYmdAsDdMmYy(min));
+                return;
+              }
+              onStartYmdChange(y);
+              setStartDraft(formatYmdAsDdMmYy(y));
+            }}
+            nativeYmd={/^\d{4}-\d{2}-\d{2}$/.test(startYmd) ? startYmd : ""}
+            minYmd={todayYmdLocal()}
+            onCalendarSelect={(ymd) => {
+              const min = todayYmdLocal();
+              const y = ymd < min ? min : ymd;
+              onStartYmdChange(y);
+              setStartDraft(formatYmdAsDdMmYy(y));
+            }}
+            inputClassName="rounded-xl border-[#ebe4d3]/90 bg-white px-2.5 py-1.5 shadow-sm"
+            buttonClassName="rounded-xl"
           />
         </div>
       </div>
@@ -181,8 +215,11 @@ export function SubscriptionPackagesInWidget({
                     <p className="line-clamp-2 text-[11px] font-extrabold leading-snug text-[#003749]">
                       {p.marketingTitleAr}
                     </p>
-                    <p className="mt-1 text-[10px] font-bold tabular-nums text-[#ea580c]" dir="ltr">
-                      {p.monthlyPriceSar} <SarCurrencyGlyph /> / شهر
+                    <p className="mt-1 text-[10px] font-bold text-[#ea580c]" dir="ltr">
+                      <SarAmountWithSymbol amountClassName="tabular-nums font-semibold">
+                        {p.monthlyPriceSar}
+                      </SarAmountWithSymbol>{" "}
+                      / شهر
                     </p>
                   </div>
                 </Link>

@@ -607,6 +607,16 @@ export function PaymentClient({ booking }: Props) {
                     </>
                   }
                 />
+                {booking.totals.oneTimeFeesExclTax > 0 && booking.interCityShipping ? (
+                  <Row
+                    label={booking.interCityShipping.labelAr}
+                    value={
+                      <>
+                        {formatSarAmount(booking.totals.oneTimeFeesExclTax)} <SarCurrencyGlyph />
+                      </>
+                    }
+                  />
+                ) : null}
                 <Row
                   label={`ضريبة القيمة المضافة ${booking.car.vatRatePercent}%`}
                   value={

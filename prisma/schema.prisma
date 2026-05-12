@@ -44,8 +44,29 @@ model City {
 
   branches Branch[]
 
+  /// رسوم شحن من هذه المدينة إلى مدينة أخرى (حجز أسطول).
+  interCityShippingFrom InterCityShippingFee[] @relation("InterCityShippingFrom")
+  interCityShippingTo   InterCityShippingFee[] @relation("InterCityShippingTo")
+
   @@index([sortOrder])
   @@index([isActive])
+}
+
+/// رسوم شحن لمرة واحدة عند اختلاف مدينة الاستلام/التوصيل عن مدينة إرجاع المركبة (غير شامل الضريبة).
+model InterCityShippingFee {
+  id             Int      @id @default(autoincrement())
+  fromCityId     Int
+  fromCity       City     @relation("InterCityShippingFrom", fields: [fromCityId], references: [id], onDelete: Cascade)
+  toCityId       Int
+  toCity         City     @relation("InterCityShippingTo", fields: [toCityId], references: [id], onDelete: Cascade)
+  feeExclVatSar  Int
+  isActive       Boolean  @default(true)
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([fromCityId, toCityId])
+  @@index([isActive, sortOrder])
 }
 
 /// فرع استلام داخل مدينة (مفتاح مستقر `slug` يطابق قيم الحجز والروابط).

@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
+import { parseBookingPricingSnapshot } from "@/lib/booking-pricing-snapshot";
 import { computeCheckoutTotals } from "@/lib/booking-checkout-pricing";
+import type { InterCityShippingSnap } from "@/lib/inter-city-shipping";
 
 const PLACEHOLDER_IMG =
   "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=1200&q=80";
@@ -33,38 +35,16 @@ export type BookingPaymentSnapshot = {
     pricePerDayExclTax: number;
     lineTotalExclTax: number;
   }>;
+  interCityShipping: InterCityShippingSnap | null;
   totals: {
     rentalExclTax: number;
     addonsExclTax: number;
+    oneTimeFeesExclTax: number;
     subtotalExclTax: number;
     vatAmount: number;
     totalInclTax: number;
   };
 };
-
-type AddonSnapItem = {
-  titleAr?: string;
-  pricePerDayExclTax?: number;
-  lineTotalExclTax?: number;
-};
-
-function parseAddonsSnapshot(raw: string | null): Array<{
-  titleAr: string;
-  pricePerDayExclTax: number;
-  lineTotalExclTax: number;
-}> {
-  if (!raw) return [];
-  try {
-    const data = JSON.parse(raw) as { items?: AddonSnapItem[] };
-    return (data.items ?? []).map((it) => ({
-      titleAr: String(it.titleAr ?? "—"),
-      pricePerDayExclTax: Number(it.pricePerDayExclTax ?? 0),
-      lineTotalExclTax: Number(it.lineTotalExclTax ?? 0),
-    }));
-  } catch {
-    return [];
-  }
-}
 
 export async function getBookingForPayment(
   id: number,
@@ -85,12 +65,14 @@ export async function getBookingForPayment(
   const brandName = m.brand.name.trim();
   const modelName = m.name.trim();
 
-  const addons = parseAddonsSnapshot(row.addonsJson);
+  const { addons, interCityShipping } = parseBookingPricingSnapshot(row.addonsJson);
+  const shipFee = interCityShipping?.feeExclVatSar ?? 0;
   const totals = computeCheckoutTotals(
     m.price,
     row.numberOfDays,
     m.vatRatePercent,
     addons.map((a) => ({ pricePerDay: a.pricePerDayExclTax })),
+    { oneTimeFeesExclTax: shipFee },
   );
 
   return {
@@ -117,6 +99,7 @@ export async function getBookingForPayment(
       alt: m.alt?.trim() || `${brandName} ${modelName}`,
     },
     addons,
+    interCityShipping,
     totals,
   };
 }

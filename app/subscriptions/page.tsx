@@ -3,7 +3,7 @@ import Link from "next/link";
 import { SiteFooter } from "@/components/home/SiteFooter";
 import { SiteNav } from "@/components/shared/SiteNav";
 import { prisma } from "@/lib/prisma";
-import { SarCurrencyGlyph } from "@/components/ui/SarCurrencyGlyph";
+import { SarAmountWithSymbol } from "@/components/ui/SarAmountWithSymbol";
 import { parseDurationOptionsCsv } from "@/lib/subscriptions/duration-options";
 import { subscriptionSubtotalExclVat, vatFromSubtotal } from "@/lib/subscriptions/pricing";
 
@@ -87,7 +87,7 @@ export default async function SubscriptionsLandingPage({
           </div>
         ) : null}
         <header className="py-10 text-center sm:py-14">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#775927]/90">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#775927]/90 whitespace-nowrap">
             اشتراك شهري
           </p>
           <h1 className="mt-3 text-3xl font-extrabold text-[#003749] sm:text-4xl">
@@ -141,7 +141,9 @@ export default async function SubscriptionsLandingPage({
                   <ul className="space-y-1.5 border-t border-neutral-100 pt-3 text-[12px] text-on-surface">
                     <li className="flex justify-between gap-2 font-semibold">
                       <span>السعر الشهري (بدون ضريبة)</span>
-                      <span dir="ltr">{p.monthlyPriceSar} <SarCurrencyGlyph /></span>
+                      <span dir="ltr">
+                        <SarAmountWithSymbol amountClassName="font-semibold">{p.monthlyPriceSar}</SarAmountWithSymbol>
+                      </span>
                     </li>
                     <li className="flex justify-between gap-2">
                       <span>بدلات شهرة</span>
@@ -157,15 +159,18 @@ export default async function SubscriptionsLandingPage({
                     </li>
                     <li className="flex justify-between gap-2 font-bold text-[#003749]">
                       <span>عربون مسترد تقريبي</span>
-                      <span dir="ltr">{p.depositAmountSar} <SarCurrencyGlyph /></span>
+                      <span dir="ltr">
+                        <SarAmountWithSymbol amountClassName="font-semibold">{p.depositAmountSar}</SarAmountWithSymbol>
+                      </span>
                     </li>
                     <li className="flex justify-between gap-2 text-[11px] text-on-surface-variant">
                       <span>إجمالي تقريبي (ضريبي)</span>
-                      <span dir="ltr">
-                        {Math.min(lowTotal, highTotal).toLocaleString("ar-SA")} –
-                        {" "}
-                        {Math.max(lowTotal, highTotal).toLocaleString("ar-SA")}{" "}
-                        <SarCurrencyGlyph />
+                      <span dir="ltr" className="inline-flex flex-row flex-wrap items-baseline gap-x-1">
+                        <span className="tabular-nums">{Math.min(lowTotal, highTotal).toLocaleString("ar-SA")}</span>
+                        <span>–</span>
+                        <SarAmountWithSymbol amountClassName="tabular-nums text-[11px]">
+                          {Math.max(lowTotal, highTotal).toLocaleString("ar-SA")}
+                        </SarAmountWithSymbol>
                       </span>
                     </li>
                   </ul>

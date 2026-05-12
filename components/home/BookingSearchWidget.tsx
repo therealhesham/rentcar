@@ -21,13 +21,18 @@ import { useEffect, useId, useMemo, useRef, useState, useTransition } from "reac
 import { submitCorporateBookingLead } from "@/app/corporate-lead-actions";
 import { DeliveryMapDialog } from "@/components/home/DeliveryMapDialog";
 import { SubscriptionPackagesInWidget } from "@/components/subscriptions/SubscriptionPackagesInWidget";
+import { DdMmYyDateWithPicker } from "@/components/ui/DdMmYyDateWithPicker";
 import { computeBookingDays } from "@/lib/booking-days";
 import {
+  composeDatetimeLocal,
   computeAutoDropoff,
   computeDaysPreview,
+  draftFromDatetimeLocal,
+  parseDdMmYyToYmd,
   rentalDropoffHint,
   toDatetimeLocalValue,
   validateRentalMinDays,
+  formatYmdAsDdMmYy,
   type ModeTab,
   type RentalTab,
 } from "@/lib/booking-search-shared";
@@ -78,8 +83,8 @@ function CityBranchSelects({
   onBranchChange: (slug: string) => void;
 }) {
   return (
-    <div className="flex flex-row flex-wrap items-end gap-x-2 gap-y-1.5">
-      <div className="min-w-0 flex-1 basis-[calc(50%-0.25rem)]">
+    <div className="grid grid-cols-2 items-end gap-x-2 gap-y-0">
+      <div className="min-w-0">
         <label
           htmlFor={cityInputId}
           className="mb-0.5 block text-[10px] font-bold uppercase tracking-wide text-[#003749]/55"
@@ -106,7 +111,7 @@ function CityBranchSelects({
           />
         </div>
       </div>
-      <div className="min-w-0 flex-1 basis-[calc(50%-0.25rem)]">
+      <div className="min-w-0">
         <label
           htmlFor={branchInputId}
           className="mb-0.5 block text-[10px] font-bold uppercase tracking-wide text-[#003749]/55"
@@ -148,11 +153,16 @@ export function BookingSearchWidget({ cities }: { cities: BookingCityBranchesOpt
   const [returnBranch, setReturnBranch] = useState("");
   const [pickupDt, setPickupDt] = useState("");
   const [dropoffDt, setDropoffDt] = useState("");
+  const [pickupDateDraft, setPickupDateDraft] = useState("");
+  const [pickupTimeDraft, setPickupTimeDraft] = useState("09:00");
+  const [dropoffDateDraft, setDropoffDateDraft] = useState("");
+  const [dropoffTimeDraft, setDropoffTimeDraft] = useState("09:00");
   const [subPackMonths, setSubPackMonths] = useState<SubscriptionPackMonths>(3);
   const [subPackStartYmd, setSubPackStartYmd] = useState(todayYmdLocalForPack);
   const [deliveryLat, setDeliveryLat] = useState<number | null>(null);
   const [deliveryLng, setDeliveryLng] = useState<number | null>(null);
   const [deliveryAddressText, setDeliveryAddressText] = useState("");
+  const [deliveryOriginCitySlug, setDeliveryOriginCitySlug] = useState("");
   const [mapOpen, setMapOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -164,6 +174,7 @@ export function BookingSearchWidget({ cities }: { cities: BookingCityBranchesOpt
   const [corpSuccess, setCorpSuccess] = useState(false);
   const [corpPending, startCorpTransition] = useTransition();
   const errorRef = useRef<HTMLDivElement>(null);
+  const prevModeRef = useRef<ModeTab>("pickup");
   const uid = useId();
 
   useEffect(() => setMounted(true), []);
@@ -197,6 +208,18 @@ export function BookingSearchWidget({ cities }: { cities: BookingCityBranchesOpt
     setDropoffDt(toDatetimeLocalValue(auto));
   }, [rental, pickupDt]);
 
+  useEffect(() => {
+    const { dateDdMmYy, hm } = draftFromDatetimeLocal(pickupDt);
+    setPickupDateDraft(dateDdMmYy);
+    setPickupTimeDraft(hm);
+  }, [pickupDt]);
+
+  useEffect(() => {
+    const { dateDdMmYy, hm } = draftFromDatetimeLocal(dropoffDt);
+    setDropoffDateDraft(dateDdMmYy);
+    setDropoffTimeDraft(hm);
+  }, [dropoffDt]);
+
   const dateCities = useMemo(
     () => cities.filter((c) => c.branches.length > 0),
     [cities],
@@ -216,6 +239,14 @@ export function BookingSearchWidget({ cities }: { cities: BookingCityBranchesOpt
 
   const defaultPickupBranchSlug = pickupCityBranches[0]?.slug ?? "";
   const defaultReturnBranchSlug = returnCityBranches[0]?.slug ?? "";
+
+  useEffect(() => {
+    if (prevModeRef.current !== "delivery" && mode === "delivery") {
+      const ret = returnCity || defaultCitySlug;
+      setDeliveryOriginCitySlug((s) => s || ret || defaultCitySlug);
+    }
+    prevModeRef.current = mode;
+  }, [mode, returnCity, defaultCitySlug]);
 
   const branchSelectRequired = dateCities.some((c) => c.branches.length > 0);
   const pickupBranchEffective =
@@ -237,7 +268,9 @@ export function BookingSearchWidget({ cities }: { cities: BookingCityBranchesOpt
   const returnCityId = `${uid}-return-city`;
   const returnBranchId = `${uid}-return-branch`;
   const pickupDtId = `${uid}-pickup-dt`;
+  const pickupTimeId = `${uid}-pickup-time`;
   const dropoffDtId = `${uid}-dropoff-dt`;
+  const dropoffTimeId = `${uid}-dropoff-time`;
   const deliveryAddrId = `${uid}-delivery-addr`;
   const corpNameId = `${uid}-corp-name`;
   const corpEmailId = `${uid}-corp-email`;
@@ -373,6 +406,14 @@ export function BookingSearchWidget({ cities }: { cities: BookingCityBranchesOpt
       }
     }
 
+    const originCityForFee =
+      mode === "pickup"
+        ? pickupCityEff
+        : deliveryOriginCitySlug || returnCityEff || defaultCitySlug;
+    if (originCityForFee) {
+      params.set("pickupCity", originCityForFee);
+    }
+
     const pickupDateYmd = effPickupDt.slice(0, 10);
 
     const deliveryAddrNorm =
@@ -385,6 +426,7 @@ export function BookingSearchWidget({ cities }: { cities: BookingCityBranchesOpt
       mode,
       pickupBranch: mode === "pickup" ? pickupBranchEffective : undefined,
       returnBranch: returnBranchEffective,
+      pickupCitySlug: originCityForFee,
       deliveryLat: mode === "delivery" ? deliveryLat ?? undefined : undefined,
       deliveryLng: mode === "delivery" ? deliveryLng ?? undefined : undefined,
       deliveryAddress:
@@ -767,6 +809,26 @@ export function BookingSearchWidget({ cities }: { cities: BookingCityBranchesOpt
                           {DELIVERY_ADDRESS_MAX_CHARS} حرفاً.
                         </p>
                       </div>
+                      <div className="rounded-lg border border-[#ebe4d3]/60 bg-white/50 p-2.5">
+                        <label
+                          htmlFor={`${uid}-delivery-fee-city-pkg`}
+                          className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-[#003749]/55"
+                        >
+                          مدينة التوصيل (لرسوم الشحن بين المدن)
+                        </label>
+                        <select
+                          id={`${uid}-delivery-fee-city-pkg`}
+                          value={deliveryOriginCitySlug || returnCityEff}
+                          onChange={(ev) => setDeliveryOriginCitySlug(ev.target.value)}
+                          className="w-full cursor-pointer rounded-md border border-[#ebe4d3]/80 bg-white px-2 py-1.5 text-[13px] font-semibold text-[#0f1923] outline-none focus-visible:ring-2 focus-visible:ring-[#dbb878]/30"
+                        >
+                          {dateCities.map((c) => (
+                            <option key={c.slug} value={c.slug}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                     <div className="rounded-xl border border-[#ebe4d3]/60 bg-white/50 p-3">
                       <p className="mb-1.5 text-[10px] font-black uppercase tracking-wide text-[#003749]/55">
@@ -858,6 +920,26 @@ export function BookingSearchWidget({ cities }: { cities: BookingCityBranchesOpt
                           {DELIVERY_ADDRESS_MAX_CHARS} حرفاً.
                         </p>
                       </div>
+                      <div className="rounded-lg border border-[#ebe4d3]/60 bg-white/50 p-2.5">
+                        <label
+                          htmlFor={`${uid}-delivery-fee-city-main`}
+                          className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-[#003749]/55"
+                        >
+                          مدينة التوصيل (لرسوم الشحن بين المدن)
+                        </label>
+                        <select
+                          id={`${uid}-delivery-fee-city-main`}
+                          value={deliveryOriginCitySlug || returnCityEff}
+                          onChange={(ev) => setDeliveryOriginCitySlug(ev.target.value)}
+                          className="w-full cursor-pointer rounded-md border border-[#ebe4d3]/80 bg-white px-2 py-1.5 text-[13px] font-semibold text-[#0f1923] outline-none focus-visible:ring-2 focus-visible:ring-[#dbb878]/30"
+                        >
+                          {dateCities.map((c) => (
+                            <option key={`m-${c.slug}`} value={c.slug}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                   )}
                 </FieldCard>
@@ -891,15 +973,56 @@ export function BookingSearchWidget({ cities }: { cities: BookingCityBranchesOpt
                   icon={<CalendarClock className="size-3.5" />}
                   controlHtmlFor={pickupDtId}
                 >
-                  <input
-                    id={pickupDtId}
-                    type="datetime-local"
-                    value={pickupDt}
-                    onChange={(ev) => setPickupDt(ev.target.value)}
-                    required
-                    dir="ltr"
-                    className="w-full cursor-pointer rounded-md border border-transparent bg-transparent py-0.5 text-[13px] font-semibold text-[#0f1923] outline-none focus-visible:ring-2 focus-visible:ring-[#dbb878]/30"
-                  />
+                  <div className="flex flex-col gap-1.5">
+                    <DdMmYyDateWithPicker
+                      id={pickupDtId}
+                      value={pickupDateDraft}
+                      onChange={(ev) => setPickupDateDraft(ev.target.value)}
+                      onBlur={() => {
+                        if (!pickupDateDraft.trim()) {
+                          setPickupDt("");
+                          return;
+                        }
+                        const ymd = parseDdMmYyToYmd(pickupDateDraft);
+                        if (!ymd) {
+                          if (pickupDt) {
+                            const { dateDdMmYy, hm } = draftFromDatetimeLocal(pickupDt);
+                            setPickupDateDraft(dateDdMmYy);
+                            setPickupTimeDraft(hm);
+                          }
+                          return;
+                        }
+                        setPickupDateDraft(formatYmdAsDdMmYy(ymd));
+                        const c = composeDatetimeLocal(ymd, pickupTimeDraft);
+                        if (c) setPickupDt(c);
+                      }}
+                      nativeYmd={pickupDt.length >= 10 ? pickupDt.slice(0, 10) : ""}
+                      onCalendarSelect={(ymd) => {
+                        setPickupDateDraft(formatYmdAsDdMmYy(ymd));
+                        const c = composeDatetimeLocal(ymd, pickupTimeDraft);
+                        if (c) setPickupDt(c);
+                      }}
+                      required
+                    />
+                    <input
+                      id={pickupTimeId}
+                      type="time"
+                      value={pickupTimeDraft}
+                      onChange={(ev) => {
+                        const v = ev.target.value;
+                        setPickupTimeDraft(v);
+                        let ymd = parseDdMmYyToYmd(pickupDateDraft);
+                        if (!ymd && pickupDt.length >= 10) ymd = pickupDt.slice(0, 10);
+                        if (!ymd) return;
+                        const c = composeDatetimeLocal(ymd, v);
+                        if (c) setPickupDt(c);
+                      }}
+                      required
+                      dir="ltr"
+                      aria-label="وقت الاستلام"
+                      className="w-full cursor-pointer rounded-md border border-[#ebe4d3]/80 bg-white/80 px-2 py-1 text-[13px] font-semibold tabular-nums text-[#0f1923] outline-none focus-visible:ring-2 focus-visible:ring-[#dbb878]/30"
+                    />
+                  </div>
                 </FieldCard>
 
                 <FieldCard
@@ -909,17 +1032,63 @@ export function BookingSearchWidget({ cities }: { cities: BookingCityBranchesOpt
                   hint={rentalDropoffHint(rental)}
                   controlHtmlFor={dropoffDtId}
                 >
-                  <input
-                    id={dropoffDtId}
-                    type="datetime-local"
-                    value={dropoffDt}
-                    onChange={(ev) => setDropoffDt(ev.target.value)}
-                    readOnly={rental !== "daily"}
-                    required
-                    dir="ltr"
-                    className={`w-full rounded-md border border-transparent bg-transparent py-0.5 text-[13px] font-semibold text-[#0f1923] outline-none focus-visible:ring-2 focus-visible:ring-[#dbb878]/30 ${rental !== "daily" ? "cursor-default opacity-90" : "cursor-pointer"}`}
-                    aria-readonly={rental !== "daily"}
-                  />
+                  <div className="flex flex-col gap-1.5">
+                    <DdMmYyDateWithPicker
+                      id={dropoffDtId}
+                      value={dropoffDateDraft}
+                      readOnly={rental !== "daily"}
+                      onChange={(ev) => setDropoffDateDraft(ev.target.value)}
+                      onBlur={() => {
+                        if (rental !== "daily") return;
+                        if (!dropoffDateDraft.trim()) {
+                          setDropoffDt("");
+                          return;
+                        }
+                        const ymd = parseDdMmYyToYmd(dropoffDateDraft);
+                        if (!ymd) {
+                          if (dropoffDt) {
+                            const { dateDdMmYy, hm } = draftFromDatetimeLocal(dropoffDt);
+                            setDropoffDateDraft(dateDdMmYy);
+                            setDropoffTimeDraft(hm);
+                          }
+                          return;
+                        }
+                        setDropoffDateDraft(formatYmdAsDdMmYy(ymd));
+                        const c = composeDatetimeLocal(ymd, dropoffTimeDraft);
+                        if (c) setDropoffDt(c);
+                      }}
+                      nativeYmd={dropoffDt.length >= 10 ? dropoffDt.slice(0, 10) : ""}
+                      onCalendarSelect={(ymd) => {
+                        if (rental !== "daily") return;
+                        setDropoffDateDraft(formatYmdAsDdMmYy(ymd));
+                        const c = composeDatetimeLocal(ymd, dropoffTimeDraft);
+                        if (c) setDropoffDt(c);
+                      }}
+                      required
+                      inputClassName={rental !== "daily" ? "cursor-default" : ""}
+                    />
+                    <input
+                      id={dropoffTimeId}
+                      type="time"
+                      value={dropoffTimeDraft}
+                      readOnly={rental !== "daily"}
+                      onChange={(ev) => {
+                        if (rental !== "daily") return;
+                        const v = ev.target.value;
+                        setDropoffTimeDraft(v);
+                        let ymd = parseDdMmYyToYmd(dropoffDateDraft);
+                        if (!ymd && dropoffDt.length >= 10) ymd = dropoffDt.slice(0, 10);
+                        if (!ymd) return;
+                        const c = composeDatetimeLocal(ymd, v);
+                        if (c) setDropoffDt(c);
+                      }}
+                      required
+                      dir="ltr"
+                      aria-label="وقت التسليم"
+                      className={`w-full rounded-md border border-[#ebe4d3]/80 bg-white/80 px-2 py-1 text-[13px] font-semibold tabular-nums text-[#0f1923] outline-none focus-visible:ring-2 focus-visible:ring-[#dbb878]/30 ${rental !== "daily" ? "cursor-default opacity-90" : "cursor-pointer"}`}
+                      aria-readonly={rental !== "daily"}
+                    />
+                  </div>
                 </FieldCard>
             </div>
           )}
@@ -1080,7 +1249,7 @@ function PillTab({
       role="tab"
       aria-selected={active}
       onClick={onClick}
-      className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-[12px] font-bold outline-none transition-all duration-250 focus-visible:ring-2 focus-visible:ring-[#dbb878] focus-visible:ring-offset-1 focus-visible:ring-offset-[#fdfbf6]"
+      className="flex flex-1 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-[12px] font-bold outline-none transition-all duration-250 focus-visible:ring-2 focus-visible:ring-[#dbb878] focus-visible:ring-offset-1 focus-visible:ring-offset-[#fdfbf6]"
       style={
         active
           ? {

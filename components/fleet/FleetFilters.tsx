@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { SarAmountWithSymbol } from "@/components/ui/SarAmountWithSymbol";
 import { SarCurrencyGlyph } from "@/components/ui/SarCurrencyGlyph";
 import { Search } from "lucide-react";
 import { useState } from "react";

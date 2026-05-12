@@ -7,9 +7,11 @@ export function computeCheckoutTotals(
   days: number,
   vatRatePercent: number,
   selectedAddons: AddonPriceRow[],
+  opts?: { oneTimeFeesExclTax?: number },
 ): {
   rentalExclTax: number;
   addonsExclTax: number;
+  oneTimeFeesExclTax: number;
   subtotalExclTax: number;
   vatAmount: number;
   totalInclTax: number;
@@ -17,12 +19,14 @@ export function computeCheckoutTotals(
   const d = Math.max(1, Math.round(days));
   const rentalExclTax = pricePerDayExclTax * d;
   const addonsExclTax = selectedAddons.reduce((sum, a) => sum + a.pricePerDay * d, 0);
-  const subtotalExclTax = rentalExclTax + addonsExclTax;
+  const oneTimeFeesExclTax = Math.max(0, Math.round(opts?.oneTimeFeesExclTax ?? 0));
+  const subtotalExclTax = rentalExclTax + addonsExclTax + oneTimeFeesExclTax;
   const vatAmount = Math.round(subtotalExclTax * (vatRatePercent / 100) * 100) / 100;
   const totalInclTax = Math.round((subtotalExclTax + vatAmount) * 100) / 100;
   return {
     rentalExclTax,
     addonsExclTax,
+    oneTimeFeesExclTax,
     subtotalExclTax,
     vatAmount,
     totalInclTax,

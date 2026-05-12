@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { verifyAdminSession } from "@/lib/admin-auth";
 import { listFleetVehiclesForAdmin } from "@/lib/fleet-vehicle-admin-data";
-import { SarCurrencyGlyph } from "@/components/ui/SarCurrencyGlyph";
+import { SarAmountWithSymbol } from "@/components/ui/SarAmountWithSymbol";
 
 export const dynamic = "force-dynamic";
 
@@ -87,8 +87,10 @@ export default async function AdminVehiclesPage() {
                     {v.brandName} <span className="text-on-surface-variant">|</span> {v.modelName}
                   </td>
                   <td className="px-4 py-3 tabular-nums text-on-surface">{v.year}</td>
-                  <td className="px-4 py-3 font-bold tabular-nums text-primary">
-                    {v.price.toLocaleString("en-US")} <SarCurrencyGlyph />
+                  <td className="px-4 py-3 font-bold text-primary">
+                    <SarAmountWithSymbol amountClassName="tabular-nums font-bold">
+                      {v.price.toLocaleString("en-US")}
+                    </SarAmountWithSymbol>
                   </td>
                   <td className="px-4 py-3 tabular-nums text-on-surface">{v.quantity}</td>
                   <td className="px-4 py-3">

@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { DAILY_PRICE_EXCL_TAX_AR } from "@/lib/pricing";
-import { SarCurrencyGlyph } from "@/components/ui/SarCurrencyGlyph";
+import { SarAmountWithSymbol } from "@/components/ui/SarAmountWithSymbol";
 
 const cars = [
   {
@@ -68,12 +68,12 @@ export function FleetShowcase() {
                   <p className="text-sm text-on-surface-variant">{car.category}</p>
                 </div>
                 <div className="shrink-0 text-end">
-                  <span
-                    className="block text-xl font-extrabold text-primary"
-                    dir="ltr"
+                  <SarAmountWithSymbol
+                    amountClassName="block text-xl font-extrabold text-primary"
+                    className="block justify-end"
                   >
-                    {car.price} <SarCurrencyGlyph />
-                  </span>
+                    {car.price}
+                  </SarAmountWithSymbol>
                   <span className="text-[10px] font-bold tracking-wide text-on-surface-variant">
                     في اليوم
                   </span>

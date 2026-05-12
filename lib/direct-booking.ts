@@ -3,6 +3,8 @@ import {
   DIRECT_BOOKING_MSG_NO_FLEET,
   DIRECT_BOOKING_MSG_UNAVAILABLE_PERIOD,
 } from "@/lib/direct-booking-user-messages";
+import type { InterCityShippingSnap } from "@/lib/inter-city-shipping";
+import { resolveInterCityShippingSnap } from "@/lib/inter-city-shipping";
 import { prisma } from "@/lib/prisma";
 import {
   DELIVERY_ADDRESS_MAX_CHARS,
@@ -528,9 +530,21 @@ export type CreateDirectBookingInput = DirectBookingCommon & {
   carModelId: number;
   /** معرفات إضافات نشطة من جدول RentalAddon */
   addonIds?: number[];
+  /** slug مدينة الاستلام أو مدينة عنوان التوصيل (لرسوم الشحن بين المدن) */
+  pickupCitySlug?: string | null;
   /** عميل مسجّل مرتبط بالطلب عند تطابق الجوال */
   customerId?: number | null;
 };
+
+export function parsePickupCitySlugFromJson(
+  body: JsonBody,
+): string | undefined {
+  const raw = body.pickupCity ?? body.pickupCitySlug;
+  if (typeof raw !== "string") return undefined;
+  const s = raw.trim().toLowerCase();
+  if (!s || !/^[a-z0-9-]{1,64}$/.test(s)) return undefined;
+  return s;
+}
 
 export function parseAddonIdsFromJsonBody(
   body: JsonBody,
@@ -555,30 +569,56 @@ export function parseAddonIdsFromJsonBody(
   return { ok: true, addonIds: ids.length ? ids : undefined };
 }
 
-async function buildAddonsJsonSnapshot(
+async function buildBookingAddonsJsonSnapshot(
   addonIds: number[] | undefined,
   numberOfDays: number,
+  interCityShipping: InterCityShippingSnap | null,
 ): Promise<{ ok: true; json: string | null } | { ok: false; error: string }> {
-  if (!addonIds?.length) {
+  const days = safeBookingDays(numberOfDays);
+  let items: Array<{
+    id: number;
+    slug: string;
+    titleAr: string;
+    pricePerDayExclTax: number;
+    days: number;
+    lineTotalExclTax: number;
+  }> = [];
+
+  if (addonIds?.length) {
+    const uniqueIds = [...new Set(addonIds)];
+    const addons = await prisma.rentalAddon.findMany({
+      where: { id: { in: uniqueIds }, isActive: true },
+    });
+    if (addons.length !== uniqueIds.length) {
+      return { ok: false, error: "إحدى الإضافات المختارة غير متاحة." };
+    }
+    items = addons.map((a) => ({
+      id: a.id,
+      slug: a.slug,
+      titleAr: a.titleAr,
+      pricePerDayExclTax: a.pricePerDay,
+      days,
+      lineTotalExclTax: a.pricePerDay * days,
+    }));
+  }
+
+  const hasShip =
+    interCityShipping != null &&
+    typeof interCityShipping.feeExclVatSar === "number" &&
+    interCityShipping.feeExclVatSar > 0;
+
+  if (items.length === 0 && !hasShip) {
     return { ok: true, json: null };
   }
-  const uniqueIds = [...new Set(addonIds)];
-  const days = safeBookingDays(numberOfDays);
-  const addons = await prisma.rentalAddon.findMany({
-    where: { id: { in: uniqueIds }, isActive: true },
-  });
-  if (addons.length !== uniqueIds.length) {
-    return { ok: false, error: "إحدى الإضافات المختارة غير متاحة." };
+
+  const payload: {
+    items: typeof items;
+    interCityShipping?: InterCityShippingSnap;
+  } = { items };
+  if (hasShip && interCityShipping) {
+    payload.interCityShipping = interCityShipping;
   }
-  const items = addons.map((a) => ({
-    id: a.id,
-    slug: a.slug,
-    titleAr: a.titleAr,
-    pricePerDayExclTax: a.pricePerDay,
-    days,
-    lineTotalExclTax: a.pricePerDay * days,
-  }));
-  return { ok: true, json: JSON.stringify({ items }) };
+  return { ok: true, json: JSON.stringify(payload) };
 }
 
 /**
@@ -587,7 +627,7 @@ async function buildAddonsJsonSnapshot(
 export async function createDirectBooking(
   input: CreateDirectBookingInput,
 ): Promise<{ ok: true; bookingRequestId: number } | { ok: false; error: string }> {
-  const { carModelId, addonIds, customerId: customerIdRaw, ...common } = input;
+  const { carModelId, addonIds, customerId: customerIdRaw, pickupCitySlug, ...common } = input;
 
   let customerId: number | null =
     customerIdRaw != null &&
@@ -630,13 +670,23 @@ export async function createDirectBooking(
 
   const commonNormalized = { ...common, branch: branchSlug };
 
-  const carType = model.category.slug || model.category.title;
+  const shippingSnap = await resolveInterCityShippingSnap({
+    originCitySlug: pickupCitySlug,
+    returnBranchSlug: branchSlug,
+  });
+
   const days = commonNormalized.numberOfDays;
 
-  const addonsSnap = await buildAddonsJsonSnapshot(addonIds, days);
+  const addonsSnap = await buildBookingAddonsJsonSnapshot(
+    addonIds,
+    days,
+    shippingSnap,
+  );
   if (!addonsSnap.ok) {
     return { ok: false, error: addonsSnap.error };
   }
+
+  const carType = model.category.slug || model.category.title;
 
   const runOnce = () =>
     prisma.$transaction(

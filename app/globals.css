@@ -70,8 +70,10 @@ body {
   font-style: normal;
   font-weight: normal;
   display: inline-block;
-  vertical-align: -0.06em;
+  font-size: 1.28em;
   line-height: 1;
+  vertical-align: -0.12em;
+  letter-spacing: 0.02em;
 }
 
 .sar-currency-glyph--bold {

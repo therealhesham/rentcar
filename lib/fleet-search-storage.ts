@@ -6,6 +6,8 @@ export type StoredFleetSearchContext = {
   mode: "pickup" | "delivery";
   pickupBranch?: string;
   returnBranch: string;
+  /** slug مدينة الاستلام أو مدينة عنوان التوصيل (لرسوم الشحن بين المدن) */
+  pickupCitySlug?: string;
   deliveryLat?: number;
   deliveryLng?: number;
   /** عنوان توصيل نصّي (بديل أو إضافة للخريطة). */

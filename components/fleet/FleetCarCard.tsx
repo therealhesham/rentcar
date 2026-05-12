@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { SpecIcon } from "@/components/icons";
 import type { FleetCar } from "@/lib/fleet-types";
-import { SarCurrencyGlyph } from "@/components/ui/SarCurrencyGlyph";
+import { SarAmountWithSymbol } from "@/components/ui/SarAmountWithSymbol";
 
 const FALLBACK_BRANCH_OPTIONS: { slug: string; name: string }[] = [
   { slug: "jeddah", name: "جدة" },
@@ -91,26 +91,24 @@ export function FleetCarCard({
               </div>
             ))}
           </div>
-          <div className="shrink-0 text-end" dir="ltr">
-            <div>
-              <span className="text-2xl font-extrabold tracking-tight text-on-surface">
-                {car.priceUi.primaryAmount}
-              </span>
-              <span className="me-1 text-lg font-bold text-on-primary-container">
-                <SarCurrencyGlyph bold />
-              </span>
-            </div>
+          <div className="flex shrink-0 flex-col items-end gap-0.5 text-end">
+            <SarAmountWithSymbol
+              bold
+              amountClassName="text-2xl font-extrabold tracking-tight text-on-surface"
+            >
+              {car.priceUi.primaryAmount}
+            </SarAmountWithSymbol>
             {car.priceUi.primaryLabelAr ? (
               <p className="text-[10px] font-bold text-on-surface-variant">{car.priceUi.primaryLabelAr}</p>
             ) : null}
             {car.priceUi.secondaryAmount ? (
-              <div className="mt-1.5 border-t border-outline-variant/40 pt-1.5">
-                <span className="text-lg font-extrabold tracking-tight text-on-surface">
+              <div className="mt-1.5 w-full border-t border-outline-variant/40 pt-1.5">
+                <SarAmountWithSymbol
+                  bold
+                  amountClassName="text-lg font-extrabold tracking-tight text-on-surface"
+                >
                   {car.priceUi.secondaryAmount}
-                </span>
-                <span className="me-1 text-sm font-bold text-on-primary-container">
-                  <SarCurrencyGlyph bold />
-                </span>
+                </SarAmountWithSymbol>
                 {car.priceUi.secondaryLabelAr ? (
                   <p className="text-[10px] font-bold text-on-surface-variant">{car.priceUi.secondaryLabelAr}</p>
                 ) : null}

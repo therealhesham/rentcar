@@ -5,6 +5,7 @@ import {
   getDirectBookingAvailability,
   parseAddonIdsFromJsonBody,
   parseCommonBookingFieldsFromJson,
+  parsePickupCitySlugFromJson,
 } from "@/lib/direct-booking";
 import { getCustomerSessionUserId } from "@/lib/customer-auth";
 
@@ -112,6 +113,7 @@ export async function POST(request: Request) {
     ...parsed.data,
     addonIds: addonParsed.addonIds,
     customerId: sessionUserId ?? undefined,
+    pickupCitySlug: parsePickupCitySlugFromJson(obj),
   });
 
   if (!created.ok) {

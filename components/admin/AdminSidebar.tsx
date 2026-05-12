@@ -15,6 +15,7 @@ const nav = [
   { href: "/admin/categories", label: "فئات الأسطول" },
   { href: "/admin/rental-addons", label: "إضافات التأجير" },
   { href: "/admin/cities", label: "المدن" },
+  { href: "/admin/inter-city-shipping", label: "شحن بين المدن" },
   { href: "/admin/branches", label: "الفروع" },
   { href: "/admin/subscription-plans", label: "باقات اشتراك" },
   { href: "/admin/subscriptions", label: "اشتراكات العملاء" },
@@ -49,7 +50,7 @@ export function AdminSidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`rounded-xl px-3 py-2.5 text-sm font-bold transition-colors ${
+              className={`whitespace-nowrap rounded-xl px-3 py-2.5 text-sm font-bold transition-colors ${
                 active
                   ? "bg-primary-container text-on-primary-container"
                   : "text-on-surface hover:bg-surface-container"
@@ -61,7 +62,7 @@ export function AdminSidebar() {
         })}
         <Link
           href="/"
-          className="rounded-xl px-3 py-2.5 text-sm font-bold text-on-surface-variant transition-colors hover:bg-surface-container"
+          className="whitespace-nowrap rounded-xl px-3 py-2.5 text-sm font-bold text-on-surface-variant transition-colors hover:bg-surface-container"
         >
           الموقع العام
         </Link>

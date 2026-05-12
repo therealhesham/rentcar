@@ -44,7 +44,7 @@ export function SiteNav({ active = "home" }: SiteNavProps) {
                 <Link
                   key={l.key}
                   href={l.href}
-                  className={`rounded-full px-5 py-2.5 text-sm font-bold transition-all duration-300 lg:px-7 ${
+                  className={`whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-bold transition-all duration-300 lg:px-7 ${
                     isActive
                       ? "bg-[#163332] text-white shadow-sm"
                       : "text-[#2a2520] hover:bg-[#163332]/10"
@@ -100,7 +100,7 @@ export function SiteNav({ active = "home" }: SiteNavProps) {
                 key={l.key}
                 href={l.href}
                 onClick={() => setOpen(false)}
-                className={`block px-5 py-3.5 text-sm font-bold transition-colors ${
+                className={`block whitespace-nowrap px-5 py-3.5 text-sm font-bold transition-colors ${
                   isActive
                     ? "bg-[#163332] text-white"
                     : "text-[#2a2520] hover:bg-[#163332]/10"
