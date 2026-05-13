@@ -48,6 +48,8 @@ export function DdMmYyDateWithPicker({
   calendarButtonLabel = "فتح التقويم",
 }: DdMmYyDateWithPickerProps) {
   const nativeRef = useRef<HTMLInputElement>(null);
+  /** يمنع إعادة فتح التقويم فوراً بعد اختيار تاريخ (عند عودة التركيز لحقل النص) */
+  const suppressOpenFromFocusRef = useRef(false);
   const pickerLocked = Boolean(disabled || readOnly);
 
   function openCalendar() {
@@ -75,25 +77,55 @@ export function DdMmYyDateWithPicker({
     }
   }
 
+  function handleTextFocus() {
+    if (pickerLocked) return;
+    if (suppressOpenFromFocusRef.current) return;
+    openCalendar();
+  }
+
   return (
     <div className={`flex items-stretch gap-1 ${rowClassName}`.trim()}>
-      <input
-        id={id}
-        type="text"
-        inputMode="numeric"
-        autoComplete="off"
-        placeholder={placeholder}
-        value={value}
-        onChange={onChange}
-        onBlur={onBlur}
-        required={required}
-        disabled={disabled}
-        readOnly={readOnly}
-        dir="ltr"
-        className={
-          `min-w-0 flex-1 rounded-md border border-[#ebe4d3]/80 bg-white/80 px-2 py-1 text-[13px] font-semibold tabular-nums text-[#0f1923] outline-none placeholder:text-[#aaa08e]/85 focus-visible:ring-2 focus-visible:ring-[#dbb878]/30 disabled:cursor-not-allowed disabled:opacity-60 read-only:opacity-90 ${inputClassName}`.trim()
-        }
-      />
+      <div className="relative min-w-0 flex-1">
+        <input
+          id={id}
+          type="text"
+          inputMode="numeric"
+          autoComplete="off"
+          placeholder={placeholder}
+          value={value}
+          onChange={onChange}
+          onFocus={handleTextFocus}
+          onBlur={onBlur}
+          required={required}
+          disabled={disabled}
+          readOnly={readOnly}
+          dir="ltr"
+          className={
+            `relative z-0 min-w-0 w-full rounded-md border border-[#ebe4d3]/80 bg-white/80 px-2 py-1 text-[13px] font-semibold tabular-nums text-[#0f1923] outline-none placeholder:text-[#aaa08e]/85 focus-visible:ring-2 focus-visible:ring-[#dbb878]/30 disabled:cursor-not-allowed disabled:opacity-60 read-only:opacity-90 ${inputClassName}`.trim()
+          }
+        />
+        <input
+          ref={nativeRef}
+          type="date"
+          value={nativeYmd}
+          min={minYmd}
+          max={maxYmd}
+          onChange={(e) => {
+            const v = e.target.value;
+            if (!v) return;
+            suppressOpenFromFocusRef.current = true;
+            onCalendarSelect(v);
+            window.setTimeout(() => {
+              suppressOpenFromFocusRef.current = false;
+            }, 400);
+          }}
+          tabIndex={-1}
+          aria-hidden
+          disabled={disabled}
+          readOnly={readOnly}
+          className="pointer-events-none absolute inset-0 z-10 m-0 w-full cursor-default appearance-none border-0 bg-transparent p-0 opacity-0"
+        />
+      </div>
       <button
         type="button"
         onClick={openCalendar}
@@ -106,20 +138,6 @@ export function DdMmYyDateWithPicker({
       >
         <CalendarDays className="size-4" aria-hidden />
       </button>
-      <input
-        ref={nativeRef}
-        type="date"
-        value={nativeYmd}
-        min={minYmd}
-        max={maxYmd}
-        onChange={(e) => {
-          const v = e.target.value;
-          if (v) onCalendarSelect(v);
-        }}
-        tabIndex={-1}
-        aria-hidden
-        className="sr-only"
-      />
     </div>
   );
 }

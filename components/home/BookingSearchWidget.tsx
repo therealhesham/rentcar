@@ -82,62 +82,54 @@ function CityBranchSelects({
   onCityChange: (slug: string) => void;
   onBranchChange: (slug: string) => void;
 }) {
+  const pairLabelClass =
+    "shrink-0 self-center text-[10px] font-bold uppercase tracking-wide text-[#003749]/55";
   return (
-    <div className="grid grid-cols-2 items-end gap-x-2 gap-y-0">
-      <div className="min-w-0">
-        <label
-          htmlFor={cityInputId}
-          className="mb-0.5 block text-[10px] font-bold uppercase tracking-wide text-[#003749]/55"
+    <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 gap-y-2">
+      <label htmlFor={cityInputId} className={pairLabelClass}>
+        المدينة
+      </label>
+      <div className="relative min-w-0">
+        <select
+          id={cityInputId}
+          value={citySlug}
+          onChange={(ev) => onCityChange(ev.target.value)}
+          required={branchSelectRequired}
+          className="w-full min-w-0 cursor-pointer appearance-none rounded-lg border border-[#ebe4d3]/70 bg-white/70 py-2 pe-8 ps-2.5 text-[13px] font-semibold text-[#0f1923] outline-none transition-[border-color,box-shadow,background-color] hover:bg-white focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25"
         >
-          المدينة
-        </label>
-        <div className="relative mt-0.5">
-          <select
-            id={cityInputId}
-            value={citySlug}
-            onChange={(ev) => onCityChange(ev.target.value)}
-            required={branchSelectRequired}
-            className="w-full min-w-0 cursor-pointer appearance-none rounded-lg border border-[#ebe4d3]/70 bg-white/70 py-2 pe-8 ps-2.5 text-[13px] font-semibold text-[#0f1923] outline-none transition-[border-color,box-shadow,background-color] hover:bg-white focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25"
-          >
-            {dateCities.map((c) => (
-              <option key={c.slug} value={c.slug}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          <ChevronDown
-            className="pointer-events-none absolute end-2 top-1/2 size-3.5 -translate-y-1/2 text-[#8a8274]"
-            aria-hidden
-          />
-        </div>
+          {dateCities.map((c) => (
+            <option key={c.slug} value={c.slug}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+        <ChevronDown
+          className="pointer-events-none absolute end-2 top-1/2 size-3.5 -translate-y-1/2 text-[#8a8274]"
+          aria-hidden
+        />
       </div>
-      <div className="min-w-0">
-        <label
-          htmlFor={branchInputId}
-          className="mb-0.5 block text-[10px] font-bold uppercase tracking-wide text-[#003749]/55"
+      <label htmlFor={branchInputId} className={pairLabelClass}>
+        الفرع
+      </label>
+      <div className="relative min-w-0">
+        <select
+          id={branchInputId}
+          value={branchSlug || defaultBranchSlug}
+          onChange={(ev) => onBranchChange(ev.target.value)}
+          required={branchSelectRequired}
+          disabled={branchOptions.length === 0}
+          className="w-full min-w-0 cursor-pointer appearance-none rounded-lg border border-[#ebe4d3]/70 bg-white/70 py-2 pe-8 ps-2.5 text-[13px] font-semibold text-[#0f1923] outline-none transition-[border-color,box-shadow,background-color] hover:bg-white focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25 disabled:cursor-not-allowed disabled:opacity-45"
         >
-          الفرع
-        </label>
-        <div className="relative mt-0.5">
-          <select
-            id={branchInputId}
-            value={branchSlug || defaultBranchSlug}
-            onChange={(ev) => onBranchChange(ev.target.value)}
-            required={branchSelectRequired}
-            disabled={branchOptions.length === 0}
-            className="w-full min-w-0 cursor-pointer appearance-none rounded-lg border border-[#ebe4d3]/70 bg-white/70 py-2 pe-8 ps-2.5 text-[13px] font-semibold text-[#0f1923] outline-none transition-[border-color,box-shadow,background-color] hover:bg-white focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25 disabled:cursor-not-allowed disabled:opacity-45"
-          >
-            {branchOptions.map((b) => (
-              <option key={b.slug} value={b.slug}>
-                {b.name}
-              </option>
-            ))}
-          </select>
-          <ChevronDown
-            className="pointer-events-none absolute end-2 top-1/2 size-3.5 -translate-y-1/2 text-[#8a8274]"
-            aria-hidden
-          />
-        </div>
+          {branchOptions.map((b) => (
+            <option key={b.slug} value={b.slug}>
+              {b.name}
+            </option>
+          ))}
+        </select>
+        <ChevronDown
+          className="pointer-events-none absolute end-2 top-1/2 size-3.5 -translate-y-1/2 text-[#8a8274]"
+          aria-hidden
+        />
       </div>
     </div>
   );
@@ -730,7 +722,7 @@ export function BookingSearchWidget({ cities }: { cities: BookingCityBranchesOpt
                   <>
                     <div>
                       <p className="mb-1.5 text-[10px] font-black uppercase tracking-wide text-[#003749]/55">
-                        استلام المركبة
+                        موقع الاستلام
                       </p>
                       <CityBranchSelects
                         dateCities={dateCities}

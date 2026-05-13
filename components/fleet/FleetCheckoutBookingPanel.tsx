@@ -46,6 +46,11 @@ const GOLD = "#dbb878";
 const GOLD_DARK = "#c9a356";
 const TEAL = "#003749";
 
+/** صفان: «المدينة» + القائمة، ثم «الفرع» + القائمة في سطر واحد لكل منهما */
+const CO_CITY_BRANCH_GRID = "grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 gap-y-2";
+const CO_CITY_BRANCH_LBL =
+  "shrink-0 self-center text-[10px] font-bold uppercase tracking-wide text-[#003749]/45";
+
 type Props = {
   modelId: number;
   cities: BookingCityBranchesOption[];
@@ -402,14 +407,15 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
                     <>
                       <div>
                         <p className="mb-1.5 text-[10px] font-black uppercase tracking-wide text-[#003749]/45">
-                          استلام المركبة
+                          موقع الاستلام
                         </p>
-                        <div className="flex flex-col gap-2.5">
-                          <div className="relative">
-                            <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-[#003749]/45">
-                              المدينة
-                            </span>
+                        <div className={CO_CITY_BRANCH_GRID}>
+                          <label htmlFor={`${coUid}-pkg-pickup-city`} className={CO_CITY_BRANCH_LBL}>
+                            المدينة
+                          </label>
+                          <div className="relative min-w-0">
                             <select
+                              id={`${coUid}-pkg-pickup-city`}
                               value={pickupCity || defaultCitySlug}
                               onChange={(ev) => {
                                 const slug = ev.target.value;
@@ -418,7 +424,7 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
                                 setPickupBranch(list[0]?.slug ?? "");
                               }}
                               required={branchSelectRequired}
-                              className="w-full appearance-none rounded-lg border border-transparent bg-transparent py-0.5 pe-5 text-[14px] font-semibold text-[#0f1923] outline-none"
+                              className="w-full cursor-pointer appearance-none rounded-lg border border-[#ebe4d3]/70 bg-white/80 py-2 pe-8 ps-2.5 text-[14px] font-semibold text-[#0f1923] outline-none transition-[border-color,box-shadow] focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25"
                             >
                               {dateCities.map((c) => (
                                 <option key={c.slug} value={c.slug}>
@@ -426,18 +432,19 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
                                 </option>
                               ))}
                             </select>
-                            <ChevronDown className="pointer-events-none absolute end-0 top-[calc(50%+6px)] size-3.5 -translate-y-1/2 text-[#aaa08e]" />
+                            <ChevronDown className="pointer-events-none absolute end-2 top-1/2 size-3.5 -translate-y-1/2 text-[#8a8274]" />
                           </div>
-                          <div className="relative border-t border-[#ebe4d3]/60 pt-2">
-                            <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-[#003749]/45">
-                              الفرع
-                            </span>
+                          <label htmlFor={`${coUid}-pkg-pickup-branch`} className={CO_CITY_BRANCH_LBL}>
+                            الفرع
+                          </label>
+                          <div className="relative min-w-0">
                             <select
+                              id={`${coUid}-pkg-pickup-branch`}
                               value={pickupBranch || defaultPickupBranchSlug}
                               onChange={(ev) => setPickupBranch(ev.target.value)}
                               required={branchSelectRequired}
                               disabled={pickupCityBranches.length === 0}
-                              className="w-full appearance-none bg-transparent pe-5 text-[14px] font-semibold text-[#0f1923] outline-none disabled:opacity-50"
+                              className="w-full cursor-pointer appearance-none rounded-lg border border-[#ebe4d3]/70 bg-white/80 py-2 pe-8 ps-2.5 text-[14px] font-semibold text-[#0f1923] outline-none transition-[border-color,box-shadow] focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               {pickupCityBranches.map((b) => (
                                 <option key={b.slug} value={b.slug}>
@@ -445,7 +452,7 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
                                 </option>
                               ))}
                             </select>
-                            <ChevronDown className="pointer-events-none absolute end-0 top-[calc(50%+6px)] size-3.5 -translate-y-1/2 text-[#aaa08e]" />
+                            <ChevronDown className="pointer-events-none absolute end-2 top-1/2 size-3.5 -translate-y-1/2 text-[#8a8274]" />
                           </div>
                         </div>
                       </div>
@@ -453,12 +460,13 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
                         <p className="mb-1.5 text-[10px] font-black uppercase tracking-wide text-[#003749]/45">
                           إرجاع المركبة
                         </p>
-                        <div className="flex flex-col gap-2.5">
-                          <div className="relative">
-                            <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-[#003749]/45">
-                              المدينة
-                            </span>
+                        <div className={CO_CITY_BRANCH_GRID}>
+                          <label htmlFor={`${coUid}-pkg-return-city`} className={CO_CITY_BRANCH_LBL}>
+                            المدينة
+                          </label>
+                          <div className="relative min-w-0">
                             <select
+                              id={`${coUid}-pkg-return-city`}
                               value={returnCity || defaultCitySlug}
                               onChange={(ev) => {
                                 const slug = ev.target.value;
@@ -467,7 +475,7 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
                                 setReturnBranch(list[0]?.slug ?? "");
                               }}
                               required={branchSelectRequired}
-                              className="w-full appearance-none rounded-lg border border-transparent bg-transparent py-0.5 pe-5 text-[14px] font-semibold text-[#0f1923] outline-none"
+                              className="w-full cursor-pointer appearance-none rounded-lg border border-[#ebe4d3]/70 bg-white/80 py-2 pe-8 ps-2.5 text-[14px] font-semibold text-[#0f1923] outline-none transition-[border-color,box-shadow] focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25"
                             >
                               {dateCities.map((c) => (
                                 <option key={c.slug} value={c.slug}>
@@ -475,18 +483,19 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
                                 </option>
                               ))}
                             </select>
-                            <ChevronDown className="pointer-events-none absolute end-0 top-[calc(50%+6px)] size-3.5 -translate-y-1/2 text-[#aaa08e]" />
+                            <ChevronDown className="pointer-events-none absolute end-2 top-1/2 size-3.5 -translate-y-1/2 text-[#8a8274]" />
                           </div>
-                          <div className="relative border-t border-[#ebe4d3]/60 pt-2">
-                            <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-[#003749]/45">
-                              الفرع
-                            </span>
+                          <label htmlFor={`${coUid}-pkg-return-branch`} className={CO_CITY_BRANCH_LBL}>
+                            الفرع
+                          </label>
+                          <div className="relative min-w-0">
                             <select
+                              id={`${coUid}-pkg-return-branch`}
                               value={returnBranch || defaultReturnBranchSlug}
                               onChange={(ev) => setReturnBranch(ev.target.value)}
                               required={branchSelectRequired}
                               disabled={returnCityBranches.length === 0}
-                              className="w-full appearance-none bg-transparent pe-5 text-[14px] font-semibold text-[#0f1923] outline-none disabled:opacity-50"
+                              className="w-full cursor-pointer appearance-none rounded-lg border border-[#ebe4d3]/70 bg-white/80 py-2 pe-8 ps-2.5 text-[14px] font-semibold text-[#0f1923] outline-none transition-[border-color,box-shadow] focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               {returnCityBranches.map((b) => (
                                 <option key={b.slug} value={b.slug}>
@@ -494,7 +503,7 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
                                 </option>
                               ))}
                             </select>
-                            <ChevronDown className="pointer-events-none absolute end-0 top-[calc(50%+6px)] size-3.5 -translate-y-1/2 text-[#aaa08e]" />
+                            <ChevronDown className="pointer-events-none absolute end-2 top-1/2 size-3.5 -translate-y-1/2 text-[#8a8274]" />
                           </div>
                         </div>
                       </div>
@@ -562,12 +571,13 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
                         <p className="mb-1.5 text-[10px] font-black uppercase tracking-wide text-[#003749]/45">
                           فرع إرجاع المركبة
                         </p>
-                        <div className="flex flex-col gap-2.5">
-                          <div className="relative">
-                            <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-[#003749]/45">
-                              المدينة
-                            </span>
+                        <div className={CO_CITY_BRANCH_GRID}>
+                          <label htmlFor={`${coUid}-pkg-return-city`} className={CO_CITY_BRANCH_LBL}>
+                            المدينة
+                          </label>
+                          <div className="relative min-w-0">
                             <select
+                              id={`${coUid}-pkg-return-city`}
                               value={returnCity || defaultCitySlug}
                               onChange={(ev) => {
                                 const slug = ev.target.value;
@@ -576,7 +586,7 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
                                 setReturnBranch(list[0]?.slug ?? "");
                               }}
                               required={branchSelectRequired}
-                              className="w-full appearance-none rounded-lg border border-transparent bg-transparent py-0.5 pe-5 text-[14px] font-semibold text-[#0f1923] outline-none"
+                              className="w-full cursor-pointer appearance-none rounded-lg border border-[#ebe4d3]/70 bg-white/80 py-2 pe-8 ps-2.5 text-[14px] font-semibold text-[#0f1923] outline-none transition-[border-color,box-shadow] focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25"
                             >
                               {dateCities.map((c) => (
                                 <option key={c.slug} value={c.slug}>
@@ -584,18 +594,19 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
                                 </option>
                               ))}
                             </select>
-                            <ChevronDown className="pointer-events-none absolute end-0 top-[calc(50%+6px)] size-3.5 -translate-y-1/2 text-[#aaa08e]" />
+                            <ChevronDown className="pointer-events-none absolute end-2 top-1/2 size-3.5 -translate-y-1/2 text-[#8a8274]" />
                           </div>
-                          <div className="relative border-t border-[#ebe4d3]/60 pt-2">
-                            <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-[#003749]/45">
-                              الفرع
-                            </span>
+                          <label htmlFor={`${coUid}-pkg-return-branch`} className={CO_CITY_BRANCH_LBL}>
+                            الفرع
+                          </label>
+                          <div className="relative min-w-0">
                             <select
+                              id={`${coUid}-pkg-return-branch`}
                               value={returnBranch || defaultReturnBranchSlug}
                               onChange={(ev) => setReturnBranch(ev.target.value)}
                               required={branchSelectRequired}
                               disabled={returnCityBranches.length === 0}
-                              className="w-full appearance-none bg-transparent pe-5 text-[14px] font-semibold text-[#0f1923] outline-none disabled:opacity-50"
+                              className="w-full cursor-pointer appearance-none rounded-lg border border-[#ebe4d3]/70 bg-white/80 py-2 pe-8 ps-2.5 text-[14px] font-semibold text-[#0f1923] outline-none transition-[border-color,box-shadow] focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               {returnCityBranches.map((b) => (
                                 <option key={b.slug} value={b.slug}>
@@ -603,7 +614,7 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
                                 </option>
                               ))}
                             </select>
-                            <ChevronDown className="pointer-events-none absolute end-0 top-[calc(50%+6px)] size-3.5 -translate-y-1/2 text-[#aaa08e]" />
+                            <ChevronDown className="pointer-events-none absolute end-2 top-1/2 size-3.5 -translate-y-1/2 text-[#8a8274]" />
                           </div>
                         </div>
                       </div>
@@ -619,12 +630,13 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
                 icon={<MapPin className="size-[15px]" />}
               >
                 {mode === "pickup" ? (
-                  <div className="flex flex-col gap-2.5">
-                    <div className="relative">
-                      <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-[#003749]/45">
-                        المدينة
-                      </span>
+                  <div className={CO_CITY_BRANCH_GRID}>
+                    <label htmlFor={`${coUid}-main-pickup-city`} className={CO_CITY_BRANCH_LBL}>
+                      المدينة
+                    </label>
+                    <div className="relative min-w-0">
                       <select
+                        id={`${coUid}-main-pickup-city`}
                         value={pickupCity || defaultCitySlug}
                         onChange={(ev) => {
                           const slug = ev.target.value;
@@ -633,7 +645,7 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
                           setPickupBranch(list[0]?.slug ?? "");
                         }}
                         required={branchSelectRequired}
-                        className="w-full appearance-none rounded-lg border border-transparent bg-transparent py-0.5 pe-5 text-[14px] font-semibold text-[#0f1923] outline-none"
+                        className="w-full cursor-pointer appearance-none rounded-lg border border-[#ebe4d3]/70 bg-white/80 py-2 pe-8 ps-2.5 text-[14px] font-semibold text-[#0f1923] outline-none transition-[border-color,box-shadow] focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25"
                       >
                         {dateCities.map((c) => (
                           <option key={c.slug} value={c.slug}>
@@ -641,18 +653,19 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
                           </option>
                         ))}
                       </select>
-                      <ChevronDown className="pointer-events-none absolute end-0 top-[calc(50%+6px)] size-3.5 -translate-y-1/2 text-[#aaa08e]" />
+                      <ChevronDown className="pointer-events-none absolute end-2 top-1/2 size-3.5 -translate-y-1/2 text-[#8a8274]" />
                     </div>
-                    <div className="relative border-t border-[#ebe4d3]/60 pt-2">
-                      <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-[#003749]/45">
-                        الفرع
-                      </span>
+                    <label htmlFor={`${coUid}-main-pickup-branch`} className={CO_CITY_BRANCH_LBL}>
+                      الفرع
+                    </label>
+                    <div className="relative min-w-0">
                       <select
+                        id={`${coUid}-main-pickup-branch`}
                         value={pickupBranch || defaultPickupBranchSlug}
                         onChange={(ev) => setPickupBranch(ev.target.value)}
                         required={branchSelectRequired}
                         disabled={pickupCityBranches.length === 0}
-                        className="w-full appearance-none bg-transparent pe-5 text-[14px] font-semibold text-[#0f1923] outline-none disabled:opacity-50"
+                        className="w-full cursor-pointer appearance-none rounded-lg border border-[#ebe4d3]/70 bg-white/80 py-2 pe-8 ps-2.5 text-[14px] font-semibold text-[#0f1923] outline-none transition-[border-color,box-shadow] focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {pickupCityBranches.map((b) => (
                           <option key={b.slug} value={b.slug}>
@@ -660,7 +673,7 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
                           </option>
                         ))}
                       </select>
-                      <ChevronDown className="pointer-events-none absolute end-0 top-[calc(50%+6px)] size-3.5 -translate-y-1/2 text-[#aaa08e]" />
+                      <ChevronDown className="pointer-events-none absolute end-2 top-1/2 size-3.5 -translate-y-1/2 text-[#8a8274]" />
                     </div>
                   </div>
                 ) : (
@@ -725,12 +738,13 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
               </CoFieldCard>
 
               <CoFieldCard label="موقع الإرجاع" icon={<MapPin className="size-[15px]" />}>
-                <div className="flex flex-col gap-2.5">
-                  <div className="relative">
-                    <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-[#003749]/45">
-                      المدينة
-                    </span>
+                <div className={CO_CITY_BRANCH_GRID}>
+                  <label htmlFor={`${coUid}-main-return-city`} className={CO_CITY_BRANCH_LBL}>
+                    المدينة
+                  </label>
+                  <div className="relative min-w-0">
                     <select
+                      id={`${coUid}-main-return-city`}
                       value={returnCity || defaultCitySlug}
                       onChange={(ev) => {
                         const slug = ev.target.value;
@@ -739,7 +753,7 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
                         setReturnBranch(list[0]?.slug ?? "");
                       }}
                       required={branchSelectRequired}
-                      className="w-full appearance-none rounded-lg border border-transparent bg-transparent py-0.5 pe-5 text-[14px] font-semibold text-[#0f1923] outline-none"
+                      className="w-full cursor-pointer appearance-none rounded-lg border border-[#ebe4d3]/70 bg-white/80 py-2 pe-8 ps-2.5 text-[14px] font-semibold text-[#0f1923] outline-none transition-[border-color,box-shadow] focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25"
                     >
                       {dateCities.map((c) => (
                         <option key={c.slug} value={c.slug}>
@@ -747,18 +761,19 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
                         </option>
                       ))}
                     </select>
-                    <ChevronDown className="pointer-events-none absolute end-0 top-[calc(50%+6px)] size-3.5 -translate-y-1/2 text-[#aaa08e]" />
+                    <ChevronDown className="pointer-events-none absolute end-2 top-1/2 size-3.5 -translate-y-1/2 text-[#8a8274]" />
                   </div>
-                  <div className="relative border-t border-[#ebe4d3]/60 pt-2">
-                    <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-[#003749]/45">
-                      الفرع
-                    </span>
+                  <label htmlFor={`${coUid}-main-return-branch`} className={CO_CITY_BRANCH_LBL}>
+                    الفرع
+                  </label>
+                  <div className="relative min-w-0">
                     <select
+                      id={`${coUid}-main-return-branch`}
                       value={returnBranch || defaultReturnBranchSlug}
                       onChange={(ev) => setReturnBranch(ev.target.value)}
                       required={branchSelectRequired}
                       disabled={returnCityBranches.length === 0}
-                      className="w-full appearance-none bg-transparent pe-5 text-[14px] font-semibold text-[#0f1923] outline-none disabled:opacity-50"
+                      className="w-full cursor-pointer appearance-none rounded-lg border border-[#ebe4d3]/70 bg-white/80 py-2 pe-8 ps-2.5 text-[14px] font-semibold text-[#0f1923] outline-none transition-[border-color,box-shadow] focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {returnCityBranches.map((b) => (
                         <option key={b.slug} value={b.slug}>
@@ -766,7 +781,7 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
                         </option>
                       ))}
                     </select>
-                    <ChevronDown className="pointer-events-none absolute end-0 top-[calc(50%+6px)] size-3.5 -translate-y-1/2 text-[#aaa08e]" />
+                    <ChevronDown className="pointer-events-none absolute end-2 top-1/2 size-3.5 -translate-y-1/2 text-[#8a8274]" />
                   </div>
                 </div>
               </CoFieldCard>
