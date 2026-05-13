@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
-import {
-  createDirectBooking,
-  getDirectBookingAvailability,
-} from "@/lib/direct-booking";
+import { getDirectBookingAvailability } from "@/lib/direct-booking";
+import { createFleetBookingAndLinkCustomerSession } from "@/lib/fleet-checkout-customer-session";
 import { getCustomerSessionUserId } from "@/lib/customer-auth";
 import { isBookingCheckoutOtpStepRequired } from "@/lib/booking-checkout-otp";
 import { parseCreateDirectBookingInputFromCheckoutJson } from "@/lib/booking-direct-checkout-parse";
 import { revalidateAfterDirectBooking } from "@/lib/revalidate-after-direct-booking";
+import { isDirectBookingCapacityMessage } from "@/lib/direct-booking-user-messages";
 
 export const dynamic = "force-dynamic";
 
@@ -107,10 +106,11 @@ export async function POST(request: Request) {
     );
   }
 
-  const created = await createDirectBooking(parsed.input);
+  const created = await createFleetBookingAndLinkCustomerSession(parsed.input);
 
   if (!created.ok) {
-    return NextResponse.json({ ok: false, error: created.error }, { status: 409 });
+    const status = isDirectBookingCapacityMessage(created.error) ? 409 : 400;
+    return NextResponse.json({ ok: false, error: created.error }, { status });
   }
 
   revalidateAfterDirectBooking();

@@ -23,6 +23,10 @@ export default async function AdminBookingOtpDeliveryPage() {
           الجوال أو عبر البريد الإلكتروني الذي يُدخله في بيانات التواصل. الإرسال الفعلي يعتمد على
           تهيئة الخادم (رابط SMS في البيئة، أو SMTP/Resend للبريد).
         </p>
+        <p className="mt-3 max-w-2xl text-sm font-semibold text-on-surface-variant">
+          يُطبَّق نفس الإعداد تلقائياً على تسجيل دخول العميل من صفحة «دخول العميل» (رمز إلى الجوال
+          أو البريد المسجَّلين في الحساب)، وليس فقط عند إتمام الحجز.
+        </p>
       </header>
 
       <BookingOtpDeliveryForm

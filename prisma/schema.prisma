@@ -297,6 +297,18 @@ model BookingCheckoutDraft {
   @@index([expiresAt])
 }
 
+/// رمز تحقق لتسجيل دخول العميل (منفصل عن رمز إتمام الحجز لتجنب التعارض).
+model CustomerLoginOtp {
+  id             Int      @id @default(autoincrement())
+  destinationKey String @unique @db.VarChar(320)
+  codeHash       String   @db.VarChar(64)
+  expiresAt      DateTime
+  verifyAttempts Int      @default(0)
+  lastSentAt     DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
 enum BookingRequestKind {
   INQUIRY
   DIRECT
