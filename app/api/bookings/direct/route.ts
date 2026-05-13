@@ -1,19 +1,12 @@
-import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import {
   createDirectBooking,
   getDirectBookingAvailability,
-  parseAddonIdsFromJsonBody,
-  parseCommonBookingFieldsFromJson,
-  parseContactEmailFromJson,
-  parseDirectBookingKycFromJson,
-  parsePickupCitySlugFromJson,
 } from "@/lib/direct-booking";
 import { getCustomerSessionUserId } from "@/lib/customer-auth";
-import {
-  isBookingCheckoutOtpStepRequired,
-  verifyAndConsumeBookingCheckoutOtp,
-} from "@/lib/booking-checkout-otp";
+import { isBookingCheckoutOtpStepRequired } from "@/lib/booking-checkout-otp";
+import { parseCreateDirectBookingInputFromCheckoutJson } from "@/lib/booking-direct-checkout-parse";
+import { revalidateAfterDirectBooking } from "@/lib/revalidate-after-direct-booking";
 
 export const dynamic = "force-dynamic";
 
@@ -97,67 +90,30 @@ export async function POST(request: Request) {
   }
 
   const obj = body as Record<string, unknown>;
-  const carModelId = Number(obj.carModelId);
-  if (!Number.isInteger(carModelId) || carModelId < 1) {
-    return NextResponse.json({ ok: false, error: "معرّف السيارة غير صالح." }, { status: 400 });
-  }
-
-  const parsed = parseCommonBookingFieldsFromJson(obj);
+  const sessionUserId = await getCustomerSessionUserId();
+  const parsed = parseCreateDirectBookingInputFromCheckoutJson(obj, sessionUserId);
   if (!parsed.ok) {
     return NextResponse.json({ ok: false, error: parsed.error }, { status: 400 });
   }
 
-  const emailParsed = parseContactEmailFromJson(obj);
-  if (!emailParsed.ok) {
-    return NextResponse.json({ ok: false, error: emailParsed.error }, { status: 400 });
-  }
-
   if (await isBookingCheckoutOtpStepRequired()) {
-    const localPhone = String(obj.phone ?? "")
-      .replace(/\s+/g, "")
-      .trim();
-    const phoneOtp = String(obj.phoneOtp ?? obj.otp ?? "").trim();
-    const verified = await verifyAndConsumeBookingCheckoutOtp({
-      phoneLocalNine: localPhone,
-      contactEmail: emailParsed.contactEmail,
-      codeRaw: phoneOtp,
-    });
-    if (!verified.ok) {
-      return NextResponse.json({ ok: false, error: verified.error }, { status: 400 });
-    }
+    return NextResponse.json(
+      {
+        ok: false,
+        error:
+          "عند تفعيل رمز التحقق يُكمَل الحجز من صفحة «رمز التحقق» بعد إرسال بياناتك من صفحة الإتمام.",
+      },
+      { status: 400 },
+    );
   }
 
-  const kycParsed = parseDirectBookingKycFromJson(obj);
-  if (!kycParsed.ok) {
-    return NextResponse.json({ ok: false, error: kycParsed.error }, { status: 400 });
-  }
-
-  const addonParsed = parseAddonIdsFromJsonBody(obj);
-  if (!addonParsed.ok) {
-    return NextResponse.json({ ok: false, error: addonParsed.error }, { status: 400 });
-  }
-
-  const sessionUserId = await getCustomerSessionUserId();
-
-  const created = await createDirectBooking({
-    carModelId,
-    ...parsed.data,
-    addonIds: addonParsed.addonIds,
-    customerId: sessionUserId ?? undefined,
-    pickupCitySlug: parsePickupCitySlugFromJson(obj),
-    contactEmail: emailParsed.contactEmail,
-    kyc: kycParsed.data,
-  });
+  const created = await createDirectBooking(parsed.input);
 
   if (!created.ok) {
     return NextResponse.json({ ok: false, error: created.error }, { status: 409 });
   }
 
-  revalidatePath("/admin");
-  revalidatePath("/admin/car-bookings");
-  revalidatePath("/fleet");
-  revalidatePath("/fleet/checkout");
-  revalidatePath("/account");
+  revalidateAfterDirectBooking();
 
   return NextResponse.json({ ok: true, bookingRequestId: created.bookingRequestId });
 }

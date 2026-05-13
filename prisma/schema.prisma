@@ -287,6 +287,16 @@ model BookingCheckoutOtp {
   @@index([expiresAt])
 }
 
+/// مسودة إتمام حجز مباشر قبل التحقق برمز OTP — تُحذف بعد التأكيد أو عند انتهاء الصلاحية.
+model BookingCheckoutDraft {
+  token       String   @id @db.VarChar(64)
+  payloadJson String   @db.LongText
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
 enum BookingRequestKind {
   INQUIRY
   DIRECT
