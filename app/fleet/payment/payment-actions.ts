@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { sendBookingInvoiceEmailAfterPayment } from "@/lib/booking-invoice-email";
+import { sendBookingCompletionWhatsAppAfterPayment } from "@/lib/evolution-whatsapp";
 import { prisma } from "@/lib/prisma";
 
 export type ConfirmPaymentResult =
@@ -72,6 +73,12 @@ export async function confirmMockPayment(
       await sendBookingInvoiceEmailAfterPayment(id);
     } catch (e) {
       console.error("[booking-invoice-email] بعد تأكيد الدفع:", e);
+    }
+
+    try {
+      await sendBookingCompletionWhatsAppAfterPayment(id);
+    } catch (e) {
+      console.error("[evolution-whatsapp] بعد تأكيد الدفع:", e);
     }
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2025") {
