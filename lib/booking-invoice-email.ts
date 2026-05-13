@@ -209,7 +209,7 @@ async function sendInvoiceViaSmtp(opts: {
     subject: opts.subject,
     html: opts.html,
     text: opts.text,
-    attachments: opts.attachments,
+    ...(opts.attachments?.length ? { attachments: opts.attachments } : {}),
   });
 }
 
@@ -229,20 +229,70 @@ async function sendInvoiceViaResend(opts: {
     "روائس لتأجير السيارات <onboarding@resend.dev>";
 
   const resend = new Resend(apiKey);
-  const { error } = await resend.emails.send({
+  const { data, error } = await resend.emails.send({
     from,
     to: [opts.to],
     subject: opts.subject,
     html: opts.html,
-    text: opts.text,
-    attachments: opts.attachments?.map((a) => ({
-      filename: a.filename,
-      content: a.content.toString("base64"),
-    })),
+    ...(opts.text ? { text: opts.text } : {}),
+    ...(opts.attachments?.length
+      ? {
+          attachments: opts.attachments.map((a) => ({
+            filename: a.filename,
+            content: a.content.toString("base64"),
+          })),
+        }
+      : {}),
   });
   if (error) {
     throw new Error(typeof error === "string" ? error : JSON.stringify(error));
   }
+  if (data?.id) {
+    console.info(`[Resend] queued email id=${data.id} to=${opts.to}`);
+  }
+}
+
+/** SMTP أو Resend — لرسائل النظام (مثل رمز التحقق عند الإتمام). */
+export function isOutgoingMailTransportConfigured(): boolean {
+  return smtpConfigured() || Boolean(process.env.RESEND_API_KEY?.trim());
+}
+
+export async function sendPlainTransactionalEmail(opts: {
+  to: string;
+  subject: string;
+  html: string;
+  text?: string;
+}): Promise<void> {
+  let smtpFailure: unknown = null;
+  if (smtpConfigured()) {
+    try {
+      await sendInvoiceViaSmtp(opts);
+      return;
+    } catch (e) {
+      smtpFailure = e;
+      console.error("[sendPlainTransactionalEmail] فشل SMTP، سيتم تجربة Resend إن وُجد:", e);
+      if (!process.env.RESEND_API_KEY?.trim()) {
+        throw e;
+      }
+    }
+  }
+  if (process.env.RESEND_API_KEY?.trim()) {
+    try {
+      await sendInvoiceViaResend(opts);
+      return;
+    } catch (e) {
+      if (smtpFailure != null) {
+        const s1 = smtpFailure instanceof Error ? smtpFailure.message : String(smtpFailure);
+        const s2 = e instanceof Error ? e.message : String(e);
+        throw new Error(`فشل SMTP ثم Resend. SMTP: ${s1} | Resend: ${s2}`);
+      }
+      throw e;
+    }
+  }
+  if (smtpFailure != null) {
+    throw smtpFailure instanceof Error ? smtpFailure : new Error(String(smtpFailure));
+  }
+  throw new Error("لم يُضبط إرسال البريد (SMTP أو Resend).");
 }
 
 /**

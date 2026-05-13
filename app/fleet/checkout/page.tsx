@@ -7,9 +7,10 @@ import { getActiveBranches, getActiveBookingCitiesWithBranches } from "@/lib/bra
 import { getCustomerProfile } from "@/lib/customer-auth";
 import { e164ToLocalNine } from "@/lib/normalize-saudi-phone";
 import { getActiveRentalAddons } from "@/lib/rental-addon-data";
-import { getRentalPriceDisplayMode } from "@/lib/site-settings";
+import { getRentalPriceDisplayMode, getBookingOtpChannel } from "@/lib/site-settings";
 import { getActiveInterCityShippingRules } from "@/lib/inter-city-shipping";
 import { getActiveCheckoutOneTimeFees } from "@/lib/checkout-one-time-fees";
+import { isBookingCheckoutOtpStepRequired } from "@/lib/booking-checkout-otp";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +39,8 @@ export default async function FleetCheckoutPage({
     rentalPriceDisplayMode,
     interCityShippingRules,
     checkoutOneTimeFees,
+    bookingOtpChannel,
+    bookingCheckoutOtpRequired,
   ] = await Promise.all([
     getCarModelForCheckout(modelId),
     getActiveRentalAddons(),
@@ -47,6 +50,8 @@ export default async function FleetCheckoutPage({
     getRentalPriceDisplayMode(),
     getActiveInterCityShippingRules().catch(() => []),
     getActiveCheckoutOneTimeFees().catch(() => []),
+    getBookingOtpChannel(),
+    isBookingCheckoutOtpStepRequired(),
   ]);
 
   if (!car) {
@@ -91,6 +96,8 @@ export default async function FleetCheckoutPage({
         checkoutOneTimeFees={checkoutOneTimeFees}
         sessionCustomer={sessionCustomer}
         rentalPriceDisplayMode={rentalPriceDisplayMode}
+        bookingOtpChannel={bookingOtpChannel}
+        bookingCheckoutOtpRequired={bookingCheckoutOtpRequired}
       />
     </Suspense>
   );

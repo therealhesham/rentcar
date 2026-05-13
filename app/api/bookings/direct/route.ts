@@ -10,6 +10,10 @@ import {
   parsePickupCitySlugFromJson,
 } from "@/lib/direct-booking";
 import { getCustomerSessionUserId } from "@/lib/customer-auth";
+import {
+  isBookingCheckoutOtpStepRequired,
+  verifyAndConsumeBookingCheckoutOtp,
+} from "@/lib/booking-checkout-otp";
 
 export const dynamic = "force-dynamic";
 
@@ -106,6 +110,21 @@ export async function POST(request: Request) {
   const emailParsed = parseContactEmailFromJson(obj);
   if (!emailParsed.ok) {
     return NextResponse.json({ ok: false, error: emailParsed.error }, { status: 400 });
+  }
+
+  if (await isBookingCheckoutOtpStepRequired()) {
+    const localPhone = String(obj.phone ?? "")
+      .replace(/\s+/g, "")
+      .trim();
+    const phoneOtp = String(obj.phoneOtp ?? obj.otp ?? "").trim();
+    const verified = await verifyAndConsumeBookingCheckoutOtp({
+      phoneLocalNine: localPhone,
+      contactEmail: emailParsed.contactEmail,
+      codeRaw: phoneOtp,
+    });
+    if (!verified.ok) {
+      return NextResponse.json({ ok: false, error: verified.error }, { status: 400 });
+    }
   }
 
   const kycParsed = parseDirectBookingKycFromJson(obj);

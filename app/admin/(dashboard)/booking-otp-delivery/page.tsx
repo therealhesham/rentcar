@@ -1,0 +1,36 @@
+import { redirect } from "next/navigation";
+import { verifyAdminSession } from "@/lib/admin-auth";
+import { getBookingOtpChannel } from "@/lib/site-settings";
+import { isBookingOtpSmsUrlConfigured } from "@/lib/booking-checkout-otp";
+import { isOutgoingMailTransportConfigured } from "@/lib/booking-invoice-email";
+import { BookingOtpDeliveryForm } from "./BookingOtpDeliveryForm";
+
+export const dynamic = "force-dynamic";
+
+export default async function AdminBookingOtpDeliveryPage() {
+  if (!(await verifyAdminSession())) {
+    redirect("/admin/login");
+  }
+
+  const currentChannel = await getBookingOtpChannel();
+
+  return (
+    <>
+      <header className="mb-10">
+        <h1 className="text-3xl font-extrabold tracking-tight">رمز التحقق عند إتمام الحجز</h1>
+        <p className="mt-2 max-w-2xl text-on-surface-variant">
+          اختر كيف يستلم العميل رمز التحقق قبل تأكيد الحجز المباشر من الموقع: عبر رسالة نصية إلى
+          الجوال أو عبر البريد الإلكتروني الذي يُدخله في بيانات التواصل. الإرسال الفعلي يعتمد على
+          تهيئة الخادم (رابط SMS في البيئة، أو SMTP/Resend للبريد).
+        </p>
+      </header>
+
+      <BookingOtpDeliveryForm
+        key={currentChannel}
+        currentChannel={currentChannel}
+        smsUrlConfigured={isBookingOtpSmsUrlConfigured()}
+        mailConfigured={isOutgoingMailTransportConfigured()}
+      />
+    </>
+  );
+}

@@ -11,6 +11,7 @@ const nav = [
   { href: "/admin/home", label: "هيرو الرئيسية" },
   { href: "/admin/promo-banner", label: "البانر الترويجي" },
   { href: "/admin/rental-pricing-display", label: "عرض أسعار التأجير" },
+  { href: "/admin/booking-otp-delivery", label: "رمز التحقق (الحجز)" },
   { href: "/admin/vehicles", label: "المركبات" },
   { href: "/admin/categories", label: "فئات الأسطول" },
   { href: "/admin/rental-addons", label: "إضافات التأجير" },

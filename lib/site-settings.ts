@@ -161,6 +161,36 @@ export async function getHomeHeroSettings(): Promise<HomeHeroSettings> {
 
 export const SITE_KEY_RENTAL_PRICE_DISPLAY = "rental_price_display";
 
+/** قناة إرسال رمز التحقق عند إتمام الحجز المباشر (يحددها المسؤول). */
+export const SITE_KEY_BOOKING_OTP_CHANNEL = "booking_otp_channel";
+
+export type BookingOtpChannel = "OFF" | "SMS" | "EMAIL";
+
+const BOOKING_OTP_CHANNELS = new Set<BookingOtpChannel>(["OFF", "SMS", "EMAIL"]);
+
+export function parseBookingOtpChannel(raw: string | null | undefined): BookingOtpChannel {
+  const s = String(raw ?? "")
+    .trim()
+    .toUpperCase();
+  if (BOOKING_OTP_CHANNELS.has(s as BookingOtpChannel)) {
+    return s as BookingOtpChannel;
+  }
+  return "OFF";
+}
+
+export async function getBookingOtpChannel(): Promise<BookingOtpChannel> {
+  try {
+    const row = await prisma.siteSetting.findUnique({
+      where: { key: SITE_KEY_BOOKING_OTP_CHANNEL },
+      select: { value: true },
+    });
+    return parseBookingOtpChannel(row?.value);
+  } catch (e) {
+    console.error("[getBookingOtpChannel] قراءة إعداد القناة فشلت:", e);
+    return "OFF";
+  }
+}
+
 export async function getRentalPriceDisplayMode(): Promise<RentalPriceDisplayMode> {
   try {
     const row = await prisma.siteSetting.findUnique({

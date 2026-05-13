@@ -6,6 +6,7 @@ import {
   Gauge,
   Info,
   KeyRound,
+  Loader2,
   Shield,
   CheckCircle2,
   CalendarDays,
@@ -40,6 +41,7 @@ import { DELIVERY_ADDRESS_MIN_CHARS } from "@/lib/delivery-address";
 import { citySlugForBranchSlug, lookupInterCityFeeSar } from "@/lib/inter-city-shipping-client";
 import type { BookingCityBranchesOption } from "@/lib/booking-location-options";
 import type { RentalAddonDTO } from "@/lib/rental-addon-data";
+import type { BookingOtpChannel } from "@/lib/site-settings";
 import { sumCheckoutOneTimeFees } from "@/lib/checkout-one-time-fees";
 
 const GOLD = "#dbb878";
@@ -87,6 +89,9 @@ type Props = {
   checkoutOneTimeFees: Array<{ slug: string; labelAr: string; feeExclVatSar: number }>;
   sessionCustomer: { name: string; phoneLocal: string; email: string } | null;
   rentalPriceDisplayMode: RentalPriceDisplayMode;
+  /** قناة الإرسال كما حددها المسؤول (للنصوص فقط؛ إن لم تُهيأ القناة لا تُعرض الخطوة). */
+  bookingOtpChannel: BookingOtpChannel;
+  bookingCheckoutOtpRequired: boolean;
 };
 
 export function FleetCheckoutClient({
@@ -98,6 +103,8 @@ export function FleetCheckoutClient({
   checkoutOneTimeFees,
   sessionCustomer,
   rentalPriceDisplayMode,
+  bookingOtpChannel,
+  bookingCheckoutOtpRequired,
 }: Props) {
   const sp = useSearchParams();
   const router = useRouter();
@@ -124,8 +131,53 @@ export function FleetCheckoutClient({
   const [licenseDocUrl, setLicenseDocUrl] = useState<string | null>(null);
   const [kycFieldError, setKycFieldError] = useState<string | null>(null);
   const [uploadingKyc, setUploadingKyc] = useState<"id" | "license" | null>(null);
+  const [otpCooldownSec, setOtpCooldownSec] = useState(0);
+  const [otpSendBusy, setOtpSendBusy] = useState(false);
+  const [otpHint, setOtpHint] = useState<string | null>(null);
+  /** بعد نجاح «إرسال الرمز» — لا نطلب الـ6 أرقام في التحقق قبل ذلك (يتجنب خطأ يظهر مع Enter بالخطأ). */
+  const [checkoutOtpSendSucceeded, setCheckoutOtpSendSucceeded] = useState(false);
+  /** يُحدَّث من الخادم ليطابق دائماً ما يتحقق منه POST /api/bookings/direct */
+  const [resolvedCheckoutOtp, setResolvedCheckoutOtp] = useState<{
+    required: boolean;
+    channel: BookingOtpChannel;
+  } | null>(null);
+
+  const checkoutOtpChannelEff = resolvedCheckoutOtp?.channel ?? bookingOtpChannel;
+  const checkoutOtpRequiredEff = resolvedCheckoutOtp?.required ?? bookingCheckoutOtpRequired;
+
+  useEffect(() => {
+    setCheckoutOtpSendSucceeded(false);
+  }, [checkoutOtpRequiredEff, checkoutOtpChannelEff]);
 
   useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    let cancel = false;
+    void (async () => {
+      try {
+        const res = await fetch("/api/bookings/direct/otp-config", { cache: "no-store" });
+        const j = (await res.json()) as { ok?: boolean; channel?: string; required?: boolean };
+        if (cancel || j.ok !== true) return;
+        const ch = String(j.channel ?? "").trim().toUpperCase();
+        setResolvedCheckoutOtp({
+          required: Boolean(j.required),
+          channel:
+            ch === "SMS" || ch === "EMAIL" || ch === "OFF" ? (ch as BookingOtpChannel) : "OFF",
+        });
+      } catch {
+        /* الإبقاء على قيم الصفحة من السيرفر */
+      }
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (otpCooldownSec <= 0) return;
+    const id = window.setTimeout(() => setOtpCooldownSec((s) => Math.max(0, s - 1)), 1000);
+    return () => window.clearTimeout(id);
+  }, [otpCooldownSec]);
 
   useEffect(() => {
     try {
@@ -394,6 +446,105 @@ export function FleetCheckoutClient({
     }
   }
 
+  /** يمنع إرسال النموذج بالضغط على Enter من حقول الاسم/البريد/الجوال بالخطأ (السلوك الافتراضي للمتصفح). */
+  function handleCheckoutFormKeyDown(ev: React.KeyboardEvent<HTMLFormElement>) {
+    if (ev.key !== "Enter") return;
+    const t = ev.target as HTMLElement;
+    if (t.tagName !== "INPUT") return;
+    const inp = t as HTMLInputElement;
+    if (
+      inp.type === "submit" ||
+      inp.type === "button" ||
+      inp.type === "checkbox" ||
+      inp.type === "radio" ||
+      inp.type === "file"
+    ) {
+      return;
+    }
+    if (inp.name === "phoneOtp" && inp.value.replace(/\D/g, "").length >= 6) {
+      return;
+    }
+    ev.preventDefault();
+  }
+
+  async function handleSendPhoneOtp(ev: React.MouseEvent<HTMLButtonElement>) {
+    ev.preventDefault();
+    const form = ev.currentTarget.closest("form");
+    if (!form) return;
+    const fd = new FormData(form);
+    setError(null);
+    setOtpSendBusy(true);
+    setOtpHint(null);
+    setCheckoutOtpSendSucceeded(false);
+    try {
+      const cfgRes = await fetch("/api/bookings/direct/otp-config", { cache: "no-store" });
+      const cfg = (await cfgRes.json()) as { ok?: boolean; channel?: string; required?: boolean };
+      if (cfg.ok !== true || !cfg.required) {
+        setOtpHint("تعذّر إرسال الرمز — حدّث الصفحة أو راجع إعداد رمز التحقق من لوحة التحكم.");
+        setOtpSendBusy(false);
+        return;
+      }
+      const chRaw = String(cfg.channel ?? "").trim().toUpperCase();
+      const channel: BookingOtpChannel =
+        chRaw === "SMS" || chRaw === "EMAIL" || chRaw === "OFF" ? chRaw : "OFF";
+      if (channel === "OFF") {
+        setOtpHint("قناة إرسال الرمز غير مفعّلة.");
+        setOtpSendBusy(false);
+        return;
+      }
+      setResolvedCheckoutOtp({ required: true, channel });
+
+      const payload: Record<string, string> =
+        channel === "EMAIL"
+          ? { email: String(fd.get("email") ?? "").trim().toLowerCase() }
+          : {
+              phone: String(fd.get("phone") ?? "")
+                .replace(/\s+/g, "")
+                .trim(),
+            };
+      if (channel === "EMAIL") {
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email ?? "")) {
+          setOtpHint("أدخل بريداً إلكترونياً صالحاً ثم اطلب الرمز.");
+          setOtpSendBusy(false);
+          return;
+        }
+      } else if (!/^5\d{8}$/.test(payload.phone ?? "")) {
+        setOtpHint("أدخل رقم جوال صالحاً (9 أرقام تبدأ بـ 5) ثم اطلب الرمز.");
+        setOtpSendBusy(false);
+        return;
+      }
+
+      const res = await fetch("/api/bookings/direct/send-checkout-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        retryAfterSec?: number;
+      };
+      if (data.ok) {
+        setCheckoutOtpSendSucceeded(true);
+        setOtpHint(
+          channel === "EMAIL"
+            ? "تم إرسال الرمز. تحقق من علبة البريد الوارد (والبريد غير الهام)."
+            : "تم إرسال الرمز. تحقق من رسائل الجوال.",
+        );
+        setOtpCooldownSec(45);
+        return;
+      }
+      if (typeof data.retryAfterSec === "number" && data.retryAfterSec > 0) {
+        setOtpCooldownSec(data.retryAfterSec);
+      }
+      setOtpHint(data.error ?? "تعذّر إرسال الرمز.");
+    } catch {
+      setOtpHint("تعذّر الاتصال بالخادم.");
+    } finally {
+      setOtpSendBusy(false);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
@@ -406,6 +557,27 @@ export function FleetCheckoutClient({
     }
 
     const fd = new FormData(e.currentTarget);
+
+    let otpPolicy: { required: boolean; channel: BookingOtpChannel } = {
+      required: checkoutOtpRequiredEff,
+      channel: checkoutOtpChannelEff,
+    };
+    try {
+      const cfgRes = await fetch("/api/bookings/direct/otp-config", { cache: "no-store" });
+      const cfg = (await cfgRes.json()) as { ok?: boolean; channel?: string; required?: boolean };
+      if (cfg.ok === true) {
+        const ch = String(cfg.channel ?? "").trim().toUpperCase();
+        otpPolicy = {
+          required: Boolean(cfg.required),
+          channel:
+            ch === "SMS" || ch === "EMAIL" || ch === "OFF" ? (ch as BookingOtpChannel) : "OFF",
+        };
+        setResolvedCheckoutOtp(otpPolicy);
+      }
+    } catch {
+      /* الإبقاء على القيم الحالية */
+    }
+
     const name = String(fd.get("name") ?? "").trim();
     const phone = String(fd.get("phone") ?? "")
       .replace(/\s+/g, "")
@@ -462,6 +634,30 @@ export function FleetCheckoutClient({
       }
     }
 
+    let phoneOtpVal = "";
+    if (otpPolicy.required) {
+      if (!checkoutOtpSendSucceeded) {
+        setError(
+          otpPolicy.channel === "EMAIL"
+            ? "اضغط «إرسال الرمز» أولاً وانتظر ظهور رسالة النجاح باللون الأخضر تحت الزر، ثم أدخل الـ 6 أرقام من البريد."
+            : "اضغط «إرسال الرمز» أولاً وانتظر رسالة النجاح، ثم أدخل الـ 6 أرقام من الرسالة النصية.",
+        );
+        return;
+      }
+      const otpRaw = String(fd.get("phoneOtp") ?? "")
+        .replace(/\s+/g, "")
+        .trim();
+      if (!/^\d{6}$/.test(otpRaw)) {
+        setError(
+          otpPolicy.channel === "EMAIL"
+            ? "أدخل رمز التحقق المكوّن من 6 أرقام كما ورد في البريد بعد طلب الإرسال."
+            : "أدخل رمز التحقق المكوّن من 6 أرقام كما ورد في الرسالة النصية.",
+        );
+        return;
+      }
+      phoneOtpVal = otpRaw;
+    }
+
     const pickupMode: "BRANCH" | "DELIVERY" =
       trip.mode === "delivery" &&
       (((trip.deliveryLat != null &&
@@ -509,6 +705,9 @@ export function FleetCheckoutClient({
     }
     if (trip.pickupCitySlug) {
       body.pickupCity = trip.pickupCitySlug;
+    }
+    if (otpPolicy.required) {
+      body.phoneOtp = phoneOtpVal;
     }
 
     setPending(true);
@@ -884,6 +1083,7 @@ export function FleetCheckoutClient({
 
                 <form
                   onSubmit={handleSubmit}
+                  onKeyDown={handleCheckoutFormKeyDown}
                   className="rounded-3xl border border-[#ebe4d3] bg-white p-6 shadow-sm sm:p-8"
                 >
                   {sessionCustomer ? (
@@ -1000,6 +1200,69 @@ export function FleetCheckoutClient({
                       </div>
                     </div>
                   )}
+
+                  {checkoutOtpRequiredEff ? (
+                    <div className="mb-8 rounded-2xl border border-[#ebe4d3] bg-[#fdfbf6] p-5 sm:p-6">
+                      <div className="mb-4 flex items-start gap-3">
+                        <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#dbb878]/20 text-[#003749]">
+                          <Shield className="size-5" aria-hidden />
+                        </div>
+                        <div>
+                          <h3 className="text-[14px] font-extrabold text-[#003749]">
+                            {checkoutOtpChannelEff === "EMAIL"
+                              ? "التحقق من البريد الإلكتروني"
+                              : "التحقق من رقم الجوال"}
+                          </h3>
+                          <p className="mt-1 text-[12px] font-semibold leading-relaxed text-[#8a7752]">
+                            {checkoutOtpChannelEff === "EMAIL"
+                              ? "اطلب رمز التحقق إلى البريد المُدخل أعلاه (نفس بريد الفاتورة)، ثم أدخل الرمز قبل تأكيد الحجز."
+                              : "اطلب رمز التحقق إلى الجوال أعلاه، ثم أدخل الرقم الظاهر في الرسالة قبل تأكيد الحجز."}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
+                        <div className="group relative min-w-0 flex-1">
+                          <input
+                            type="text"
+                            name="phoneOtp"
+                            id="phone-otp"
+                            inputMode="numeric"
+                            autoComplete="one-time-code"
+                            maxLength={6}
+                            onInput={() => setError(null)}
+                            className="peer w-full rounded-xl border border-[#ebe4d3] bg-white px-4 pb-3 pt-6 text-[15px] font-extrabold tracking-[0.25em] text-[#003749] outline-none transition-all focus:border-[#dbb878] focus:ring-1 focus:ring-[#dbb878]"
+                            placeholder=" "
+                            dir="ltr"
+                          />
+                          <label
+                            htmlFor="phone-otp"
+                            className="absolute start-4 top-4 text-[13px] font-bold text-[#aaa08e] transition-all peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-[#dbb878] peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:text-[10px]"
+                          >
+                            رمز التحقق (6 أرقام)
+                          </label>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleSendPhoneOtp}
+                          disabled={otpSendBusy || otpCooldownSec > 0 || pending}
+                          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border-2 border-[#003749] bg-white px-5 py-3 text-[13px] font-extrabold text-[#003749] transition-colors hover:bg-[#003749] hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+                        >
+                          {otpSendBusy ? (
+                            <Loader2 className="size-4 animate-spin" aria-hidden />
+                          ) : null}
+                          {otpCooldownSec > 0 ? `إعادة الإرسال (${otpCooldownSec})` : "إرسال الرمز"}
+                        </button>
+                      </div>
+                      {otpHint ? (
+                        <p
+                          className={`mt-3 text-[12px] font-bold ${otpHint.startsWith("تم إرسال") ? "text-emerald-700" : "text-[#8a7752]"}`}
+                          role="status"
+                        >
+                          {otpHint}
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
 
                   {/* Terms Checkbox */}
                   <div className="mb-8 flex items-center gap-3">

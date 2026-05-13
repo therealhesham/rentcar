@@ -275,6 +275,18 @@ model BookingRequest {
   @@index([customerId])
 }
 
+/// رمز تحقق لمرة واحدة عند إتمام الحجز المباشر — الوجهة `phone:+9665…` أو `email:…`.
+model BookingCheckoutOtp {
+  id             Int      @id @default(autoincrement())
+  destinationKey String   @unique @db.VarChar(320)
+  codeHash       String   @db.VarChar(64)
+  expiresAt      DateTime
+  verifyAttempts Int      @default(0)
+  lastSentAt     DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
 enum BookingRequestKind {
   INQUIRY
   DIRECT
