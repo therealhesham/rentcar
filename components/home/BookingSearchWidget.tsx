@@ -1154,7 +1154,7 @@ export function BookingSearchWidget({ cities }: { cities: BookingCityBranchesOpt
                 <>
                   <Search className="size-4 shrink-0" aria-hidden />
                   <span className="text-[14px] font-extrabold tracking-wide">
-                    بحث المركبات المتاحة
+                    بحث 
                   </span>
                 </>
               )}
