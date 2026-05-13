@@ -33,7 +33,10 @@ import {
   type RentalTab,
 } from "@/lib/booking-search-shared";
 import { fleetDatetimesFromSubscriptionPack } from "@/lib/subscription-fleet-bridge";
-import type { SubscriptionPackMonths } from "@/lib/subscription-fleet-bridge";
+import {
+  MAX_SUBSCRIPTION_DURATION_MONTHS,
+  MIN_SUBSCRIPTION_DURATION_MONTHS,
+} from "@/lib/subscriptions/duration-options";
 import type { StoredFleetSearchContext } from "@/lib/fleet-search-storage";
 import { FLEET_SEARCH_STORAGE_KEY } from "@/lib/fleet-search-storage";
 
@@ -68,7 +71,7 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
   const [returnBranch, setReturnBranch] = useState("");
   const [pickupDt, setPickupDt] = useState("");
   const [dropoffDt, setDropoffDt] = useState("");
-  const [subPackMonths, setSubPackMonths] = useState<SubscriptionPackMonths>(3);
+  const [subPackMonths, setSubPackMonths] = useState(3);
   const [subPackStartYmd, setSubPackStartYmd] = useState(todayYmdLocalCo);
   const [deliveryLat, setDeliveryLat] = useState<number | null>(null);
   const [deliveryLng, setDeliveryLng] = useState<number | null>(null);
@@ -147,6 +150,16 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
     let effPickupDt = pickupDt;
     let effDropoffDt = dropoffDt;
     if (rental === "monthly_packages") {
+      if (
+        !Number.isInteger(subPackMonths) ||
+        subPackMonths < MIN_SUBSCRIPTION_DURATION_MONTHS ||
+        subPackMonths > MAX_SUBSCRIPTION_DURATION_MONTHS
+      ) {
+        setError(
+          `أدخل عدد أشهر الباقة بين ${MIN_SUBSCRIPTION_DURATION_MONTHS} و${MAX_SUBSCRIPTION_DURATION_MONTHS}.`,
+        );
+        return;
+      }
       const r = fleetDatetimesFromSubscriptionPack(subPackStartYmd, subPackMonths);
       if (!r) {
         setError("يوم بدء الباقة غير صالح.");

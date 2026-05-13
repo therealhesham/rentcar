@@ -111,7 +111,7 @@ export async function createSubscriptionPlan(data: FormData) {
   const mileageKmPerMonth = Number(data.get("mileageKmPerMonth"));
   const depositAmountSar = Number(data.get("depositAmountSar") ?? 0);
   const extraKmFeeSarPerKm = Number(data.get("extraKmFeeSarPerKm") ?? 3);
-  const durationOptionsCsv = String(data.get("durationOptionsCsv") ?? "1,3,6").trim();
+  const durationOptionsCsv = String(data.get("durationOptionsCsv") ?? "3,6,12").trim();
   parseDurationOptionsCsv(durationOptionsCsv);
 
   if (!slug || !/^[-a-z0-9]+$/.test(slug)) return fail("slug بالإنجليزية وفواصل بدون مسافات.");

@@ -6,9 +6,9 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { DdMmYyDateWithPicker } from "@/components/ui/DdMmYyDateWithPicker";
 import { formatYmdAsDdMmYy, parseDdMmYyToYmd } from "@/lib/booking-search-shared";
 import {
-  SUBSCRIPTION_PACK_MONTHS,
-  type SubscriptionPackMonths,
-} from "@/lib/subscription-fleet-bridge";
+  MAX_SUBSCRIPTION_DURATION_MONTHS,
+  MIN_SUBSCRIPTION_DURATION_MONTHS,
+} from "@/lib/subscriptions/duration-options";
 import { SarAmountWithSymbol } from "@/components/ui/SarAmountWithSymbol";
 
 function pad2(n: number): string {
@@ -27,22 +27,17 @@ type ApiPlan = {
   car: { name: string; image: string | null; alt: string | null };
 };
 
-function durationLabel(m: number): string {
-  if (m === 1) return "شهر";
-  return `${m} أشهر`;
-}
-
 type Props = {
-  months: SubscriptionPackMonths;
+  months: number;
   startYmd: string;
-  onMonthsChange: (m: SubscriptionPackMonths) => void;
+  onMonthsChange: (m: number) => void;
   onStartYmdChange: (ymd: string) => void;
   /** مواقع الاستلام/الإرجاع أو التوصيل — داخل نفس السكشن البصري */
   children?: ReactNode;
 };
 
 /**
- * شريط داخل widget الحجز عند تبويب «الباقات الشهرية»: مدة الاشتراك، يوم البداية، وبطاقات سريعة للخطط.
+ * شريط داخل widget الحجز عند تبويب «الباقات الشهرية»: عدد الأشهر (3–6)، يوم البداية، وبطاقات سريعة للخطط.
  * الحالة (المدة ويوم البداية) تُدار من الأب لربطها ببحث الأسطول دون حقول تاريخ مكررة.
  */
 export function SubscriptionPackagesInWidget({
@@ -54,6 +49,7 @@ export function SubscriptionPackagesInWidget({
 }: Props) {
   const [plans, setPlans] = useState<ApiPlan[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [plansLoading, setPlansLoading] = useState(true);
   const [startDraft, setStartDraft] = useState(() => formatYmdAsDdMmYy(startYmd));
 
   useEffect(() => {
@@ -62,6 +58,7 @@ export function SubscriptionPackagesInWidget({
 
   useEffect(() => {
     let cancelled = false;
+    setPlansLoading(true);
     (async () => {
       try {
         const res = await fetch("/api/subscriptions/plans?limit=8&page=1", {
@@ -78,6 +75,8 @@ export function SubscriptionPackagesInWidget({
           setPlans([]);
           setLoadError("تعذّر تحميل باقات الاشتراك.");
         }
+      } finally {
+        if (!cancelled) setPlansLoading(false);
       }
     })();
     return () => {
@@ -100,7 +99,7 @@ export function SubscriptionPackagesInWidget({
             اشتراك شهري بالسيارة
           </p>
           <h3 className="mt-0.5 text-sm font-extrabold text-[#003749] sm:text-[15px]">
-            باقات شهرية — اختر المدة ويوم البداية ثم الباقة
+            باقات شهرية — اختر عدد الأشهر (3–6) ويوم البداية ثم الباقة
           </h3>
           <p className="mt-1 max-w-xl text-[11px] leading-relaxed text-on-surface-variant">
             تُحسب نهاية الباقة تلقائياً من تاريخ البداية وعدد الأشهر، وتُستخدم أيضاً لحساب مدة البحث في الأسطول
@@ -118,22 +117,39 @@ export function SubscriptionPackagesInWidget({
       <div className="mt-3 flex flex-wrap items-end gap-3">
         <div>
           <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-[#003749]/55">
-            مدة الاشتراك
+            عدد أشهر الباقة
           </span>
-          <div className="flex flex-wrap gap-1.5">
-            {SUBSCRIPTION_PACK_MONTHS.map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => onMonthsChange(m)}
-                className={`rounded-full px-3 py-1.5 text-[11px] font-extrabold transition-colors ${months === m
-                    ? "bg-[#003749] text-white shadow-sm"
-                    : "border border-[#003749]/20 bg-white text-[#003749]"
-                  }`}
-              >
-                {durationLabel(m)}
-              </button>
-            ))}
+          <div className="flex flex-wrap items-end gap-2">
+            <input
+              type="number"
+              inputMode="numeric"
+              min={MIN_SUBSCRIPTION_DURATION_MONTHS}
+              max={MAX_SUBSCRIPTION_DURATION_MONTHS}
+              step={1}
+              value={months}
+              onChange={(ev) => {
+                const raw = ev.target.value;
+                if (raw === "") return;
+                const n = Number(raw);
+                if (!Number.isInteger(n)) return;
+                onMonthsChange(
+                  Math.min(
+                    MAX_SUBSCRIPTION_DURATION_MONTHS,
+                    Math.max(MIN_SUBSCRIPTION_DURATION_MONTHS, n),
+                  ),
+                );
+              }}
+              onBlur={() => {
+                if (!Number.isInteger(months) || months < MIN_SUBSCRIPTION_DURATION_MONTHS) {
+                  onMonthsChange(MIN_SUBSCRIPTION_DURATION_MONTHS);
+                }
+              }}
+              dir="ltr"
+              className="w-[5.5rem] rounded-xl border border-[#003749]/20 bg-white px-2.5 py-1.5 text-center text-[13px] font-extrabold tabular-nums text-[#003749] shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-[#dbb878]/40"
+            />
+            <span className="pb-1 text-[10px] font-semibold text-on-surface-variant">
+              شهراً ({MIN_SUBSCRIPTION_DURATION_MONTHS}–{MAX_SUBSCRIPTION_DURATION_MONTHS})
+            </span>
           </div>
         </div>
         <div>
@@ -184,9 +200,9 @@ export function SubscriptionPackagesInWidget({
 
       {loadError ? (
         <p className="mt-2 text-[11px] font-bold text-red-700">{loadError}</p>
-      ) : plans.length === 0 ? (
+      ) : plansLoading && plans.length === 0 ? (
         <p className="mt-2 text-[11px] text-on-surface-variant">جاري تحميل الباقات…</p>
-      ) : (
+      ) : plans.length > 0 ? (
         <ul className="mt-3 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {plans.map((p) => {
             const img = p.car.image?.trim() || null;
@@ -227,7 +243,7 @@ export function SubscriptionPackagesInWidget({
             );
           })}
         </ul>
-      )}
+      ) : null}
       {children ? (
         <div className="mt-4 border-t border-[#dbb878]/30 pt-4 sm:mt-5 sm:pt-5">{children}</div>
       ) : null}

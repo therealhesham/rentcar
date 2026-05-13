@@ -2,7 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { parseDurationOptionsCsv } from "@/lib/subscriptions/duration-options";
+import {
+  MAX_SUBSCRIPTION_DURATION_MONTHS,
+  MIN_SUBSCRIPTION_DURATION_MONTHS,
+} from "@/lib/subscriptions/duration-options";
 import { parseSubscriptionStartDateYmd } from "@/lib/subscriptions/start-date";
 import { addUtcCalendarMonths, startOfUtcDay } from "@/lib/subscriptions/utc-calendar";
 
@@ -13,7 +16,7 @@ export type SubscribeFormPlan = {
 
 type Props = {
   plan: SubscribeFormPlan;
-  /** من الرابط ?months= — يُقيَّد بما تسمح به الخطة */
+  /** من الرابط ?months= — يُقيَّد بين الحد الأدنى والأقصى */
   initialDurationMonths?: number;
   /** من الرابط ?start=YYYY-MM-DD */
   initialStartDateYmd?: string;
@@ -28,9 +31,12 @@ function todayYmdLocal(): string {
   return `${t.getFullYear()}-${pad2(t.getMonth() + 1)}-${pad2(t.getDate())}`;
 }
 
-function normalizeDuration(options: number[], preset?: number): number {
-  if (preset != null && options.includes(preset)) return preset;
-  return options[0] ?? 1;
+function clampDurationMonths(m: number | undefined): number {
+  if (m == null || !Number.isInteger(m)) return MIN_SUBSCRIPTION_DURATION_MONTHS;
+  return Math.min(
+    MAX_SUBSCRIPTION_DURATION_MONTHS,
+    Math.max(MIN_SUBSCRIPTION_DURATION_MONTHS, m),
+  );
 }
 
 function normalizeStart(preset?: string): string {
@@ -47,22 +53,16 @@ export function SubscribeForm({
   initialStartDateYmd,
 }: Props) {
   const router = useRouter();
-  const options = parseDurationOptionsCsv(plan.durationOptionsCsv);
-  const [duration, setDuration] = useState(() =>
-    normalizeDuration(options, initialDurationMonths),
-  );
-  const [startDate, setStartDate] = useState(() =>
-    normalizeStart(initialStartDateYmd),
-  );
+  const [duration, setDuration] = useState(() => clampDurationMonths(initialDurationMonths));
+  const [startDate, setStartDate] = useState(() => normalizeStart(initialStartDateYmd));
   const [autoRenew, setAutoRenew] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const opts = parseDurationOptionsCsv(plan.durationOptionsCsv);
-    setDuration(normalizeDuration(opts, initialDurationMonths));
+    setDuration(clampDurationMonths(initialDurationMonths));
     setStartDate(normalizeStart(initialStartDateYmd));
-  }, [plan.slug, plan.durationOptionsCsv, initialDurationMonths, initialStartDateYmd]);
+  }, [plan.slug, initialDurationMonths, initialStartDateYmd]);
 
   const previewEndIso = useMemo(() => {
     const p = parseSubscriptionStartDateYmd(startDate);
@@ -70,11 +70,6 @@ export function SubscribeForm({
     const dayStart = startOfUtcDay(p.date);
     return addUtcCalendarMonths(dayStart, duration).toISOString();
   }, [startDate, duration]);
-
-  function durationArabicSegment(m: number): string {
-    if (m === 1) return "شهر";
-    return `${m} أشهر`;
-  }
 
   async function subscribe() {
     setBusy(true);
@@ -138,24 +133,33 @@ export function SubscribeForm({
       </div>
 
       <div>
-        <p className="text-[11px] font-bold uppercase tracking-wide text-[#003749]/65">
-          مدة الباقة
+        <label
+          htmlFor="sub-duration-months"
+          className="text-[11px] font-bold uppercase tracking-wide text-[#003749]/65"
+        >
+          مدة الباقة (بالأشهر)
+        </label>
+        <p className="mt-1 text-xs leading-relaxed text-on-surface-variant">
+          أدخل عدد الأشهر بنفسك — الحد الأدنى {MIN_SUBSCRIPTION_DURATION_MONTHS} أشهر، والحد الأقصى{" "}
+          {MAX_SUBSCRIPTION_DURATION_MONTHS}.
         </p>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {options.map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => setDuration(m)}
-              className={`rounded-full px-4 py-2 text-[12px] font-extrabold transition-colors ${duration === m
-                  ? "bg-[#ea580c] text-white shadow-sm"
-                  : "border border-[#003749]/20 bg-white text-[#003749]"
-                }`}
-            >
-              {durationArabicSegment(m)}
-            </button>
-          ))}
-        </div>
+        <input
+          id="sub-duration-months"
+          type="number"
+          inputMode="numeric"
+          min={MIN_SUBSCRIPTION_DURATION_MONTHS}
+          max={MAX_SUBSCRIPTION_DURATION_MONTHS}
+          step={1}
+          value={duration}
+          onChange={(e) => {
+            const v = Number(e.target.value);
+            if (e.target.value === "" || Number.isNaN(v)) return;
+            setDuration(clampDurationMonths(v));
+          }}
+          onBlur={() => setDuration((d) => clampDurationMonths(d))}
+          className="mt-3 w-full max-w-[10rem] rounded-xl border border-[#003749]/25 bg-white px-3 py-2 text-sm font-semibold shadow-sm tabular-nums"
+          dir="ltr"
+        />
       </div>
 
       <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold">

@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { getCustomerSessionUserId } from "@/lib/customer-auth";
 import { prisma } from "@/lib/prisma";
-import { isAllowedDuration } from "@/lib/subscriptions/duration-options";
+import {
+  isAllowedDuration,
+  MAX_SUBSCRIPTION_DURATION_MONTHS,
+  MIN_SUBSCRIPTION_DURATION_MONTHS,
+} from "@/lib/subscriptions/duration-options";
 import { subscriptionSubtotalExclVat, vatFromSubtotal } from "@/lib/subscriptions/pricing";
 import { parseSubscriptionStartDateYmd } from "@/lib/subscriptions/start-date";
 
@@ -95,8 +99,14 @@ export async function POST(req: Request) {
 
   if (!planSlug) return bad("planSlug مطلوب.");
   if (!startDateRaw) return bad("اختر يوم بدء الباقة.");
-  if (!Number.isInteger(durationMonths) || durationMonths < 1) {
-    return bad("اختر عدد شهر صالح.");
+  if (
+    !Number.isInteger(durationMonths) ||
+    durationMonths < MIN_SUBSCRIPTION_DURATION_MONTHS ||
+    durationMonths > MAX_SUBSCRIPTION_DURATION_MONTHS
+  ) {
+    return bad(
+      `اختر مدة اشتراك صالحة بين ${MIN_SUBSCRIPTION_DURATION_MONTHS} و${MAX_SUBSCRIPTION_DURATION_MONTHS} شهراً.`,
+    );
   }
 
   const startParsed = parseSubscriptionStartDateYmd(startDateRaw);

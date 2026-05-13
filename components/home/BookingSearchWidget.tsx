@@ -37,7 +37,10 @@ import {
   type RentalTab,
 } from "@/lib/booking-search-shared";
 import { fleetDatetimesFromSubscriptionPack } from "@/lib/subscription-fleet-bridge";
-import type { SubscriptionPackMonths } from "@/lib/subscription-fleet-bridge";
+import {
+  MAX_SUBSCRIPTION_DURATION_MONTHS,
+  MIN_SUBSCRIPTION_DURATION_MONTHS,
+} from "@/lib/subscriptions/duration-options";
 import type { BookingBranchOption, BookingCityBranchesOption } from "@/lib/booking-location-options";
 import {
   DELIVERY_ADDRESS_MAX_CHARS,
@@ -149,7 +152,7 @@ export function BookingSearchWidget({ cities }: { cities: BookingCityBranchesOpt
   const [pickupTimeDraft, setPickupTimeDraft] = useState("09:00");
   const [dropoffDateDraft, setDropoffDateDraft] = useState("");
   const [dropoffTimeDraft, setDropoffTimeDraft] = useState("09:00");
-  const [subPackMonths, setSubPackMonths] = useState<SubscriptionPackMonths>(3);
+  const [subPackMonths, setSubPackMonths] = useState(3);
   const [subPackStartYmd, setSubPackStartYmd] = useState(todayYmdLocalForPack);
   const [deliveryLat, setDeliveryLat] = useState<number | null>(null);
   const [deliveryLng, setDeliveryLng] = useState<number | null>(null);
@@ -310,6 +313,16 @@ export function BookingSearchWidget({ cities }: { cities: BookingCityBranchesOpt
     let effPickupDt = pickupDt;
     let effDropoffDt = dropoffDt;
     if (rental === "monthly_packages") {
+      if (
+        !Number.isInteger(subPackMonths) ||
+        subPackMonths < MIN_SUBSCRIPTION_DURATION_MONTHS ||
+        subPackMonths > MAX_SUBSCRIPTION_DURATION_MONTHS
+      ) {
+        setError(
+          `أدخل عدد أشهر الباقة بين ${MIN_SUBSCRIPTION_DURATION_MONTHS} و${MAX_SUBSCRIPTION_DURATION_MONTHS}.`,
+        );
+        return;
+      }
       const r = fleetDatetimesFromSubscriptionPack(subPackStartYmd, subPackMonths);
       if (!r) {
         setError("يوم بدء الباقة غير صالح.");

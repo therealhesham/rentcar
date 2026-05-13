@@ -4,7 +4,11 @@ import { SiteFooter } from "@/components/home/SiteFooter";
 import { SiteNav } from "@/components/shared/SiteNav";
 import { prisma } from "@/lib/prisma";
 import { SarAmountWithSymbol } from "@/components/ui/SarAmountWithSymbol";
-import { parseDurationOptionsCsv } from "@/lib/subscriptions/duration-options";
+import {
+  MAX_SUBSCRIPTION_DURATION_MONTHS,
+  MIN_SUBSCRIPTION_DURATION_MONTHS,
+  parseDurationOptionsCsv,
+} from "@/lib/subscriptions/duration-options";
 import { subscriptionSubtotalExclVat, vatFromSubtotal } from "@/lib/subscriptions/pricing";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +27,10 @@ export default async function SubscriptionsLandingPage({
   const presetStartRaw =
     typeof params?.start === "string" ? params.start.trim() : "";
   const widgetPreset =
-    [1, 3, 6].includes(presetMonthsNum) && /^\d{4}-\d{2}-\d{2}$/.test(presetStartRaw)
+    Number.isInteger(presetMonthsNum) &&
+    presetMonthsNum >= MIN_SUBSCRIPTION_DURATION_MONTHS &&
+    presetMonthsNum <= MAX_SUBSCRIPTION_DURATION_MONTHS &&
+    /^\d{4}-\d{2}-\d{2}$/.test(presetStartRaw)
       ? { months: presetMonthsNum, start: presetStartRaw }
       : null;
   const planLinkSuffix = widgetPreset
@@ -70,11 +77,7 @@ export default async function SubscriptionsLandingPage({
             <p className="mt-1 text-[12px] font-semibold text-on-surface-variant">
               مدة{" "}
               <span className="tabular-nums text-[#ea580c]" dir="ltr">
-                {widgetPreset.months === 1
-                  ? "شهر"
-                  : widgetPreset.months === 3
-                    ? "3 أشهر"
-                    : "6 أشهر"}
+                {widgetPreset.months} أشهر
               </span>
               {" · "}
               يوم بدء الباقة:{" "}
@@ -94,7 +97,8 @@ export default async function SubscriptionsLandingPage({
             باقات السيارات شهرية مرنة
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-on-surface-variant sm:text-[15px]">
-            ادفع شهرياً، اختر مدة الباقة (شهر أو 3 أو 6 أشهر)، وحدّد يوم بدء الباقة فقط — تُحسب نهاية المدة
+            ادفع شهرياً، اختر مدة الباقة (من {MIN_SUBSCRIPTION_DURATION_MONTHS} إلى{" "}
+            {MAX_SUBSCRIPTION_DURATION_MONTHS} شهراً)، وحدّد يوم بدء الباقة فقط — تُحسب نهاية المدة
             تلقائياً، مع شفافية في البدلات والعربون.
           </p>
         </header>

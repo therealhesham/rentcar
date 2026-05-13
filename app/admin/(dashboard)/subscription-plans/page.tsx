@@ -91,7 +91,7 @@ export default async function AdminSubscriptionPlansPage() {
           </label>
           <label className="flex flex-col gap-1">
             مدّد مخزّنة (فواصل)
-            <input name="durationOptionsCsv" defaultValue="1,3,6" className="rounded-xl border px-3 py-2" dir="ltr" />
+            <input name="durationOptionsCsv" defaultValue="3,6,12" className="rounded-xl border px-3 py-2" dir="ltr" />
           </label>
           <div className="flex flex-wrap gap-4">
             <label className="inline-flex items-center gap-2 font-semibold">

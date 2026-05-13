@@ -319,8 +319,8 @@ model SubscriptionPlan {
   depositAmountSar       Int             @default(0)
   /// رسوم كل كيلومتر إضافي بعد استهلاك البدل (بالريال).
   extraKmFeeSarPerKm    Int             @default(3)
-  /// قيم شهرية مسموحة مفصولة بفواصل — المعروض علناً شهر أو 3 أو 6 أشهر؛ يمكن للاحتياط احتواء قيم لا تُعرض بعد التصفية
-  durationOptionsCsv      String             @default("1,3,6") @db.VarChar(32)
+  /// أرقام شهرية اختيارية مفصولة بفواصل (عرض/إرشاد)؛ السماح الفعلي للعميل 3–6 أشهر في التطبيق
+  durationOptionsCsv      String             @default("3,6,12") @db.VarChar(32)
   isActive               Boolean         @default(true)
   sortOrder              Int             @default(0)
   createdAt              DateTime        @default(now())

@@ -7,6 +7,10 @@ import { SiteNav } from "@/components/shared/SiteNav";
 import type { SubscribeFormPlan } from "@/components/subscriptions/SubscribeForm";
 import { SubscribeForm } from "@/components/subscriptions/SubscribeForm";
 import { prisma } from "@/lib/prisma";
+import {
+  MAX_SUBSCRIPTION_DURATION_MONTHS,
+  MIN_SUBSCRIPTION_DURATION_MONTHS,
+} from "@/lib/subscriptions/duration-options";
 import { SarAmountWithSymbol } from "@/components/ui/SarAmountWithSymbol";
 
 export const dynamic = "force-dynamic";
@@ -41,7 +45,12 @@ export default async function SubscriptionPlanDetailPage(ctx: {
   const monthsRaw = Array.isArray(q.months) ? q.months[0] : q.months;
   const startRaw = Array.isArray(q.start) ? q.start[0] : q.start;
   const pm = Number(monthsRaw);
-  const initialDurationMonths = [1, 3, 6].includes(pm) ? pm : undefined;
+  const initialDurationMonths =
+    Number.isInteger(pm) &&
+    pm >= MIN_SUBSCRIPTION_DURATION_MONTHS &&
+    pm <= MAX_SUBSCRIPTION_DURATION_MONTHS
+      ? pm
+      : undefined;
   const initialStartDateYmd =
     typeof startRaw === "string" && /^\d{4}-\d{2}-\d{2}$/.test(startRaw.trim())
       ? startRaw.trim()

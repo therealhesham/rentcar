@@ -1,9 +1,5 @@
 import { addLocalCalendarMonths, toDatetimeLocalValue } from "@/lib/booking-search-shared";
 
-/** أشهر باقة الاشتراك المعروضة في الـ widget */
-export const SUBSCRIPTION_PACK_MONTHS = [1, 3, 6] as const;
-export type SubscriptionPackMonths = (typeof SUBSCRIPTION_PACK_MONTHS)[number];
-
 /**
  * يحوّل يوم بدء الباقة (محلي yyyy-mm-dd) + عدد أشهر تقويمية إلى قيم `datetime-local`
  * متوافقة مع بحث الأسطول (مدة بالأيام بين الاستلام والتسليم).

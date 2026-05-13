@@ -63,7 +63,7 @@ export function rentalDropoffHint(rental: RentalTab): string | undefined {
   if (rental === "weekly") return "يُحدَّد تلقائياً بعد أسبوع من وقت الاستلام.";
   if (rental === "monthly") return "يُحدَّد تلقائياً بعد شهر تقويمي من الاستلام.";
   if (rental === "monthly_packages") {
-    return "فترة شهر تقويمي أساساً للبحث؛ التسعير وفق الباقات الشهرية المعروضة.";
+    return "الباقات من 3 أشهر فما فوق؛ نهاية البحث تُحسب من يوم البداية والمدة التي اخترتها.";
   }
   return undefined;
 }

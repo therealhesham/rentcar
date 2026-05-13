@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { addUtcCalendarMonths, startOfUtcDay } from "@/lib/subscriptions/utc-calendar";
+import {
+  MAX_SUBSCRIPTION_DURATION_MONTHS,
+  MIN_SUBSCRIPTION_DURATION_MONTHS,
+} from "@/lib/subscriptions/duration-options";
 
 export type SerializedSubscription = {
   id: number;
@@ -195,18 +199,11 @@ export function SubscriptionManageClient({ rows, highlightedId }: Props) {
               </span>
             )}
             {["ACTIVE"].includes(s.status) ? (
-              <>
-                {[1, 3, 6].map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    className="rounded-xl border border-[#003749] px-4 py-2 text-[11px] font-black text-[#003749]"
-                    onClick={() => renew(s.id, m)}
-                  >
-                    تجديد {m === 1 ? "شهر" : `${m} أشهر`}
-                  </button>
-                ))}
-              </>
+              <RenewBlock
+                subscriptionId={s.id}
+                defaultMonths={s.durationMonths}
+                onRenew={renew}
+              />
             ) : null}
             {["PENDING", "ACTIVE"].includes(s.status) ? (
               <button type="button" className="text-xs font-bold text-red-700 underline" onClick={() => cancel(s.id)}>
@@ -225,6 +222,54 @@ export function SubscriptionManageClient({ rows, highlightedId }: Props) {
           .
         </p>
       ) : null}
+    </div>
+  );
+}
+
+function RenewBlock({
+  subscriptionId,
+  defaultMonths,
+  onRenew,
+}: {
+  subscriptionId: number;
+  defaultMonths: number;
+  onRenew: (id: number, months: number) => Promise<void>;
+}) {
+  const clamp = (m: number) =>
+    Math.min(
+      MAX_SUBSCRIPTION_DURATION_MONTHS,
+      Math.max(MIN_SUBSCRIPTION_DURATION_MONTHS, Math.round(m)),
+    );
+  const [months, setMonths] = useState(() => clamp(defaultMonths));
+
+  return (
+    <div className="flex flex-wrap items-end gap-2 rounded-xl border border-[#003749]/20 bg-[#fdfbf8] px-3 py-2">
+      <label className="flex flex-col gap-1 text-[11px] font-bold text-[#003749]/80">
+        أشهر التجديد
+        <input
+          type="number"
+          inputMode="numeric"
+          min={MIN_SUBSCRIPTION_DURATION_MONTHS}
+          max={MAX_SUBSCRIPTION_DURATION_MONTHS}
+          step={1}
+          value={months}
+          onChange={(e) => {
+            const v = Number(e.target.value);
+            if (e.target.value === "" || Number.isNaN(v)) return;
+            setMonths(clamp(v));
+          }}
+          onBlur={() => setMonths((m) => clamp(m))}
+          className="w-[5.5rem] rounded-lg border border-[#003749]/25 bg-white px-2 py-1.5 text-[12px] font-black tabular-nums text-[#003749]"
+          dir="ltr"
+        />
+      </label>
+      <button
+        type="button"
+        className="rounded-xl border border-[#003749] bg-[#003749] px-4 py-2 text-[11px] font-black text-white"
+        onClick={() => onRenew(subscriptionId, months)}
+      >
+        تجديد
+      </button>
     </div>
   );
 }
