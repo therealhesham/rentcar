@@ -37,6 +37,7 @@ import { DELIVERY_ADDRESS_MIN_CHARS } from "@/lib/delivery-address";
 import { citySlugForBranchSlug, lookupInterCityFeeSar } from "@/lib/inter-city-shipping-client";
 import type { BookingCityBranchesOption } from "@/lib/booking-location-options";
 import type { RentalAddonDTO } from "@/lib/rental-addon-data";
+import { sumCheckoutOneTimeFees } from "@/lib/checkout-one-time-fees";
 
 const GOLD = "#dbb878";
 const GOLD_DARK = "#c9a356";
@@ -80,6 +81,7 @@ type Props = {
   branchBySlug: Record<string, string>;
   bookingCities: BookingCityBranchesOption[];
   interCityShippingRules: Array<{ fromSlug: string; toSlug: string; feeExclVatSar: number }>;
+  checkoutOneTimeFees: Array<{ slug: string; labelAr: string; feeExclVatSar: number }>;
   sessionCustomer: { name: string; phoneLocal: string; email: string } | null;
   rentalPriceDisplayMode: RentalPriceDisplayMode;
 };
@@ -90,6 +92,7 @@ export function FleetCheckoutClient({
   branchBySlug,
   bookingCities,
   interCityShippingRules,
+  checkoutOneTimeFees,
   sessionCustomer,
   rentalPriceDisplayMode,
 }: Props) {
@@ -286,12 +289,17 @@ export function FleetCheckoutClient({
     return `رسوم شحن بين المدن (${a} → ${b})`;
   }, [interCityShippingFeeSar, trip.pickupCitySlug, trip.returnCitySlug, bookingCities]);
 
+  const checkoutFeesSumExclTax = useMemo(
+    () => sumCheckoutOneTimeFees(checkoutOneTimeFees),
+    [checkoutOneTimeFees],
+  );
+
   const totals = computeCheckoutTotals(
     car.pricePerDayExclTax,
     trip.days,
     car.vatRatePercent,
     selectedRows.map((a) => ({ pricePerDay: a.pricePerDay })),
-    { oneTimeFeesExclTax: interCityShippingFeeSar },
+    { oneTimeFeesExclTax: interCityShippingFeeSar + checkoutFeesSumExclTax },
   );
 
   useEffect(() => {
@@ -850,10 +858,21 @@ export function FleetCheckoutClient({
                             {interCityShippingLabelAr}
                           </span>
                           <span className="shrink-0 font-bold text-[#003749] tabular-nums" dir="ltr">
-                            {formatSarAmount(totals.oneTimeFeesExclTax)} <SarCurrencyGlyph />
+                            {formatSarAmount(interCityShippingFeeSar)} <SarCurrencyGlyph />
                           </span>
                         </div>
                       ) : null}
+
+                      {checkoutOneTimeFees.map((f) => (
+                        <div key={f.slug} className="flex justify-between text-[13px]">
+                          <span className="max-w-[60%] text-end text-[12px] font-semibold leading-snug text-[#6b5a3b]">
+                            {f.labelAr}
+                          </span>
+                          <span className="shrink-0 font-bold text-[#003749] tabular-nums" dir="ltr">
+                            {formatSarAmount(f.feeExclVatSar)} <SarCurrencyGlyph />
+                          </span>
+                        </div>
+                      ))}
 
                       <div className="flex justify-between text-[13px]">
                         <span className="font-semibold text-[#6b5a3b]">ضريبة القيمة المضافة ({car.vatRatePercent}%)</span>

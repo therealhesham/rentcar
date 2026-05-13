@@ -607,16 +607,28 @@ export function PaymentClient({ booking }: Props) {
                     </>
                   }
                 />
-                {booking.totals.oneTimeFeesExclTax > 0 && booking.interCityShipping ? (
+                {booking.interCityShipping && booking.interCityShipping.feeExclVatSar > 0 ? (
                   <Row
                     label={booking.interCityShipping.labelAr}
                     value={
                       <>
-                        {formatSarAmount(booking.totals.oneTimeFeesExclTax)} <SarCurrencyGlyph />
+                        {formatSarAmount(booking.interCityShipping.feeExclVatSar)}{" "}
+                        <SarCurrencyGlyph />
                       </>
                     }
                   />
                 ) : null}
+                {booking.checkoutOneTimeFees.map((f) => (
+                  <Row
+                    key={f.slug}
+                    label={f.labelAr}
+                    value={
+                      <>
+                        {formatSarAmount(f.feeExclVatSar)} <SarCurrencyGlyph />
+                      </>
+                    }
+                  />
+                ))}
                 <Row
                   label={`ضريبة القيمة المضافة ${booking.car.vatRatePercent}%`}
                   value={

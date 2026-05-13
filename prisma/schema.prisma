@@ -69,6 +69,20 @@ model InterCityShippingFee {
   @@index([isActive, sortOrder])
 }
 
+/// رسوم لمرة واحدة تُضاف تلقائياً عند إتمام حجز الأسطول (مثل تفويض / إبرام عقد) — غير شامل الضريبة.
+model CheckoutOneTimeFee {
+  id            Int      @id @default(autoincrement())
+  slug          String   @unique @db.VarChar(64)
+  labelAr       String   @db.VarChar(255)
+  feeExclVatSar Int
+  isActive      Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
 /// فرع استلام داخل مدينة (مفتاح مستقر `slug` يطابق قيم الحجز والروابط).
 model Branch {
   id        Int      @id @default(autoincrement())

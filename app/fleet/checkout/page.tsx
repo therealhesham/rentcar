@@ -9,6 +9,7 @@ import { e164ToLocalNine } from "@/lib/normalize-saudi-phone";
 import { getActiveRentalAddons } from "@/lib/rental-addon-data";
 import { getRentalPriceDisplayMode } from "@/lib/site-settings";
 import { getActiveInterCityShippingRules } from "@/lib/inter-city-shipping";
+import { getActiveCheckoutOneTimeFees } from "@/lib/checkout-one-time-fees";
 
 export const dynamic = "force-dynamic";
 
@@ -28,16 +29,25 @@ export default async function FleetCheckoutPage({
     redirect("/fleet");
   }
 
-  const [car, addons, branchRows, bookingCities, profile, rentalPriceDisplayMode, interCityShippingRules] =
-    await Promise.all([
-      getCarModelForCheckout(modelId),
-      getActiveRentalAddons(),
-      getActiveBranches().catch(() => []),
-      getActiveBookingCitiesWithBranches().catch(() => []),
-      getCustomerProfile(),
-      getRentalPriceDisplayMode(),
-      getActiveInterCityShippingRules().catch(() => []),
-    ]);
+  const [
+    car,
+    addons,
+    branchRows,
+    bookingCities,
+    profile,
+    rentalPriceDisplayMode,
+    interCityShippingRules,
+    checkoutOneTimeFees,
+  ] = await Promise.all([
+    getCarModelForCheckout(modelId),
+    getActiveRentalAddons(),
+    getActiveBranches().catch(() => []),
+    getActiveBookingCitiesWithBranches().catch(() => []),
+    getCustomerProfile(),
+    getRentalPriceDisplayMode(),
+    getActiveInterCityShippingRules().catch(() => []),
+    getActiveCheckoutOneTimeFees().catch(() => []),
+  ]);
 
   if (!car) {
     redirect("/fleet");
@@ -78,6 +88,7 @@ export default async function FleetCheckoutPage({
         branchBySlug={branchBySlug}
         bookingCities={bookingCities}
         interCityShippingRules={interCityShippingRules}
+        checkoutOneTimeFees={checkoutOneTimeFees}
         sessionCustomer={sessionCustomer}
         rentalPriceDisplayMode={rentalPriceDisplayMode}
       />

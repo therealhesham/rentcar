@@ -16,6 +16,7 @@ const nav = [
   { href: "/admin/rental-addons", label: "إضافات التأجير" },
   { href: "/admin/cities", label: "المدن" },
   { href: "/admin/inter-city-shipping", label: "شحن بين المدن" },
+  { href: "/admin/checkout-fees", label: "رسوم إتمام الحجز" },
   { href: "/admin/branches", label: "الفروع" },
   { href: "/admin/subscription-plans", label: "باقات اشتراك" },
   { href: "/admin/subscriptions", label: "اشتراكات العملاء" },

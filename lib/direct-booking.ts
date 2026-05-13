@@ -5,6 +5,8 @@ import {
 } from "@/lib/direct-booking-user-messages";
 import type { InterCityShippingSnap } from "@/lib/inter-city-shipping";
 import { resolveInterCityShippingSnap } from "@/lib/inter-city-shipping";
+import type { CheckoutOneTimeFeeLine } from "@/lib/checkout-one-time-fees";
+import { getActiveCheckoutOneTimeFees } from "@/lib/checkout-one-time-fees";
 import { prisma } from "@/lib/prisma";
 import {
   DELIVERY_ADDRESS_MAX_CHARS,
@@ -573,6 +575,7 @@ async function buildBookingAddonsJsonSnapshot(
   addonIds: number[] | undefined,
   numberOfDays: number,
   interCityShipping: InterCityShippingSnap | null,
+  checkoutOneTimeFees: ReadonlyArray<CheckoutOneTimeFeeLine>,
 ): Promise<{ ok: true; json: string | null } | { ok: false; error: string }> {
   const days = safeBookingDays(numberOfDays);
   let items: Array<{
@@ -607,16 +610,29 @@ async function buildBookingAddonsJsonSnapshot(
     typeof interCityShipping.feeExclVatSar === "number" &&
     interCityShipping.feeExclVatSar > 0;
 
-  if (items.length === 0 && !hasShip) {
+  const coSnap = checkoutOneTimeFees
+    .filter((x) => x.feeExclVatSar > 0)
+    .map((x) => ({
+      slug: x.slug,
+      labelAr: x.labelAr,
+      feeExclVatSar: Math.round(x.feeExclVatSar),
+    }));
+  const hasCheckout = coSnap.length > 0;
+
+  if (items.length === 0 && !hasShip && !hasCheckout) {
     return { ok: true, json: null };
   }
 
   const payload: {
     items: typeof items;
     interCityShipping?: InterCityShippingSnap;
+    checkoutOneTimeFees?: typeof coSnap;
   } = { items };
   if (hasShip && interCityShipping) {
     payload.interCityShipping = interCityShipping;
+  }
+  if (hasCheckout) {
+    payload.checkoutOneTimeFees = coSnap;
   }
   return { ok: true, json: JSON.stringify(payload) };
 }
@@ -677,10 +693,13 @@ export async function createDirectBooking(
 
   const days = commonNormalized.numberOfDays;
 
+  const checkoutFeeLines = await getActiveCheckoutOneTimeFees();
+
   const addonsSnap = await buildBookingAddonsJsonSnapshot(
     addonIds,
     days,
     shippingSnap,
+    checkoutFeeLines,
   );
   if (!addonsSnap.ok) {
     return { ok: false, error: addonsSnap.error };

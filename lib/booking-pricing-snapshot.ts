@@ -9,9 +9,17 @@ export type AddonSnapItem = {
   lineTotalExclTax: number;
 };
 
+/** لقطة رسوم ثابتة عند الإتمام (تُدار من الإدارة). */
+export type CheckoutOneTimeFeeSnap = {
+  slug: string;
+  labelAr: string;
+  feeExclVatSar: number;
+};
+
 export type BookingPricingSnapshotV1 = {
   items: AddonSnapItem[];
   interCityShipping?: InterCityShippingSnap | null;
+  checkoutOneTimeFees?: CheckoutOneTimeFeeSnap[] | null;
 };
 
 export function parseBookingPricingSnapshot(raw: string | null): {
@@ -21,9 +29,10 @@ export function parseBookingPricingSnapshot(raw: string | null): {
     lineTotalExclTax: number;
   }>;
   interCityShipping: InterCityShippingSnap | null;
+  checkoutOneTimeFees: CheckoutOneTimeFeeSnap[];
 } {
   if (!raw) {
-    return { addons: [], interCityShipping: null };
+    return { addons: [], interCityShipping: null, checkoutOneTimeFees: [] };
   }
   try {
     const data = JSON.parse(raw) as BookingPricingSnapshotV1;
@@ -51,8 +60,30 @@ export function parseBookingPricingSnapshot(raw: string | null): {
         labelAr: s.labelAr,
       };
     }
-    return { addons, interCityShipping };
+
+    const rawCo = data.checkoutOneTimeFees;
+    const checkoutOneTimeFees: CheckoutOneTimeFeeSnap[] = [];
+    if (Array.isArray(rawCo)) {
+      for (const x of rawCo) {
+        if (
+          x &&
+          typeof x === "object" &&
+          typeof (x as CheckoutOneTimeFeeSnap).slug === "string" &&
+          typeof (x as CheckoutOneTimeFeeSnap).labelAr === "string" &&
+          typeof (x as CheckoutOneTimeFeeSnap).feeExclVatSar === "number" &&
+          (x as CheckoutOneTimeFeeSnap).feeExclVatSar > 0
+        ) {
+          checkoutOneTimeFees.push({
+            slug: String((x as CheckoutOneTimeFeeSnap).slug).trim().toLowerCase(),
+            labelAr: String((x as CheckoutOneTimeFeeSnap).labelAr).trim(),
+            feeExclVatSar: Math.round((x as CheckoutOneTimeFeeSnap).feeExclVatSar),
+          });
+        }
+      }
+    }
+
+    return { addons, interCityShipping, checkoutOneTimeFees };
   } catch {
-    return { addons: [], interCityShipping: null };
+    return { addons: [], interCityShipping: null, checkoutOneTimeFees: [] };
   }
 }

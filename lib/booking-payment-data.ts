@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { parseBookingPricingSnapshot } from "@/lib/booking-pricing-snapshot";
 import { computeCheckoutTotals } from "@/lib/booking-checkout-pricing";
 import type { InterCityShippingSnap } from "@/lib/inter-city-shipping";
+import type { CheckoutOneTimeFeeSnap } from "@/lib/booking-pricing-snapshot";
 
 const PLACEHOLDER_IMG =
   "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=1200&q=80";
@@ -36,6 +37,8 @@ export type BookingPaymentSnapshot = {
     lineTotalExclTax: number;
   }>;
   interCityShipping: InterCityShippingSnap | null;
+  /** رسوم لمرة واحدة عند الإتمام (من الإدارة)، غير شاملة الضريبة. */
+  checkoutOneTimeFees: CheckoutOneTimeFeeSnap[];
   totals: {
     rentalExclTax: number;
     addonsExclTax: number;
@@ -65,14 +68,17 @@ export async function getBookingForPayment(
   const brandName = m.brand.name.trim();
   const modelName = m.name.trim();
 
-  const { addons, interCityShipping } = parseBookingPricingSnapshot(row.addonsJson);
+  const { addons, interCityShipping, checkoutOneTimeFees } = parseBookingPricingSnapshot(
+    row.addonsJson,
+  );
   const shipFee = interCityShipping?.feeExclVatSar ?? 0;
+  const checkoutFeesSum = checkoutOneTimeFees.reduce((s, x) => s + x.feeExclVatSar, 0);
   const totals = computeCheckoutTotals(
     m.price,
     row.numberOfDays,
     m.vatRatePercent,
     addons.map((a) => ({ pricePerDay: a.pricePerDayExclTax })),
-    { oneTimeFeesExclTax: shipFee },
+    { oneTimeFeesExclTax: shipFee + checkoutFeesSum },
   );
 
   return {
@@ -100,6 +106,7 @@ export async function getBookingForPayment(
     },
     addons,
     interCityShipping,
+    checkoutOneTimeFees,
     totals,
   };
 }
