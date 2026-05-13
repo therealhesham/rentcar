@@ -514,14 +514,14 @@ export function BookingSearchWidget({ cities }: { cities: BookingCityBranchesOpt
           {/* Subtle gradient background for the tabs */}
           <div className="absolute inset-0 bg-gradient-to-b from-[#fdfbf6] to-white" />
 
-          <div className="relative flex flex-col sm:flex-row sm:items-stretch" role="tablist" aria-label="نوع الإيجار وطريقة الاستلام">
-            {/* Rental type group */}
-            <div
-              className={`flex flex-1 items-center border-b border-[#f0ebe4] sm:border-b-0 ${
-                rental !== "corporate" ? "sm:border-e sm:border-e-[#f0ebe4]" : ""
-              }`}
-            >
-              <div className="flex w-full flex-wrap items-center gap-0.5 p-1.5">
+          <div className="relative flex flex-col">
+            {/* مدة الإيجار + حجز الشركات (بجوار الباقات الشهرية) */}
+            <div className="border-b border-[#f0ebe4]">
+              <div
+                className="flex w-full flex-wrap items-center gap-0.5 p-1.5"
+                role="tablist"
+                aria-label="نوع الحجز"
+              >
                 <PillTab
                   active={rental === "daily"}
                   onClick={() => setRental("daily")}
@@ -556,24 +556,28 @@ export function BookingSearchWidget({ cities }: { cities: BookingCityBranchesOpt
             </div>
 
             {rental !== "corporate" ? (
-            <div className="flex flex-1 items-center">
-              <div className="flex w-full items-center gap-0.5 p-1.5">
-                <PillTab
-                  active={mode === "pickup"}
-                  onClick={() => setMode("pickup")}
-                  icon={<PackageCheck className="size-3.5 shrink-0" />}
-                  label="استلام من الفرع"
-                  tone="teal"
-                />
-                <PillTab
-                  active={mode === "delivery"}
-                  onClick={() => setMode("delivery")}
-                  icon={<Truck className="size-3.5 shrink-0" />}
-                  label="توصيل لموقعي"
-                  tone="teal"
-                />
+              <div className="border-b border-[#f0ebe4] bg-[#fcfaf7]/40">
+                <div
+                  className="flex w-full flex-wrap items-center gap-0.5 p-1.5"
+                  role="tablist"
+                  aria-label="طريقة الاستلام"
+                >
+                  <PillTab
+                    active={mode === "pickup"}
+                    onClick={() => setMode("pickup")}
+                    icon={<PackageCheck className="size-3.5 shrink-0" />}
+                    label="استلام من الفرع"
+                    tone="teal"
+                  />
+                  <PillTab
+                    active={mode === "delivery"}
+                    onClick={() => setMode("delivery")}
+                    icon={<Truck className="size-3.5 shrink-0" />}
+                    label="توصيل لموقعي"
+                    tone="teal"
+                  />
+                </div>
               </div>
-            </div>
             ) : null}
           </div>
         </div>

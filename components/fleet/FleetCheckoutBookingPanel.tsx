@@ -324,9 +324,13 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
         >
           <div className="relative">
             <div className="absolute inset-0 bg-gradient-to-b from-[#fdfbf6] to-white" />
-            <div className="relative flex flex-col sm:flex-row sm:items-stretch">
-              <div className="flex flex-1 items-center border-b border-[#f0ebe4] sm:border-b-0 sm:border-e sm:border-e-[#f0ebe4]">
-                <div className="flex w-full flex-wrap items-center gap-1 p-2">
+            <div className="relative flex flex-col">
+              <div className="border-b border-[#f0ebe4]">
+                <div
+                  className="flex w-full flex-wrap items-center gap-1 p-2"
+                  role="tablist"
+                  aria-label="مدة الإيجار"
+                >
                   <CoPillTab
                     active={rental === "daily"}
                     onClick={() => setRental("daily")}
@@ -353,8 +357,12 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
                   />
                 </div>
               </div>
-              <div className="flex flex-1 items-center">
-                <div className="flex w-full items-center gap-1 p-2">
+              <div className="border-b border-[#f0ebe4] bg-[#fcfaf7]/40">
+                <div
+                  className="flex w-full flex-wrap items-center gap-1 p-2"
+                  role="tablist"
+                  aria-label="طريقة الاستلام"
+                >
                   <CoPillTab
                     active={mode === "pickup"}
                     onClick={() => setMode("pickup")}
