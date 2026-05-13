@@ -13,6 +13,8 @@ import {
   CreditCard,
   Check,
   ChevronDown,
+  FileImage,
+  UserRound,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -24,6 +26,7 @@ import { FleetCheckoutBookingPanel } from "@/components/fleet/FleetCheckoutBooki
 import { SarCurrencyGlyph } from "@/components/ui/SarCurrencyGlyph";
 import { CarUnavailableModal } from "@/components/fleet/CarUnavailableModal";
 import { isDirectBookingCapacityMessage } from "@/lib/direct-booking-user-messages";
+import { lastInclusiveBookingDayYmd } from "@/lib/booking-calendar-ymd";
 import {
   computeCheckoutTotals,
   formatSarAmount,
@@ -110,6 +113,17 @@ export function FleetCheckoutClient({
   const [mounted, setMounted] = useState(false);
   const [unavailableDismissed, setUnavailableDismissed] = useState(false);
   const [postCapacityModal, setPostCapacityModal] = useState(false);
+
+  type IdDocKind = "CITIZEN" | "RESIDENT_VISITOR";
+  const [idDocKind, setIdDocKind] = useState<IdDocKind>("CITIZEN");
+  const [nationalId, setNationalId] = useState("");
+  const [passportNumber, setPassportNumber] = useState("");
+  const [licenseNumber, setLicenseNumber] = useState("");
+  const [licenseExpiryYmd, setLicenseExpiryYmd] = useState("");
+  const [idCardUrl, setIdCardUrl] = useState<string | null>(null);
+  const [licenseDocUrl, setLicenseDocUrl] = useState<string | null>(null);
+  const [kycFieldError, setKycFieldError] = useState<string | null>(null);
+  const [uploadingKyc, setUploadingKyc] = useState<"id" | "license" | null>(null);
 
   useEffect(() => setMounted(true), []);
 
@@ -257,6 +271,13 @@ export function FleetCheckoutClient({
     };
   }, [sp, ctxStore, branchBySlug, bookingCities]);
 
+  const rentalLastDayYmdForLicense = useMemo(() => {
+    if (!trip.pickupIso) return null;
+    const p = new Date(trip.pickupIso);
+    if (Number.isNaN(p.getTime())) return null;
+    return lastInclusiveBookingDayYmd(p, trip.days);
+  }, [trip.pickupIso, trip.days]);
+
   useEffect(() => {
     setUnavailableDismissed(false);
     setPostCapacityModal(false);
@@ -353,6 +374,26 @@ export function FleetCheckoutClient({
     });
   }
 
+  async function uploadKycImage(file: File, slot: "id" | "license") {
+    setKycFieldError(null);
+    setUploadingKyc(slot);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/bookings/kyc-upload", { method: "POST", body: fd });
+      const data = (await res.json()) as { ok?: boolean; url?: string; error?: string };
+      if (!data.ok || !data.url) {
+        throw new Error(data.error ?? "تعذّر رفع الملف.");
+      }
+      if (slot === "id") setIdCardUrl(data.url);
+      else setLicenseDocUrl(data.url);
+    } catch (err) {
+      setKycFieldError(err instanceof Error ? err.message : "تعذّر رفع الملف.");
+    } finally {
+      setUploadingKyc(null);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
@@ -378,6 +419,49 @@ export function FleetCheckoutClient({
       return;
     }
 
+    setKycFieldError(null);
+    if (!idCardUrl) {
+      setError("يرجى رفع صورة الهوية الوطنية أو الجواز (إلزامي).");
+      return;
+    }
+    const lic = licenseNumber.trim();
+    if (lic.length < 4 || lic.length > 64) {
+      setError("أدخل رقم الرخصة (4–64 حرفاً).");
+      return;
+    }
+    const exp = licenseExpiryYmd.trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(exp)) {
+      setError("اختر تاريخ انتهاء الرخصة.");
+      return;
+    }
+    if (!rentalLastDayYmdForLicense) {
+      setError("لم يُعثر على تواريخ الحجز. ارجع إلى الأسطول أو الصفحة الرئيسية وابحث مجدداً.");
+      return;
+    }
+    if (exp < rentalLastDayYmdForLicense) {
+      setError(
+        `يجب أن يكون تاريخ انتهاء الرخصة في أو بعد آخر يوم من الإيجار (${rentalLastDayYmdForLicense}).`,
+      );
+      return;
+    }
+    if (idDocKind === "CITIZEN") {
+      const nid = nationalId.replace(/\D/g, "");
+      if (!/^\d{10}$/.test(nid)) {
+        setError("رقم الهوية الوطنية يجب أن يكون 10 أرقاماً.");
+        return;
+      }
+    } else {
+      const p = passportNumber.trim().toUpperCase();
+      if (p.length < 6 || p.length > 24) {
+        setError("أدخل رقم الجواز (6–24 حرفاً).");
+        return;
+      }
+      if (!/^[A-Z0-9\-]+$/.test(p)) {
+        setError("رقم الجواز: أحرف إنجليزية وأرقام وشرطة فقط.");
+        return;
+      }
+    }
+
     const pickupMode: "BRANCH" | "DELIVERY" =
       trip.mode === "delivery" &&
       (((trip.deliveryLat != null &&
@@ -400,6 +484,13 @@ export function FleetCheckoutClient({
       pickupMode,
       addonIds: [...selected],
       email,
+      idDocumentKind: idDocKind,
+      nationalIdNumber: idDocKind === "CITIZEN" ? nationalId.replace(/\D/g, "") : "",
+      passportNumber: idDocKind === "RESIDENT_VISITOR" ? passportNumber.trim().toUpperCase() : "",
+      licenseNumber: lic,
+      licenseExpiryDate: exp,
+      idCardImageUrl: idCardUrl,
+      ...(licenseDocUrl ? { driverLicenseImageUrl: licenseDocUrl } : {}),
     };
     if (pickupMode === "DELIVERY") {
       if (
@@ -488,16 +579,207 @@ export function FleetCheckoutClient({
                   مراجعة الحجز 
                 </h1>
                 <p className="mt-2 text-[14px] text-[#6b5a3b]">
-                  الرجاء مراجعة الإضافات وتأكيد بيانات التواصل لإتمام عملية الدفع. يُرسل ملخص الفاتورة إلى
-                  بريدكم بعد إتمام الدفع.
+                  ارفعوا مستندات الهوية والرخصة، ثم راجعوا الإضافات وبيانات التواصل. تُرسل الفاتورة إلى بريدكم
+                  بعد الدفع.
                 </p>
               </div>
+
+              {/* KYC — هوية / جواز + رخصة */}
+              <section className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <span className="flex size-7 items-center justify-center rounded-full bg-[#f4f0ea] text-[#dbb878]">
+                    1
+                  </span>
+                  <h2 className="text-xl font-extrabold text-[#003749]">الهوية والرخصة</h2>
+                </div>
+                <p className="text-[13px] font-semibold leading-relaxed text-[#6b5a3b]">
+                  صورة بطاقة الهوية أو الجواز <span className="text-red-600">إلزامية</span> — صورة الرخصة اختيارية.
+                </p>
+
+                <div className="rounded-3xl border border-[#ebe4d3] bg-white p-6 shadow-sm sm:p-8">
+                  <div className="mb-6 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIdDocKind("CITIZEN");
+                        setKycFieldError(null);
+                      }}
+                      className={`rounded-xl px-4 py-2.5 text-[13px] font-extrabold transition-colors ${
+                        idDocKind === "CITIZEN"
+                          ? "bg-[#003749] text-white ring-2 ring-[#dbb878]/50"
+                          : "border border-[#ebe4d3] bg-[#fdfbf6] text-[#003749] hover:border-[#dbb878]/40"
+                      }`}
+                    >
+                      مواطن سعودي
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIdDocKind("RESIDENT_VISITOR");
+                        setKycFieldError(null);
+                      }}
+                      className={`rounded-xl px-4 py-2.5 text-[13px] font-extrabold transition-colors ${
+                        idDocKind === "RESIDENT_VISITOR"
+                          ? "bg-[#003749] text-white ring-2 ring-[#dbb878]/50"
+                          : "border border-[#ebe4d3] bg-[#fdfbf6] text-[#003749] hover:border-[#dbb878]/40"
+                      }`}
+                    >
+                      مقيم / زائر
+                    </button>
+                  </div>
+
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    {idDocKind === "CITIZEN" ? (
+                      <div className="group relative sm:col-span-2">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          autoComplete="off"
+                          maxLength={10}
+                          value={nationalId}
+                          onChange={(e) => setNationalId(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                          id="checkout-national-id"
+                          className="peer w-full rounded-xl border border-[#ebe4d3] bg-transparent px-4 pb-3 pt-6 text-[14px] font-semibold text-[#003749] outline-none transition-all focus:border-[#dbb878] focus:ring-1 focus:ring-[#dbb878]"
+                          placeholder=" "
+                          dir="ltr"
+                        />
+                        <label
+                          htmlFor="checkout-national-id"
+                          className="absolute start-4 top-4 text-[13px] font-bold text-[#aaa08e] transition-all peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-[#dbb878] peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:text-[10px]"
+                        >
+                          رقم الهوية الوطنية (10 أرقام)
+                        </label>
+                      </div>
+                    ) : (
+                      <div className="group relative sm:col-span-2">
+                        <input
+                          type="text"
+                          autoComplete="off"
+                          value={passportNumber}
+                          onChange={(e) =>
+                            setPassportNumber(e.target.value.toUpperCase().replace(/[^A-Z0-9\-]/g, "").slice(0, 24))
+                          }
+                          id="checkout-passport"
+                          className="peer w-full rounded-xl border border-[#ebe4d3] bg-transparent px-4 pb-3 pt-6 text-[14px] font-semibold text-[#003749] outline-none transition-all focus:border-[#dbb878] focus:ring-1 focus:ring-[#dbb878]"
+                          placeholder=" "
+                          dir="ltr"
+                        />
+                        <label
+                          htmlFor="checkout-passport"
+                          className="absolute start-4 top-4 text-[13px] font-bold text-[#aaa08e] transition-all peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-[#dbb878] peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:text-[10px]"
+                        >
+                          رقم الجواز
+                        </label>
+                      </div>
+                    )}
+
+                    <div className="group relative sm:col-span-2">
+                      <input
+                        type="text"
+                        value={licenseNumber}
+                        onChange={(e) => setLicenseNumber(e.target.value.slice(0, 64))}
+                        id="checkout-license-no"
+                        className="peer w-full rounded-xl border border-[#ebe4d3] bg-transparent px-4 pb-3 pt-6 text-[14px] font-semibold text-[#003749] outline-none transition-all focus:border-[#dbb878] focus:ring-1 focus:ring-[#dbb878]"
+                        placeholder=" "
+                        dir="ltr"
+                      />
+                      <label
+                        htmlFor="checkout-license-no"
+                        className="absolute start-4 top-4 text-[13px] font-bold text-[#aaa08e] transition-all peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-[#dbb878] peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:text-[10px]"
+                      >
+                        {idDocKind === "CITIZEN" ? "رقم رخصة القيادة" : "رقم الرخصة الدولية"}
+                      </label>
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label
+                        htmlFor="checkout-license-expiry"
+                        className="mb-1.5 block text-[13px] font-bold text-[#003749]"
+                      >
+                        تاريخ انتهاء الرخصة
+                        <span className="text-red-600"> *</span>
+                      </label>
+                      <input
+                        id="checkout-license-expiry"
+                        type="date"
+                        required
+                        value={licenseExpiryYmd}
+                        onChange={(e) => setLicenseExpiryYmd(e.target.value)}
+                        min={rentalLastDayYmdForLicense ?? undefined}
+                        className="w-full rounded-xl border border-[#ebe4d3] bg-white px-3 py-2.5 text-[14px] font-semibold text-[#003749] outline-none transition-all focus:border-[#dbb878] focus:ring-1 focus:ring-[#dbb878]"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-6 grid gap-5 sm:grid-cols-2">
+                    <div className="rounded-2xl border border-[#ebe4d3] bg-[#fdfbf6] p-4">
+                      <div className="mb-2 flex items-center gap-2 text-[13px] font-extrabold text-[#003749]">
+                        <UserRound className="size-4 text-[#dbb878]" aria-hidden />
+                        صورة الهوية أو الجواز
+                        <span className="text-red-600">*</span>
+                      </div>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        className="block w-full text-[12px] font-semibold text-[#6b5a3b] file:me-3 file:rounded-lg file:border-0 file:bg-[#003749] file:px-3 file:py-2 file:text-[12px] file:font-bold file:text-white"
+                        disabled={uploadingKyc !== null}
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          e.target.value = "";
+                          if (f) void uploadKycImage(f, "id");
+                        }}
+                      />
+                      {uploadingKyc === "id" ? (
+                        <p className="mt-2 text-[11px] font-bold text-[#aaa08e]">جاري الرفع…</p>
+                      ) : null}
+                      {idCardUrl ? (
+                        <div className="relative mt-3 aspect-[16/10] w-full max-w-[220px] overflow-hidden rounded-lg border border-[#ebe4d3] bg-white">
+                          <Image src={idCardUrl} alt="" fill className="object-cover" sizes="220px" unoptimized />
+                        </div>
+                      ) : null}
+                    </div>
+
+                    <div className="rounded-2xl border border-dashed border-[#dbb878]/50 bg-[#fffdf9] p-4">
+                      <div className="mb-2 flex items-center gap-2 text-[13px] font-extrabold text-[#003749]">
+                        <FileImage className="size-4 text-[#dbb878]" aria-hidden />
+                        صورة الرخصة
+                        <span className="text-[11px] font-bold text-[#aaa08e]">(اختياري)</span>
+                      </div>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        className="block w-full text-[12px] font-semibold text-[#6b5a3b] file:me-3 file:rounded-lg file:border-0 file:bg-[#003749]/90 file:px-3 file:py-2 file:text-[12px] file:font-bold file:text-white"
+                        disabled={uploadingKyc !== null}
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          e.target.value = "";
+                          if (f) void uploadKycImage(f, "license");
+                        }}
+                      />
+                      {uploadingKyc === "license" ? (
+                        <p className="mt-2 text-[11px] font-bold text-[#aaa08e]">جاري الرفع…</p>
+                      ) : null}
+                      {licenseDocUrl ? (
+                        <div className="relative mt-3 aspect-[16/10] w-full max-w-[220px] overflow-hidden rounded-lg border border-[#ebe4d3] bg-white">
+                          <Image src={licenseDocUrl} alt="" fill className="object-cover" sizes="220px" unoptimized />
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  {kycFieldError ? (
+                    <p className="mt-4 text-[13px] font-bold text-red-600" role="alert">
+                      {kycFieldError}
+                    </p>
+                  ) : null}
+                </div>
+              </section>
 
               {/* Addons Section */}
               <section className="space-y-4">
                 <div className="flex items-center gap-3">
                   <span className="flex size-7 items-center justify-center rounded-full bg-[#f4f0ea] text-[#dbb878]">
-                    1
+                    2
                   </span>
                   <h2 className="text-xl font-extrabold text-[#003749]">إضافات وتأمين (اختياري)</h2>
                 </div>
@@ -595,7 +877,7 @@ export function FleetCheckoutClient({
               <section className="space-y-4">
                 <div className="flex items-center gap-3">
                   <span className="flex size-7 items-center justify-center rounded-full bg-[#f4f0ea] text-[#dbb878]">
-                    2
+                    3
                   </span>
                   <h2 className="text-xl font-extrabold text-[#003749]">بيانات التواصل</h2>
                 </div>
@@ -751,7 +1033,7 @@ export function FleetCheckoutClient({
                   {/* Submit CTA */}
                   <button
                     type="submit"
-                    disabled={pending || slotBlocked || !trip.pickupIso}
+                    disabled={pending || slotBlocked || !trip.pickupIso || uploadingKyc !== null}
                     className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl py-4 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5 active:translate-y-0"
                     style={{
                       background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)`,

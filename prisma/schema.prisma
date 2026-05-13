@@ -235,6 +235,15 @@ model BookingRequest {
   phone         String
   /// بريد لإرسال الفاتورة بعد إتمام الدفع (يُجمع من صفحة الإتمام).
   contactEmail  String?   @db.VarChar(255)
+  /// مواطن = CITIZEN، مقيم/زائر = RESIDENT_VISITOR (حجز مباشر من الموقع).
+  idDocumentKind           String?   @db.VarChar(24)
+  nationalIdNumber         String?   @db.VarChar(16)
+  passportNumber           String?   @db.VarChar(32)
+  licenseNumber            String?   @db.VarChar(64)
+  /// تاريخ انتهاء رخصة القيادة (يُجمع عند الإتمام).
+  licenseExpiryDate        DateTime? @db.Date
+  idCardImageUrl           String?   @db.Text
+  driverLicenseImageUrl    String?   @db.Text
   ageRange      String
   carType       String
   branch        String

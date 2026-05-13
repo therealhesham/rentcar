@@ -197,6 +197,15 @@ export default async function AdminDashboardPage() {
                             ? request.paidAt.toISOString()
                             : null,
                           paymentMethod: request.paymentMethod ?? null,
+                          idDocumentKind: request.idDocumentKind ?? null,
+                          nationalIdNumber: request.nationalIdNumber ?? null,
+                          passportNumber: request.passportNumber ?? null,
+                          licenseNumber: request.licenseNumber ?? null,
+                          licenseExpiryDate: request.licenseExpiryDate
+                            ? request.licenseExpiryDate.toISOString().slice(0, 10)
+                            : null,
+                          idCardImageUrl: request.idCardImageUrl ?? null,
+                          driverLicenseImageUrl: request.driverLicenseImageUrl ?? null,
                         }}
                         categories={fleetCategoriesForEdit}
                         models={bookableModels}

@@ -6,6 +6,7 @@ import {
   parseAddonIdsFromJsonBody,
   parseCommonBookingFieldsFromJson,
   parseContactEmailFromJson,
+  parseDirectBookingKycFromJson,
   parsePickupCitySlugFromJson,
 } from "@/lib/direct-booking";
 import { getCustomerSessionUserId } from "@/lib/customer-auth";
@@ -107,6 +108,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: emailParsed.error }, { status: 400 });
   }
 
+  const kycParsed = parseDirectBookingKycFromJson(obj);
+  if (!kycParsed.ok) {
+    return NextResponse.json({ ok: false, error: kycParsed.error }, { status: 400 });
+  }
+
   const addonParsed = parseAddonIdsFromJsonBody(obj);
   if (!addonParsed.ok) {
     return NextResponse.json({ ok: false, error: addonParsed.error }, { status: 400 });
@@ -121,6 +127,7 @@ export async function POST(request: Request) {
     customerId: sessionUserId ?? undefined,
     pickupCitySlug: parsePickupCitySlugFromJson(obj),
     contactEmail: emailParsed.contactEmail,
+    kyc: kycParsed.data,
   });
 
   if (!created.ok) {

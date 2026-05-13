@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import { Resend } from "resend";
+import { buildBookingInvoicePdfBuffer } from "@/lib/booking-invoice-pdf";
 import { formatSarAmount } from "@/lib/booking-checkout-pricing";
 import type { BookingPaymentSnapshot } from "@/lib/booking-payment-data";
 import { getBookingForPayment } from "@/lib/booking-payment-data";
@@ -105,7 +106,8 @@ function buildInvoiceHtml(booking: BookingPaymentSnapshot): string {
       </td></tr>
       <tr><td style="padding:28px">
         <p style="margin:0 0 16px">عزيزي/عزيزتي <strong>${escapeHtml(booking.fullName)}</strong>،</p>
-        <p style="margin:0 0 20px;line-height:1.6">شكراً لاختياركم روائس. فيما يلي ملخص الفاتورة بعد إتمام الدفع.</p>
+        <p style="margin:0 0 12px;line-height:1.6">شكراً لاختياركم روائس. <strong>مُرفق مع هذه الرسالة ملف PDF</strong> يحتوي على الفاتورة للطباعة أو الأرشفة.</p>
+        <p style="margin:0 0 20px;line-height:1.6">فيما يلي ملخص الفاتورة بعد إتمام الدفع (نفس المحتوى في المرفق).</p>
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;font-size:14px">
           <tr><td style="padding:6px 0"><strong>الجوال:</strong></td><td dir="ltr" style="padding:6px 0;text-align:left">${escapeHtml(booking.phone)}</td></tr>
           <tr><td style="padding:6px 0"><strong>المركبة:</strong></td><td style="padding:6px 0">${escapeHtml(booking.car.fullTitle)} — ${escapeHtml(booking.car.categoryTitle)}</td></tr>
@@ -125,6 +127,22 @@ function buildInvoiceHtml(booking: BookingPaymentSnapshot): string {
   </td></tr></table>
 </body>
 </html>`;
+}
+
+function buildInvoicePlainText(booking: BookingPaymentSnapshot): string {
+  const t = booking.totals;
+  return [
+    `فاتورة حجز — طلب رقم #${booking.id}`,
+    "",
+    `الاسم: ${booking.fullName}`,
+    `الجوال: ${booking.phone}`,
+    `المركبة: ${booking.car.fullTitle}`,
+    `الإجمالي المدفوع: ${formatSarAmount(t.totalInclTax)} ر.س`,
+    "",
+    "التفاصيل الكاملة في الملف المرفق (PDF).",
+    "",
+    "روائس لتأجير السيارات",
+  ].join("\n");
 }
 
 async function resolveInvoiceRecipientEmail(bookingRequestId: number): Promise<string | null> {
@@ -164,6 +182,8 @@ async function sendInvoiceViaSmtp(opts: {
   to: string;
   subject: string;
   html: string;
+  text?: string;
+  attachments?: { filename: string; content: Buffer; contentType?: string }[];
 }): Promise<void> {
   const host = process.env.MAIL_HOST!.trim();
   const user = process.env.MAIL_USER!.trim();
@@ -188,6 +208,8 @@ async function sendInvoiceViaSmtp(opts: {
     to: opts.to,
     subject: opts.subject,
     html: opts.html,
+    text: opts.text,
+    attachments: opts.attachments,
   });
 }
 
@@ -195,6 +217,8 @@ async function sendInvoiceViaResend(opts: {
   to: string;
   subject: string;
   html: string;
+  text?: string;
+  attachments?: { filename: string; content: Buffer }[];
 }): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY?.trim();
   if (!apiKey) {
@@ -210,6 +234,11 @@ async function sendInvoiceViaResend(opts: {
     to: [opts.to],
     subject: opts.subject,
     html: opts.html,
+    text: opts.text,
+    attachments: opts.attachments?.map((a) => ({
+      filename: a.filename,
+      content: a.content.toString("base64"),
+    })),
   });
   if (error) {
     throw new Error(typeof error === "string" ? error : JSON.stringify(error));
@@ -217,7 +246,7 @@ async function sendInvoiceViaResend(opts: {
 }
 
 /**
- * بعد تأكيد الدفع: إرسال فاتورة HTML.
+ * بعد تأكيد الدفع: إرسال فاتورة HTML مع مرفق PDF.
  * الأولوية: SMTP (`MAIL_HOST` + `MAIL_USER` + `MAIL_PASS`) ثم Resend (`RESEND_API_KEY`).
  */
 export async function sendBookingInvoiceEmailAfterPayment(bookingRequestId: number): Promise<void> {
@@ -237,10 +266,29 @@ export async function sendBookingInvoiceEmailAfterPayment(bookingRequestId: numb
 
   const subject = `فاتورة حجزكم — طلب رقم #${bookingRequestId}`;
   const html = buildInvoiceHtml(snapshot);
+  const text = buildInvoicePlainText(snapshot);
+
+  let pdfBuffer: Buffer | null = null;
+  try {
+    pdfBuffer = await buildBookingInvoicePdfBuffer(snapshot);
+  } catch (e) {
+    console.error("[booking-invoice-email] تعذّر توليد PDF:", e);
+  }
+
+  const attachments =
+    pdfBuffer && pdfBuffer.length > 0
+      ? [
+          {
+            filename: `invoice-${snapshot.id}.pdf`,
+            content: pdfBuffer,
+            contentType: "application/pdf" as const,
+          },
+        ]
+      : undefined;
 
   if (smtpConfigured()) {
     try {
-      await sendInvoiceViaSmtp({ to, subject, html });
+      await sendInvoiceViaSmtp({ to, subject, html, text, attachments });
       return;
     } catch (e) {
       console.error("[booking-invoice-email] فشل SMTP:", e);
@@ -250,7 +298,16 @@ export async function sendBookingInvoiceEmailAfterPayment(bookingRequestId: numb
 
   if (process.env.RESEND_API_KEY?.trim()) {
     try {
-      await sendInvoiceViaResend({ to, subject, html });
+      await sendInvoiceViaResend({
+        to,
+        subject,
+        html,
+        text,
+        attachments: attachments?.map((a) => ({
+          filename: a.filename,
+          content: a.content,
+        })),
+      });
       return;
     } catch (e) {
       console.error("[booking-invoice-email] فشل Resend:", e);

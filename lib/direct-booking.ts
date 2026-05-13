@@ -8,10 +8,18 @@ import { resolveInterCityShippingSnap } from "@/lib/inter-city-shipping";
 import type { CheckoutOneTimeFeeLine } from "@/lib/checkout-one-time-fees";
 import { getActiveCheckoutOneTimeFees } from "@/lib/checkout-one-time-fees";
 import { prisma } from "@/lib/prisma";
+import { isTrustedSpacesImageUrl } from "@/lib/spaces-upload";
 import {
   DELIVERY_ADDRESS_MAX_CHARS,
   DELIVERY_ADDRESS_MIN_CHARS,
 } from "@/lib/delivery-address";
+import {
+  addDaysToYmd,
+  dateOnlyYmd,
+  lastInclusiveBookingDayYmd,
+} from "@/lib/booking-calendar-ymd";
+
+export { addDaysToYmd, lastInclusiveBookingDayYmd } from "@/lib/booking-calendar-ymd";
 
 /**
  * منطق التوفر: مجموع quantity في Fleet للموديل = أقصى عدد حجوزات DIRECT متزامنة
@@ -222,17 +230,6 @@ function parseDeliveryPartFromFormData(
   );
   if (!p.ok) return p;
   return { ok: true, ...p.value };
-}
-
-function dateOnlyYmd(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
-
-/** نهاية الفترة (حصرية): أول يوم بعد آخر يوم محجوز */
-export function addDaysToYmd(ymd: string, days: number): string {
-  const u = new Date(`${ymd}T12:00:00.000Z`);
-  u.setUTCDate(u.getUTCDate() + days);
-  return u.toISOString().slice(0, 10);
 }
 
 function bookingRangeYmd(pickupDate: Date, numberOfDays: number): {
@@ -553,6 +550,8 @@ export type CreateDirectBookingInput = DirectBookingCommon & {
   customerId?: number | null;
   /** بريد إرسال الفاتورة (من واجهة الإتمام) */
   contactEmail?: string | null;
+  /** مستندات الهوية والرخصة (واجهة الإتمام) — اختياري لحجز المكتب من الإدارة */
+  kyc?: DirectBookingKycInput | null;
 };
 
 export function parsePickupCitySlugFromJson(
@@ -586,6 +585,132 @@ export function parseAddonIdsFromJsonBody(
     return { ok: false, error: "عدد الإضافات غير مسموح." };
   }
   return { ok: true, addonIds: ids.length ? ids : undefined };
+}
+
+export const DIRECT_BOOKING_ID_KIND_CITIZEN = "CITIZEN" as const;
+export const DIRECT_BOOKING_ID_KIND_RESIDENT_VISITOR = "RESIDENT_VISITOR" as const;
+
+export type DirectBookingKycInput = {
+  idDocumentKind: typeof DIRECT_BOOKING_ID_KIND_CITIZEN | typeof DIRECT_BOOKING_ID_KIND_RESIDENT_VISITOR;
+  nationalIdNumber: string | null;
+  passportNumber: string | null;
+  licenseNumber: string;
+  licenseExpiryDate: Date;
+  idCardImageUrl: string;
+  driverLicenseImageUrl: string | null;
+};
+
+/**
+ * تحقق من بيانات الهوية/الجواز والرخصة وروابط الصور (روابط Spaces موثوقة فقط).
+ */
+export function parseDirectBookingKycFromJson(
+  body: JsonBody,
+): { ok: true; data: DirectBookingKycInput } | { ok: false; error: string } {
+  const kindRaw = String(body.idDocumentKind ?? "")
+    .trim()
+    .toUpperCase();
+  const idDocumentKind =
+    kindRaw === DIRECT_BOOKING_ID_KIND_RESIDENT_VISITOR
+      ? DIRECT_BOOKING_ID_KIND_RESIDENT_VISITOR
+      : kindRaw === DIRECT_BOOKING_ID_KIND_CITIZEN
+        ? DIRECT_BOOKING_ID_KIND_CITIZEN
+        : null;
+  if (!idDocumentKind) {
+    return { ok: false, error: "نوع المستند غير صالح (مواطن أو مقيم/زائر)." };
+  }
+
+  const nationalIdNumber =
+    String(body.nationalIdNumber ?? "")
+      .trim()
+      .replace(/\D/g, "") || null;
+  const passportNumber = String(body.passportNumber ?? "").trim().toUpperCase() || null;
+  const licenseNumber = String(body.licenseNumber ?? "").trim();
+  const idCardImageUrl = String(body.idCardImageUrl ?? "").trim();
+  const licenseImgRaw = String(body.driverLicenseImageUrl ?? "").trim();
+
+  if (!licenseNumber || licenseNumber.length < 4 || licenseNumber.length > 64) {
+    return { ok: false, error: "رقم الرخصة مطلوب (4–64 حرفاً)." };
+  }
+
+  const licenseExpiryRaw = String(body.licenseExpiryDate ?? "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(licenseExpiryRaw)) {
+    return { ok: false, error: "تاريخ انتهاء الرخصة مطلوب بصيغة سنة-شهر-يوم." };
+  }
+  const expParts = licenseExpiryRaw.split("-").map((x) => Number(x));
+  const [ey, em, ed] = expParts;
+  if (!ey || !em || !ed || em < 1 || em > 12 || ed < 1 || ed > 31) {
+    return { ok: false, error: "تاريخ انتهاء الرخصة غير صالح." };
+  }
+  const licenseExpiryDate = new Date(Date.UTC(ey, em - 1, ed));
+  if (Number.isNaN(licenseExpiryDate.getTime())) {
+    return { ok: false, error: "تاريخ انتهاء الرخصة غير صالح." };
+  }
+
+  const pickupDateRaw = String(body.pickupDate ?? "");
+  const pickupDate = new Date(pickupDateRaw);
+  if (!pickupDateRaw.trim() || Number.isNaN(pickupDate.getTime())) {
+    return { ok: false, error: "يرجى اختيار تاريخ بداية الحجز." };
+  }
+  const daysNum = Number(body.days);
+  if (!Number.isFinite(daysNum) || daysNum < 1 || daysNum > 60) {
+    return { ok: false, error: "عدد الأيام يجب أن يكون من 1 إلى 60." };
+  }
+  const rentalLastDayYmd = lastInclusiveBookingDayYmd(pickupDate, daysNum);
+  if (licenseExpiryRaw < rentalLastDayYmd) {
+    return {
+      ok: false,
+      error: `تاريخ انتهاء الرخصة يجب ألا يكون قبل آخر يوم من مدة الحجز (${rentalLastDayYmd}).`,
+    };
+  }
+
+  if (!idCardImageUrl || !isTrustedSpacesImageUrl(idCardImageUrl)) {
+    return {
+      ok: false,
+      error: "صورة الهوية أو الجواز مطلوبة ويجب رفعها من النظام (رابط غير موثوق).",
+    };
+  }
+
+  let driverLicenseImageUrl: string | null = null;
+  if (licenseImgRaw) {
+    if (!isTrustedSpacesImageUrl(licenseImgRaw)) {
+      return { ok: false, error: "رابط صورة الرخصة غير موثوق." };
+    }
+    driverLicenseImageUrl = licenseImgRaw;
+  }
+
+  if (idDocumentKind === DIRECT_BOOKING_ID_KIND_CITIZEN) {
+    if (!nationalIdNumber || !/^\d{10}$/.test(nationalIdNumber)) {
+      return { ok: false, error: "رقم الهوية الوطنية مطلوب ويجب أن يكون 10 أرقام." };
+    }
+    if (passportNumber) {
+      return { ok: false, error: "لا تُدخل رقم جواز عند اختيار مواطن سعودي." };
+    }
+  } else {
+    if (!passportNumber || passportNumber.length < 6 || passportNumber.length > 24) {
+      return { ok: false, error: "رقم الجواز مطلوب للمقيم/الزائر (6–24 حرفاً)." };
+    }
+    if (!/^[A-Z0-9\-]+$/.test(passportNumber)) {
+      return { ok: false, error: "صيغة رقم الجواز غير صالحة (أحرف إنجليزية وأرقام وشرطة)." };
+    }
+    if (nationalIdNumber) {
+      return { ok: false, error: "لا تُدخل رقم هوية وطنية عند اختيار مقيم/زائر." };
+    }
+  }
+
+  return {
+    ok: true,
+    data: {
+      idDocumentKind,
+      nationalIdNumber:
+        idDocumentKind === DIRECT_BOOKING_ID_KIND_CITIZEN ? nationalIdNumber : null,
+      passportNumber:
+        idDocumentKind === DIRECT_BOOKING_ID_KIND_RESIDENT_VISITOR ? passportNumber : null,
+      licenseNumber,
+      licenseExpiryDate,
+      idCardImageUrl,
+      driverLicenseImageUrl,
+    },
+  };
 }
 
 async function buildBookingAddonsJsonSnapshot(
@@ -666,6 +791,7 @@ export async function createDirectBooking(
     customerId: customerIdRaw,
     pickupCitySlug,
     contactEmail,
+    kyc,
     ...common
   } = input;
 
@@ -764,6 +890,13 @@ export async function createDirectBooking(
               typeof contactEmail === "string" && contactEmail.trim()
                 ? contactEmail.trim().toLowerCase()
                 : null,
+            idDocumentKind: kyc?.idDocumentKind ?? null,
+            nationalIdNumber: kyc?.nationalIdNumber ?? null,
+            passportNumber: kyc?.passportNumber ?? null,
+            licenseNumber: kyc?.licenseNumber ?? null,
+            licenseExpiryDate: kyc?.licenseExpiryDate ?? null,
+            idCardImageUrl: kyc?.idCardImageUrl ?? null,
+            driverLicenseImageUrl: kyc?.driverLicenseImageUrl ?? null,
             ageRange: commonNormalized.ageRange,
             carType,
             branch: commonNormalized.branch,

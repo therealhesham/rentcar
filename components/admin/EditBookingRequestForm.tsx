@@ -34,6 +34,13 @@ export type EditableBookingRow = {
   paymentStatus: string | null;
   paidAt: string | null;
   paymentMethod: string | null;
+  idDocumentKind: string | null;
+  nationalIdNumber: string | null;
+  passportNumber: string | null;
+  licenseNumber: string | null;
+  licenseExpiryDate: string | null;
+  idCardImageUrl: string | null;
+  driverLicenseImageUrl: string | null;
 };
 
 type CategoryOption = { slug: string; title: string };
@@ -314,6 +321,85 @@ function EditBookingModalInner({
                   >
                     فتح صفحة الدفع
                   </a>
+                </div>
+              ) : null}
+              {request.kind === "DIRECT" &&
+              (request.idDocumentKind ||
+                request.idCardImageUrl ||
+                request.licenseNumber ||
+                request.licenseExpiryDate) ? (
+                <div className="sm:col-span-2 rounded-xl border border-outline-variant/40 bg-surface-container-low px-3 py-3 text-sm">
+                  <p className="font-bold text-on-surface">مستندات العميل (عند الإتمام)</p>
+                  <dl className="mt-2 space-y-1.5 text-xs">
+                    {request.idDocumentKind ? (
+                      <div className="flex flex-wrap gap-2">
+                        <dt className="font-bold text-on-surface-variant">النوع:</dt>
+                        <dd>
+                          {request.idDocumentKind === "CITIZEN"
+                            ? "مواطن سعودي"
+                            : request.idDocumentKind === "RESIDENT_VISITOR"
+                              ? "مقيم / زائر"
+                              : request.idDocumentKind}
+                        </dd>
+                      </div>
+                    ) : null}
+                    {request.nationalIdNumber ? (
+                      <div className="flex flex-wrap gap-2">
+                        <dt className="font-bold text-on-surface-variant">الهوية:</dt>
+                        <dd dir="ltr" className="font-mono">
+                          {request.nationalIdNumber}
+                        </dd>
+                      </div>
+                    ) : null}
+                    {request.passportNumber ? (
+                      <div className="flex flex-wrap gap-2">
+                        <dt className="font-bold text-on-surface-variant">الجواز:</dt>
+                        <dd dir="ltr" className="font-mono">
+                          {request.passportNumber}
+                        </dd>
+                      </div>
+                    ) : null}
+                    {request.licenseNumber ? (
+                      <div className="flex flex-wrap gap-2">
+                        <dt className="font-bold text-on-surface-variant">رقم الرخصة:</dt>
+                        <dd dir="ltr" className="font-mono">
+                          {request.licenseNumber}
+                        </dd>
+                      </div>
+                    ) : null}
+                    {request.licenseExpiryDate ? (
+                      <div className="flex flex-wrap gap-2">
+                        <dt className="font-bold text-on-surface-variant">انتهاء الرخصة:</dt>
+                        <dd dir="ltr" className="font-mono">
+                          {request.licenseExpiryDate}
+                        </dd>
+                      </div>
+                    ) : null}
+                    {request.idCardImageUrl ? (
+                      <div>
+                        <a
+                          href={request.idCardImageUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-bold text-primary underline"
+                        >
+                          فتح صورة الهوية / الجواز
+                        </a>
+                      </div>
+                    ) : null}
+                    {request.driverLicenseImageUrl ? (
+                      <div>
+                        <a
+                          href={request.driverLicenseImageUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-bold text-primary underline"
+                        >
+                          فتح صورة الرخصة
+                        </a>
+                      </div>
+                    ) : null}
+                  </dl>
                 </div>
               ) : null}
               {request.kind === "DIRECT" && request.addonsJson ? (
