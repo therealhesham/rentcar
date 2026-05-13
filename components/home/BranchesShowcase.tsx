@@ -1,4 +1,5 @@
 import { getActiveBranches, getNewBranchesForHome } from "@/lib/branch-data";
+import { Reveal } from "./HomeMotion";
 
 const branchMapLinks: Record<string, string> = {
   madinah:
@@ -154,22 +155,26 @@ export async function BranchesShowcase() {
 
   return (
     <section id="branches-new" className="overflow-x-clip">
-      <div className="relative overflow-hidden bg-[#003749] px-4 py-14 text-center sm:px-6 sm:py-16 lg:px-8">
-        <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
-          فروعنا
-        </h2>
-        <p className="mx-auto mt-3 max-w-xl text-sm font-medium text-white/80 sm:text-base">
-          مواقعنا المنتشرة لخدمتكم. اختر الفرع المناسب واستعرض موقعه على الخريطة.
-        </p>
-        <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-[#dbb878]" aria-hidden />
-      </div>
+      <Reveal>
+        <div>
+          <div className="relative overflow-hidden bg-[#003749] px-4 py-14 text-center sm:px-6 sm:py-16 lg:px-8">
+            <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
+              فروعنا
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-sm font-medium text-white/80 sm:text-base">
+              مواقعنا المنتشرة لخدمتكم. اختر الفرع المناسب واستعرض موقعه على الخريطة.
+            </p>
+            <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-[#dbb878]" aria-hidden />
+          </div>
 
-      {groups.map((g, i) => (
-        <div key={`${g.cityName}-${i}`}>
-          {i > 0 ? <div className="h-1 bg-[#dbb878]/40" aria-hidden /> : null}
-          <BranchGroup title="فروعنا" subtitle={g.cityName} branches={g.branches} />
+          {groups.map((g, i) => (
+            <div key={`${g.cityName}-${i}`}>
+              {i > 0 ? <div className="h-1 bg-[#dbb878]/40" aria-hidden /> : null}
+              <BranchGroup title="فروعنا" subtitle={g.cityName} branches={g.branches} />
+            </div>
+          ))}
         </div>
-      ))}
+      </Reveal>
     </section>
   );
 }

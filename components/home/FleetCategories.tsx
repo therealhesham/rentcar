@@ -3,6 +3,7 @@ import {
   FleetCategoriesShowcase,
   type FleetCategoryTab,
 } from "./FleetCategoriesShowcase";
+import { Reveal } from "./HomeMotion";
 
 function luggageLabelForChairs(chairs: number): string {
   if (chairs >= 7) return "حتى 4 حقائب سفر تقريباً";
@@ -52,7 +53,9 @@ export async function FleetCategories() {
       <div className="pointer-events-none absolute -start-[16rem] top-0 h-[32rem] w-[32rem] rounded-full bg-gradient-to-tr from-[#dbb878]/14 to-transparent blur-3xl" />
       <div className="pointer-events-none absolute -end-[16rem] bottom-0 h-[32rem] w-[32rem] rounded-full bg-gradient-to-bl from-[#003749]/10 to-transparent blur-3xl" />
 
-      <FleetCategoriesShowcase tabs={tabs} />
+      <Reveal className="relative z-[1]">
+        <FleetCategoriesShowcase tabs={tabs} />
+      </Reveal>
     </section>
   );
 }
