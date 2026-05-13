@@ -2,13 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
+import { sendBookingInvoiceEmailAfterPayment } from "@/lib/booking-invoice-email";
 import { prisma } from "@/lib/prisma";
 
 export type ConfirmPaymentResult =
   | { ok: true; paymentMethod: string }
   | { ok: false; error: string };
 
-const PAYMENT_METHODS = ["TABBY", "TAMARA", "CARD", "POINTS"] as const;
+const PAYMENT_METHODS = ["TABBY", "TAMARA", "CARD", "APPLE_PAY", "POINTS"] as const;
 
 function parsePaymentMethod(formData: FormData): (typeof PAYMENT_METHODS)[number] | null {
   const raw = String(formData.get("paymentMethod") ?? "CARD")
@@ -21,7 +22,7 @@ function parsePaymentMethod(formData: FormData): (typeof PAYMENT_METHODS)[number
 
 /**
  * تأكيد دفع تجريبي: يضع `paymentStatus = PAID` و `paidAt = الآن` و`paymentMethod` على طلب الحجز.
- * جاهز لاحقاً لربط بوابات تابي / تمارا / بطاقة / نقاط دون تغيير شكل الطلب.
+ * جاهز لاحقاً لربط بوابات تابي / تمارا / بطاقة / Apple Pay / نقاط دون تغيير شكل الطلب.
  */
 export async function confirmMockPayment(
   _prev: ConfirmPaymentResult | null,
@@ -65,6 +66,12 @@ export async function confirmMockPayment(
         };
       }
       return { ok: false, error: "تعذّر تحديث حالة الدفع." };
+    }
+
+    try {
+      await sendBookingInvoiceEmailAfterPayment(id);
+    } catch (e) {
+      console.error("[booking-invoice-email] بعد تأكيد الدفع:", e);
     }
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2025") {

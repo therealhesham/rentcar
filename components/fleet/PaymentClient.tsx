@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, CreditCard, Gift, Lock, Shield } from "lucide-react";
+import { CheckCircle2, CreditCard, Gift, Lock, Shield, Wallet } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useActionState, useMemo, useState, type ReactNode } from "react";
@@ -11,7 +11,7 @@ import type { BookingPaymentSnapshot } from "@/lib/booking-payment-data";
 
 type Props = { booking: BookingPaymentSnapshot };
 
-export type CheckoutPaymentMethod = "TABBY" | "TAMARA" | "CARD" | "POINTS";
+export type CheckoutPaymentMethod = "TABBY" | "TAMARA" | "CARD" | "APPLE_PAY" | "POINTS";
 
 function paymentMethodLabelAr(code: string | null | undefined): string {
   switch (code) {
@@ -21,6 +21,8 @@ function paymentMethodLabelAr(code: string | null | undefined): string {
       return "تمارا";
     case "CARD":
       return "بطاقة ائتمانية";
+    case "APPLE_PAY":
+      return "Apple Pay";
     case "POINTS":
       return "استبدال نقاط";
     default:
@@ -111,6 +113,12 @@ const METHOD_OPTIONS: MethodOption[] = [
     Icon: CreditCard,
   },
   {
+    id: "APPLE_PAY",
+    title: "Apple Pay",
+    hint: "دفع سريع من محفظة آبل — يُفعَّل عند ربط البوابة (مثل Stripe أو مزوّد محلي)",
+    Icon: Wallet,
+  },
+  {
     id: "POINTS",
     title: "استبدال نقاط",
     hint: "خصم من رصيد نقاط برنامج الولاء — يُربَط بنظام النقاط لاحقاً",
@@ -191,11 +199,17 @@ export function PaymentClient({ booking }: Props) {
         ? "المتابعة عبر تمارا (تجريبي)"
         : method === "POINTS"
           ? "تأكيد استبدال النقاط (تجريبي)"
-          : (
-              <>
-                ادفع {formatSarAmount(booking.totals.totalInclTax)} <SarCurrencyGlyph />
-              </>
-            );
+          : method === "APPLE_PAY"
+            ? (
+                <>
+                  ادفع {formatSarAmount(booking.totals.totalInclTax)} <SarCurrencyGlyph /> عبر Apple Pay
+                </>
+              )
+            : (
+                <>
+                  ادفع {formatSarAmount(booking.totals.totalInclTax)} <SarCurrencyGlyph />
+                </>
+              );
 
   return (
     <main dir="rtl" className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
@@ -324,8 +338,8 @@ export function PaymentClient({ booking }: Props) {
                   </span>
                 </div>
                 <p className="text-xs text-on-surface-variant">
-                  يمكن للعميل الدفع عبر تابي أو تمارا أو بطاقة ائتمانية أو استبدال نقاط. الربط الفعلي مع
-                  مزوّدي الخدمة يُضاف لاحقاً دون تغيير مسار الحجز.
+                  يمكن للعميل الدفع عبر تابي أو تمارا أو بطاقة ائتمانية أو Apple Pay أو استبدال نقاط. الربط
+                  الفعلي مع مزوّدي الخدمة يُضاف لاحقاً دون تغيير مسار الحجز.
                 </p>
               </header>
 
@@ -394,6 +408,16 @@ export function PaymentClient({ booking }: Props) {
                   <p className="mt-1 text-xs leading-relaxed opacity-90">
                     بعد التفعيل، سيتم فتح جلسة تمارا لإتمام التقسيط وفق سياساتهم. يمكن دمجها مع عروض
                     الشركة لاحقاً.
+                  </p>
+                </div>
+              ) : null}
+
+              {method === "APPLE_PAY" ? (
+                <div className="rounded-xl border border-neutral-800/15 bg-neutral-900/[0.04] px-4 py-3 text-sm text-neutral-900">
+                  <p className="font-bold">Apple Pay</p>
+                  <p className="mt-1 text-xs leading-relaxed opacity-90">
+                    بعد التفعيل، ستُعرض جلسة Apple Pay (عبر البوابة المدعومة) لإتمام الدفع من iPhone أو
+                    Mac أو Apple Watch. الوضع الحالي تجريبي ويُسجَّل الطلب كمدفوع للاختبار.
                   </p>
                 </div>
               ) : null}
@@ -486,8 +510,8 @@ export function PaymentClient({ booking }: Props) {
 
               <p className="flex items-start gap-2 rounded-lg bg-neutral-50 px-3 py-2 text-[11px] text-on-surface-variant">
                 <Shield className="mt-0.5 size-3.5 shrink-0 text-[#003749]" aria-hidden />
-                التأكيد الحالي يحدّث حالة الطلب في النظام للاختبار. ربط تابي وتمارا والبوابة البنكية
-                ونظام النقاط يتم على مستوى الخادم والامتثال (PCI-DSS) عند التشغيل الفعلي.
+                التأكيد الحالي يحدّث حالة الطلب في النظام للاختبار. ربط تابي وتمارا والبوابة البنكية وApple
+                Pay ونظام النقاط يتم على مستوى الخادم والامتثال (PCI-DSS) عند التشغيل الفعلي.
               </p>
 
               {(clientError || serverError) ? (

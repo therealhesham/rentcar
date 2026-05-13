@@ -39,6 +39,21 @@ export type DirectBookingCommon = {
 
 const AGE_OPTIONS = new Set(["25-35", "35-50", "50+"]);
 
+const CONTACT_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export function parseContactEmailFromJson(
+  body: Record<string, unknown>,
+): { ok: true; contactEmail: string } | { ok: false; error: string } {
+  const raw = String(body.email ?? body.contactEmail ?? "").trim();
+  if (!raw) {
+    return { ok: false, error: "البريد الإلكتروني مطلوب لإرسال الفاتورة بعد الدفع." };
+  }
+  if (raw.length > 254 || !CONTACT_EMAIL_RE.test(raw)) {
+    return { ok: false, error: "صيغة البريد الإلكتروني غير صالحة." };
+  }
+  return { ok: true, contactEmail: raw.toLowerCase() };
+}
+
 function isBranchSlugFormat(branch: string): boolean {
   const s = branch.trim().toLowerCase();
   return /^[a-z0-9-]{1,64}$/.test(s);
@@ -536,6 +551,8 @@ export type CreateDirectBookingInput = DirectBookingCommon & {
   pickupCitySlug?: string | null;
   /** عميل مسجّل مرتبط بالطلب عند تطابق الجوال */
   customerId?: number | null;
+  /** بريد إرسال الفاتورة (من واجهة الإتمام) */
+  contactEmail?: string | null;
 };
 
 export function parsePickupCitySlugFromJson(
@@ -643,7 +660,14 @@ async function buildBookingAddonsJsonSnapshot(
 export async function createDirectBooking(
   input: CreateDirectBookingInput,
 ): Promise<{ ok: true; bookingRequestId: number } | { ok: false; error: string }> {
-  const { carModelId, addonIds, customerId: customerIdRaw, pickupCitySlug, ...common } = input;
+  const {
+    carModelId,
+    addonIds,
+    customerId: customerIdRaw,
+    pickupCitySlug,
+    contactEmail,
+    ...common
+  } = input;
 
   let customerId: number | null =
     customerIdRaw != null &&
@@ -736,6 +760,10 @@ export async function createDirectBooking(
             customerId,
             fullName: commonNormalized.fullName,
             phone: commonNormalized.phone,
+            contactEmail:
+              typeof contactEmail === "string" && contactEmail.trim()
+                ? contactEmail.trim().toLowerCase()
+                : null,
             ageRange: commonNormalized.ageRange,
             carType,
             branch: commonNormalized.branch,

@@ -20,7 +20,7 @@ export type BookingPaymentSnapshot = {
   numberOfDays: number;
   paymentStatus: string;
   paidAt: Date | null;
-  /** TABBY | TAMARA | CARD | POINTS — يُسجَّل عند إتمام الدفع التجريبي */
+  /** TABBY | TAMARA | CARD | APPLE_PAY | POINTS — يُسجَّل عند إتمام الدفع التجريبي */
   paymentMethod: string | null;
   status: string;
   car: {

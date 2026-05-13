@@ -233,6 +233,8 @@ model BookingRequest {
 
   fullName      String
   phone         String
+  /// بريد لإرسال الفاتورة بعد إتمام الدفع (يُجمع من صفحة الإتمام).
+  contactEmail  String?   @db.VarChar(255)
   ageRange      String
   carType       String
   branch        String

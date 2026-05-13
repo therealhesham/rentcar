@@ -370,7 +370,13 @@ export function FleetCheckoutClient({
       .replace(/\s+/g, "")
       .trim();
     const age = String(fd.get("age") ?? "");
+    const email = String(fd.get("email") ?? "").trim();
     const terms = fd.get("terms") === "on";
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError("أدخل بريداً إلكترونياً صالحاً لإرسال الفاتورة بعد الدفع.");
+      return;
+    }
 
     const pickupMode: "BRANCH" | "DELIVERY" =
       trip.mode === "delivery" &&
@@ -393,6 +399,7 @@ export function FleetCheckoutClient({
       terms,
       pickupMode,
       addonIds: [...selected],
+      email,
     };
     if (pickupMode === "DELIVERY") {
       if (
@@ -481,7 +488,8 @@ export function FleetCheckoutClient({
                   مراجعة الحجز 
                 </h1>
                 <p className="mt-2 text-[14px] text-[#6b5a3b]">
-                  الرجاء مراجعة الإضافات وتأكيد بيانات التواصل لإتمام عملية الدفع.
+                  الرجاء مراجعة الإضافات وتأكيد بيانات التواصل لإتمام عملية الدفع. يُرسل ملخص الفاتورة إلى
+                  بريدكم بعد إتمام الدفع.
                 </p>
               </div>
 
@@ -614,6 +622,7 @@ export function FleetCheckoutClient({
                       <input type="hidden" name="name" value={sessionCustomer.name} />
                       <input type="hidden" name="phone" value={sessionCustomer.phoneLocal} />
                       <input type="hidden" name="age" value="25-35" />
+                      <input type="hidden" name="email" value={sessionCustomer.email} />
                     </div>
                   ) : (
                     <div className="mb-8 grid gap-5 sm:grid-cols-2">
@@ -687,6 +696,25 @@ export function FleetCheckoutClient({
                           الفئة العمرية
                         </label>
                         <ChevronDown className="pointer-events-none absolute end-4 top-1/2 size-4 -translate-y-1/2 text-[#aaa08e]" />
+                      </div>
+
+                      <div className="group relative sm:col-span-2">
+                        <input
+                          type="email"
+                          name="email"
+                          id="checkout-email"
+                          required
+                          autoComplete="email"
+                          className="peer w-full rounded-xl border border-[#ebe4d3] bg-transparent px-4 pb-3 pt-6 text-[14px] font-semibold text-[#003749] outline-none transition-all focus:border-[#dbb878] focus:ring-1 focus:ring-[#dbb878]"
+                          placeholder=" "
+                          dir="ltr"
+                        />
+                        <label
+                          htmlFor="checkout-email"
+                          className="absolute start-4 top-4 text-[13px] font-bold text-[#aaa08e] transition-all peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-[#dbb878] peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:text-[10px]"
+                        >
+                          البريد الإلكتروني (لإرسال الفاتورة)
+                        </label>
                       </div>
                     </div>
                   )}

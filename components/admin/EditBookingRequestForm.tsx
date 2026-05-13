@@ -46,6 +46,8 @@ function paymentMethodLabelAr(code: string | null | undefined): string {
       return "تمارا";
     case "CARD":
       return "بطاقة ائتمانية";
+    case "APPLE_PAY":
+      return "Apple Pay";
     case "POINTS":
       return "استبدال نقاط";
     default:
