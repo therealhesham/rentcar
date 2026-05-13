@@ -10,9 +10,14 @@ import { getActiveCheckoutOneTimeFees } from "@/lib/checkout-one-time-fees";
 import { prisma } from "@/lib/prisma";
 import { isTrustedSpacesImageUrl } from "@/lib/spaces-upload";
 import {
+  parseBranchOpeningHoursJson,
+  isDateTimeWithinBranchSchedule,
+} from "@/lib/branch-opening-hours";
+import {
   DELIVERY_ADDRESS_MAX_CHARS,
   DELIVERY_ADDRESS_MIN_CHARS,
 } from "@/lib/delivery-address";
+import { formatBranchOutsideHoursError } from "@/lib/direct-booking-user-messages";
 import {
   addDaysToYmd,
   dateOnlyYmd,
@@ -542,6 +547,8 @@ export function parseCommonBookingFieldsFromJson(
 
 export type CreateDirectBookingInput = DirectBookingCommon & {
   carModelId: number;
+  /** عند الاستلام من فرع — slug فرع الاستلام إن وُجد (وإلا يُفترض نفس `branch`). */
+  pickupBranchSlug?: string | null;
   /** معرفات إضافات نشطة من جدول RentalAddon */
   addonIds?: number[];
   /** slug مدينة الاستلام أو مدينة عنوان التوصيل (لرسوم الشحن بين المدن) */
@@ -561,6 +568,15 @@ export function parsePickupCitySlugFromJson(
   if (typeof raw !== "string") return undefined;
   const s = raw.trim().toLowerCase();
   if (!s || !/^[a-z0-9-]{1,64}$/.test(s)) return undefined;
+  return s;
+}
+
+/** فرع الاستلام عند الاستلام من الفرع (قد يختلف عن فرع إرجاع المركبة في `branch`). */
+export function parsePickupBranchSlugFromJson(body: JsonBody): string | undefined {
+  const raw = body.pickupBranch ?? body.pickupBranchSlug;
+  if (typeof raw !== "string") return undefined;
+  const s = raw.trim().toLowerCase();
+  if (!s || !isBranchSlugFormat(s)) return undefined;
   return s;
 }
 
@@ -779,6 +795,50 @@ async function buildBookingAddonsJsonSnapshot(
   return { ok: true, json: JSON.stringify(payload) };
 }
 
+export async function assertBranchesAndPickupHoursForDirectBooking(
+  input: CreateDirectBookingInput,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const {
+    pickupBranchSlug,
+    carModelId: _cm,
+    addonIds: _ad,
+    pickupCitySlug: _pcs,
+    customerId: _cu,
+    contactEmail: _ce,
+    kyc: _ky,
+    ...common
+  } = input;
+
+  const branchSlug = common.branch.trim().toLowerCase();
+  const returnBranchRow = await prisma.branch.findFirst({
+    where: { slug: branchSlug, isActive: true },
+    select: { id: true, name: true, openingHoursJson: true },
+  });
+  if (!returnBranchRow) {
+    return { ok: false, error: "الفرع غير متاح أو غير مفعّل." };
+  }
+
+  if (common.pickupMode === "BRANCH") {
+    const pickupSlug = (pickupBranchSlug?.trim() || branchSlug).toLowerCase();
+    const pickupRow =
+      pickupSlug === branchSlug
+        ? returnBranchRow
+        : await prisma.branch.findFirst({
+            where: { slug: pickupSlug, isActive: true },
+            select: { id: true, name: true, openingHoursJson: true },
+          });
+    if (!pickupRow) {
+      return { ok: false, error: "فرع الاستلام غير متاح أو غير مفعّل." };
+    }
+    const pickupSch = parseBranchOpeningHoursJson(pickupRow.openingHoursJson);
+    if (!isDateTimeWithinBranchSchedule(common.pickupDate, pickupSch)) {
+      return { ok: false, error: formatBranchOutsideHoursError(pickupRow.name) };
+    }
+  }
+
+  return { ok: true };
+}
+
 /**
  * إنشاء حجز مباشر: نفس احتساب التوفر داخل معاملة Serializable مع إعادة المحاولة عند تعارض P2034.
  */
@@ -790,6 +850,7 @@ export async function createDirectBooking(
     addonIds,
     customerId: customerIdRaw,
     pickupCitySlug,
+    pickupBranchSlug,
     contactEmail,
     kyc,
     ...common
@@ -825,15 +886,12 @@ export async function createDirectBooking(
     return { ok: false, error: "السيارة غير موجودة." };
   }
 
-  const branchSlug = common.branch.trim().toLowerCase();
-  const activeBranch = await prisma.branch.findFirst({
-    where: { slug: branchSlug, isActive: true },
-    select: { id: true },
-  });
-  if (!activeBranch) {
-    return { ok: false, error: "الفرع غير متاح أو غير مفعّل." };
+  const branchAssert = await assertBranchesAndPickupHoursForDirectBooking(input);
+  if (!branchAssert.ok) {
+    return branchAssert;
   }
 
+  const branchSlug = common.branch.trim().toLowerCase();
   const commonNormalized = { ...common, branch: branchSlug };
 
   const shippingSnap = await resolveInterCityShippingSnap({

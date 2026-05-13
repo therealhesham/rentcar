@@ -1,4 +1,5 @@
 import type { BookingCityBranchesOption } from "@/lib/booking-location-options";
+import { parseBranchOpeningHoursJson } from "@/lib/branch-opening-hours";
 import { prisma } from "@/lib/prisma";
 
 const PLACEHOLDER_BRANCH_IMG =
@@ -49,7 +50,7 @@ export async function getActiveBookingCitiesWithBranches(): Promise<
         branches: {
           where: { isActive: true },
           orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
-          select: { slug: true, name: true },
+          select: { slug: true, name: true, openingHoursJson: true },
         },
       },
     });
@@ -58,7 +59,11 @@ export async function getActiveBookingCitiesWithBranches(): Promise<
       .map((c) => ({
         slug: c.slug,
         name: c.name,
-        branches: c.branches,
+        branches: c.branches.map((b) => ({
+          slug: b.slug,
+          name: b.name,
+          openingHours: parseBranchOpeningHoursJson(b.openingHoursJson),
+        })),
       }));
   } catch {
     return [];

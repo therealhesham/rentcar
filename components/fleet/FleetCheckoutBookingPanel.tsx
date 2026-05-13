@@ -15,9 +15,12 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
+import { BranchOutsideHoursModal } from "@/components/fleet/BranchOutsideHoursModal";
 import { DeliveryMapDialog } from "@/components/home/DeliveryMapDialog";
 import { SubscriptionPackagesInWidget } from "@/components/subscriptions/SubscriptionPackagesInWidget";
 import type { BookingCityBranchesOption } from "@/lib/booking-location-options";
+import { lookupBranchOpeningSchedule } from "@/lib/booking-branch-schedule-lookup";
+import { isDateTimeWithinBranchSchedule } from "@/lib/branch-opening-hours";
 import {
   DELIVERY_ADDRESS_MAX_CHARS,
   DELIVERY_ADDRESS_MIN_CHARS,
@@ -79,6 +82,11 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
   const [deliveryOriginCitySlug, setDeliveryOriginCitySlug] = useState("");
   const [mapOpen, setMapOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [branchHoursNotice, setBranchHoursNotice] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
@@ -146,6 +154,7 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
   function applyDates(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setBranchHoursNotice(null);
 
     let effPickupDt = pickupDt;
     let effDropoffDt = dropoffDt;
@@ -221,6 +230,29 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
         setError(
           `حدّد الموقع على الخريطة، أو اكتب عنوان التوصيل كاملاً (على الأقل ${DELIVERY_ADDRESS_MIN_CHARS} أحرف).`,
         );
+        return;
+      }
+    }
+
+    if (mode === "pickup" && pickupBranchEffective) {
+      const sch = lookupBranchOpeningSchedule(dateCities, pickupBranchEffective);
+      if (!isDateTimeWithinBranchSchedule(pickupDate, sch)) {
+        setBranchHoursNotice({
+          title: "فرع الاستلام غير متاح",
+          message:
+            "فرع الاستلام غير متاح في وقت الاستلام المحدّد. اختر موعداً ضمن مواعيد العمل أو فرعاً آخر.",
+        });
+        return;
+      }
+    }
+    if (returnBranchEffective) {
+      const schR = lookupBranchOpeningSchedule(dateCities, returnBranchEffective);
+      if (!isDateTimeWithinBranchSchedule(dropoffDate, schR)) {
+        setBranchHoursNotice({
+          title: "فرع التسليم غير متاح",
+          message:
+            "فرع التسليم غير متاح في وقت التسليم المحدّد. اختر موعداً ضمن مواعيد العمل أو فرعاً آخر.",
+        });
         return;
       }
     }
@@ -334,6 +366,7 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
         </div>
 
         <form
+          ref={formRef}
           onSubmit={applyDates}
           dir="rtl"
           className={`checkout-bar-card w-full overflow-hidden rounded-3xl bg-white/[0.98] shadow-[0_28px_80px_-28px_rgba(15,61,71,0.18),0_10px_28px_-8px_rgba(15,61,71,0.08)] ring-1 ring-black/[0.04] ${
@@ -892,6 +925,16 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
             </div>
           )}
         </form>
+
+        <BranchOutsideHoursModal
+          open={branchHoursNotice != null}
+          title={branchHoursNotice?.title}
+          message={branchHoursNotice?.message ?? ""}
+          onClose={() => setBranchHoursNotice(null)}
+          onChangeTimes={() => {
+            formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+          }}
+        />
 
         <DeliveryMapDialog
           open={mapOpen}

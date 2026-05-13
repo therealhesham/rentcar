@@ -100,6 +100,8 @@ model Branch {
   isActive  Boolean  @default(true)
   /// يظهر في قسم «فروعنا الجديدة» بالصفحة الرئيسية
   isNew     Boolean  @default(false)
+  /// مواعيد العمل بتوقيت السعودية (JSON: { "days": { "0": { "open":"09:00","close":"22:00" }, … } })؛ null = بدون تقييد
+  openingHoursJson String? @db.Text
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

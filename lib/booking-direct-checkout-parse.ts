@@ -4,6 +4,7 @@ import {
   parseCommonBookingFieldsFromJson,
   parseContactEmailFromJson,
   parseDirectBookingKycFromJson,
+  parsePickupBranchSlugFromJson,
   parsePickupCitySlugFromJson,
 } from "@/lib/direct-booking";
 
@@ -40,6 +41,7 @@ export function parseCreateDirectBookingInputFromCheckoutJson(
   }
 
   const pickupCitySlug = parsePickupCitySlugFromJson(obj);
+  const pickupBranchSlug = parsePickupBranchSlugFromJson(obj);
   const sid =
     sessionUserId != null && Number.isInteger(sessionUserId) && sessionUserId > 0
       ? sessionUserId
@@ -53,6 +55,7 @@ export function parseCreateDirectBookingInputFromCheckoutJson(
       addonIds: addonParsed.addonIds,
       customerId: sid,
       ...(pickupCitySlug != null ? { pickupCitySlug } : {}),
+      ...(pickupBranchSlug != null ? { pickupBranchSlug } : {}),
       contactEmail: emailParsed.contactEmail,
       kyc: kycParsed.data,
     },

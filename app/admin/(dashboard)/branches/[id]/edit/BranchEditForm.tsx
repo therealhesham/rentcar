@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { updateBranch } from "@/app/admin/branch-actions";
+import { BranchOpeningHoursFields } from "@/components/admin/BranchOpeningHoursFields";
 import { AdminImageField } from "@/components/admin/AdminImageField";
 
 type Branch = {
@@ -19,6 +20,7 @@ type Branch = {
   sortOrder: number;
   isActive: boolean;
   isNew: boolean;
+  openingHoursJson: string | null;
 };
 
 type CityOption = { id: number; name: string };
@@ -173,6 +175,8 @@ export function BranchEditForm({ branch, cities }: Props) {
         currentImageUrl={branch.image}
         fileHelp="اترك الحقول فارغة للإبقاء على الصورة الحالية أو الرابط المحفوظ."
       />
+
+      <BranchOpeningHoursFields initialOpeningHoursJson={branch.openingHoursJson} />
 
       <div className="md:col-span-2 flex flex-wrap items-center gap-4">
         <button

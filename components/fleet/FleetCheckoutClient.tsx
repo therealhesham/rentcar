@@ -26,7 +26,14 @@ import { SiteNav } from "@/components/shared/SiteNav";
 import { FleetCheckoutBookingPanel } from "@/components/fleet/FleetCheckoutBookingPanel";
 import { SarCurrencyGlyph } from "@/components/ui/SarCurrencyGlyph";
 import { CarUnavailableModal } from "@/components/fleet/CarUnavailableModal";
-import { isDirectBookingCapacityMessage } from "@/lib/direct-booking-user-messages";
+import { BranchOutsideHoursModal } from "@/components/fleet/BranchOutsideHoursModal";
+import {
+  isBranchOutsideHoursBookingError,
+  isDirectBookingCapacityMessage,
+  stripBranchHoursErrorCodeForDisplay,
+} from "@/lib/direct-booking-user-messages";
+import { isDateTimeWithinBranchSchedule } from "@/lib/branch-opening-hours";
+import { lookupBranchOpeningSchedule } from "@/lib/booking-branch-schedule-lookup";
 import { lastInclusiveBookingDayYmd } from "@/lib/booking-calendar-ymd";
 import {
   computeCheckoutTotals,
@@ -114,6 +121,8 @@ export function FleetCheckoutClient({
   const [mounted, setMounted] = useState(false);
   const [unavailableDismissed, setUnavailableDismissed] = useState(false);
   const [postCapacityModal, setPostCapacityModal] = useState(false);
+  const [branchHoursOpen, setBranchHoursOpen] = useState(false);
+  const [branchHoursMessage, setBranchHoursMessage] = useState("");
 
   type IdDocKind = "CITIZEN" | "RESIDENT_VISITOR";
   const [idDocKind, setIdDocKind] = useState<IdDocKind>("CITIZEN");
@@ -180,7 +189,7 @@ export function FleetCheckoutClient({
       pickupIso = `${ctxStore.pickupDate}T12:00:00`;
     }
 
-    let days =
+    const days =
       Number.isFinite(daysNum) && daysNum >= 1 && daysNum <= 60
         ? Math.round(daysNum)
         : ctxStore?.days ?? 1;
@@ -215,6 +224,9 @@ export function FleetCheckoutClient({
       ctxStore?.returnBranch?.trim().toLowerCase() ||
       Object.keys(branchBySlug)[0] ||
       "jeddah";
+
+    const pickupBranchNorm = pickupBranch?.trim().toLowerCase() || undefined;
+    const pickupBranchSlugForHours = pickupBranchNorm || branchSlug;
 
     const pickupCityFromUrl = sp.get("pickupCity")?.trim().toLowerCase() || undefined;
     const pickupCitySlug =
@@ -269,6 +281,7 @@ export function FleetCheckoutClient({
       deliveryAddress: deliveryAddressForTrip,
       pickupCitySlug,
       returnCitySlug,
+      pickupBranchSlugForHours,
     };
   }, [sp, ctxStore, branchBySlug, bookingCities]);
 
@@ -282,6 +295,8 @@ export function FleetCheckoutClient({
   useEffect(() => {
     setUnavailableDismissed(false);
     setPostCapacityModal(false);
+    setBranchHoursOpen(false);
+    setBranchHoursMessage("");
   }, [trip.pickupIso, trip.days, car.modelId]);
 
   const branchOptions = useMemo(
@@ -492,6 +507,27 @@ export function FleetCheckoutClient({
         ? "DELIVERY"
         : "BRANCH";
 
+    if (pickupMode === "BRANCH" && trip.pickupIso) {
+      const sch = lookupBranchOpeningSchedule(bookingCities, trip.pickupBranchSlugForHours);
+      if (!isDateTimeWithinBranchSchedule(new Date(trip.pickupIso), sch)) {
+        setBranchHoursMessage(
+          `${trip.pickupLabel}: الفرع غير متاح في الوقت المحدّد. اختر موعداً ضمن مواعيد العمل أو فرعاً آخر.`,
+        );
+        setBranchHoursOpen(true);
+        return;
+      }
+    }
+    if (trip.dropoffIso && trip.branchSlug) {
+      const schR = lookupBranchOpeningSchedule(bookingCities, trip.branchSlug);
+      if (!isDateTimeWithinBranchSchedule(new Date(trip.dropoffIso), schR)) {
+        setBranchHoursMessage(
+          `${trip.returnLabel}: الفرع غير متاح في وقت التسليم المحدّد. عدّل الموعد أو الفرع.`,
+        );
+        setBranchHoursOpen(true);
+        return;
+      }
+    }
+
     const body: Record<string, unknown> = {
       carModelId: car.modelId,
       name,
@@ -530,6 +566,9 @@ export function FleetCheckoutClient({
     if (trip.pickupCitySlug) {
       body.pickupCity = trip.pickupCitySlug;
     }
+    if (pickupMode === "BRANCH") {
+      body.pickupBranch = trip.pickupBranchSlugForHours;
+    }
 
     setPending(true);
     try {
@@ -558,6 +597,11 @@ export function FleetCheckoutClient({
       }
       if (isDirectBookingCapacityMessage(data.error)) {
         setPostCapacityModal(true);
+        return;
+      }
+      if (isBranchOutsideHoursBookingError(data.error)) {
+        setBranchHoursMessage(stripBranchHoursErrorCodeForDisplay(data.error ?? ""));
+        setBranchHoursOpen(true);
         return;
       }
       setError(data.error ?? "تعذّر إرسال الطلب.");
@@ -1258,6 +1302,14 @@ export function FleetCheckoutClient({
           setPostCapacityModal(false);
         }}
         onChangeDates={() => {
+          router.replace(`/fleet/checkout?modelId=${car.modelId}`);
+        }}
+      />
+      <BranchOutsideHoursModal
+        open={branchHoursOpen}
+        message={branchHoursMessage}
+        onClose={() => setBranchHoursOpen(false)}
+        onChangeTimes={() => {
           router.replace(`/fleet/checkout?modelId=${car.modelId}`);
         }}
       />

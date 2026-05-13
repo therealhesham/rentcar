@@ -7,6 +7,10 @@ import { useEffect, useState } from "react";
 import { SiteFooter } from "@/components/home/SiteFooter";
 import { SiteNav } from "@/components/shared/SiteNav";
 import type { BookingOtpChannel } from "@/lib/site-settings";
+import {
+  isBranchOutsideHoursBookingError,
+  stripBranchHoursErrorCodeForDisplay,
+} from "@/lib/direct-booking-user-messages";
 
 const TEAL = "#003749";
 const GOLD = "#dbb878";
@@ -142,7 +146,12 @@ export function FleetCheckoutOtpClient() {
         router.push(`/fleet/payment/${data.bookingRequestId}`);
         return;
       }
-      setError(data.error ?? "تعذّر تأكيد الرمز.");
+      const rawErr = data.error ?? "تعذّر تأكيد الرمز.";
+      setError(
+        isBranchOutsideHoursBookingError(rawErr)
+          ? stripBranchHoursErrorCodeForDisplay(rawErr)
+          : rawErr,
+      );
     } catch {
       setError("تعذّر الاتصال بالخادم.");
     } finally {

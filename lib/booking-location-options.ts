@@ -1,7 +1,11 @@
+import type { BranchOpeningHoursSchedule } from "@/lib/branch-opening-hours";
+
 /** خيار فرع في نماذج الحجز (المعرّف slug يُرسل للـ URL والحجز). */
 export type BookingBranchOption = {
   slug: string;
   name: string;
+  /** من لوحة الإدارة؛ null = بدون تقييد بمواعيد */
+  openingHours: BranchOpeningHoursSchedule | null;
 };
 
 /** مدينة نشطة مع فروعها المعروضة في البحث. */

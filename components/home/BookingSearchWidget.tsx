@@ -19,6 +19,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
 import { submitCorporateBookingLead } from "@/app/corporate-lead-actions";
+import { BranchOutsideHoursModal } from "@/components/fleet/BranchOutsideHoursModal";
 import { DeliveryMapDialog } from "@/components/home/DeliveryMapDialog";
 import { SubscriptionPackagesInWidget } from "@/components/subscriptions/SubscriptionPackagesInWidget";
 import { DdMmYyDateWithPicker } from "@/components/ui/DdMmYyDateWithPicker";
@@ -42,6 +43,8 @@ import {
   MIN_SUBSCRIPTION_DURATION_MONTHS,
 } from "@/lib/subscriptions/duration-options";
 import type { BookingBranchOption, BookingCityBranchesOption } from "@/lib/booking-location-options";
+import { lookupBranchOpeningSchedule } from "@/lib/booking-branch-schedule-lookup";
+import { isDateTimeWithinBranchSchedule } from "@/lib/branch-opening-hours";
 import {
   DELIVERY_ADDRESS_MAX_CHARS,
   DELIVERY_ADDRESS_MIN_CHARS,
@@ -160,6 +163,11 @@ export function BookingSearchWidget({ cities }: { cities: BookingCityBranchesOpt
   const [deliveryOriginCitySlug, setDeliveryOriginCitySlug] = useState("");
   const [mapOpen, setMapOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [branchHoursNotice, setBranchHoursNotice] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   const [mounted, setMounted] = useState(false);
   const [corpCompanyName, setCorpCompanyName] = useState("");
   const [corpEmail, setCorpEmail] = useState("");
@@ -285,6 +293,7 @@ export function BookingSearchWidget({ cities }: { cities: BookingCityBranchesOpt
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setBranchHoursNotice(null);
 
     if (rental === "corporate") {
       setCorpSuccess(false);
@@ -384,6 +393,29 @@ export function BookingSearchWidget({ cities }: { cities: BookingCityBranchesOpt
         setError(
           `حدّد الموقع على الخريطة، أو اكتب عنوان التوصيل كاملاً (على الأقل ${DELIVERY_ADDRESS_MIN_CHARS} أحرف: المدينة، الحي، الشارع…).`,
         );
+        return;
+      }
+    }
+
+    if (mode === "pickup" && pickupBranchEffective) {
+      const sch = lookupBranchOpeningSchedule(dateCities, pickupBranchEffective);
+      if (!isDateTimeWithinBranchSchedule(pickupDate, sch)) {
+        setBranchHoursNotice({
+          title: "فرع الاستلام غير متاح",
+          message:
+            "فرع الاستلام غير متاح في وقت الاستلام المحدّد. اختر موعداً ضمن مواعيد العمل أو فرعاً آخر.",
+        });
+        return;
+      }
+    }
+    if (returnBranchEffective) {
+      const schR = lookupBranchOpeningSchedule(dateCities, returnBranchEffective);
+      if (!isDateTimeWithinBranchSchedule(dropoffDate, schR)) {
+        setBranchHoursNotice({
+          title: "فرع التسليم غير متاح",
+          message:
+            "فرع التسليم غير متاح في وقت التسليم المحدّد. اختر موعداً ضمن مواعيد العمل أو فرعاً آخر.",
+        });
         return;
       }
     }
@@ -506,6 +538,7 @@ export function BookingSearchWidget({ cities }: { cities: BookingCityBranchesOpt
       `}</style>
 
       <form
+        ref={formRef}
         onSubmit={handleSearch}
         dir="rtl"
         className={`booking-card w-full overflow-hidden rounded-2xl bg-white/[0.97] shadow-[0_28px_72px_-20px_rgba(15,61,71,0.18),0_8px_24px_-6px_rgba(15,61,71,0.07)] ring-1 ring-black/[0.03] backdrop-blur-xl ${
@@ -1213,6 +1246,16 @@ export function BookingSearchWidget({ cities }: { cities: BookingCityBranchesOpt
           </div>
         )}
       </form>
+
+      <BranchOutsideHoursModal
+        open={branchHoursNotice != null}
+        title={branchHoursNotice?.title}
+        message={branchHoursNotice?.message ?? ""}
+        onClose={() => setBranchHoursNotice(null)}
+        onChangeTimes={() => {
+          formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }}
+      />
 
       <DeliveryMapDialog
         open={mapOpen}

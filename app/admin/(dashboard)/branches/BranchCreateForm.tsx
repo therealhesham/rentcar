@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { createBranch } from "@/app/admin/branch-actions";
+import { BranchOpeningHoursFields } from "@/components/admin/BranchOpeningHoursFields";
 import { AdminImageField } from "@/components/admin/AdminImageField";
 
 type CityOption = { id: number; name: string };
@@ -157,6 +158,8 @@ export function BranchCreateForm({ cities }: { cities: CityOption[] }) {
         label="صورة الفرع — من المعرض أو رفع ملف (اختياري)"
         fileHelp="يتطلب مجلد معرض «branches» وضبط Spaces. بحد أقصى 5 ميجابايت."
       />
+
+      <BranchOpeningHoursFields initialOpeningHoursJson={null} />
 
       <div className="md:col-span-2 flex flex-wrap items-center gap-4">
         <button

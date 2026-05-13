@@ -6,6 +6,7 @@ import {
   sendBookingCheckoutOtpFromPublicRequest,
 } from "@/lib/booking-checkout-otp";
 import { parseCreateDirectBookingInputFromCheckoutJson } from "@/lib/booking-direct-checkout-parse";
+import { assertBranchesAndPickupHoursForDirectBooking } from "@/lib/direct-booking";
 import { e164ToLocalNine } from "@/lib/normalize-saudi-phone";
 import {
   BOOKING_CHECKOUT_DRAFT_TTL_MS,
@@ -43,6 +44,11 @@ export async function POST(request: Request) {
   const parsed = parseCreateDirectBookingInputFromCheckoutJson(obj, sessionUserId);
   if (!parsed.ok) {
     return NextResponse.json({ ok: false, error: parsed.error }, { status: 400 });
+  }
+
+  const branchHours = await assertBranchesAndPickupHoursForDirectBooking(parsed.input);
+  if (!branchHours.ok) {
+    return NextResponse.json({ ok: false, error: branchHours.error }, { status: 400 });
   }
 
   const otpRequired = await isBookingCheckoutOtpStepRequired();

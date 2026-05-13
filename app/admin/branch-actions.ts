@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { verifyAdminSession } from "@/lib/admin-auth";
+import { parseBranchOpeningHoursJson } from "@/lib/branch-opening-hours";
 import { requireGalleryFolderSlug } from "@/lib/gallery-folder";
 import { prisma } from "@/lib/prisma";
 import {
@@ -44,6 +45,16 @@ function normalizeMapUrl(raw: string): string | null {
     throw new Error("رابط الخريطة يجب أن يبدأ بـ https://");
   }
   return v;
+}
+
+function openingHoursPayloadFromForm(formData: FormData): string | null {
+  const raw = String(formData.get("openingHoursJson") ?? "").trim();
+  if (!raw) return null;
+  const parsed = parseBranchOpeningHoursJson(raw);
+  if (!parsed) {
+    throw new Error("مواعيد العمل غير صالحة. عطّل التقييد أو راجع الأوقات.");
+  }
+  return JSON.stringify({ days: parsed.days });
 }
 
 function revalidateBranchPaths() {
@@ -140,6 +151,13 @@ export async function createBranch(
     return { ok: false, error: msg };
   }
 
+  let openingHoursJson: string | null = null;
+  try {
+    openingHoursJson = openingHoursPayloadFromForm(formData);
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "مواعيد العمل غير صالحة." };
+  }
+
   try {
     await prisma.branch.create({
       data: {
@@ -155,6 +173,7 @@ export async function createBranch(
         sortOrder: Math.round(sortOrder),
         isActive,
         isNew,
+        openingHoursJson,
       },
     });
   } catch (e) {
@@ -230,6 +249,13 @@ export async function updateBranch(
     return { ok: false, error: msg };
   }
 
+  let openingHoursJson: string | null = null;
+  try {
+    openingHoursJson = openingHoursPayloadFromForm(formData);
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "مواعيد العمل غير صالحة." };
+  }
+
   try {
     await prisma.branch.update({
       where: { id },
@@ -246,6 +272,7 @@ export async function updateBranch(
         sortOrder: Math.round(sortOrder),
         isActive,
         isNew,
+        openingHoursJson,
       },
     });
   } catch (e) {
