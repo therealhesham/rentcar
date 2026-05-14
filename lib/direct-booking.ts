@@ -604,16 +604,26 @@ export function parseAddonIdsFromJsonBody(
 }
 
 export const DIRECT_BOOKING_ID_KIND_CITIZEN = "CITIZEN" as const;
+/** مقيم — رقم الإقامة (10 أرقام يبدأ بـ 2). */
+export const DIRECT_BOOKING_ID_KIND_RESIDENT = "RESIDENT" as const;
+/** زائر — جواز السفر فقط. */
+export const DIRECT_BOOKING_ID_KIND_VISITOR = "VISITOR" as const;
+/** @deprecated استخدم `VISITOR`؛ ما زال يُقبل للتوافق مع طلبات قديمة. */
 export const DIRECT_BOOKING_ID_KIND_RESIDENT_VISITOR = "RESIDENT_VISITOR" as const;
 
+export type DirectBookingIdDocumentKind =
+  | typeof DIRECT_BOOKING_ID_KIND_CITIZEN
+  | typeof DIRECT_BOOKING_ID_KIND_RESIDENT
+  | typeof DIRECT_BOOKING_ID_KIND_VISITOR;
+
 export type DirectBookingKycInput = {
-  idDocumentKind: typeof DIRECT_BOOKING_ID_KIND_CITIZEN | typeof DIRECT_BOOKING_ID_KIND_RESIDENT_VISITOR;
+  idDocumentKind: DirectBookingIdDocumentKind;
   nationalIdNumber: string | null;
   passportNumber: string | null;
   licenseNumber: string;
   licenseExpiryDate: Date;
-  idCardImageUrl: string;
-  driverLicenseImageUrl: string | null;
+  idCardImageUrl: string | null;
+  driverLicenseImageUrl: string;
 };
 
 /**
@@ -625,14 +635,16 @@ export function parseDirectBookingKycFromJson(
   const kindRaw = String(body.idDocumentKind ?? "")
     .trim()
     .toUpperCase();
-  const idDocumentKind =
-    kindRaw === DIRECT_BOOKING_ID_KIND_RESIDENT_VISITOR
-      ? DIRECT_BOOKING_ID_KIND_RESIDENT_VISITOR
-      : kindRaw === DIRECT_BOOKING_ID_KIND_CITIZEN
-        ? DIRECT_BOOKING_ID_KIND_CITIZEN
-        : null;
+  let idDocumentKind: DirectBookingIdDocumentKind | null = null;
+  if (kindRaw === DIRECT_BOOKING_ID_KIND_CITIZEN) {
+    idDocumentKind = DIRECT_BOOKING_ID_KIND_CITIZEN;
+  } else if (kindRaw === DIRECT_BOOKING_ID_KIND_RESIDENT) {
+    idDocumentKind = DIRECT_BOOKING_ID_KIND_RESIDENT;
+  } else if (kindRaw === DIRECT_BOOKING_ID_KIND_VISITOR || kindRaw === DIRECT_BOOKING_ID_KIND_RESIDENT_VISITOR) {
+    idDocumentKind = DIRECT_BOOKING_ID_KIND_VISITOR;
+  }
   if (!idDocumentKind) {
-    return { ok: false, error: "نوع المستند غير صالح (مواطن أو مقيم/زائر)." };
+    return { ok: false, error: "نوع المستند غير صالح (مواطن أو مقيم أو زائر)." };
   }
 
   const nationalIdNumber =
@@ -641,7 +653,7 @@ export function parseDirectBookingKycFromJson(
       .replace(/\D/g, "") || null;
   const passportNumber = String(body.passportNumber ?? "").trim().toUpperCase() || null;
   const licenseNumber = String(body.licenseNumber ?? "").trim();
-  const idCardImageUrl = String(body.idCardImageUrl ?? "").trim();
+  const idCardRaw = String(body.idCardImageUrl ?? "").trim();
   const licenseImgRaw = String(body.driverLicenseImageUrl ?? "").trim();
 
   if (!licenseNumber || licenseNumber.length < 4 || licenseNumber.length > 64) {
@@ -679,37 +691,51 @@ export function parseDirectBookingKycFromJson(
     };
   }
 
-  if (!idCardImageUrl || !isTrustedSpacesImageUrl(idCardImageUrl)) {
-    return {
-      ok: false,
-      error: "صورة الهوية أو الجواز مطلوبة ويجب رفعها من النظام (رابط غير موثوق).",
-    };
+  let idCardImageUrl: string | null = null;
+  if (idCardRaw) {
+    if (!isTrustedSpacesImageUrl(idCardRaw)) {
+      return { ok: false, error: "رابط صورة الهوية أو الجواز غير موثوق." };
+    }
+    idCardImageUrl = idCardRaw;
   }
 
-  let driverLicenseImageUrl: string | null = null;
-  if (licenseImgRaw) {
-    if (!isTrustedSpacesImageUrl(licenseImgRaw)) {
-      return { ok: false, error: "رابط صورة الرخصة غير موثوق." };
-    }
-    driverLicenseImageUrl = licenseImgRaw;
+  if (!licenseImgRaw || !isTrustedSpacesImageUrl(licenseImgRaw)) {
+    return {
+      ok: false,
+      error: "صورة الرخصة مطلوبة ويجب رفعها من النظام (رابط غير موثوق).",
+    };
   }
+  const driverLicenseImageUrl = licenseImgRaw;
 
   if (idDocumentKind === DIRECT_BOOKING_ID_KIND_CITIZEN) {
     if (!nationalIdNumber || !/^\d{10}$/.test(nationalIdNumber)) {
       return { ok: false, error: "رقم الهوية الوطنية مطلوب ويجب أن يكون 10 أرقام." };
     }
+    if (!nationalIdNumber.startsWith("1")) {
+      return { ok: false, error: "رقم الهوية الوطنية للمواطن يجب أن يبدأ بالرقم 1." };
+    }
     if (passportNumber) {
       return { ok: false, error: "لا تُدخل رقم جواز عند اختيار مواطن سعودي." };
     }
+  } else if (idDocumentKind === DIRECT_BOOKING_ID_KIND_RESIDENT) {
+    if (!nationalIdNumber || !/^\d{10}$/.test(nationalIdNumber)) {
+      return { ok: false, error: "رقم الإقامة مطلوب ويجب أن يكون 10 أرقاماً." };
+    }
+    if (!nationalIdNumber.startsWith("2")) {
+      return { ok: false, error: "رقم الإقامة للمقيم يجب أن يبدأ بالرقم 2." };
+    }
+    if (passportNumber) {
+      return { ok: false, error: "لا تُدخل رقم جواز عند اختيار مقيم (أدخل رقم الإقامة فقط)." };
+    }
   } else {
     if (!passportNumber || passportNumber.length < 6 || passportNumber.length > 24) {
-      return { ok: false, error: "رقم الجواز مطلوب للمقيم/الزائر (6–24 حرفاً)." };
+      return { ok: false, error: "رقم الجواز مطلوب للزائر (6–24 حرفاً)." };
     }
     if (!/^[A-Z0-9\-]+$/.test(passportNumber)) {
       return { ok: false, error: "صيغة رقم الجواز غير صالحة (أحرف إنجليزية وأرقام وشرطة)." };
     }
     if (nationalIdNumber) {
-      return { ok: false, error: "لا تُدخل رقم هوية وطنية عند اختيار مقيم/زائر." };
+      return { ok: false, error: "لا تُدخل رقم هوية أو إقامة عند اختيار زائر (أدخل رقم الجواز فقط)." };
     }
   }
 
@@ -718,9 +744,12 @@ export function parseDirectBookingKycFromJson(
     data: {
       idDocumentKind,
       nationalIdNumber:
-        idDocumentKind === DIRECT_BOOKING_ID_KIND_CITIZEN ? nationalIdNumber : null,
+        idDocumentKind === DIRECT_BOOKING_ID_KIND_CITIZEN ||
+        idDocumentKind === DIRECT_BOOKING_ID_KIND_RESIDENT
+          ? nationalIdNumber
+          : null,
       passportNumber:
-        idDocumentKind === DIRECT_BOOKING_ID_KIND_RESIDENT_VISITOR ? passportNumber : null,
+        idDocumentKind === DIRECT_BOOKING_ID_KIND_VISITOR ? passportNumber : null,
       licenseNumber,
       licenseExpiryDate,
       idCardImageUrl,

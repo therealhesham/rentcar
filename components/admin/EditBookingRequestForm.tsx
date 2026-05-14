@@ -336,16 +336,22 @@ function EditBookingModalInner({
                         <dt className="font-bold text-on-surface-variant">النوع:</dt>
                         <dd>
                           {request.idDocumentKind === "CITIZEN"
-                            ? "مواطن سعودي"
-                            : request.idDocumentKind === "RESIDENT_VISITOR"
-                              ? "مقيم / زائر"
-                              : request.idDocumentKind}
+                            ? "مواطن"
+                            : request.idDocumentKind === "RESIDENT"
+                              ? "مقيم"
+                              : request.idDocumentKind === "VISITOR"
+                                ? "زائر"
+                                : request.idDocumentKind === "RESIDENT_VISITOR"
+                                  ? "مقيم / زائر (سجل قديم)"
+                                  : request.idDocumentKind}
                         </dd>
                       </div>
                     ) : null}
                     {request.nationalIdNumber ? (
                       <div className="flex flex-wrap gap-2">
-                        <dt className="font-bold text-on-surface-variant">الهوية:</dt>
+                        <dt className="font-bold text-on-surface-variant">
+                          {request.idDocumentKind === "RESIDENT" ? "الإقامة:" : "الهوية:"}
+                        </dt>
                         <dd dir="ltr" className="font-mono">
                           {request.nationalIdNumber}
                         </dd>
