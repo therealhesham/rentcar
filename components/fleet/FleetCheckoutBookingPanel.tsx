@@ -58,6 +58,15 @@ const CO_CITY_BRANCH_GRID = "grid grid-cols-[auto_minmax(0,1fr)] items-center ga
 const CO_CITY_BRANCH_LBL =
   "shrink-0 self-center text-[10px] font-bold uppercase tracking-wide text-[#003749]/45";
 
+function branchLineAr(cities: BookingCityBranchesOption[], branchSlug: string): string {
+  const s = branchSlug.trim().toLowerCase();
+  for (const c of cities) {
+    const b = c.branches.find((x) => x.slug.toLowerCase() === s);
+    if (b) return `${c.name}، ${b.name}`;
+  }
+  return branchSlug;
+}
+
 type Props = {
   modelId: number;
   cities: BookingCityBranchesOption[];
@@ -66,6 +75,13 @@ type Props = {
 export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
   const router = useRouter();
   const sp = useSearchParams();
+  const prefillBookingRequestIdRaw = sp.get("prefillBookingRequestId")?.trim() ?? "";
+  const excludeBookingRequestIdRaw = sp.get("excludeBookingRequestId")?.trim() ?? "";
+  /** إعادة حجز جديدة بنفس السيارة — يُفترض تغيير التواريخ فقط (الفروع من الرابط). */
+  const isFreshRebookFlow =
+    /^\d+$/.test(prefillBookingRequestIdRaw) && !/^\d+$/.test(excludeBookingRequestIdRaw);
+  /** تعديل حجز قائم — يُسمح بتغيير المواقع والتواريخ. */
+  const isEditBookingFlow = /^\d+$/.test(excludeBookingRequestIdRaw);
   const initializedFromUrlRef = useRef(false);
   const coUid = useId();
   const [rental, setRental] = useState<RentalTab>("daily");
@@ -213,6 +229,43 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
   const pickupBranchEffective =
     mode === "pickup" ? pickupBranch || defaultPickupBranchSlug : "";
   const returnBranchEffective = returnBranch || defaultReturnBranchSlug;
+
+  const freshRebookLocationSummaryAr = useMemo(() => {
+    if (!isFreshRebookFlow) return "";
+    if (mode === "delivery") {
+      const addr = deliveryAddressText.trim();
+      const mapOk = deliveryLat != null && deliveryLng != null;
+      const ret = returnBranchEffective
+        ? `إرجاع المركبة: ${branchLineAr(cities, returnBranchEffective)}`
+        : "";
+      if (mapOk && addr) {
+        const short = addr.length > 140 ? `${addr.slice(0, 140)}…` : addr;
+        return `توصيل (تم تحديد الموقع على الخريطة). ${short} — ${ret}`;
+      }
+      if (mapOk) return `توصيل (موقع على الخريطة) — ${ret}`;
+      if (addr) {
+        const short = addr.length > 160 ? `${addr.slice(0, 160)}…` : addr;
+        return `توصيل: ${short} — ${ret}`;
+      }
+      return ret || "توصيل";
+    }
+    const pick = pickupBranchEffective
+      ? `الاستلام: ${branchLineAr(cities, pickupBranchEffective)}`
+      : "الاستلام من الفرع";
+    const ret = returnBranchEffective
+      ? `الإرجاع: ${branchLineAr(cities, returnBranchEffective)}`
+      : "";
+    return ret ? `${pick} — ${ret}` : pick;
+  }, [
+    isFreshRebookFlow,
+    mode,
+    cities,
+    deliveryAddressText,
+    deliveryLat,
+    deliveryLng,
+    returnBranchEffective,
+    pickupBranchEffective,
+  ]);
 
   const daysPreview = useMemo(() => {
     if (rental === "monthly_packages") {
@@ -442,9 +495,15 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
             <CalendarClock className="size-4" aria-hidden />
           </span>
           <div>
-            <h2 className="text-xl font-extrabold text-[#003749]">تواريخ الاستلام والتسليم</h2>
+            <h2 className="text-xl font-extrabold text-[#003749]">
+              {isFreshRebookFlow ? "مواعيد الحجز الجديد" : "تواريخ الاستلام والتسليم"}
+            </h2>
             <p className="text-[13px] font-semibold text-[#8a7752]">
-              اختر نوع الإيجار والفروع والتوقيت كما في الصفحة الرئيسية، ثم طبّق على هذا الحجز.
+              {isFreshRebookFlow
+                ? "نفس مواقع الاستلام والإرجاع السابقة — عدّلوا التاريخ والوقت فقط ثم «تطبيق التواريخ على الحجز»."
+                : isEditBookingFlow
+                  ? "يمكنكم تغيير الفروع أو طريقة الاستلام أو التواريخ، ثم «تطبيق التواريخ على الحجز»."
+                  : "اختر نوع الإيجار والفروع والتوقيت كما في الصفحة الرئيسية، ثم طبّق على هذا الحجز."}
             </p>
           </div>
         </div>
@@ -457,68 +516,123 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
             mounted ? "" : "opacity-0"
           }`}
         >
-          <div className="relative">
-            <div className="absolute inset-0 bg-gradient-to-b from-[#fdfbf6] to-white" />
-            <div className="relative flex flex-col">
-              <div className="border-b border-[#f0ebe4]">
-                <div
-                  className="flex w-full flex-wrap items-center gap-1 p-2"
-                  role="tablist"
-                  aria-label="مدة الإيجار"
-                >
-                  <CoPillTab
-                    active={rental === "daily"}
-                    onClick={() => setRental("daily")}
-                    icon={<Car className="size-[15px]" />}
-                    label="يومي"
-                  />
-                  <CoPillTab
-                    active={rental === "weekly"}
-                    onClick={() => setRental("weekly")}
-                    icon={<CalendarDays className="size-[15px]" />}
-                    label="أسبوعي"
-                  />
-                  <CoPillTab
-                    active={rental === "monthly"}
-                    onClick={() => setRental("monthly")}
-                    icon={<CalendarRange className="size-[15px]" />}
-                    label="شهري"
-                  />
-                  <CoPillTab
-                    active={rental === "monthly_packages"}
-                    onClick={() => setRental("monthly_packages")}
-                    icon={<Layers className="size-[15px]" />}
-                    label="الباقات الشهرية"
-                  />
+          {!isFreshRebookFlow ? (
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-b from-[#fdfbf6] to-white" />
+              <div className="relative flex flex-col">
+                <div className="border-b border-[#f0ebe4]">
+                  <div
+                    className="flex w-full flex-wrap items-center gap-1 p-2"
+                    role="tablist"
+                    aria-label="مدة الإيجار"
+                  >
+                    <CoPillTab
+                      active={rental === "daily"}
+                      onClick={() => setRental("daily")}
+                      icon={<Car className="size-[15px]" />}
+                      label="يومي"
+                    />
+                    <CoPillTab
+                      active={rental === "weekly"}
+                      onClick={() => setRental("weekly")}
+                      icon={<CalendarDays className="size-[15px]" />}
+                      label="أسبوعي"
+                    />
+                    <CoPillTab
+                      active={rental === "monthly"}
+                      onClick={() => setRental("monthly")}
+                      icon={<CalendarRange className="size-[15px]" />}
+                      label="شهري"
+                    />
+                    <CoPillTab
+                      active={rental === "monthly_packages"}
+                      onClick={() => setRental("monthly_packages")}
+                      icon={<Layers className="size-[15px]" />}
+                      label="الباقات الشهرية"
+                    />
+                  </div>
                 </div>
-              </div>
-              <div className="border-b border-[#f0ebe4] bg-[#fcfaf7]/40">
-                <div
-                  className="flex w-full flex-wrap items-center gap-1 p-2"
-                  role="tablist"
-                  aria-label="طريقة الاستلام"
-                >
-                  <CoPillTab
-                    active={mode === "pickup"}
-                    onClick={() => setMode("pickup")}
-                    icon={<PackageCheck className="size-[15px]" />}
-                    label="استلام من الفرع"
-                    tone="teal"
-                  />
-                  <CoPillTab
-                    active={mode === "delivery"}
-                    onClick={() => setMode("delivery")}
-                    icon={<Truck className="size-[15px]" />}
-                    label="توصيل لموقعي"
-                    tone="teal"
-                  />
+                <div className="border-b border-[#f0ebe4] bg-[#fcfaf7]/40">
+                  <div
+                    className="flex w-full flex-wrap items-center gap-1 p-2"
+                    role="tablist"
+                    aria-label="طريقة الاستلام"
+                  >
+                    <CoPillTab
+                      active={mode === "pickup"}
+                      onClick={() => setMode("pickup")}
+                      icon={<PackageCheck className="size-[15px]" />}
+                      label="استلام من الفرع"
+                      tone="teal"
+                    />
+                    <CoPillTab
+                      active={mode === "delivery"}
+                      onClick={() => setMode("delivery")}
+                      icon={<Truck className="size-[15px]" />}
+                      label="توصيل لموقعي"
+                      tone="teal"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          ) : null}
 
           <div className="px-5 py-5 sm:px-6 sm:py-6">
-            {rental === "monthly_packages" ? (
+            {isFreshRebookFlow ? (
+              <div className="space-y-6">
+                {freshRebookLocationSummaryAr ? (
+                  <div className="rounded-2xl border border-[#dbb878]/30 bg-gradient-to-br from-[#fffdf9] via-white to-[#fdfbf6] px-4 py-3.5 shadow-sm ring-1 ring-[#dbb878]/10">
+                    <p className="mb-1.5 text-[10px] font-black uppercase tracking-wider text-[#003749]/45">
+                      مواقع الاستلام والإرجاع
+                    </p>
+                    <p className="text-[13px] font-bold leading-relaxed text-[#2d4a52]">
+                      {freshRebookLocationSummaryAr}
+                    </p>
+                  </div>
+                ) : null}
+
+                <div className="relative overflow-hidden rounded-3xl border border-[#ebe4d3]/90 bg-gradient-to-b from-white via-[#fffdf9] to-[#f9f5ee] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] sm:p-5">
+                  <div
+                    className="pointer-events-none absolute -start-20 -top-28 size-[22rem] rounded-full bg-[#dbb878]/12 blur-3xl"
+                    aria-hidden
+                  />
+                  <div
+                    className="pointer-events-none absolute -end-16 bottom-0 size-56 rounded-full bg-[#003749]/6 blur-2xl"
+                    aria-hidden
+                  />
+                  <p className="relative mb-4 text-center text-[11px] font-black uppercase tracking-[0.2em] text-[#003749]/40">
+                    التقويم
+                  </p>
+                  <div className="relative grid gap-4 sm:grid-cols-2 sm:gap-5">
+                    <CoFieldCard label="تاريخ ووقت الاستلام" icon={<CalendarClock className="size-[15px]" />}>
+                      <input
+                        type="datetime-local"
+                        value={pickupDt}
+                        onChange={(ev) => setPickupDt(ev.target.value)}
+                        required
+                        dir="ltr"
+                        className="w-full min-h-[2.75rem] rounded-xl border border-[#ebe4d3]/60 bg-white/90 px-2 py-2 text-[15px] font-bold tabular-nums text-[#0f1923] outline-none transition-[box-shadow,border-color] focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25"
+                      />
+                    </CoFieldCard>
+                    <CoFieldCard
+                      label="تاريخ ووقت التسليم"
+                      icon={<Clock className="size-[15px]" />}
+                      hint={rentalDropoffHint("daily")}
+                    >
+                      <input
+                        type="datetime-local"
+                        value={dropoffDt}
+                        onChange={(ev) => setDropoffDt(ev.target.value)}
+                        required
+                        dir="ltr"
+                        className="w-full min-h-[2.75rem] rounded-xl border border-[#ebe4d3]/60 bg-white/90 px-2 py-2 text-[15px] font-bold tabular-nums text-[#0f1923] outline-none transition-[box-shadow,border-color] focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25"
+                      />
+                    </CoFieldCard>
+                  </div>
+                </div>
+              </div>
+            ) : rental === "monthly_packages" ? (
               <SubscriptionPackagesInWidget
                 months={subPackMonths}
                 startYmd={subPackStartYmd}

@@ -689,6 +689,13 @@ export function FleetCheckoutClient({
   const showCarUnavailableModal =
     (slotBlocked && !unavailableDismissed) || postCapacityModal;
 
+  const prefillBookingRequestIdBanner = sp.get("prefillBookingRequestId")?.trim() ?? "";
+  const excludeBookingRequestIdBanner = sp.get("excludeBookingRequestId")?.trim() ?? "";
+  const isFreshRebookCheckoutBanner =
+    sp.get("rebook") === "1" &&
+    /^\d+$/.test(prefillBookingRequestIdBanner) &&
+    !/^\d+$/.test(excludeBookingRequestIdBanner);
+
   return (
     <div className="flex min-h-screen flex-col bg-[#fdfbf6] text-on-surface">
       <SiteNav active="fleet" />
@@ -706,8 +713,17 @@ export function FleetCheckoutClient({
           <div className="mb-10 space-y-3">
             {sp.get("rebook") === "1" ? (
               <div className="rounded-2xl border border-[#dbb878]/40 bg-[#fffdf9] px-4 py-3 text-center text-[13px] font-semibold leading-relaxed text-[#5c4d2e]">
-                يمكنكم تغيير تاريخ الاستلام أو التسليم أو الفروع في النموذج أدناه، ثم الضغط على «تطبيق التواريخ على
-                الحجز» لتحديث السعر والتوفر.
+                {isFreshRebookCheckoutBanner ? (
+                  <>
+                    حدّدوا <span className="text-[#003749]">تاريخ ووقت الاستلام والتسليم</span> في التقويم أدناه، ثم
+                    «تطبيق التواريخ على الحجز» لتحديث السعر والتوفر. الفروع كما في حجزكم السابق.
+                  </>
+                ) : (
+                  <>
+                    يمكنكم تغيير <span className="text-[#003749]">الفروع أو طريقة الاستلام أو التواريخ</span> في
+                    النموذج أدناه، ثم «تطبيق التواريخ على الحجز» لتحديث السعر والتوفر.
+                  </>
+                )}
               </div>
             ) : trip.pickupIso ? (
               <p className="text-center text-[13px] font-semibold leading-relaxed text-[#6b5a3b]">
