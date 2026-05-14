@@ -12,6 +12,9 @@ export type BookingPaymentSnapshot = {
   fullName: string;
   phone: string;
   branch: string;
+  /** من جدول الفروع — لعرض الموقع في إشعارات واتساب وغيرها */
+  branchAddress: string | null;
+  branchMapUrl: string | null;
   pickupMode: string | null;
   deliveryLat: number | null;
   deliveryLng: number | null;
@@ -71,6 +74,11 @@ export async function getBookingForPayment(
   const { addons, interCityShipping, checkoutOneTimeFees } = parseBookingPricingSnapshot(
     row.addonsJson,
   );
+  const branchRow = await prisma.branch.findFirst({
+    where: { slug: row.branch },
+    select: { address: true, mapUrl: true },
+  });
+
   const shipFee = interCityShipping?.feeExclVatSar ?? 0;
   const checkoutFeesSum = checkoutOneTimeFees.reduce((s, x) => s + x.feeExclVatSar, 0);
   const totals = computeCheckoutTotals(
@@ -86,6 +94,8 @@ export async function getBookingForPayment(
     fullName: row.fullName,
     phone: row.phone,
     branch: row.branch,
+    branchAddress: branchRow?.address?.trim() || null,
+    branchMapUrl: branchRow?.mapUrl?.trim() || null,
     pickupMode: row.pickupMode,
     deliveryLat: row.deliveryLat,
     deliveryLng: row.deliveryLng,

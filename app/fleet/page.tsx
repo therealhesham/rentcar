@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { FleetCarGrid, FleetFilters } from "@/components/fleet";
+import { BookingWidget } from "@/components/home";
 import { SiteFooter } from "@/components/home/SiteFooter";
 import { SiteNav } from "@/components/shared/SiteNav";
-import { getActiveBranches } from "@/lib/branch-data";
+import { getActiveBranches, getActiveBookingCitiesWithBranches } from "@/lib/branch-data";
 import { computeBookingDays } from "@/lib/booking-days";
 import { listAvailableCarModelIds } from "@/lib/direct-booking";
 import { getFleetCarsForDisplay } from "@/lib/fleet-data";
 import { fleetDailyPriceFilterLabel } from "@/components/fleet/FleetDailyPriceFilterLabel";
+import { buildFleetSearchUrlHydrate } from "@/lib/fleet-search-url-hydrate";
 import { getRentalPriceDisplayMode } from "@/lib/site-settings";
 
 export const dynamic = "force-dynamic";
@@ -34,6 +36,7 @@ export default async function FleetPage({
   searchParams?: Promise<FleetSearchParams>;
 }) {
   const params = searchParams ? await searchParams : {};
+  const fleetUrlHydrate = buildFleetSearchUrlHydrate(params);
   const categorySlug = qFirst(params.category);
 
   const pickupRaw = qFirst(params.pickup);
@@ -126,7 +129,10 @@ export default async function FleetPage({
   const priceMode = await getRentalPriceDisplayMode();
   const cars = await getFleetCarsForDisplay(categorySlug, availabilityModelIds, priceMode);
 
-  const branchRows = await getActiveBranches().catch(() => []);
+  const [branchRows, cities] = await Promise.all([
+    getActiveBranches().catch(() => []),
+    getActiveBookingCitiesWithBranches().catch(() => []),
+  ]);
   const branchOptions =
     branchRows.length > 0
       ? branchRows.map((b) => ({ slug: b.slug, name: b.name }))
@@ -140,6 +146,21 @@ export default async function FleetPage({
     <div className="flex min-h-screen flex-col bg-surface text-on-surface">
       <SiteNav active="fleet" />
       <div className="pt-28">
+        <section
+          className="border-b border-outline-variant/60 bg-surface-container-low/90 shadow-[0_8px_28px_-8px_rgba(15,61,71,0.12)] backdrop-blur-md"
+          dir="rtl"
+        >
+          <div className="mx-auto max-w-screen-2xl px-4 py-4 sm:px-6 sm:py-5 lg:px-8">
+            <div className="mb-3 flex items-center justify-center gap-3 sm:mb-4">
+              <span className="h-px w-10 bg-gradient-to-l from-primary/35 to-transparent sm:w-12" />
+              <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-on-surface-variant sm:text-[11px]">
+                احجز مركبتك الآن
+              </span>
+              <span className="h-px w-10 bg-gradient-to-r from-primary/35 to-transparent sm:w-12" />
+            </div>
+            <BookingWidget cities={cities} initialFromUrl={fleetUrlHydrate} />
+          </div>
+        </section>
         <FleetFilters dailyPriceLabel={fleetDailyPriceFilterLabel(priceMode)} />
         <main className="mx-auto max-w-screen-2xl px-8 py-24">
           {searchBanner}

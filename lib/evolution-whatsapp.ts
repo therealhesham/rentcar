@@ -72,6 +72,14 @@ function buildBookingCompletionMessage(booking: BookingPaymentSnapshot): string 
       ? `التوصيل: ${booking.deliveryAddress?.trim() || "—"}`
       : `الفرع: ${branchLabel}`;
 
+  const branchLocationLines: string[] = [];
+  if (booking.branchAddress?.trim()) {
+    branchLocationLines.push(`عنوان الفرع: ${booking.branchAddress.trim()}`);
+  }
+  if (booking.branchMapUrl?.trim()) {
+    branchLocationLines.push(`موقع الفرع على الخرائط: ${booking.branchMapUrl.trim()}`);
+  }
+
   return [
     `مرحباً ${booking.fullName.trim()}،`,
     "",
@@ -82,6 +90,7 @@ function buildBookingCompletionMessage(booking: BookingPaymentSnapshot): string 
     `الاستلام: ${pickup}`,
     `التسليم: ${dropoff}`,
     pickupLine,
+    ...branchLocationLines,
     `طريقة الدفع: ${paymentMethodLabelAr(booking.paymentMethod)}`,
     `الإجمالي المدفوع: ${formatSarAmount(t.totalInclTax)} ر.س (شامل الضريبة)`,
     "",

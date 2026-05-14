@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Reveal } from "./HomeMotion";
+import { MotionSection } from "./MotionSection";
 
 type HomeScrollSectionsProps = {
   hero: ReactNode;
@@ -11,7 +11,7 @@ type HomeScrollSectionsProps = {
   branches: ReactNode;
 };
 
-/** أقسام الصفحة الرئيسية مع ظهور تدريجي عند التمرير (framer-motion) */
+/** أقسام الصفحة الرئيسية: whileInView + انزلاق أفقي مثل AboutSection */
 export function HomeScrollSections({
   hero,
   fleetCategories,
@@ -22,10 +22,18 @@ export function HomeScrollSections({
   return (
     <>
       {hero}
-      <Reveal delay={0.02}>{fleetCategories}</Reveal>
-      <Reveal delay={0.05}>{promoBanner}</Reveal>
-      <Reveal delay={0.08}>{services}</Reveal>
-      <Reveal delay={0.11}>{branches}</Reveal>
+      <MotionSection className="w-full" delay={0} x={-50}>
+        {fleetCategories}
+      </MotionSection>
+      <MotionSection className="w-full" delay={0.2} x={50}>
+        {promoBanner}
+      </MotionSection>
+      <MotionSection className="w-full" delay={0.2} x={-50}>
+        {services}
+      </MotionSection>
+      <MotionSection className="w-full" delay={0.2} x={50}>
+        {branches}
+      </MotionSection>
     </>
   );
 }

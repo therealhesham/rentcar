@@ -49,6 +49,8 @@ import {
   DELIVERY_ADDRESS_MAX_CHARS,
   DELIVERY_ADDRESS_MIN_CHARS,
 } from "@/lib/delivery-address";
+import type { FleetSearchUrlHydrate } from "@/lib/fleet-search-url-hydrate";
+import { citySlugForBranchSlug } from "@/lib/fleet-search-url-hydrate";
 import type { StoredFleetSearchContext } from "@/lib/fleet-search-storage";
 import { FLEET_SEARCH_STORAGE_KEY } from "@/lib/fleet-search-storage";
 
@@ -141,7 +143,14 @@ function CityBranchSelects({
   );
 }
 
-export function BookingSearchWidget({ cities }: { cities: BookingCityBranchesOption[] }) {
+export function BookingSearchWidget({
+  cities,
+  initialFromUrl,
+}: {
+  cities: BookingCityBranchesOption[];
+  /** من `/fleet?pickup=…` — يُطبَّق بعد التحميل */
+  initialFromUrl?: FleetSearchUrlHydrate | null;
+}) {
   const router = useRouter();
   const [rental, setRental] = useState<SearchRentalTab>("daily");
   const [mode, setMode] = useState<ModeTab>("pickup");
@@ -242,6 +251,83 @@ export function BookingSearchWidget({ cities }: { cities: BookingCityBranchesOpt
 
   const defaultPickupBranchSlug = pickupCityBranches[0]?.slug ?? "";
   const defaultReturnBranchSlug = returnCityBranches[0]?.slug ?? "";
+
+  const fleetHydrateKey = useMemo(
+    () => (initialFromUrl ? JSON.stringify(initialFromUrl) : ""),
+    [initialFromUrl],
+  );
+
+  /* لقطة معاملات `/fleet` من الخادم → حالة النموذج (تهيئة لمرة عند تغيّر المفتاح) */
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (!initialFromUrl || !fleetHydrateKey) return;
+
+    const u = initialFromUrl;
+    const r = u.rental;
+    if (r === "daily" || r === "weekly" || r === "monthly" || r === "monthly_packages" || r === "corporate") {
+      setRental(r);
+    }
+
+    let effectiveMode: ModeTab | undefined;
+    if (u.mode === "pickup" || u.mode === "delivery") {
+      effectiveMode = u.mode;
+    } else if ((u.dlat && u.dlng) || (u.daddr && u.daddr.trim().length > 0)) {
+      effectiveMode = "delivery";
+    }
+    if (effectiveMode) {
+      setMode(effectiveMode);
+    }
+    if (effectiveMode === "pickup") {
+      setDeliveryLat(null);
+      setDeliveryLng(null);
+      setDeliveryAddressText("");
+    }
+
+    if (r !== "corporate" && dateCities.length > 0) {
+      if (u.pickupBranch) {
+        const city = citySlugForBranchSlug(dateCities, u.pickupBranch);
+        if (city) {
+          setPickupCity(city);
+          setPickupBranch(u.pickupBranch);
+        }
+      } else if (
+        effectiveMode === "pickup" &&
+        u.pickupCity &&
+        dateCities.some((c) => c.slug === u.pickupCity)
+      ) {
+        setPickupCity(u.pickupCity);
+      }
+
+      if (u.returnBranch) {
+        const retCity = citySlugForBranchSlug(dateCities, u.returnBranch);
+        if (retCity) {
+          setReturnCity(retCity);
+          setReturnBranch(u.returnBranch);
+        }
+      }
+    }
+
+    if (effectiveMode === "delivery") {
+      if (u.dlat && u.dlng) {
+        const lat = Number(u.dlat);
+        const lng = Number(u.dlng);
+        if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
+          setDeliveryLat(lat);
+          setDeliveryLng(lng);
+        }
+      }
+      if (u.daddr) setDeliveryAddressText(u.daddr);
+      if (u.pickupCity && dateCities.some((c) => c.slug === u.pickupCity)) {
+        setDeliveryOriginCitySlug(u.pickupCity);
+      }
+    }
+
+    if (r !== "corporate") {
+      if (u.pickup) setPickupDt(u.pickup);
+      if (u.dropoff) setDropoffDt(u.dropoff);
+    }
+  }, [fleetHydrateKey, initialFromUrl, dateCities]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (prevModeRef.current !== "delivery" && mode === "delivery") {
