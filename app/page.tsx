@@ -9,13 +9,16 @@ import {
   TopNav,
 } from "@/components/home";
 import { getActiveBookingCitiesWithBranches } from "@/lib/branch-data";
-import { getHomeHeroSettings } from "@/lib/site-settings";
+import { getBookingWidgetTabFlags, getHomeHeroSettings } from "@/lib/site-settings";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const hero = await getHomeHeroSettings();
-  const cities = await getActiveBookingCitiesWithBranches().catch(() => []);
+  const [hero, cities, tabFlags] = await Promise.all([
+    getHomeHeroSettings(),
+    getActiveBookingCitiesWithBranches().catch(() => []),
+    getBookingWidgetTabFlags(),
+  ]);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -29,6 +32,7 @@ export default async function Home() {
               rightImageUrl={hero.rightImageUrl}
               rightImageAlt={hero.rightImageAlt}
               cities={cities}
+              tabFlags={tabFlags}
             />
           }
           fleetCategories={<FleetCategories />}

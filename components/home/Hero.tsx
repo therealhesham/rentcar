@@ -3,6 +3,7 @@ import {
   BookingWidget,
   type BookingCityBranchesOption,
 } from "./BookingWidget";
+import type { BookingWidgetTabFlags } from "@/lib/booking-widget-tabs";
 import { HeroEntrance } from "./HomeMotion";
 
 /** مؤقت: عطّل صور الهيرو الجانبية لرفع الـ widget أقرب للـ nav */
@@ -14,6 +15,7 @@ export type HeroProps = {
   rightImageUrl: string;
   rightImageAlt: string;
   cities: BookingCityBranchesOption[];
+  tabFlags?: BookingWidgetTabFlags | null;
 };
 
 export function Hero({
@@ -22,6 +24,7 @@ export function Hero({
   rightImageUrl,
   rightImageAlt,
   cities,
+  tabFlags,
 }: HeroProps) {
   const headlineBlock = (
     <div
@@ -125,7 +128,7 @@ export function Hero({
               <span className="h-px w-12 bg-gradient-to-r from-[#dbb878]/50 to-transparent" />
             </div>
 
-            <BookingWidget cities={cities} />
+            <BookingWidget cities={cities} tabFlags={tabFlags} />
           </div>
         </HeroEntrance>
       </div>

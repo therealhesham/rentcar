@@ -10,7 +10,7 @@ import { listAvailableCarModelIds } from "@/lib/direct-booking";
 import { getFleetCarsForDisplay } from "@/lib/fleet-data";
 import { fleetDailyPriceFilterLabel } from "@/components/fleet/FleetDailyPriceFilterLabel";
 import { buildFleetSearchUrlHydrate } from "@/lib/fleet-search-url-hydrate";
-import { getRentalPriceDisplayMode } from "@/lib/site-settings";
+import { getBookingWidgetTabFlags, getRentalPriceDisplayMode } from "@/lib/site-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -129,9 +129,10 @@ export default async function FleetPage({
   const priceMode = await getRentalPriceDisplayMode();
   const cars = await getFleetCarsForDisplay(categorySlug, availabilityModelIds, priceMode);
 
-  const [branchRows, cities] = await Promise.all([
+  const [branchRows, cities, tabFlags] = await Promise.all([
     getActiveBranches().catch(() => []),
     getActiveBookingCitiesWithBranches().catch(() => []),
+    getBookingWidgetTabFlags(),
   ]);
   const branchOptions =
     branchRows.length > 0
@@ -158,7 +159,11 @@ export default async function FleetPage({
               </span>
               <span className="h-px w-10 bg-gradient-to-r from-primary/35 to-transparent sm:w-12" />
             </div>
-            <BookingWidget cities={cities} initialFromUrl={fleetUrlHydrate} />
+            <BookingWidget
+              cities={cities}
+              initialFromUrl={fleetUrlHydrate}
+              tabFlags={tabFlags}
+            />
           </div>
         </section>
         <FleetFilters dailyPriceLabel={fleetDailyPriceFilterLabel(priceMode)} />

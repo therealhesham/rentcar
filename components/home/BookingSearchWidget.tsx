@@ -51,10 +51,31 @@ import {
 } from "@/lib/delivery-address";
 import type { FleetSearchUrlHydrate } from "@/lib/fleet-search-url-hydrate";
 import { citySlugForBranchSlug } from "@/lib/fleet-search-url-hydrate";
+import {
+  DEFAULT_BOOKING_WIDGET_TAB_FLAGS,
+  type BookingWidgetTabFlags,
+} from "@/lib/booking-widget-tabs";
 import type { StoredFleetSearchContext } from "@/lib/fleet-search-storage";
 import { FLEET_SEARCH_STORAGE_KEY } from "@/lib/fleet-search-storage";
 
 type SearchRentalTab = RentalTab | "corporate";
+
+function isRentalTabEnabled(f: BookingWidgetTabFlags, r: SearchRentalTab): boolean {
+  switch (r) {
+    case "daily":
+      return f.rentalDaily;
+    case "weekly":
+      return f.rentalWeekly;
+    case "monthly":
+      return f.rentalMonthly;
+    case "monthly_packages":
+      return f.rentalMonthlyPackages;
+    case "corporate":
+      return f.rentalCorporate;
+    default:
+      return true;
+  }
+}
 
 function todayYmdLocalForPack(): string {
   const t = new Date();
@@ -146,10 +167,13 @@ function CityBranchSelects({
 export function BookingSearchWidget({
   cities,
   initialFromUrl,
+  tabFlags,
 }: {
   cities: BookingCityBranchesOption[];
   /** من `/fleet?pickup=…` — يُطبَّق بعد التحميل */
   initialFromUrl?: FleetSearchUrlHydrate | null;
+  /** من الإدارة — التبويبات المعطّلة لا تُعرض */
+  tabFlags?: BookingWidgetTabFlags | null;
 }) {
   const router = useRouter();
   const [rental, setRental] = useState<SearchRentalTab>("daily");
@@ -189,12 +213,41 @@ export function BookingSearchWidget({
   const prevModeRef = useRef<ModeTab>("pickup");
   const uid = useId();
 
+  const tabFlagsEff = useMemo(
+    () => tabFlags ?? DEFAULT_BOOKING_WIDGET_TAB_FLAGS,
+    [tabFlags],
+  );
+
   useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     if (!error) return;
     errorRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [error]);
+
+  /* eslint-disable react-hooks/set-state-in-effect -- مزامنة rental/mode مع إعدادات الإدارة */
+  useEffect(() => {
+    const f = tabFlagsEff;
+    const order: SearchRentalTab[] = [
+      "daily",
+      "weekly",
+      "monthly",
+      "monthly_packages",
+      "corporate",
+    ];
+    if (!isRentalTabEnabled(f, rental)) {
+      const next = order.find((r) => isRentalTabEnabled(f, r));
+      if (next) setRental(next);
+      return;
+    }
+    if (rental === "corporate") return;
+    if (mode === "pickup" && !f.modePickup && f.modeDelivery) {
+      setMode("delivery");
+    } else if (mode === "delivery" && !f.modeDelivery && f.modePickup) {
+      setMode("pickup");
+    }
+  }, [tabFlagsEff, rental, mode]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (mode !== "delivery") {
@@ -646,60 +699,75 @@ export function BookingSearchWidget({
                 role="tablist"
                 aria-label="نوع الحجز"
               >
-                <PillTab
-                  active={rental === "daily"}
-                  onClick={() => setRental("daily")}
-                  icon={<Car className="size-3.5 shrink-0" />}
-                  label="يومي"
-                />
-                <PillTab
-                  active={rental === "weekly"}
-                  onClick={() => setRental("weekly")}
-                  icon={<CalendarDays className="size-3.5 shrink-0" />}
-                  label="أسبوعي"
-                />
-                <PillTab
-                  active={rental === "monthly"}
-                  onClick={() => setRental("monthly")}
-                  icon={<CalendarRange className="size-3.5 shrink-0" />}
-                  label="شهري"
-                />
-                <PillTab
-                  active={rental === "monthly_packages"}
-                  onClick={() => setRental("monthly_packages")}
-                  icon={<Layers className="size-3.5 shrink-0" />}
-                  label="الباقات الشهرية"
-                />
-                <PillTab
-                  active={rental === "corporate"}
-                  onClick={() => setRental("corporate")}
-                  icon={<Building2 className="size-3.5 shrink-0" />}
-                  label="حجز الشركات"
-                />
+                {tabFlagsEff.rentalDaily ? (
+                  <PillTab
+                    active={rental === "daily"}
+                    onClick={() => setRental("daily")}
+                    icon={<Car className="size-3.5 shrink-0" />}
+                    label="يومي"
+                  />
+                ) : null}
+                {tabFlagsEff.rentalWeekly ? (
+                  <PillTab
+                    active={rental === "weekly"}
+                    onClick={() => setRental("weekly")}
+                    icon={<CalendarDays className="size-3.5 shrink-0" />}
+                    label="أسبوعي"
+                  />
+                ) : null}
+                {tabFlagsEff.rentalMonthly ? (
+                  <PillTab
+                    active={rental === "monthly"}
+                    onClick={() => setRental("monthly")}
+                    icon={<CalendarRange className="size-3.5 shrink-0" />}
+                    label="شهري"
+                  />
+                ) : null}
+                {tabFlagsEff.rentalMonthlyPackages ? (
+                  <PillTab
+                    active={rental === "monthly_packages"}
+                    onClick={() => setRental("monthly_packages")}
+                    icon={<Layers className="size-3.5 shrink-0" />}
+                    label="الباقات الشهرية"
+                  />
+                ) : null}
+                {tabFlagsEff.rentalCorporate ? (
+                  <PillTab
+                    active={rental === "corporate"}
+                    onClick={() => setRental("corporate")}
+                    icon={<Building2 className="size-3.5 shrink-0" />}
+                    label="حجز الشركات"
+                  />
+                ) : null}
               </div>
             </div>
 
-            {rental !== "corporate" ? (
+            {rental !== "corporate" &&
+            (tabFlagsEff.modePickup || tabFlagsEff.modeDelivery) ? (
               <div className="border-b border-[#f0ebe4] bg-[#fcfaf7]/40">
                 <div
                   className="flex w-full flex-wrap items-center gap-0.5 p-1.5"
                   role="tablist"
                   aria-label="طريقة الاستلام"
                 >
-                  <PillTab
-                    active={mode === "pickup"}
-                    onClick={() => setMode("pickup")}
-                    icon={<PackageCheck className="size-3.5 shrink-0" />}
-                    label="استلام من الفرع"
-                    tone="teal"
-                  />
-                  <PillTab
-                    active={mode === "delivery"}
-                    onClick={() => setMode("delivery")}
-                    icon={<Truck className="size-3.5 shrink-0" />}
-                    label="توصيل لموقعي"
-                    tone="teal"
-                  />
+                  {tabFlagsEff.modePickup ? (
+                    <PillTab
+                      active={mode === "pickup"}
+                      onClick={() => setMode("pickup")}
+                      icon={<PackageCheck className="size-3.5 shrink-0" />}
+                      label="استلام من الفرع"
+                      tone="teal"
+                    />
+                  ) : null}
+                  {tabFlagsEff.modeDelivery ? (
+                    <PillTab
+                      active={mode === "delivery"}
+                      onClick={() => setMode("delivery")}
+                      icon={<Truck className="size-3.5 shrink-0" />}
+                      label="توصيل لموقعي"
+                      tone="teal"
+                    />
+                  ) : null}
                 </div>
               </div>
             ) : null}

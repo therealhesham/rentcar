@@ -1,5 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import {
+  DEFAULT_BOOKING_WIDGET_TAB_FLAGS,
+  normalizeBookingWidgetTabFlags,
+  type BookingWidgetTabFlags,
+} from "@/lib/booking-widget-tabs";
+import {
   parseRentalPriceDisplayMode,
   type RentalPriceDisplayMode,
 } from "@/lib/pricing";
@@ -215,6 +220,29 @@ export async function getBookingOtpChannel(): Promise<BookingOtpChannel> {
   } catch (e) {
     console.error("[getBookingOtpChannel] قراءة إعداد القناة فشلت:", e);
     return "OFF";
+  }
+}
+
+export const SITE_KEY_BOOKING_WIDGET_TABS = "booking_widget_tabs_v1";
+
+export async function getBookingWidgetTabFlags(): Promise<BookingWidgetTabFlags> {
+  try {
+    const row = await prisma.siteSetting.findUnique({
+      where: { key: SITE_KEY_BOOKING_WIDGET_TABS },
+      select: { value: true },
+    });
+    if (!row?.value?.trim()) {
+      return DEFAULT_BOOKING_WIDGET_TAB_FLAGS;
+    }
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(row.value) as unknown;
+    } catch {
+      return DEFAULT_BOOKING_WIDGET_TAB_FLAGS;
+    }
+    return normalizeBookingWidgetTabFlags(parsed);
+  } catch {
+    return DEFAULT_BOOKING_WIDGET_TAB_FLAGS;
   }
 }
 
