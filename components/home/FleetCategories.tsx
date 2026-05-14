@@ -1,15 +1,11 @@
 import { getFleetCategoriesForHome } from "@/lib/fleet-category-data";
+import { getFleetCarMapByModelIds } from "@/lib/fleet-data";
+import { getRentalPriceDisplayMode } from "@/lib/site-settings";
 import {
   FleetCategoriesShowcase,
   type FleetCategoryTab,
 } from "./FleetCategoriesShowcase";
 import { Reveal } from "./HomeMotion";
-
-function luggageLabelForChairs(chairs: number): string {
-  if (chairs >= 7) return "حتى 4 حقائب سفر تقريباً";
-  if (chairs >= 5) return "حتى 3 حقائب سفر تقريباً";
-  return "حقيبتان–ثلاث تقريباً";
-}
 
 export async function FleetCategories() {
   const categories = await getFleetCategoriesForHome().catch(() => []);
@@ -18,21 +14,16 @@ export async function FleetCategories() {
     return null;
   }
 
+  const allModelIds = categories.flatMap((c) => c.models.map((m) => m.id));
+  const priceMode = await getRentalPriceDisplayMode();
+  const carByModel = await getFleetCarMapByModelIds(allModelIds, priceMode);
+
   const tabs: FleetCategoryTab[] = categories.map((cat) => ({
     slug: cat.slug,
     tabLabel: cat.title,
-    cards:
-      cat.models.length > 0
-        ? cat.models.map((m) => ({
-            id: `m-${m.id}`,
-            eyebrow: cat.title,
-            detailLine: `${m.brand.name} ${m.name} — أو مشابه`,
-            image: m.image?.trim() || cat.image,
-            alt: m.alt?.trim() || `${m.brand.name} ${m.name}`,
-            seats: m.chairs,
-            luggageLabel: luggageLabelForChairs(m.chairs),
-          }))
-        : [],
+    cars: cat.models
+      .map((m) => carByModel.get(m.id))
+      .filter((car): car is NonNullable<typeof car> => car != null),
   }));
 
   return (

@@ -1,42 +1,30 @@
 "use client";
 
-import { Briefcase, Users } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { FleetCarCard } from "@/components/fleet/FleetCarCard";
+import type { FleetCar } from "@/lib/fleet-types";
 
-const GOLD = "#dbb878";
-const GOLD_DARK = "#c9a356";
 const TEAL = "#003749";
-
-export type FleetCategoryCard = {
-  id: string;
-  eyebrow: string;
-  detailLine: string;
-  image: string;
-  alt: string;
-  seats: number | null;
-  luggageLabel: string | null;
-};
 
 export type FleetCategoryTab = {
   slug: string;
   tabLabel: string;
-  cards: FleetCategoryCard[];
+  cars: FleetCar[];
 };
 
 type Props = { tabs: FleetCategoryTab[] };
 
 export function FleetCategoriesShowcase({ tabs }: Props) {
-  const firstWithCars = tabs.findIndex((t) => t.cards.length > 0);
+  const firstWithCars = tabs.findIndex((t) => t.cars.length > 0);
   const [active, setActive] = useState(() => (firstWithCars >= 0 ? firstWithCars : 0));
 
   const current = tabs[active] ?? tabs[0];
-  const cards = useMemo(() => current?.cards ?? [], [current]);
+  const cars = useMemo(() => current?.cars ?? [], [current]);
 
   if (!current) return null;
 
-  const hasCards = cards.length > 0;
+  const hasCards = cars.length > 0;
 
   return (
     <div className="relative mx-auto max-w-screen-xl px-4 sm:px-8">
@@ -98,72 +86,10 @@ export function FleetCategoriesShowcase({ tabs }: Props) {
           role="tabpanel"
           id={`fleet-cat-panel-${current.slug}`}
           aria-labelledby={`fleet-cat-tab-${current.slug}`}
-          className="grid grid-cols-1 gap-10 md:grid-cols-3 md:gap-0"
+          className="grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-3"
         >
-          {cards.map((card, idx) => (
-            <article
-              key={card.id}
-              className={`flex flex-col px-0 md:px-5 lg:px-7 ${
-                idx > 0
-                  ? "border-t border-[#e8e4dc] pt-10 md:border-t-0 md:border-s md:border-[#e8e4dc] md:pt-0"
-                  : ""
-              }`}
-            >
-              <h3 className="text-center text-[14px] font-extrabold leading-snug tracking-wide text-[#0f1923] sm:text-[15px]">
-                {card.eyebrow}
-              </h3>
-
-              <div className="relative mt-6 aspect-[2.15/1] w-full max-w-[400px] justify-self-center md:max-w-full">
-                <Image
-                  src={card.image}
-                  alt={card.alt}
-                  fill
-                  className="object-contain object-center"
-                  sizes="(min-width: 1024px) 28vw, (min-width: 768px) 30vw, 92vw"
-                  priority={idx === 0}
-                />
-              </div>
-
-              <p className="mt-6 text-center text-[13px] font-semibold leading-relaxed text-[#6b7280] sm:text-[14px]">
-                {card.detailLine}
-              </p>
-
-              {card.seats != null || card.luggageLabel ? (
-                <div className="mt-6 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-[13px] font-bold text-[#374151]">
-                  {card.seats != null ? (
-                    <span className="inline-flex items-center gap-2 tabular-nums">
-                      <Users className="size-[18px] shrink-0 text-[#003749]/75" aria-hidden />
-                      <span dir="ltr">{card.seats}</span>
-                      <span className="font-semibold text-[#6b7280]">مقاعد</span>
-                    </span>
-                  ) : null}
-                  {card.luggageLabel ? (
-                    <span className="inline-flex items-center gap-2">
-                      <Briefcase className="size-[18px] shrink-0 text-[#003749]/75" aria-hidden />
-                      <span>{card.luggageLabel}</span>
-                    </span>
-                  ) : null}
-                </div>
-              ) : null}
-
-              <div className="mt-9 grid grid-cols-2 gap-3">
-                <Link
-                  href={`/fleet?category=${encodeURIComponent(current.slug)}`}
-                  className="inline-flex min-h-[48px] items-center justify-center rounded-xl border-2 border-[#0f1923] bg-white px-2 text-center text-[11px] font-extrabold uppercase tracking-wide text-[#0f1923] transition-colors hover:border-[#003749] hover:bg-[#fdfbf6] sm:px-3 sm:text-[12px]"
-                >
-                  تفاصيل الفئة
-                </Link>
-                <Link
-                  href={`/fleet?category=${encodeURIComponent(current.slug)}`}
-                  className="inline-flex min-h-[48px] items-center justify-center rounded-xl px-2 text-center text-[11px] font-extrabold uppercase tracking-wide text-white shadow-[0_10px_26px_-12px_rgba(201,163,86,0.65)] transition-[transform,box-shadow] hover:shadow-[0_14px_34px_-12px_rgba(201,163,86,0.75)] active:scale-[0.99] sm:px-3 sm:text-[12px]"
-                  style={{
-                    background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)`,
-                  }}
-                >
-                  احجز الآن
-                </Link>
-              </div>
-            </article>
+          {cars.map((car) => (
+            <FleetCarCard key={`${current.slug}-${car.modelId}`} car={car} />
           ))}
         </div>
       ) : (
