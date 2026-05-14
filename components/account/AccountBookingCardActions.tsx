@@ -21,16 +21,26 @@ export type AccountBookingCardActionsProps = {
     paymentStatus: string;
     status: string;
   };
+  /** نص من لوحة الإدارة يُعرض عند تأكيد الإلغاء */
+  cancellationPolicyAr?: string;
+  /** مهلة الإلغاء بالساعات قبل الاستلام (٠ = بدون تقييد) */
+  cancelMinHoursBeforePickup?: number;
 };
 
-function canCustomerCancel(b: AccountBookingCardActionsProps["booking"]): boolean {
-  const st = b.status.trim().toUpperCase();
-  if (st === "CANCELLED" || st === "COMPLETED" || st === "REJECTED") return false;
-  if (b.kind === "DIRECT" && b.paymentStatus === "PAID") return false;
-  return true;
+function isSelfCancelPastDeadline(pickupIso: string, minHours: number): boolean {
+  if (minHours <= 0) return false;
+  const pickupMs = new Date(pickupIso).getTime();
+  const now = Date.now();
+  if (!(pickupMs > now)) return false;
+  const lastAllowedMs = pickupMs - minHours * 60 * 60 * 1000;
+  return now >= lastAllowedMs;
 }
 
-export function AccountBookingCardActions({ booking: b }: AccountBookingCardActionsProps) {
+export function AccountBookingCardActions({
+  booking: b,
+  cancellationPolicyAr = "",
+  cancelMinHoursBeforePickup = 0,
+}: AccountBookingCardActionsProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -52,8 +62,16 @@ export function AccountBookingCardActions({ booking: b }: AccountBookingCardActi
   const editCheckoutHref = hrefRebookFromBooking(rebookLike);
   const rebookCheckoutHref = hrefFreshRebookCheckoutFromBooking(rebookLike);
 
-  const canCancel = canCustomerCancel(b);
   const showDirectLinks = b.kind === "DIRECT" && b.carModelId != null && b.carModelId >= 1;
+
+  const cancelPastDeadline = isSelfCancelPastDeadline(
+    b.pickupDateIso,
+    cancelMinHoursBeforePickup,
+  );
+  const cancelDeadlineTitle =
+    cancelPastDeadline && cancelMinHoursBeforePickup > 0
+      ? `انتهت مهلة الإلغاء . يجب الإلغاء قبل موعد الاستلام بأكثر من ${cancelMinHoursBeforePickup} ساعة.`
+      : undefined;
 
   return (
     <div className="mt-4 flex flex-col gap-2">
@@ -65,7 +83,15 @@ export function AccountBookingCardActions({ booking: b }: AccountBookingCardActi
 
       {cancelOpen ? (
         <div className="rounded-xl border border-red-200 bg-red-50/80 p-3 text-[13px] font-semibold text-red-950">
+          {cancellationPolicyAr.trim() ? (
+            <div className="mb-3 max-h-44 overflow-y-auto rounded-lg border border-red-200/50 bg-white/60 p-3 text-[12px] font-semibold leading-relaxed text-red-950/95 whitespace-pre-wrap">
+              {cancellationPolicyAr.trim()}
+            </div>
+          ) : null}
           <p className="mb-3">هل تريد إلغاء هذا الطلب؟ لا يمكن التراجع بعد التأكيد.</p>
+          <p className="mb-3 text-[12px] font-semibold leading-relaxed text-red-950/85">
+            أي تفاصيل استرداد أو استثناءات تُتابع من الفريق عبر لوحة الإدارة.
+          </p>
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <button
               type="button"
@@ -86,7 +112,7 @@ export function AccountBookingCardActions({ booking: b }: AccountBookingCardActi
               }}
               className="inline-flex flex-1 items-center justify-center rounded-xl bg-red-700 px-4 py-2.5 text-sm font-extrabold text-white shadow-sm transition-opacity hover:opacity-95 disabled:opacity-60"
             >
-              {pending ? "جاري الإلغاء…" : "تأكيد إزالة الحجز"}
+              {pending ? "جاري الإلغاء…" : "تأكيد الغاء الحجز"}
             </button>
             <button
               type="button"
@@ -136,18 +162,18 @@ export function AccountBookingCardActions({ booking: b }: AccountBookingCardActi
             </Link>
           ) : null}
 
-          {canCancel ? (
-            <button
-              type="button"
-              onClick={() => {
-                setCancelError(null);
-                setCancelOpen(true);
-              }}
-              className="inline-flex w-full items-center justify-center rounded-xl border border-red-300 bg-white px-4 py-2.5 text-sm font-extrabold text-red-800 shadow-sm transition-colors hover:bg-red-50 sm:w-auto sm:flex-1"
-            >
-              إزالة الحجز
-            </button>
-          ) : null}
+          <button
+            type="button"
+            disabled={cancelPastDeadline}
+            title={cancelDeadlineTitle}
+            onClick={() => {
+              setCancelError(null);
+              setCancelOpen(true);
+            }}
+            className="inline-flex w-full items-center justify-center rounded-xl border border-red-300 bg-white px-4 py-2.5 text-sm font-extrabold text-red-800 shadow-sm transition-colors hover:bg-red-50 enabled:cursor-pointer disabled:cursor-not-allowed disabled:opacity-55 sm:w-auto sm:flex-1"
+          >
+            الغاء الحجز
+          </button>
         </div>
       )}
     </div>

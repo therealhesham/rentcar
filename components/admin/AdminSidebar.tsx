@@ -22,6 +22,7 @@ const nav = [
   { href: "/admin/subscription-plans", label: "باقات اشتراك" },
   { href: "/admin/subscriptions", label: "اشتراكات العملاء" },
   { href: "/admin/car-bookings", label: "حجوزات السيارات" },
+  { href: "/admin/cancellation-policy", label: "سياسات إلغاء الحجز" },
   { href: "/admin/corporate-leads", label: "حجز الشركات" },
   { href: "/admin/fleet-availability", label: "توفر المركبات" },
   { href: "/fleet", label: "عرض الأسطول" },

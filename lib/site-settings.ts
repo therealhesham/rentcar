@@ -161,6 +161,33 @@ export async function getHomeHeroSettings(): Promise<HomeHeroSettings> {
 
 export const SITE_KEY_RENTAL_PRICE_DISPLAY = "rental_price_display";
 
+/** نص سياسات الإلغاء المعروض للعميل عند تأكيد «إزالة الحجز» في حسابه (يحرره المسؤول). */
+export const SITE_KEY_CUSTOMER_CANCELLATION_POLICY_AR =
+  "customer_cancellation_policy_ar";
+
+/**
+ * أقل عدد ساعات قبل موعد الاستلام يسمح للعميل بإلغاء الحجز من الحساب (٠ = بدون تقييد زمني).
+ * يُخزَّن كرقم صحيح في نص الإعداد.
+ */
+export const SITE_KEY_CUSTOMER_CANCEL_MIN_HOURS_BEFORE_PICKUP =
+  "customer_cancel_min_hours_before_pickup";
+
+const MAX_CANCEL_DEADLINE_HOURS = 720;
+
+export async function getCustomerCancelMinHoursBeforePickup(): Promise<number> {
+  try {
+    const row = await prisma.siteSetting.findUnique({
+      where: { key: SITE_KEY_CUSTOMER_CANCEL_MIN_HOURS_BEFORE_PICKUP },
+      select: { value: true },
+    });
+    const n = Math.floor(Number(row?.value ?? 0));
+    if (!Number.isFinite(n) || n < 0 || n > MAX_CANCEL_DEADLINE_HOURS) return 0;
+    return n;
+  } catch {
+    return 0;
+  }
+}
+
 /** قناة إرسال رمز التحقق عند إتمام الحجز المباشر (يحددها المسؤول). */
 export const SITE_KEY_BOOKING_OTP_CHANNEL = "booking_otp_channel";
 
@@ -200,5 +227,18 @@ export async function getRentalPriceDisplayMode(): Promise<RentalPriceDisplayMod
     return parseRentalPriceDisplayMode(row?.value);
   } catch {
     return "EX_TAX";
+  }
+}
+
+/** نص سياسات الإلغاء للعميل (فارغ إن لم يُضبط بعد). */
+export async function getCustomerCancellationPolicyAr(): Promise<string> {
+  try {
+    const row = await prisma.siteSetting.findUnique({
+      where: { key: SITE_KEY_CUSTOMER_CANCELLATION_POLICY_AR },
+      select: { value: true },
+    });
+    return (row?.value ?? "").trim();
+  } catch {
+    return "";
   }
 }

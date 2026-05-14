@@ -6,6 +6,10 @@ import { SiteNav } from "@/components/shared/SiteNav";
 import { AccountBookingCardActions } from "@/components/account/AccountBookingCardActions";
 import { getCustomerProfile } from "@/lib/customer-auth";
 import { prisma } from "@/lib/prisma";
+import {
+  getCustomerCancellationPolicyAr,
+  getCustomerCancelMinHoursBeforePickup,
+} from "@/lib/site-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -64,6 +68,11 @@ export default async function AccountDashboardPage() {
       carModel: { include: { brand: true } },
     },
   });
+
+  const [cancellationPolicyAr, cancelMinHoursBeforePickup] = await Promise.all([
+    getCustomerCancellationPolicyAr(),
+    getCustomerCancelMinHoursBeforePickup(),
+  ]);
 
   return (
     <div className="flex min-h-screen flex-col bg-[#f4f4f5] text-on-surface">
@@ -231,6 +240,8 @@ export default async function AccountDashboardPage() {
                     </div>
 
                     <AccountBookingCardActions
+                      cancellationPolicyAr={cancellationPolicyAr}
+                      cancelMinHoursBeforePickup={cancelMinHoursBeforePickup}
                       booking={{
                         id: b.id,
                         kind: b.kind,

@@ -11,12 +11,13 @@ import {
 import { saudiLocalNineToE164 } from "@/lib/normalize-saudi-phone";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
+import { getCustomerCancelMinHoursBeforePickup } from "@/lib/site-settings";
 
 export type AuthFormState = { error?: string } | null;
 
 export type CancelBookingResult = { ok: true } | { ok: false; error: string };
 
-/** إلغاء طلب حجز من حساب العميل (ملكية الجوال/الحساب + قيود الحالة والدفع). */
+/** إلغاء طلب حجز من حساب العميل (ملكية الحساب/الجوال فقط). تفاصيل السياسات تُدار من لوحة الإدارة. */
 export async function cancelCustomerBooking(formData: FormData): Promise<CancelBookingResult> {
   const profile = await getCustomerProfile();
   if (!profile) {
@@ -36,8 +37,7 @@ export async function cancelCustomerBooking(formData: FormData): Promise<CancelB
     select: {
       id: true,
       status: true,
-      kind: true,
-      paymentStatus: true,
+      pickupDate: true,
     },
   });
 
@@ -49,14 +49,20 @@ export async function cancelCustomerBooking(formData: FormData): Promise<CancelB
   if (st === "CANCELLED") {
     return { ok: false, error: "الطلب ملغى بالفعل." };
   }
-  if (st === "COMPLETED" || st === "REJECTED") {
-    return { ok: false, error: "لا يمكن إلغاء هذا الطلب في حالته الحالية." };
-  }
-  if (row.kind === "DIRECT" && row.paymentStatus === "PAID") {
-    return {
-      ok: false,
-      error: "حجز مدفوع لا يُلغى من هنا. تواصل مع خدمة العملاء.",
-    };
+
+  const minHours = await getCustomerCancelMinHoursBeforePickup();
+  if (minHours > 0) {
+    const pickup = row.pickupDate;
+    const now = new Date();
+    if (pickup.getTime() > now.getTime()) {
+      const lastMs = pickup.getTime() - minHours * 60 * 60 * 1000;
+      if (now.getTime() >= lastMs) {
+        return {
+          ok: false,
+          error: `انتهت مهلة الإلغاء . يجب إلغاء الحجز قبل موعد الاستلام بما لا يقل عن ${minHours} ساعة. للاستفسار تواصل معنا.`,
+        };
+      }
+    }
   }
 
   await prisma.bookingRequest.update({
