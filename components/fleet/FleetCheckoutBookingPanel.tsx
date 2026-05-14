@@ -392,6 +392,10 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
     if (exId && /^\d+$/.test(exId)) {
       params.set("excludeBookingRequestId", exId);
     }
+    const prefillId = sp.get("prefillBookingRequestId")?.trim();
+    if (prefillId && /^\d+$/.test(prefillId)) {
+      params.set("prefillBookingRequestId", prefillId);
+    }
     if (sp.get("rebook") === "1") {
       params.set("rebook", "1");
     }

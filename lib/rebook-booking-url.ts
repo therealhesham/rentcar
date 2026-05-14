@@ -119,6 +119,14 @@ export function buildRebookSearchParams(
     ex >= 1
   ) {
     params.set("excludeBookingRequestId", String(ex));
+  } else if (
+    !includeExclude &&
+    ex != null &&
+    Number.isInteger(ex) &&
+    ex >= 1
+  ) {
+    /** يملأ النموذج من الطلب السابق دون استثنائه من احتساب السعة (إعادة حجز). */
+    params.set("prefillBookingRequestId", String(ex));
   }
 
   return params;

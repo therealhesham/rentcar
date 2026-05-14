@@ -83,16 +83,22 @@ export default async function FleetCheckoutPage({
       : null;
 
   const excludeRaw = firstSearchParam(sp.excludeBookingRequestId)?.trim();
+  const prefillRaw = firstSearchParam(sp.prefillBookingRequestId)?.trim();
   const excludeParsed = excludeRaw ? Number(excludeRaw) : NaN;
+  const prefillParsed = prefillRaw ? Number(prefillRaw) : NaN;
   const excludeBookingRequestId =
     Number.isInteger(excludeParsed) && excludeParsed >= 1 ? excludeParsed : undefined;
+  const prefillBookingRequestId =
+    Number.isInteger(prefillParsed) && prefillParsed >= 1 ? prefillParsed : undefined;
+
+  const bookingIdForPrefill = excludeBookingRequestId ?? prefillBookingRequestId;
 
   const editPrefill =
-    profile && excludeBookingRequestId != null
+    profile && bookingIdForPrefill != null
       ? await loadFleetCheckoutEditPrefill({
           profile,
           carModelId: modelId,
-          excludeBookingRequestId,
+          bookingRequestId: bookingIdForPrefill,
         })
       : null;
 

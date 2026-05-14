@@ -50,18 +50,18 @@ function bookingPhoneToLocalDigits(stored: string): string {
 }
 
 /**
- * بيانات طلب حجز مباشر قائم لملء نموذج الإتمام عند «تعديل الحجز».
+ * بيانات طلب حجز مباشر قائم لملء نموذج الإتمام عند «تعديل الحجز» أو «إعادة حجز» (prefill فقط).
  * يُحمَّل فقط إذا كان الطلب لنفس العميل (حساب أو جوال مسجّل) ولنفس موديل السيارة.
  */
 export async function loadFleetCheckoutEditPrefill(args: {
   profile: { id: number; phone: string | null };
   carModelId: number;
-  excludeBookingRequestId: number;
+  bookingRequestId: number;
 }): Promise<FleetCheckoutEditPrefill | null> {
-  const { profile, carModelId, excludeBookingRequestId } = args;
+  const { profile, carModelId, bookingRequestId } = args;
   const row = await prisma.bookingRequest.findFirst({
     where: {
-      id: excludeBookingRequestId,
+      id: bookingRequestId,
       kind: "DIRECT",
       carModelId,
       OR: [
