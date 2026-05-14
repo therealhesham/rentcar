@@ -11,6 +11,8 @@ import {
 import { SarCurrencyGlyph } from "@/components/ui/SarCurrencyGlyph";
 import type { BookableModelOption } from "@/components/admin/ConvertInquiryToDirectForm";
 import { parseBookingPricingSnapshot } from "@/lib/booking-pricing-snapshot";
+import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
+import { formatDeductDaysSummaryAr } from "@/lib/cancellation-deduct";
 
 export type EditableBookingRow = {
   id: number;
@@ -41,25 +43,23 @@ export type EditableBookingRow = {
   licenseExpiryDate: string | null;
   idCardImageUrl: string | null;
   driverLicenseImageUrl: string | null;
+  cancelledAt: string | null;
+  cancellationDeductedDays: number | null;
+  cancellationRefundAmountSar: number | null;
+  cancellationRefundExternalRef: string | null;
 };
 
 type CategoryOption = { slug: string; title: string };
 
-function paymentMethodLabelAr(code: string | null | undefined): string {
-  switch (code) {
-    case "TABBY":
-      return "تابي";
-    case "TAMARA":
-      return "تمارا";
-    case "CARD":
-      return "بطاقة ائتمانية";
-    case "APPLE_PAY":
-      return "Apple Pay";
-    case "POINTS":
-      return "استبدال نقاط";
-    default:
-      return code ?? "—";
-  }
+function paymentStatusLabelArForBooking(ps: string | null | undefined): string {
+  const k = String(ps ?? "")
+    .trim()
+    .toUpperCase();
+  if (k === "PAID") return "مدفوع";
+  if (k === "REFUNDED") return "مسترد بالكامل";
+  if (k === "PARTIAL_REFUND") return "استرداد جزئي";
+  if (k === "NO_REFUND") return "بدون استرداد";
+  return "بانتظار الدفع";
 }
 
 type Props = {
@@ -291,15 +291,24 @@ function EditBookingModalInner({
               {request.kind === "DIRECT" ? (
                 <div className="sm:col-span-2 flex flex-wrap items-center gap-2 rounded-xl border border-outline-variant/40 bg-surface-container-low px-3 py-2 text-xs">
                   <span className="font-bold text-on-surface">حالة الدفع:</span>
-                  {request.paymentStatus === "PAID" ? (
-                    <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 font-extrabold text-emerald-800">
-                      مدفوع
-                    </span>
-                  ) : (
-                    <span className="rounded-full bg-amber-100 px-2.5 py-0.5 font-extrabold text-amber-900">
-                      بانتظار الدفع
-                    </span>
-                  )}
+                  {(() => {
+                    const ps = request.paymentStatus?.trim().toUpperCase() ?? "";
+                    const cls =
+                      ps === "PAID"
+                        ? "bg-emerald-100 text-emerald-800"
+                        : ps === "REFUNDED"
+                          ? "bg-sky-100 text-sky-900"
+                          : ps === "PARTIAL_REFUND"
+                            ? "bg-violet-100 text-violet-900"
+                            : ps === "NO_REFUND"
+                              ? "bg-neutral-200 text-neutral-900"
+                              : "bg-amber-100 text-amber-900";
+                    return (
+                      <span className={`rounded-full px-2.5 py-0.5 font-extrabold ${cls}`}>
+                        {paymentStatusLabelArForBooking(request.paymentStatus)}
+                      </span>
+                    );
+                  })()}
                   {request.paidAt ? (
                     <span className="text-on-surface-variant" dir="ltr">
                       {new Date(request.paidAt).toLocaleString("ar-SA")}
@@ -309,7 +318,7 @@ function EditBookingModalInner({
                     <span className="w-full basis-full text-on-surface-variant sm:w-auto sm:basis-auto">
                       الطريقة:{" "}
                       <span className="font-bold text-on-surface">
-                        {paymentMethodLabelAr(request.paymentMethod)}
+                        {bookingPaymentMethodLabelAr(request.paymentMethod)}
                       </span>
                     </span>
                   ) : null}
@@ -519,6 +528,58 @@ function EditBookingModalInner({
                   تُحفظ في النظام بالإنجليزية (NEW، …). الحجز المباشر لا يُحتسب على الأسطول عند «ملغى» أو «مرفوض».
                 </span>
               </label>
+
+              {request.status.trim().toUpperCase() === "CANCELLED" &&
+              (request.cancelledAt != null ||
+                (request.cancellationDeductedDays != null && request.cancellationDeductedDays > 0) ||
+                request.cancellationRefundAmountSar != null ||
+                ["REFUNDED", "PARTIAL_REFUND", "NO_REFUND"].includes(
+                  request.paymentStatus?.trim().toUpperCase() ?? "",
+                )) ? (
+                <div className="sm:col-span-2 rounded-xl border border-outline-variant/40 bg-surface-container-high/40 p-3 text-sm">
+                  <p className="font-bold text-on-surface">بيانات إلغاء ذاتي (إن وُجدت)</p>
+                  {request.cancelledAt ? (
+                    <p className="mt-1 text-xs text-on-surface-variant" dir="ltr">
+                      وقت الإلغاء: {new Date(request.cancelledAt).toLocaleString("ar-SA")}
+                    </p>
+                  ) : null}
+                  {request.cancellationDeductedDays != null && request.cancellationDeductedDays > 0 ? (
+                    <p className="mt-1 text-xs font-semibold text-on-surface">
+                      خصم أيام مسجّل:{" "}
+                      <span className="tabular-nums">
+                        {formatDeductDaysSummaryAr(request.cancellationDeductedDays)}
+                      </span>
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-xs text-on-surface-variant">
+                      لا يوجد خصم أيام مسجّل على الطلب (إلغاء يدوي أو سياسة بلا خصم).
+                    </p>
+                  )}
+                  {request.paymentMethod ? (
+                    <p className="mt-1 text-xs text-on-surface">
+                      وسيلة الدفع / الاسترداد:{" "}
+                      <span className="font-bold">{bookingPaymentMethodLabelAr(request.paymentMethod)}</span>
+                    </p>
+                  ) : null}
+                  {typeof request.cancellationRefundAmountSar === "number" ? (
+                    <p className="mt-1 text-xs font-semibold text-on-surface" dir="ltr">
+                      مبلغ الاسترداد (شامل الضريبة):{" "}
+                      <span className="tabular-nums font-extrabold">
+                        {request.cancellationRefundAmountSar.toLocaleString("en-US", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}{" "}
+                        <SarCurrencyGlyph className="inline h-[0.9em] w-[0.9em]" />
+                      </span>
+                    </p>
+                  ) : null}
+                  {request.cancellationRefundExternalRef ? (
+                    <p className="mt-1 break-all text-[11px] text-on-surface-variant" dir="ltr">
+                      مرجع الاسترداد: {request.cancellationRefundExternalRef}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
 
               {request.kind === "INQUIRY" ? (
                 <label className="sm:col-span-2 block text-sm font-bold text-on-surface">

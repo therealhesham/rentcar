@@ -11,11 +11,25 @@ import {
 import { saudiLocalNineToE164 } from "@/lib/normalize-saudi-phone";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
-import { getCustomerCancelMinHoursBeforePickup } from "@/lib/site-settings";
+import {
+  computeCancellationRefundBreakdown,
+  paymentStatusAfterCancellationRefund,
+} from "@/lib/booking-cancellation-refund";
+import { executeCancellationRefundByPaymentMethod } from "@/lib/booking-refund-executor";
+import {
+  computeCancellationDeductedDays,
+  hoursBeforePickup,
+} from "@/lib/cancellation-deduct";
+import {
+  getCustomerCancelMinHoursBeforePickup,
+  getCustomerCancellationDeductTiers,
+} from "@/lib/site-settings";
 
 export type AuthFormState = { error?: string } | null;
 
-export type CancelBookingResult = { ok: true } | { ok: false; error: string };
+export type CancelBookingResult =
+  | { ok: true; refundInclTaxSar?: number; paymentMethod?: string | null }
+  | { ok: false; error: string };
 
 /** إلغاء طلب حجز من حساب العميل (ملكية الحساب/الجوال فقط). تفاصيل السياسات تُدار من لوحة الإدارة. */
 export async function cancelCustomerBooking(formData: FormData): Promise<CancelBookingResult> {
@@ -38,6 +52,12 @@ export async function cancelCustomerBooking(formData: FormData): Promise<CancelB
       id: true,
       status: true,
       pickupDate: true,
+      numberOfDays: true,
+      kind: true,
+      paymentStatus: true,
+      paymentMethod: true,
+      addonsJson: true,
+      carModel: { select: { price: true, vatRatePercent: true } },
     },
   });
 
@@ -65,16 +85,79 @@ export async function cancelCustomerBooking(formData: FormData): Promise<CancelB
     }
   }
 
+  const tiers = await getCustomerCancellationDeductTiers();
+  const nowCancel = new Date();
+  const hoursBefore = hoursBeforePickup(row.pickupDate, nowCancel);
+  const deductDays = computeCancellationDeductedDays(
+    hoursBefore,
+    tiers,
+    row.numberOfDays,
+  );
+
+  const baseData = {
+    status: "CANCELLED" as const,
+    cancelledAt: nowCancel,
+    cancellationDeductedDays: deductDays > 0 ? deductDays : null,
+  };
+
+  let refundInclTaxSar: number | undefined;
+  let paymentMethodOut: string | null | undefined;
+
+  const ps = row.paymentStatus.trim().toUpperCase();
+  const paidEligible =
+    row.kind === "DIRECT" && ps === "PAID" && row.carModel != null;
+
+  let paymentPatch: {
+    paymentStatus?: string;
+    cancellationRefundAmountSar?: number | null;
+    cancellationRefundExternalRef?: string | null;
+  } = {};
+
+  if (paidEligible && row.carModel) {
+    const br = computeCancellationRefundBreakdown({
+      numberOfDays: row.numberOfDays,
+      deductDays,
+      pricePerDayExclTax: row.carModel.price,
+      vatRatePercent: row.carModel.vatRatePercent,
+      addonsJson: row.addonsJson,
+    });
+    if (br) {
+      const exec = await executeCancellationRefundByPaymentMethod({
+        bookingRequestId: row.id,
+        paymentMethod: row.paymentMethod,
+        refundAmountInclTaxSar: br.refundInclTax,
+      });
+      if (exec.ok) {
+        paymentPatch = {
+          paymentStatus: paymentStatusAfterCancellationRefund(
+            br.paidTotalInclTax,
+            br.refundInclTax,
+          ),
+          cancellationRefundAmountSar: br.refundInclTax,
+          cancellationRefundExternalRef: exec.externalRef,
+        };
+        refundInclTaxSar = br.refundInclTax;
+        paymentMethodOut = row.paymentMethod;
+      } else {
+        console.error("[cancelCustomerBooking] refund execution failed:", exec.error);
+      }
+    }
+  }
+
   await prisma.bookingRequest.update({
     where: { id: row.id },
-    data: { status: "CANCELLED" },
+    data: {
+      ...baseData,
+      ...paymentPatch,
+    },
   });
 
   revalidatePath("/account");
   revalidatePath("/admin");
   revalidatePath("/admin/car-bookings");
+  revalidatePath(`/fleet/payment/${row.id}`);
 
-  return { ok: true };
+  return { ok: true, refundInclTaxSar, paymentMethod: paymentMethodOut };
 }
 
 export async function registerCustomer(

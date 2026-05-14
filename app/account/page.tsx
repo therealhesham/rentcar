@@ -6,9 +6,16 @@ import { SiteNav } from "@/components/shared/SiteNav";
 import { AccountBookingCardActions } from "@/components/account/AccountBookingCardActions";
 import { getCustomerProfile } from "@/lib/customer-auth";
 import { prisma } from "@/lib/prisma";
+import { computeCancellationRefundBreakdown } from "@/lib/booking-cancellation-refund";
+import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
+import {
+  computeCancellationDeductedDays,
+  hoursBeforePickup,
+} from "@/lib/cancellation-deduct";
 import {
   getCustomerCancellationPolicyAr,
   getCustomerCancelMinHoursBeforePickup,
+  getCustomerCancellationDeductTiers,
 } from "@/lib/site-settings";
 
 export const dynamic = "force-dynamic";
@@ -35,6 +42,24 @@ function bookingStatusLabel(status: string): string {
   };
   const key = status.trim().toUpperCase();
   return map[key] ?? status;
+}
+
+function bookingPaymentPillClass(paymentStatus: string): string {
+  const k = paymentStatus.trim().toUpperCase();
+  if (k === "PAID") return "border-emerald-200 bg-emerald-50 text-emerald-950";
+  if (k === "REFUNDED") return "border-sky-200 bg-sky-50 text-sky-950";
+  if (k === "PARTIAL_REFUND") return "border-violet-200 bg-violet-50 text-violet-950";
+  if (k === "NO_REFUND") return "border-neutral-300 bg-neutral-100 text-neutral-900";
+  return "border-orange-200 bg-orange-50 text-orange-900";
+}
+
+function bookingPaymentPillLabel(paymentStatus: string): string {
+  const k = paymentStatus.trim().toUpperCase();
+  if (k === "PAID") return "مدفوع";
+  if (k === "REFUNDED") return "مسترد بالكامل";
+  if (k === "PARTIAL_REFUND") return "استرداد جزئي";
+  if (k === "NO_REFUND") return "بدون استرداد";
+  return "بانتظار الدفع";
 }
 
 function bookingStatusStyles(status: string): string {
@@ -69,10 +94,12 @@ export default async function AccountDashboardPage() {
     },
   });
 
-  const [cancellationPolicyAr, cancelMinHoursBeforePickup] = await Promise.all([
-    getCustomerCancellationPolicyAr(),
-    getCustomerCancelMinHoursBeforePickup(),
-  ]);
+  const [cancellationPolicyAr, cancelMinHoursBeforePickup, cancellationDeductTiers] =
+    await Promise.all([
+      getCustomerCancellationPolicyAr(),
+      getCustomerCancelMinHoursBeforePickup(),
+      getCustomerCancellationDeductTiers(),
+    ]);
 
   return (
     <div className="flex min-h-screen flex-col bg-[#f4f4f5] text-on-surface">
@@ -176,7 +203,48 @@ export default async function AccountDashboardPage() {
             </div>
           ) : (
             <ul className="mt-6 grid gap-4 sm:grid-cols-1 lg:grid-cols-2">
-              {bookings.map((b) => (
+              {bookings.map((b) => {
+                const bookingSt = b.status.trim().toUpperCase();
+                let cancellationFinancePreview: {
+                  paidInclTax: number;
+                  refundInclTax: number;
+                  methodLabel: string;
+                } | null = null;
+                if (
+                  b.kind === "DIRECT" &&
+                  b.paymentStatus.trim().toUpperCase() === "PAID" &&
+                  b.carModel &&
+                  bookingSt !== "CANCELLED" &&
+                  bookingSt !== "REJECTED"
+                ) {
+                  const h = hoursBeforePickup(b.pickupDate, new Date());
+                  const deduct = computeCancellationDeductedDays(
+                    h,
+                    cancellationDeductTiers,
+                    b.numberOfDays,
+                  );
+                  const br = computeCancellationRefundBreakdown({
+                    numberOfDays: b.numberOfDays,
+                    deductDays: deduct,
+                    pricePerDayExclTax: b.carModel.price,
+                    vatRatePercent: b.carModel.vatRatePercent,
+                    addonsJson: b.addonsJson,
+                  });
+                  if (br) {
+                    cancellationFinancePreview = {
+                      paidInclTax: br.paidTotalInclTax,
+                      refundInclTax: br.refundInclTax,
+                      methodLabel: bookingPaymentMethodLabelAr(b.paymentMethod),
+                    };
+                  }
+                }
+
+                const rowRefund = b as typeof b & {
+                  cancellationRefundAmountSar?: number | null;
+                  cancellationRefundExternalRef?: string | null;
+                };
+
+                return (
                 <li key={b.id}>
                   <article className="group flex h-full flex-col rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition-shadow duration-300 hover:shadow-md editorial-shadow">
                     <div className="flex flex-wrap items-start justify-between gap-3">
@@ -203,12 +271,9 @@ export default async function AccountDashboardPage() {
                         </span>
                         {b.kind === "DIRECT" ? (
                           <span
-                            className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${b.paymentStatus === "PAID"
-                                ? "border-emerald-200 bg-emerald-50 text-emerald-950"
-                                : "border-orange-200 bg-orange-50 text-orange-900"
-                              }`}
+                            className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${bookingPaymentPillClass(b.paymentStatus)}`}
                           >
-                            {b.paymentStatus === "PAID" ? "مدفوع" : "بانتظار الدفع"}
+                            {bookingPaymentPillLabel(b.paymentStatus)}
                           </span>
                         ) : null}
                       </div>
@@ -242,6 +307,8 @@ export default async function AccountDashboardPage() {
                     <AccountBookingCardActions
                       cancellationPolicyAr={cancellationPolicyAr}
                       cancelMinHoursBeforePickup={cancelMinHoursBeforePickup}
+                      cancellationDeductTiers={cancellationDeductTiers}
+                      cancellationFinancePreview={cancellationFinancePreview}
                       booking={{
                         id: b.id,
                         kind: b.kind,
@@ -254,12 +321,17 @@ export default async function AccountDashboardPage() {
                         deliveryLng: b.deliveryLng,
                         deliveryAddress: b.deliveryAddress,
                         paymentStatus: b.paymentStatus,
+                        paymentMethod: b.paymentMethod,
                         status: b.status,
+                        cancellationDeductedDays: b.cancellationDeductedDays ?? null,
+                        cancellationRefundAmountSar: rowRefund.cancellationRefundAmountSar ?? null,
+                        cancellationRefundExternalRef: rowRefund.cancellationRefundExternalRef ?? null,
                       }}
                     />
                   </article>
                 </li>
-              ))}
+                );
+              })}
             </ul>
           )}
         </section>

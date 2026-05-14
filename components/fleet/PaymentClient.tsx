@@ -127,7 +127,8 @@ const METHOD_OPTIONS: MethodOption[] = [
 ];
 
 export function PaymentClient({ booking }: Props) {
-  const initiallyPaid = booking.paymentStatus === "PAID";
+  const ps = booking.paymentStatus.trim().toUpperCase();
+  const paymentFinalized = ps !== "PENDING";
   const [state, formAction, pending] = useActionState<ConfirmPaymentResult | null, FormData>(
     confirmMockPayment,
     null,
@@ -140,11 +141,11 @@ export function PaymentClient({ booking }: Props) {
   const [pointsNote, setPointsNote] = useState("");
   const [clientError, setClientError] = useState<string | null>(null);
 
-  const paid = initiallyPaid || (state?.ok ?? false);
+  const paid = paymentFinalized || (state?.ok ?? false);
 
   const serverError = state && state.ok === false ? state.error : null;
 
-  const resolvedMethodCode = initiallyPaid
+  const resolvedMethodCode = paymentFinalized
     ? booking.paymentMethod
     : state?.ok && state.paymentMethod
       ? state.paymentMethod
@@ -233,9 +234,15 @@ export function PaymentClient({ booking }: Props) {
         </span>{" "}
         —{" "}
         {paid
-          ? resolvedMethodCode
-            ? `تم الدفع عبر ${paymentMethodLabelAr(resolvedMethodCode)}.`
-            : "تم الدفع بنجاح."
+          ? ps === "REFUNDED"
+            ? `تم استرداد المبلغ بالكامل عبر ${paymentMethodLabelAr(resolvedMethodCode)}.`
+            : ps === "PARTIAL_REFUND"
+              ? `تم استرداد جزء من المبلغ عبر ${paymentMethodLabelAr(resolvedMethodCode)}.`
+              : ps === "NO_REFUND"
+                ? "لا يوجد مبلغ مسترد بحسب سياسة الإلغاء."
+                : resolvedMethodCode
+                  ? `تم الدفع عبر ${paymentMethodLabelAr(resolvedMethodCode)}.`
+                  : "تم الدفع بنجاح."
           : "اختر طريقة الدفع وأكمل الإجراء."}
       </p>
 
@@ -247,7 +254,11 @@ export function PaymentClient({ booking }: Props) {
                 <div className="grid size-16 place-items-center rounded-full bg-emerald-100 text-emerald-700">
                   <CheckCircle2 className="size-9" aria-hidden />
                 </div>
-                <h2 className="text-lg font-extrabold text-emerald-800">تم استلام الدفع</h2>
+                <h2 className="text-lg font-extrabold text-emerald-800">
+                  {ps === "REFUNDED" || ps === "PARTIAL_REFUND" || ps === "NO_REFUND"
+                    ? "حالة الدفع بعد الإلغاء"
+                    : "تم استلام الدفع"}
+                </h2>
                 <p className="max-w-md text-sm text-emerald-900/80">
                   شكراً لك! تم تأكيد حجزك وسيتواصل معك فريقنا قريباً لتأكيد التسليم
                   وأي إجراءات إضافية. احتفظ برقم الطلب للمراجعة.

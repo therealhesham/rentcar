@@ -260,13 +260,21 @@ model BookingRequest {
   termsAccepted Boolean             @default(true)
   /// لقطة JSON للإضافات المختارة عند إنشاء الحجز المباشر (عناوين وأسعار وقت الطلب).
   addonsJson    String?   @db.Text
-  /// حالة الدفع للحجز: PENDING (بانتظار الدفع) أو PAID (تم الدفع — وضع تجريبي).
-  paymentStatus String    @default("PENDING") @db.VarChar(16)
+  /// حالة الدفع: PENDING | PAID | REFUNDED | PARTIAL_REFUND | NO_REFUND
+  paymentStatus String    @default("PENDING") @db.VarChar(24)
   /// وقت تأكيد الدفع (تجريبي).
   paidAt        DateTime?
   /// طريقة الدفع المختارة عند الإتمام: TABBY | TAMARA | CARD | POINTS (ربط البوابات لاحقاً).
   paymentMethod String?   @db.VarChar(24)
   status        String              @default("NEW")
+  /// وقت إلغاء الطلب من الحساب (إن وُجد).
+  cancelledAt              DateTime?
+  /// أيام الإيجار المخصومة عند آخر إلغاء ذاتي (حسب سياسة الشرائح في الإعدادات).
+  cancellationDeductedDays Float?
+  /// إجمالي المبلغ المسترد للعميل (شامل الضريبة) عند الإلغاء الذاتي بعد دفع ناجح.
+  cancellationRefundAmountSar Float?
+  /// مرجع من بوابة الاسترداد (أو محاكاة MOCK-… حتى ربط البوابات).
+  cancellationRefundExternalRef String? @db.VarChar(128)
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
 

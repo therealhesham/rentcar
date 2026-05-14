@@ -8,6 +8,10 @@ import {
   parseRentalPriceDisplayMode,
   type RentalPriceDisplayMode,
 } from "@/lib/pricing";
+import {
+  parseCancellationDeductTiersJson,
+  type CancellationDeductTier,
+} from "@/lib/cancellation-deduct";
 import { isTrustedSpacesImageUrl } from "@/lib/spaces-upload";
 
 /* ─── Promo Banner (Carousel) ──────────────────────────────── */
@@ -177,6 +181,10 @@ export const SITE_KEY_CUSTOMER_CANCELLATION_POLICY_AR =
 export const SITE_KEY_CUSTOMER_CANCEL_MIN_HOURS_BEFORE_PICKUP =
   "customer_cancel_min_hours_before_pickup";
 
+/** JSON: مصفوفة شرائح خصم الأيام عند الإلغاء الذاتي (انظر `lib/cancellation-deduct.ts`). */
+export const SITE_KEY_CUSTOMER_CANCELLATION_DEDUCT_TIERS_JSON =
+  "customer_cancellation_deduct_tiers_json";
+
 const MAX_CANCEL_DEADLINE_HOURS = 720;
 
 export async function getCustomerCancelMinHoursBeforePickup(): Promise<number> {
@@ -190,6 +198,18 @@ export async function getCustomerCancelMinHoursBeforePickup(): Promise<number> {
     return n;
   } catch {
     return 0;
+  }
+}
+
+export async function getCustomerCancellationDeductTiers(): Promise<CancellationDeductTier[]> {
+  try {
+    const row = await prisma.siteSetting.findUnique({
+      where: { key: SITE_KEY_CUSTOMER_CANCELLATION_DEDUCT_TIERS_JSON },
+      select: { value: true },
+    });
+    return parseCancellationDeductTiersJson(row?.value ?? "");
+  } catch {
+    return [];
   }
 }
 

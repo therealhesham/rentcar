@@ -206,6 +206,15 @@ export default async function AdminDashboardPage() {
                             : null,
                           idCardImageUrl: request.idCardImageUrl ?? null,
                           driverLicenseImageUrl: request.driverLicenseImageUrl ?? null,
+                          cancelledAt: request.cancelledAt
+                            ? request.cancelledAt.toISOString()
+                            : null,
+                          cancellationDeductedDays:
+                            request.cancellationDeductedDays ?? null,
+                          cancellationRefundAmountSar:
+                            request.cancellationRefundAmountSar ?? null,
+                          cancellationRefundExternalRef:
+                            request.cancellationRefundExternalRef ?? null,
                         }}
                         categories={fleetCategoriesForEdit}
                         models={bookableModels}

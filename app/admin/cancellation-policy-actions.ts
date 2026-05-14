@@ -2,8 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { verifyAdminSession } from "@/lib/admin-auth";
+import { parseCancellationDeductTiersFromAdminForm } from "@/lib/cancellation-deduct";
 import {
   SITE_KEY_CUSTOMER_CANCEL_MIN_HOURS_BEFORE_PICKUP,
+  SITE_KEY_CUSTOMER_CANCELLATION_DEDUCT_TIERS_JSON,
   SITE_KEY_CUSTOMER_CANCELLATION_POLICY_AR,
 } from "@/lib/site-settings";
 import { prisma } from "@/lib/prisma";
@@ -34,6 +36,12 @@ export async function updateCustomerCancellationPolicy(
     };
   }
 
+  const rawTiersJson = String(formData.get("deductTiersJson") ?? "");
+  const parsedTiers = parseCancellationDeductTiersFromAdminForm(rawTiersJson);
+  if (!parsedTiers.ok) {
+    return { ok: false, error: parsedTiers.error };
+  }
+
   try {
     await prisma.$transaction([
       prisma.siteSetting.upsert({
@@ -45,6 +53,14 @@ export async function updateCustomerCancellationPolicy(
         where: { key: SITE_KEY_CUSTOMER_CANCEL_MIN_HOURS_BEFORE_PICKUP },
         create: { key: SITE_KEY_CUSTOMER_CANCEL_MIN_HOURS_BEFORE_PICKUP, value: String(n) },
         update: { value: String(n) },
+      }),
+      prisma.siteSetting.upsert({
+        where: { key: SITE_KEY_CUSTOMER_CANCELLATION_DEDUCT_TIERS_JSON },
+        create: {
+          key: SITE_KEY_CUSTOMER_CANCELLATION_DEDUCT_TIERS_JSON,
+          value: JSON.stringify(parsedTiers.tiers),
+        },
+        update: { value: JSON.stringify(parsedTiers.tiers) },
       }),
     ]);
   } catch {
