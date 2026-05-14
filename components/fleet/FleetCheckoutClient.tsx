@@ -9,7 +9,6 @@ import {
   Loader2,
   Shield,
   CheckCircle2,
-  CalendarDays,
   MapPin,
   CreditCard,
   Check,
@@ -20,7 +19,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { SiteFooter } from "@/components/home/SiteFooter";
 import { SiteNav } from "@/components/shared/SiteNav";
 import { FleetCheckoutBookingPanel } from "@/components/fleet/FleetCheckoutBookingPanel";
@@ -49,46 +48,13 @@ import { citySlugForBranchSlug, lookupInterCityFeeSar } from "@/lib/inter-city-s
 import type { BookingCityBranchesOption } from "@/lib/booking-location-options";
 import type { RentalAddonDTO } from "@/lib/rental-addon-data";
 import { sumCheckoutOneTimeFees } from "@/lib/checkout-one-time-fees";
+import type { FleetCheckoutEditPrefill } from "@/lib/fleet-checkout-edit-prefill";
+import { DdMmYyDateWithPicker } from "@/components/ui/DdMmYyDateWithPicker";
+import { formatYmdAsDdMmYy, parseDdMmYyToYmd } from "@/lib/booking-search-shared";
 
 const GOLD = "#dbb878";
 const GOLD_DARK = "#c9a356";
 const TEAL = "#003749";
-
-/** أرقام فقط مع شرطات لعرض dd/mm/yy */
-function formatLicenseExpiryDdmmyyInput(raw: string): string {
-  const d = raw.replace(/\D/g, "").slice(0, 8);
-  if (d.length <= 2) return d;
-  if (d.length <= 4) return `${d.slice(0, 2)}/${d.slice(2)}`;
-  return `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}`;
-}
-
-/** yyyy-mm-dd → dd/mm/yy للعرض */
-function ymdToDdmmyyDisplay(ymd: string): string {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd.trim());
-  if (!m) return ymd;
-  const yyyy = Number(m[1]);
-  const yy = String(yyyy % 100).padStart(2, "0");
-  return `${m[3]}/${m[2]}/${yy}`;
-}
-
-/**
- * dd/mm/yy → yyyy-mm-dd (سنة منزلتين: 00–69 → 20xx، 70–99 → 19xx)
- */
-function parseDdmmyyToYmd(input: string): string | null {
-  const trimmed = input.trim().replace(/\s/g, "");
-  const m = /^(\d{2})\/(\d{2})\/(\d{2})$/.exec(trimmed);
-  if (!m) return null;
-  const dd = Number(m[1]);
-  const mm = Number(m[2]);
-  const yy = Number(m[3]);
-  const yyyy = yy >= 70 ? 1900 + yy : 2000 + yy;
-  if (mm < 1 || mm > 12 || dd < 1 || dd > 31) return null;
-  const d = new Date(Date.UTC(yyyy, mm - 1, dd));
-  if (d.getUTCFullYear() !== yyyy || d.getUTCMonth() !== mm - 1 || d.getUTCDate() !== dd) {
-    return null;
-  }
-  return `${yyyy}-${String(mm).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
-}
 
 function AddonVisual({ iconKey }: { iconKey: string | null }) {
   const cls = "size-7";
@@ -131,6 +97,8 @@ type Props = {
   checkoutOneTimeFees: Array<{ slug: string; labelAr: string; feeExclVatSar: number }>;
   sessionCustomer: { name: string; phoneLocal: string; email: string } | null;
   rentalPriceDisplayMode: RentalPriceDisplayMode;
+  /** بيانات حجز قائم عند «تعديل الحجز» — لملء الحقول بعد التحقق من الخادم */
+  editPrefill: FleetCheckoutEditPrefill | null;
 };
 
 export function FleetCheckoutClient({
@@ -142,6 +110,7 @@ export function FleetCheckoutClient({
   checkoutOneTimeFees,
   sessionCustomer,
   rentalPriceDisplayMode,
+  editPrefill,
 }: Props) {
   const sp = useSearchParams();
   const router = useRouter();
@@ -171,6 +140,7 @@ export function FleetCheckoutClient({
   const [licenseDocUrl, setLicenseDocUrl] = useState<string | null>(null);
   const [kycFieldError, setKycFieldError] = useState<string | null>(null);
   const [uploadingKyc, setUploadingKyc] = useState<"id" | "license" | null>(null);
+  const prefillBookingIdRef = useRef<number | null>(null);
 
   useEffect(() => setMounted(true), []);
 
@@ -322,12 +292,54 @@ export function FleetCheckoutClient({
     };
   }, [sp, ctxStore, branchBySlug, bookingCities]);
 
+  useEffect(() => {
+    if (!editPrefill) {
+      prefillBookingIdRef.current = null;
+      return;
+    }
+    if (prefillBookingIdRef.current === editPrefill.bookingRequestId) return;
+    prefillBookingIdRef.current = editPrefill.bookingRequestId;
+
+    if (
+      editPrefill.idDocumentKind === "VISITOR" ||
+      editPrefill.idDocumentKind === "RESIDENT_VISITOR"
+    ) {
+      setIdDocKind("VISITOR");
+      setPassportNumber(editPrefill.passportNumber);
+      setNationalId("");
+    } else {
+      setIdDocKind("SAUDI_ID");
+      setNationalId(editPrefill.nationalIdNumber);
+      setPassportNumber("");
+    }
+    setLicenseNumber(editPrefill.licenseNumber);
+    if (editPrefill.licenseExpiryYmd) {
+      setLicenseExpiryDdmmyy(formatYmdAsDdMmYy(editPrefill.licenseExpiryYmd));
+    }
+    if (editPrefill.idCardImageUrl) setIdCardUrl(editPrefill.idCardImageUrl);
+    if (editPrefill.driverLicenseImageUrl) setLicenseDocUrl(editPrefill.driverLicenseImageUrl);
+    const validAddonIds = editPrefill.addonIds.filter((id) => addons.some((a) => a.id === id));
+    if (validAddonIds.length > 0) setSelected(new Set(validAddonIds));
+  }, [editPrefill, addons]);
+
+  const excludeBookingRequestIdFromUrl = useMemo(() => {
+    const raw = sp.get("excludeBookingRequestId")?.trim();
+    if (!raw) return undefined;
+    const n = Number(raw);
+    return Number.isInteger(n) && n >= 1 ? n : undefined;
+  }, [sp]);
+
   const rentalLastDayYmdForLicense = useMemo(() => {
     if (!trip.pickupIso) return null;
     const p = new Date(trip.pickupIso);
     if (Number.isNaN(p.getTime())) return null;
     return lastInclusiveBookingDayYmd(p, trip.days);
   }, [trip.pickupIso, trip.days]);
+
+  const licenseExpiryNativeYmd = useMemo(
+    () => parseDdMmYyToYmd(licenseExpiryDdmmyy.trim()) ?? "",
+    [licenseExpiryDdmmyy],
+  );
 
   useEffect(() => {
     setUnavailableDismissed(false);
@@ -391,6 +403,9 @@ export function FleetCheckoutClient({
           pickupDate,
           days: String(trip.days),
         });
+        if (excludeBookingRequestIdFromUrl != null) {
+          params.set("excludeBookingRequestId", String(excludeBookingRequestIdFromUrl));
+        }
         const res = await fetch(`/api/bookings/direct?${params}`, {
           signal: ctrl.signal,
           credentials: "include",
@@ -416,7 +431,7 @@ export function FleetCheckoutClient({
       }
     })();
     return () => ctrl.abort();
-  }, [car.modelId, trip.pickupIso, trip.days]);
+  }, [car.modelId, trip.pickupIso, trip.days, excludeBookingRequestIdFromUrl]);
 
   function toggleAddon(id: number) {
     setSelected((prev) => {
@@ -501,9 +516,9 @@ export function FleetCheckoutClient({
       setError("أدخل رقم الرخصة (4–64 حرفاً).");
       return;
     }
-    const expYmd = parseDdmmyyToYmd(licenseExpiryDdmmyy);
+    const expYmd = parseDdMmYyToYmd(licenseExpiryDdmmyy);
     if (!expYmd) {
-      setError("أدخل تاريخ انتهاء الرخصة بصيغة يوم/شهر/سنة (dd/mm/yy).");
+      setError("أدخل تاريخ انتهاء الرخصة بصيغة يوم-شهر-سنة (DD-MM-YY).");
       return;
     }
     if (!rentalLastDayYmdForLicense) {
@@ -512,7 +527,7 @@ export function FleetCheckoutClient({
     }
     if (expYmd < rentalLastDayYmdForLicense) {
       setError(
-        `يجب أن يكون تاريخ انتهاء الرخصة في أو بعد آخر يوم من الإيجار (أقل تاريخ صالح: ${ymdToDdmmyyDisplay(rentalLastDayYmdForLicense)}).`,
+        `يجب أن يكون تاريخ انتهاء الرخصة في أو بعد آخر يوم من الإيجار (أقل تاريخ صالح: ${formatYmdAsDdMmYy(rentalLastDayYmdForLicense)}).`,
       );
       return;
     }
@@ -588,6 +603,9 @@ export function FleetCheckoutClient({
       ...(idCardUrl ? { idCardImageUrl: idCardUrl } : {}),
       driverLicenseImageUrl: licenseDocUrl,
     };
+    if (excludeBookingRequestIdFromUrl != null) {
+      body.excludeBookingRequestId = excludeBookingRequestIdFromUrl;
+    }
     if (pickupMode === "DELIVERY") {
       if (
         trip.deliveryLat != null &&
@@ -658,6 +676,16 @@ export function FleetCheckoutClient({
     availability && !availability.loading && !availability.available,
   );
 
+  const contactNameDefault = editPrefill?.fullName ?? "";
+  const contactPhoneDefault = editPrefill?.phoneLocal ?? "";
+  const contactEmailDefault =
+    editPrefill != null
+      ? (editPrefill.email?.trim() || sessionCustomer?.email?.trim() || "")
+      : "";
+  const contactAgeDefault = editPrefill?.ageRange ?? "25-35";
+  /** عند تعديل حجز قائم: الاسم والجوال مرتبطان بالطلب ولا يُسمح بتغييرهما من الواجهة. */
+  const identityFieldsReadOnly = editPrefill != null;
+
   const showCarUnavailableModal =
     (slotBlocked && !unavailableDismissed) || postCapacityModal;
 
@@ -675,11 +703,19 @@ export function FleetCheckoutClient({
             <span className="text-[#003749]">إتمام الحجز</span>
           </nav>
 
-          {!trip.pickupIso ? (
-            <div className="mb-10">
-              <FleetCheckoutBookingPanel modelId={car.modelId} cities={bookingCities} />
-            </div>
-          ) : null}
+          <div className="mb-10 space-y-3">
+            {sp.get("rebook") === "1" ? (
+              <div className="rounded-2xl border border-[#dbb878]/40 bg-[#fffdf9] px-4 py-3 text-center text-[13px] font-semibold leading-relaxed text-[#5c4d2e]">
+                يمكنكم تغيير تاريخ الاستلام أو التسليم أو الفروع في النموذج أدناه، ثم الضغط على «تطبيق التواريخ على
+                الحجز» لتحديث السعر والتوفر.
+              </div>
+            ) : trip.pickupIso ? (
+              <p className="text-center text-[13px] font-semibold leading-relaxed text-[#6b5a3b]">
+                لتغيير التواريخ أو الفروع: عدّلوا الحقول أدناه ثم «تطبيق التواريخ على الحجز».
+              </p>
+            ) : null}
+            <FleetCheckoutBookingPanel modelId={car.modelId} cities={bookingCities} />
+          </div>
 
           {/* Core Layout */}
           <div dir="rtl" className="grid gap-8 lg:grid-cols-[1fr_360px] xl:gap-12">
@@ -813,24 +849,26 @@ export function FleetCheckoutClient({
                         تاريخ انتهاء الرخصة
                         <span className="text-red-600"> *</span>
                         <span className="ms-1 font-mono text-[12px] font-semibold text-[#6b5a3b]">
-                          (dd/mm/yy)
+                          (DD-MM-YY)
                         </span>
                       </label>
-                      <input
+                      <DdMmYyDateWithPicker
                         id="checkout-license-expiry"
-                        type="text"
-                        inputMode="numeric"
-                        autoComplete="off"
-                        required
-                        placeholder="dd/mm/yy"
-                        maxLength={10}
-                        dir="ltr"
                         value={licenseExpiryDdmmyy}
-                        onChange={(e) =>
-                          setLicenseExpiryDdmmyy(formatLicenseExpiryDdmmyyInput(e.target.value))
-                        }
-                        className="w-full rounded-xl border border-[#ebe4d3] bg-white px-3 py-2.5 font-mono text-[14px] font-semibold tracking-wide text-[#003749] outline-none transition-all placeholder:text-[#aaa08e] focus:border-[#dbb878] focus:ring-1 focus:ring-[#dbb878]"
-                        aria-describedby="checkout-license-expiry-hint"
+                        onChange={(e) => setLicenseExpiryDdmmyy(e.target.value)}
+                        onBlur={() => {
+                          const ymd = parseDdMmYyToYmd(licenseExpiryDdmmyy);
+                          if (ymd) setLicenseExpiryDdmmyy(formatYmdAsDdMmYy(ymd));
+                        }}
+                        nativeYmd={licenseExpiryNativeYmd}
+                        onCalendarSelect={(ymd) => {
+                          setLicenseExpiryDdmmyy(formatYmdAsDdMmYy(ymd));
+                        }}
+                        minYmd={rentalLastDayYmdForLicense ?? undefined}
+                        required
+                        rowClassName="w-full"
+                        inputClassName="!rounded-xl !border-[#ebe4d3] !bg-white py-2.5 text-[14px] font-mono tracking-wide text-[#003749]"
+                        buttonClassName="!rounded-xl !border-[#ebe4d3]"
                       />
                       {rentalLastDayYmdForLicense ? (
                         <p
@@ -839,7 +877,7 @@ export function FleetCheckoutClient({
                         >
                           أقل تاريخ صالح لانتهاء الرخصة (آخر يوم إيجار):{" "}
                           <span dir="ltr" className="font-mono font-bold text-[#003749]">
-                            {ymdToDdmmyyDisplay(rentalLastDayYmdForLicense)}
+                            {formatYmdAsDdMmYy(rentalLastDayYmdForLicense)}
                           </span>
                         </p>
                       ) : null}
@@ -1018,11 +1056,12 @@ export function FleetCheckoutClient({
                 </div>
 
                 <form
+                  key={`checkout-${car.modelId}-${editPrefill?.bookingRequestId ?? "new"}`}
                   onSubmit={handleSubmit}
                   onKeyDown={handleCheckoutFormKeyDown}
                   className="rounded-3xl border border-[#ebe4d3] bg-white p-6 shadow-sm sm:p-8"
                 >
-                  {sessionCustomer ? (
+                  {sessionCustomer && !editPrefill ? (
                     <div className="mb-8 rounded-2xl border border-[#ebe4d3] bg-[#fdfbf6] p-5">
                       <div className="flex items-center gap-4">
                         <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-[#dbb878]/20 text-[#dbb878]">
@@ -1053,7 +1092,13 @@ export function FleetCheckoutClient({
                           required
                           minLength={3}
                           autoComplete="name"
-                          className="peer w-full rounded-xl border border-[#ebe4d3] bg-transparent px-4 pb-3 pt-6 text-[14px] font-semibold text-[#003749] outline-none transition-all focus:border-[#dbb878] focus:ring-1 focus:ring-[#dbb878]"
+                          readOnly={identityFieldsReadOnly}
+                          defaultValue={contactNameDefault}
+                          className={`peer w-full rounded-xl border border-[#ebe4d3] px-4 pb-3 pt-6 text-[14px] font-semibold text-[#003749] outline-none transition-all ${
+                            identityFieldsReadOnly
+                              ? "cursor-default bg-[#f4f2ec] focus:border-[#ebe4d3] focus:ring-0"
+                              : "bg-transparent focus:border-[#dbb878] focus:ring-1 focus:ring-[#dbb878]"
+                          }`}
                           placeholder=" "
                         />
                         <label
@@ -1066,7 +1111,13 @@ export function FleetCheckoutClient({
 
                       {/* Phone Field */}
                       <div className="group relative">
-                        <div className="flex w-full overflow-hidden rounded-xl border border-[#ebe4d3] transition-all focus-within:border-[#dbb878] focus-within:ring-1 focus-within:ring-[#dbb878]">
+                        <div
+                          className={`flex w-full overflow-hidden rounded-xl border border-[#ebe4d3] transition-all ${
+                            identityFieldsReadOnly
+                              ? "bg-[#f4f2ec]"
+                              : "focus-within:border-[#dbb878] focus-within:ring-1 focus-within:ring-[#dbb878]"
+                          }`}
+                        >
                           <span className="flex items-center bg-[#fdfbf6] px-3 border-e border-[#ebe4d3] text-[13px] font-bold text-[#003749]" dir="ltr">
                             +966
                           </span>
@@ -1080,7 +1131,13 @@ export function FleetCheckoutClient({
                               maxLength={9}
                               inputMode="numeric"
                               autoComplete="tel-national"
-                              className="peer w-full bg-transparent px-4 pb-2 pt-6 text-[14px] font-semibold text-[#003749] outline-none"
+                              readOnly={identityFieldsReadOnly}
+                              defaultValue={contactPhoneDefault}
+                              className={`peer w-full px-4 pb-2 pt-6 text-[14px] font-semibold text-[#003749] outline-none ${
+                                identityFieldsReadOnly
+                                  ? "cursor-default bg-transparent focus:ring-0"
+                                  : "bg-transparent"
+                              }`}
                               placeholder=" "
                               dir="ltr"
                             />
@@ -1100,7 +1157,7 @@ export function FleetCheckoutClient({
                           name="age"
                           id="age"
                           required
-                          defaultValue="25-35"
+                          defaultValue={contactAgeDefault}
                           className="peer w-full appearance-none rounded-xl border border-[#ebe4d3] bg-transparent px-4 pb-3 pt-6 text-[14px] font-semibold text-[#003749] outline-none transition-all focus:border-[#dbb878] focus:ring-1 focus:ring-[#dbb878]"
                         >
                           <option value="25-35">25-35 سنة</option>
@@ -1123,6 +1180,7 @@ export function FleetCheckoutClient({
                           id="checkout-email"
                           required
                           autoComplete="email"
+                          defaultValue={contactEmailDefault}
                           className="peer w-full rounded-xl border border-[#ebe4d3] bg-transparent px-4 pb-3 pt-6 text-[14px] font-semibold text-[#003749] outline-none transition-all focus:border-[#dbb878] focus:ring-1 focus:ring-[#dbb878]"
                           placeholder=" "
                           dir="ltr"

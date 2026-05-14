@@ -13,7 +13,7 @@ import {
   Truck,
   CalendarCheck2,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { BranchOutsideHoursModal } from "@/components/fleet/BranchOutsideHoursModal";
 import { DeliveryMapDialog } from "@/components/home/DeliveryMapDialog";
@@ -35,6 +35,7 @@ import {
   type ModeTab,
   type RentalTab,
 } from "@/lib/booking-search-shared";
+import { citySlugForBranchSlug } from "@/lib/inter-city-shipping-client";
 import { fleetDatetimesFromSubscriptionPack } from "@/lib/subscription-fleet-bridge";
 import {
   MAX_SUBSCRIPTION_DURATION_MONTHS,
@@ -64,6 +65,8 @@ type Props = {
 
 export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
   const router = useRouter();
+  const sp = useSearchParams();
+  const initializedFromUrlRef = useRef(false);
   const coUid = useId();
   const [rental, setRental] = useState<RentalTab>("daily");
   const [mode, setMode] = useState<ModeTab>("pickup");
@@ -90,6 +93,75 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
+
+  /** مزامنة أولية من عنوان الصفحة (إعادة حجز / رابط يحوي pickup) حتى يُمكن تعديل التواريخ قبل «تطبيق». */
+  useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- تهيئة لمرة واحدة من معلمات الرابط */
+    if (initializedFromUrlRef.current) return;
+    const pickupRaw = sp.get("pickup")?.trim();
+    if (!pickupRaw) return;
+    const p = new Date(pickupRaw);
+    if (Number.isNaN(p.getTime())) return;
+    initializedFromUrlRef.current = true;
+
+    setPickupDt(toDatetimeLocalValue(p));
+    const dropoffRaw = sp.get("dropoff")?.trim();
+    if (dropoffRaw) {
+      const d = new Date(dropoffRaw);
+      if (!Number.isNaN(d.getTime()) && d.getTime() >= p.getTime()) {
+        setDropoffDt(toDatetimeLocalValue(d));
+      }
+    }
+
+    const rentalRaw = sp.get("rental")?.trim().toLowerCase();
+    if (
+      rentalRaw === "weekly" ||
+      rentalRaw === "monthly" ||
+      rentalRaw === "monthly_packages"
+    ) {
+      setRental(rentalRaw);
+    } else {
+      setRental("daily");
+    }
+
+    const modeParam = sp.get("mode") === "delivery" ? "delivery" : "pickup";
+    setMode(modeParam);
+
+    const pb = sp.get("pickupBranch")?.trim().toLowerCase();
+    const rb = sp.get("returnBranch")?.trim().toLowerCase();
+    if (pb) {
+      setPickupBranch(pb);
+      const cs = citySlugForBranchSlug(pb, cities);
+      if (cs) setPickupCity(cs);
+    }
+    if (rb) {
+      setReturnBranch(rb);
+      const cs = citySlugForBranchSlug(rb, cities);
+      if (cs) setReturnCity(cs);
+    }
+
+    const pickupCityParam = sp.get("pickupCity")?.trim().toLowerCase();
+    if (pickupCityParam) {
+      setPickupCity(pickupCityParam);
+      if (modeParam === "delivery") {
+        setDeliveryOriginCitySlug((prev) => prev || pickupCityParam);
+      }
+    }
+
+    const dlat = sp.get("dlat");
+    const dlng = sp.get("dlng");
+    if (dlat != null && dlat !== "" && dlng != null && dlng !== "") {
+      const la = Number(dlat);
+      const ln = Number(dlng);
+      if (Number.isFinite(la) && Number.isFinite(ln)) {
+        setDeliveryLat(la);
+        setDeliveryLng(ln);
+      }
+    }
+    const daddr = (sp.get("daddr") ?? "").trim();
+    if (daddr) setDeliveryAddressText(daddr);
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [sp, cities]);
 
   useEffect(() => {
     if (mode !== "delivery") {
@@ -314,6 +386,14 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
       sessionStorage.setItem(FLEET_SEARCH_STORAGE_KEY, JSON.stringify(ctx));
     } catch {
       /* ignore */
+    }
+
+    const exId = sp.get("excludeBookingRequestId")?.trim();
+    if (exId && /^\d+$/.test(exId)) {
+      params.set("excludeBookingRequestId", exId);
+    }
+    if (sp.get("rebook") === "1") {
+      params.set("rebook", "1");
     }
 
     router.replace(`/fleet/checkout?${params.toString()}`);

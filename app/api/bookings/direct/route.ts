@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getDirectBookingAvailability } from "@/lib/direct-booking";
 import { createFleetBookingAndLinkCustomerSession } from "@/lib/fleet-checkout-customer-session";
-import { getCustomerSessionUserId } from "@/lib/customer-auth";
+import { getCustomerProfile, getCustomerSessionUserId } from "@/lib/customer-auth";
+import { prisma } from "@/lib/prisma";
 import { isBookingCheckoutOtpStepRequired } from "@/lib/booking-checkout-otp";
 import { parseCreateDirectBookingInputFromCheckoutJson } from "@/lib/booking-direct-checkout-parse";
 import { revalidateAfterDirectBooking } from "@/lib/revalidate-after-direct-booking";
@@ -46,13 +47,13 @@ export async function GET(request: Request) {
   }
 
   const excludeRaw = url.searchParams.get("excludeBookingRequestId");
-  const excludeBookingRequestId =
+  const excludeParsed =
     excludeRaw != null && excludeRaw !== ""
       ? Number(excludeRaw)
       : undefined;
   if (
-    excludeBookingRequestId !== undefined &&
-    (!Number.isInteger(excludeBookingRequestId) || excludeBookingRequestId < 1)
+    excludeParsed !== undefined &&
+    (!Number.isInteger(excludeParsed) || excludeParsed < 1)
   ) {
     return NextResponse.json(
       { ok: false, error: "excludeBookingRequestId غير صالح." },
@@ -60,11 +61,34 @@ export async function GET(request: Request) {
     );
   }
 
+  /** لا يُستثنى من التداخل إلا طلب يخص نفس العميل (حساب أو جوال) ونفس الموديل — وإلا يُتجاهل المعامل. */
+  let verifiedExcludeBookingRequestId: number | undefined;
+  if (excludeParsed !== undefined) {
+    const profile = await getCustomerProfile();
+    if (profile) {
+      const owned = await prisma.bookingRequest.findFirst({
+        where: {
+          id: excludeParsed,
+          kind: "DIRECT",
+          carModelId,
+          OR: [
+            { customerId: profile.id },
+            ...(profile.phone ? [{ phone: profile.phone }] : []),
+          ],
+        },
+        select: { id: true },
+      });
+      if (owned) {
+        verifiedExcludeBookingRequestId = owned.id;
+      }
+    }
+  }
+
   const result = await getDirectBookingAvailability({
     carModelId,
     pickupDate,
     numberOfDays: Math.round(days),
-    excludeBookingRequestId,
+    excludeBookingRequestId: verifiedExcludeBookingRequestId,
   });
 
   return NextResponse.json({

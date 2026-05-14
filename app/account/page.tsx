@@ -3,9 +3,9 @@ import { redirect } from "next/navigation";
 import { logoutCustomer } from "@/app/account/actions";
 import { SiteFooter } from "@/components/home/SiteFooter";
 import { SiteNav } from "@/components/shared/SiteNav";
+import { AccountBookingCardActions } from "@/components/account/AccountBookingCardActions";
 import { getCustomerProfile } from "@/lib/customer-auth";
 import { prisma } from "@/lib/prisma";
-import { hrefRebookFromBooking } from "@/lib/rebook-booking-url";
 
 export const dynamic = "force-dynamic";
 
@@ -230,31 +230,22 @@ export default async function AccountDashboardPage() {
                       </span>
                     </div>
 
-                    <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-                      {b.kind === "DIRECT" && b.paymentStatus === "PENDING" ? (
-                        <Link
-                          href={`/fleet/payment/${b.id}`}
-                          className="inline-flex w-full items-center justify-center rounded-xl bg-[#ea580c] px-4 py-2.5 text-center text-sm font-extrabold text-white shadow-sm transition-opacity hover:opacity-95 sm:w-auto sm:flex-1"
-                        >
-                          إتمام الدفع
-                        </Link>
-                      ) : null}
-                      <Link
-                        href={hrefRebookFromBooking({
-                          kind: b.kind,
-                          carModelId: b.carModelId,
-                          pickupDate: b.pickupDate,
-                          numberOfDays: b.numberOfDays,
-                          pickupMode: b.pickupMode,
-                          branch: b.branch,
-                          deliveryLat: b.deliveryLat,
-                          deliveryLng: b.deliveryLng,
-                        })}
-                        className={`inline-flex w-full items-center justify-center rounded-xl border-2 border-[#003749] bg-white px-4 py-2.5 text-center text-sm font-extrabold text-[#003749] shadow-sm transition-colors hover:bg-[#003749]/5 sm:w-auto ${b.kind === "DIRECT" && b.paymentStatus === "PENDING" ? "sm:flex-1" : "sm:self-start"}`}
-                      >
-                        إعادة الحجز
-                      </Link>
-                    </div>
+                    <AccountBookingCardActions
+                      booking={{
+                        id: b.id,
+                        kind: b.kind,
+                        carModelId: b.carModelId,
+                        pickupDateIso: b.pickupDate.toISOString(),
+                        numberOfDays: b.numberOfDays,
+                        pickupMode: b.pickupMode,
+                        branch: b.branch,
+                        deliveryLat: b.deliveryLat,
+                        deliveryLng: b.deliveryLng,
+                        deliveryAddress: b.deliveryAddress,
+                        paymentStatus: b.paymentStatus,
+                        status: b.status,
+                      }}
+                    />
                   </article>
                 </li>
               ))}

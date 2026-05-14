@@ -10,6 +10,7 @@ import { getActiveRentalAddons } from "@/lib/rental-addon-data";
 import { getRentalPriceDisplayMode } from "@/lib/site-settings";
 import { getActiveInterCityShippingRules } from "@/lib/inter-city-shipping";
 import { getActiveCheckoutOneTimeFees } from "@/lib/checkout-one-time-fees";
+import { loadFleetCheckoutEditPrefill } from "@/lib/fleet-checkout-edit-prefill";
 
 export const dynamic = "force-dynamic";
 
@@ -18,13 +19,20 @@ export const metadata: Metadata = {
   description: "مراجعة السعر والإضافات وإتمام حجز السيارة.",
 };
 
+function firstSearchParam(
+  v: string | string[] | undefined,
+): string | undefined {
+  if (Array.isArray(v)) return v[0];
+  return v;
+}
+
 export default async function FleetCheckoutPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ modelId?: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const sp = searchParams ? await searchParams : {};
-  const modelId = Number(sp.modelId);
+  const modelId = Number(firstSearchParam(sp.modelId));
   if (!Number.isInteger(modelId) || modelId < 1) {
     redirect("/fleet");
   }
@@ -74,6 +82,20 @@ export default async function FleetCheckoutPage({
         }
       : null;
 
+  const excludeRaw = firstSearchParam(sp.excludeBookingRequestId)?.trim();
+  const excludeParsed = excludeRaw ? Number(excludeRaw) : NaN;
+  const excludeBookingRequestId =
+    Number.isInteger(excludeParsed) && excludeParsed >= 1 ? excludeParsed : undefined;
+
+  const editPrefill =
+    profile && excludeBookingRequestId != null
+      ? await loadFleetCheckoutEditPrefill({
+          profile,
+          carModelId: modelId,
+          excludeBookingRequestId,
+        })
+      : null;
+
   return (
     <Suspense
       fallback={
@@ -91,6 +113,7 @@ export default async function FleetCheckoutPage({
         checkoutOneTimeFees={checkoutOneTimeFees}
         sessionCustomer={sessionCustomer}
         rentalPriceDisplayMode={rentalPriceDisplayMode}
+        editPrefill={editPrefill}
       />
     </Suspense>
   );

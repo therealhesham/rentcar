@@ -8,6 +8,7 @@ import { resolveInterCityShippingSnap } from "@/lib/inter-city-shipping";
 import type { CheckoutOneTimeFeeLine } from "@/lib/checkout-one-time-fees";
 import { getActiveCheckoutOneTimeFees } from "@/lib/checkout-one-time-fees";
 import { prisma } from "@/lib/prisma";
+import { e164ToLocalNine } from "@/lib/normalize-saudi-phone";
 import { isTrustedSpacesImageUrl } from "@/lib/spaces-upload";
 import {
   parseBranchOpeningHoursJson,
@@ -33,6 +34,22 @@ export { addDaysToYmd, lastInclusiveBookingDayYmd } from "@/lib/booking-calendar
  */
 
 export const NON_BLOCKING_BOOKING_STATUSES = ["CANCELLED", "REJECTED"] as const;
+
+function normalizeDirectBookingFullNameForCompare(name: string): string {
+  return name.trim().replace(/\s+/g, " ");
+}
+
+/** مطابقة جوال الطلب المخزّن (+966…) مع الجوال المُرسَل من الإتمام */
+function directBookingPhonesMatchForLock(a: string, b: string): boolean {
+  const la = e164ToLocalNine(a);
+  const lb = e164ToLocalNine(b);
+  if (la && lb) return la === lb;
+  const da = a.replace(/\D/g, "");
+  const db = b.replace(/\D/g, "");
+  const tailA = da.length >= 9 ? da.slice(-9) : "";
+  const tailB = db.length >= 9 ? db.slice(-9) : "";
+  return /^5\d{8}$/.test(tailA) && tailA === tailB;
+}
 
 export type DirectBookingCommon = {
   fullName: string;
@@ -559,6 +576,10 @@ export type CreateDirectBookingInput = DirectBookingCommon & {
   contactEmail?: string | null;
   /** مستندات الهوية والرخصة (واجهة الإتمام) — اختياري لحجز المكتب من الإدارة */
   kyc?: DirectBookingKycInput | null;
+  /**
+   * عند تعديل حجز من الحساب: يُستثنى هذا الطلب من احتساب التداخل داخل المعاملة (بعد التحقق من الملكية).
+   */
+  excludeBlockingBookingRequestId?: number | null;
 };
 
 export function parsePickupCitySlugFromJson(
@@ -578,6 +599,14 @@ export function parsePickupBranchSlugFromJson(body: JsonBody): string | undefine
   const s = raw.trim().toLowerCase();
   if (!s || !isBranchSlugFormat(s)) return undefined;
   return s;
+}
+
+/** معرف طلب يُستثنى من التداخل عند الإتمام — يُتحقق من ملكيته داخل `createDirectBooking`. */
+export function parseExcludeBlockingBookingRequestIdFromJson(body: JsonBody): number | undefined {
+  const raw = body.excludeBookingRequestId ?? body.excludeBlockingBookingRequestId;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 1) return undefined;
+  return n;
 }
 
 export function parseAddonIdsFromJsonBody(
@@ -868,28 +897,24 @@ export async function assertBranchesAndPickupHoursForDirectBooking(
   return { ok: true };
 }
 
-/**
- * إنشاء حجز مباشر: نفس احتساب التوفر داخل معاملة Serializable مع إعادة المحاولة عند تعارض P2034.
- */
-export async function createDirectBooking(
-  input: CreateDirectBookingInput,
-): Promise<{ ok: true; bookingRequestId: number } | { ok: false; error: string }> {
-  const {
-    carModelId,
-    addonIds,
-    customerId: customerIdRaw,
-    pickupCitySlug,
-    pickupBranchSlug,
-    contactEmail,
-    kyc,
-    ...common
-  } = input;
+export type EnforceEditLockedIdentityResult =
+  | { ok: true; prepared: CreateDirectBookingInput; verifiedExcludeBlockingId: number | undefined }
+  | { ok: false; error: string };
 
+/**
+ * يضبط customerId عند تطابق جوال الحساب مع الطلب، ويتحقق من ملكية طلب الاستثناء من التداخل،
+ * ويثبّت الاسم والجوال من الطلب الأصلي عند تعديل حجز قائم (رفض أي تلاعب من الواجهة).
+ */
+export async function enforceEditLockedIdentityOnInput(
+  input: CreateDirectBookingInput,
+): Promise<EnforceEditLockedIdentityResult> {
+  const excludeBlockingRaw = input.excludeBlockingBookingRequestId;
+  const carModelId = input.carModelId;
   let customerId: number | null =
-    customerIdRaw != null &&
-    Number.isInteger(customerIdRaw) &&
-    customerIdRaw > 0
-      ? customerIdRaw
+    input.customerId != null &&
+    Number.isInteger(input.customerId) &&
+    input.customerId > 0
+      ? input.customerId
       : null;
 
   if (customerId != null) {
@@ -897,11 +922,87 @@ export async function createDirectBooking(
       where: { id: customerId },
       select: { phone: true },
     });
-    const bookingPhone = common.phone.trim();
+    const bookingPhone = input.phone.trim();
     if (!linked?.phone || linked.phone !== bookingPhone) {
       customerId = null;
     }
   }
+
+  let verifiedExcludeBlockingId: number | undefined;
+  let lockedBookingIdentity: { fullName: string; phone: string } | null = null;
+  if (
+    excludeBlockingRaw != null &&
+    Number.isInteger(excludeBlockingRaw) &&
+    excludeBlockingRaw >= 1
+  ) {
+    const bookingPhone = input.phone.trim();
+    const owned = await prisma.bookingRequest.findFirst({
+      where: {
+        id: excludeBlockingRaw,
+        kind: "DIRECT",
+        carModelId,
+        OR: [
+          ...(customerId != null ? [{ customerId }] : []),
+          { phone: bookingPhone },
+        ],
+      },
+      select: { id: true, fullName: true, phone: true },
+    });
+    if (owned) {
+      verifiedExcludeBlockingId = owned.id;
+      lockedBookingIdentity = {
+        fullName: owned.fullName,
+        phone: owned.phone,
+      };
+    }
+  }
+
+  let prepared: CreateDirectBookingInput = { ...input, customerId };
+
+  if (verifiedExcludeBlockingId != null && lockedBookingIdentity != null) {
+    const subName = normalizeDirectBookingFullNameForCompare(prepared.fullName);
+    const lockName = normalizeDirectBookingFullNameForCompare(lockedBookingIdentity.fullName);
+    const subPhone = prepared.phone.trim();
+    const lockPhone = lockedBookingIdentity.phone.trim();
+    if (subName !== lockName || !directBookingPhonesMatchForLock(subPhone, lockPhone)) {
+      return {
+        ok: false,
+        error:
+          "لا يُسمح بتغيير الاسم أو رقم الجوال عند تعديل حجز قائم. استخدم بيانات الطلب الأصلية كما في الحساب.",
+      };
+    }
+    prepared = {
+      ...prepared,
+      fullName: lockName,
+      phone: lockPhone,
+      customerId,
+    };
+  }
+
+  return { ok: true, prepared, verifiedExcludeBlockingId };
+}
+
+/**
+ * إنشاء حجز مباشر: نفس احتساب التوفر داخل معاملة Serializable مع إعادة المحاولة عند تعارض P2034.
+ */
+export async function createDirectBooking(
+  input: CreateDirectBookingInput,
+): Promise<{ ok: true; bookingRequestId: number } | { ok: false; error: string }> {
+  const enforced = await enforceEditLockedIdentityOnInput(input);
+  if (!enforced.ok) return enforced;
+
+  const { prepared, verifiedExcludeBlockingId } = enforced;
+  const {
+    carModelId,
+    addonIds,
+    customerId,
+    pickupCitySlug,
+    pickupBranchSlug,
+    contactEmail,
+    kyc,
+    excludeBlockingBookingRequestId: _excludeIgnored,
+    ...common
+  } = prepared;
 
   if (!Number.isInteger(carModelId) || carModelId < 1) {
     return { ok: false, error: "معرّف السيارة غير صالح." };
@@ -915,7 +1016,7 @@ export async function createDirectBooking(
     return { ok: false, error: "السيارة غير موجودة." };
   }
 
-  const branchAssert = await assertBranchesAndPickupHoursForDirectBooking(input);
+  const branchAssert = await assertBranchesAndPickupHoursForDirectBooking(prepared);
   if (!branchAssert.ok) {
     return branchAssert;
   }
@@ -956,7 +1057,7 @@ export async function createDirectBooking(
             0,
           );
         }
-        const rows = await loadBlockingDirectBookings(tx, carModelId);
+        const rows = await loadBlockingDirectBookings(tx, carModelId, verifiedExcludeBlockingId);
         const overlapping = countOverlapsFromRows(rows, commonNormalized.pickupDate, days);
         if (overlapping >= fleetUnits) {
           throw new DirectBookingCapacityError(

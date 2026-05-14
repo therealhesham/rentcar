@@ -1,9 +1,11 @@
 "use server";
 
 import { Prisma } from "@prisma/client";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
   clearCustomerSessionCookie,
+  getCustomerProfile,
   setCustomerSessionCookie,
 } from "@/lib/customer-auth";
 import { saudiLocalNineToE164 } from "@/lib/normalize-saudi-phone";
@@ -11,6 +13,63 @@ import { hashPassword, verifyPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
 
 export type AuthFormState = { error?: string } | null;
+
+export type CancelBookingResult = { ok: true } | { ok: false; error: string };
+
+/** إلغاء طلب حجز من حساب العميل (ملكية الجوال/الحساب + قيود الحالة والدفع). */
+export async function cancelCustomerBooking(formData: FormData): Promise<CancelBookingResult> {
+  const profile = await getCustomerProfile();
+  if (!profile) {
+    return { ok: false, error: "يجب تسجيل الدخول." };
+  }
+
+  const id = Number(formData.get("bookingId"));
+  if (!Number.isInteger(id) || id < 1) {
+    return { ok: false, error: "معرّف الطلب غير صالح." };
+  }
+
+  const row = await prisma.bookingRequest.findFirst({
+    where: {
+      id,
+      OR: [{ customerId: profile.id }, ...(profile.phone ? [{ phone: profile.phone }] : [])],
+    },
+    select: {
+      id: true,
+      status: true,
+      kind: true,
+      paymentStatus: true,
+    },
+  });
+
+  if (!row) {
+    return { ok: false, error: "الطلب غير موجود أو لا يخص حسابك." };
+  }
+
+  const st = row.status.trim().toUpperCase();
+  if (st === "CANCELLED") {
+    return { ok: false, error: "الطلب ملغى بالفعل." };
+  }
+  if (st === "COMPLETED" || st === "REJECTED") {
+    return { ok: false, error: "لا يمكن إلغاء هذا الطلب في حالته الحالية." };
+  }
+  if (row.kind === "DIRECT" && row.paymentStatus === "PAID") {
+    return {
+      ok: false,
+      error: "حجز مدفوع لا يُلغى من هنا. تواصل مع خدمة العملاء.",
+    };
+  }
+
+  await prisma.bookingRequest.update({
+    where: { id: row.id },
+    data: { status: "CANCELLED" },
+  });
+
+  revalidatePath("/account");
+  revalidatePath("/admin");
+  revalidatePath("/admin/car-bookings");
+
+  return { ok: true };
+}
 
 export async function registerCustomer(
   _prev: AuthFormState,

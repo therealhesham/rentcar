@@ -4,6 +4,7 @@ import {
   parseCommonBookingFieldsFromJson,
   parseContactEmailFromJson,
   parseDirectBookingKycFromJson,
+  parseExcludeBlockingBookingRequestIdFromJson,
   parsePickupBranchSlugFromJson,
   parsePickupCitySlugFromJson,
 } from "@/lib/direct-booking";
@@ -42,6 +43,7 @@ export function parseCreateDirectBookingInputFromCheckoutJson(
 
   const pickupCitySlug = parsePickupCitySlugFromJson(obj);
   const pickupBranchSlug = parsePickupBranchSlugFromJson(obj);
+  const excludeBlockingBookingRequestId = parseExcludeBlockingBookingRequestIdFromJson(obj);
   const sid =
     sessionUserId != null && Number.isInteger(sessionUserId) && sessionUserId > 0
       ? sessionUserId
@@ -58,6 +60,9 @@ export function parseCreateDirectBookingInputFromCheckoutJson(
       ...(pickupBranchSlug != null ? { pickupBranchSlug } : {}),
       contactEmail: emailParsed.contactEmail,
       kyc: kycParsed.data,
+      ...(excludeBlockingBookingRequestId != null
+        ? { excludeBlockingBookingRequestId }
+        : {}),
     },
   };
 }
