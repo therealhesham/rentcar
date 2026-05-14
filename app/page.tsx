@@ -1,8 +1,8 @@
 import {
   BranchesShowcase,
-  FleetBanner,
   FleetCategories,
   Hero,
+  HomeScrollSections,
   PromoBanner,
   ServicesSection,
   SiteFooter,
@@ -21,18 +21,21 @@ export default async function Home() {
     <div className="flex min-h-screen flex-col">
       <TopNav />
       <main className="flex-1">
-        <Hero
-          leftImageUrl={hero.leftImageUrl}
-          leftImageAlt={hero.leftImageAlt}
-          rightImageUrl={hero.rightImageUrl}
-          rightImageAlt={hero.rightImageAlt}
-          cities={cities}
+        <HomeScrollSections
+          hero={
+            <Hero
+              leftImageUrl={hero.leftImageUrl}
+              leftImageAlt={hero.leftImageAlt}
+              rightImageUrl={hero.rightImageUrl}
+              rightImageAlt={hero.rightImageAlt}
+              cities={cities}
+            />
+          }
+          fleetCategories={<FleetCategories />}
+          promoBanner={<PromoBanner />}
+          services={<ServicesSection />}
+          branches={<BranchesShowcase />}
         />
-        <FleetCategories />
-
-        <PromoBanner />
-        <ServicesSection />
-        <BranchesShowcase />
       </main>
       <SiteFooter />
     </div>

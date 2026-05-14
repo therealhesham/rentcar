@@ -4,6 +4,7 @@ export { FleetBanner } from "./FleetBanner";
 export { FleetCategories } from "./FleetCategories";
 export { PromoBanner } from "./PromoBanner";
 export { FleetShowcase } from "./FleetShowcase";
+export { HomeScrollSections } from "./HomeScrollSections";
 export { Hero } from "./Hero";
 export { ServicesSection } from "./ServicesSection";
 export { SiteFooter } from "./SiteFooter";
