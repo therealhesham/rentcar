@@ -1,5 +1,9 @@
 import type { BookingCityBranchesOption } from "@/lib/booking-location-options";
 import { parseBranchOpeningHoursJson } from "@/lib/branch-opening-hours";
+import {
+  computeCityCenterFromBranchCoords,
+  parseLatLngFromMapUrl,
+} from "@/lib/delivery-origin-city";
 import { prisma } from "@/lib/prisma";
 
 const PLACEHOLDER_BRANCH_IMG =
@@ -50,21 +54,34 @@ export async function getActiveBookingCitiesWithBranches(): Promise<
         branches: {
           where: { isActive: true },
           orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
-          select: { slug: true, name: true, openingHoursJson: true },
+          select: {
+            slug: true,
+            name: true,
+            openingHoursJson: true,
+            mapUrl: true,
+          },
         },
       },
     });
     return rows
       .filter((c) => c.branches.length > 0)
-      .map((c) => ({
-        slug: c.slug,
-        name: c.name,
-        branches: c.branches.map((b) => ({
-          slug: b.slug,
-          name: b.name,
-          openingHours: parseBranchOpeningHoursJson(b.openingHoursJson),
-        })),
-      }));
+      .map((c) => {
+        const branchCoords = c.branches
+          .map((b) => parseLatLngFromMapUrl(b.mapUrl))
+          .filter((p): p is NonNullable<typeof p> => p != null);
+        const center = computeCityCenterFromBranchCoords(c.slug, branchCoords);
+        return {
+          slug: c.slug,
+          name: c.name,
+          centerLat: center?.lat ?? null,
+          centerLng: center?.lng ?? null,
+          branches: c.branches.map((b) => ({
+            slug: b.slug,
+            name: b.name,
+            openingHours: parseBranchOpeningHoursJson(b.openingHoursJson),
+          })),
+        };
+      });
   } catch {
     return [];
   }

@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  ArrowLeftRight,
   Building2,
   CalendarDays,
   CalendarRange,
@@ -22,6 +21,11 @@ import { useEffect, useId, useMemo, useRef, useState, useTransition } from "reac
 import { submitCorporateBookingLead } from "@/app/corporate-lead-actions";
 import { BranchOutsideHoursModal } from "@/components/fleet/BranchOutsideHoursModal";
 import { DeliveryMapDialog } from "@/components/home/DeliveryMapDialog";
+import {
+  DeliveryOriginCityLabelSuffix,
+  useDeliveryOriginCity,
+} from "@/components/home/DeliveryOriginCityHint";
+import { PickupReturnBranchFields } from "@/components/home/PickupReturnBranchFields";
 import { SubscriptionPackagesInWidget } from "@/components/subscriptions/SubscriptionPackagesInWidget";
 import { DdMmYyDateWithPicker } from "@/components/ui/DdMmYyDateWithPicker";
 import { computeBookingDays } from "@/lib/booking-days";
@@ -46,10 +50,6 @@ import {
 import type { BookingBranchOption, BookingCityBranchesOption } from "@/lib/booking-location-options";
 import { lookupBranchOpeningSchedule } from "@/lib/booking-branch-schedule-lookup";
 import { isDateTimeWithinBranchSchedule } from "@/lib/branch-opening-hours";
-import {
-  DELIVERY_ADDRESS_MAX_CHARS,
-  DELIVERY_ADDRESS_MIN_CHARS,
-} from "@/lib/delivery-address";
 import type { FleetSearchUrlHydrate } from "@/lib/fleet-search-url-hydrate";
 import { citySlugForBranchSlug } from "@/lib/fleet-search-url-hydrate";
 import {
@@ -165,36 +165,6 @@ function CityBranchSelects({
   );
 }
 
-function PickupReturnSwapButton({
-  onClick,
-  className,
-}: {
-  onClick: () => void;
-  /** مثال: `absolute left-3 top-1/2 z-20 -translate-y-1/2` للتداخل مع فاصل الصفّين */
-  className?: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={[
-        "inline-flex size-9 shrink-0 items-center justify-center rounded-full",
-        "border border-[#ebe4d3]/95 bg-gradient-to-b from-white via-[#fffdf8] to-[#faf7f0]",
-        "text-[#c9a356] shadow-[0_1px_2px_rgba(201,163,86,0.14)]",
-        "ring-[3px] ring-[#fdfbf6]",
-        "outline-none transition-[border-color,background-color,transform,box-shadow,ring-color,color]",
-        "hover:border-[#dbb878] hover:from-[#fffdf8] hover:via-[#fffbf5] hover:to-[#fdf6e8] hover:text-[#a67c29] hover:shadow-[0_2px_10px_rgba(219,184,120,0.22)]",
-        "focus-visible:ring-2 focus-visible:ring-[#dbb878]/40 focus-visible:ring-offset-0",
-        "active:scale-[0.96]",
-        className ?? "",
-      ].join(" ")}
-      aria-label="تبديل موقع الاستلام وموقع الإرجاع"
-    >
-      <ArrowLeftRight className="size-3.5 stroke-[2.25]" aria-hidden />
-    </button>
-  );
-}
-
 export function BookingSearchWidget({
   cities,
   initialFromUrl,
@@ -213,6 +183,7 @@ export function BookingSearchWidget({
   const [pickupBranch, setPickupBranch] = useState("");
   const [returnCity, setReturnCity] = useState("");
   const [returnBranch, setReturnBranch] = useState("");
+  const [returnLocationDifferent, setReturnLocationDifferent] = useState(false);
   const [pickupDt, setPickupDt] = useState("");
   const [dropoffDt, setDropoffDt] = useState("");
   const [pickupDateDraft, setPickupDateDraft] = useState("");
@@ -333,6 +304,25 @@ export function BookingSearchWidget({
     [dateCities, returnCityEff],
   );
 
+  const deliveryOriginCity = useDeliveryOriginCity({
+    cities: dateCities,
+    deliveryLat,
+    deliveryLng,
+    fallbackCitySlug: returnCityEff || defaultCitySlug,
+    detectedSlug: deliveryOriginCitySlug || returnCityEff || defaultCitySlug,
+    onDetectedSlugChange: setDeliveryOriginCitySlug,
+  });
+
+  const deliveryLocationLabel = (
+    <>
+      موقع التوصيل
+      <DeliveryOriginCityLabelSuffix
+        cityName={deliveryOriginCity.cityNameAr}
+        show={mode === "delivery" && deliveryOriginCity.showInLabel}
+      />
+    </>
+  );
+
   const defaultPickupBranchSlug = pickupCityBranches[0]?.slug ?? "";
   const defaultReturnBranchSlug = returnCityBranches[0]?.slug ?? "";
 
@@ -388,6 +378,11 @@ export function BookingSearchWidget({
           setReturnCity(retCity);
           setReturnBranch(u.returnBranch);
         }
+        const pb = u.pickupBranch?.trim().toLowerCase();
+        const rb = u.returnBranch.trim().toLowerCase();
+        if (effectiveMode === "pickup" && rb && (!pb || pb !== rb)) {
+          setReturnLocationDifferent(true);
+        }
       }
     }
 
@@ -424,7 +419,10 @@ export function BookingSearchWidget({
   const branchSelectRequired = dateCities.some((c) => c.branches.length > 0);
   const pickupBranchEffective =
     mode === "pickup" ? pickupBranch || defaultPickupBranchSlug : "";
-  const returnBranchEffective = returnBranch || defaultReturnBranchSlug;
+  const returnBranchEffective =
+    mode === "pickup" && !returnLocationDifferent
+      ? pickupBranchEffective
+      : returnBranch || defaultReturnBranchSlug;
 
   const daysPreview = useMemo(() => {
     if (rental === "corporate") return null;
@@ -436,14 +434,56 @@ export function BookingSearchWidget({
     return computeDaysPreview(pickupDt, dropoffDt);
   }, [rental, subPackStartYmd, subPackMonths, pickupDt, dropoffDt]);
 
-  function swapPickupReturnBranchState() {
-    const pc = pickupCity;
-    const pb = pickupBranch;
-    setPickupCity(returnCity);
-    setPickupBranch(returnBranch);
-    setReturnCity(pc);
-    setReturnBranch(pb);
+  function handleReturnLocationDifferentChange(checked: boolean) {
+    setReturnLocationDifferent(checked);
+    if (checked) {
+      setReturnCity(pickupCity || defaultCitySlug);
+      setReturnBranch(pickupBranch || defaultPickupBranchSlug);
+    }
   }
+
+  function handlePickupCityChange(slug: string) {
+    setPickupCity(slug);
+    const list = dateCities.find((c) => c.slug === slug)?.branches ?? [];
+    const branch = list[0]?.slug ?? "";
+    setPickupBranch(branch);
+    if (!returnLocationDifferent) {
+      setReturnCity(slug);
+      setReturnBranch(branch);
+    }
+  }
+
+  function handlePickupBranchChange(slug: string) {
+    setPickupBranch(slug);
+    if (!returnLocationDifferent) {
+      setReturnBranch(slug);
+    }
+  }
+
+  const pickupBranchFieldsProps = {
+    uidPrefix: uid,
+    dateCities,
+    defaultCitySlug,
+    branchSelectRequired,
+    pickupCity,
+    pickupBranch,
+    pickupCityBranches,
+    defaultPickupBranchSlug,
+    returnCity,
+    returnBranch,
+    returnCityBranches,
+    defaultReturnBranchSlug,
+    returnLocationDifferent,
+    onReturnLocationDifferentChange: handleReturnLocationDifferentChange,
+    onPickupCityChange: handlePickupCityChange,
+    onPickupBranchChange: handlePickupBranchChange,
+    onReturnCityChange: (slug: string) => {
+      setReturnCity(slug);
+      const list = dateCities.find((c) => c.slug === slug)?.branches ?? [];
+      setReturnBranch(list[0]?.slug ?? "");
+    },
+    onReturnBranchChange: setReturnBranch,
+  };
 
   const pickupCityId = `${uid}-pickup-city`;
   const pickupBranchId = `${uid}-pickup-branch`;
@@ -453,7 +493,6 @@ export function BookingSearchWidget({
   const pickupTimeId = `${uid}-pickup-time`;
   const dropoffDtId = `${uid}-dropoff-dt`;
   const dropoffTimeId = `${uid}-dropoff-time`;
-  const deliveryAddrId = `${uid}-delivery-addr`;
   const corpNameId = `${uid}-corp-name`;
   const corpEmailId = `${uid}-corp-email`;
   const corpTaxId = `${uid}-corp-tax`;
@@ -552,26 +591,22 @@ export function BookingSearchWidget({
         setError("اختر فرع الاستلام.");
         return;
       }
-      if (!returnBranchEffective) {
-        setError("اختر فرع التسليم (إرجاع المركبة).");
-        return;
+      if (mode === "delivery" || returnLocationDifferent) {
+        if (!returnBranchEffective) {
+          setError(
+            mode === "delivery"
+              ? "اختر فرع التسليم (إرجاع المركبة)."
+              : "اختر فرع الإرجاع.",
+          );
+          return;
+        }
       }
     }
 
     if (mode === "delivery") {
-      const addrNorm = deliveryAddressText.trim().replace(/\s+/g, " ");
       const mapOk = deliveryLat != null && deliveryLng != null;
-      const addrOk = addrNorm.length >= DELIVERY_ADDRESS_MIN_CHARS;
-      if (addrNorm.length > DELIVERY_ADDRESS_MAX_CHARS) {
-        setError(
-          `عنوان التوصيل طويل جداً (بحد أقصى ${DELIVERY_ADDRESS_MAX_CHARS} حرفاً).`,
-        );
-        return;
-      }
-      if (!mapOk && !addrOk) {
-        setError(
-          `حدّد الموقع على الخريطة، أو اكتب عنوان التوصيل كاملاً (على الأقل ${DELIVERY_ADDRESS_MIN_CHARS} أحرف: المدينة، الحي، الشارع…).`,
-        );
+      if (!mapOk) {
+        setError("حدّد موقع التوصيل على الخريطة.");
         return;
       }
     }
@@ -956,60 +991,21 @@ export function BookingSearchWidget({
                 aria-label="مواقع الاستلام والإرجاع"
               >
                 <p className="text-[10px] font-black uppercase tracking-wide text-[#003749]/65">
-                  {mode === "pickup" ? "مواقع الاستلام والإرجاع" : "التوصيل وموقع الإرجاع"}
+                  {mode === "pickup" ? "موقع الاستلام" : "التوصيل وموقع الإرجاع"}
                 </p>
                 {mode === "pickup" ? (
-                  <div className="relative flex flex-col overflow-visible rounded-xl border border-[#ebe4d3]/80 bg-[#fdfbf6] sm:flex-row sm:items-stretch">
-                    <PickupReturnSwapButton
-                      onClick={swapPickupReturnBranchState}
-                      className="absolute left-3 top-1/2 z-20 -translate-y-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2"
-                    />
-                    <div className="border-b border-[#ebe4d3]/80 pb-3 pl-11 pr-3 pt-2.5 sm:min-w-0 sm:flex-1 sm:border-b-0 sm:px-3 sm:pb-3 sm:pe-8 sm:pt-2.5">
-                      <p className="mb-1.5 text-[10px] font-black uppercase tracking-wide text-[#003749]/55">
-                        موقع الاستلام
-                      </p>
-                      <CityBranchSelects
-                        dateCities={dateCities}
-                        citySlug={pickupCity || defaultCitySlug}
-                        branchSlug={pickupBranch || defaultPickupBranchSlug}
-                        branchOptions={pickupCityBranches}
-                        defaultBranchSlug={defaultPickupBranchSlug}
-                        branchSelectRequired={branchSelectRequired}
-                        cityInputId={pickupCityId}
-                        branchInputId={pickupBranchId}
-                        onCityChange={(slug) => {
-                          setPickupCity(slug);
-                          const list = dateCities.find((c) => c.slug === slug)?.branches ?? [];
-                          setPickupBranch(list[0]?.slug ?? "");
-                        }}
-                        onBranchChange={setPickupBranch}
-                      />
-                    </div>
-                    <div className="pb-3 pl-11 pr-3 pt-3 sm:min-w-0 sm:flex-1 sm:border-s sm:border-[#ebe4d3]/80 sm:px-3 sm:pb-3 sm:ps-8 sm:pt-2.5">
-                      <p className="mb-1.5 text-[10px] font-black uppercase tracking-wide text-[#003749]/55">
-                        إرجاع المركبة
-                      </p>
-                      <CityBranchSelects
-                        dateCities={dateCities}
-                        citySlug={returnCity || defaultCitySlug}
-                        branchSlug={returnBranch || defaultReturnBranchSlug}
-                        branchOptions={returnCityBranches}
-                        defaultBranchSlug={defaultReturnBranchSlug}
-                        branchSelectRequired={branchSelectRequired}
-                        cityInputId={returnCityId}
-                        branchInputId={returnBranchId}
-                        onCityChange={(slug) => {
-                          setReturnCity(slug);
-                          const list = dateCities.find((c) => c.slug === slug)?.branches ?? [];
-                          setReturnBranch(list[0]?.slug ?? "");
-                        }}
-                        onBranchChange={setReturnBranch}
-                      />
-                    </div>
+                  <div className="rounded-xl border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3">
+                    <PickupReturnBranchFields {...pickupBranchFieldsProps} />
                   </div>
                 ) : (
                   <>
                     <div className="flex flex-col gap-2">
+                      <p className="flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[10px] font-bold uppercase tracking-wide text-[#003749]/55">
+                        <span className="flex items-center gap-1">
+                          <MapPin className="size-3.5 text-[#dbb878]" aria-hidden />
+                          {deliveryLocationLabel}
+                        </span>
+                      </p>
                       <button
                         type="button"
                         onClick={() => setMapOpen(true)}
@@ -1020,55 +1016,13 @@ export function BookingSearchWidget({
                             <span className="flex size-5 items-center justify-center rounded-full bg-emerald-100">
                               <span className="size-2 rounded-full bg-emerald-500" />
                             </span>
-                            تم تحديد الموقع على الخريطة
+                            تم تحديد الموقع
                           </span>
                         ) : (
-                          <span className="text-[#6b5a3b]">تحديد على الخريطة (اختياري)</span>
+                          <span className="text-[#6b5a3b]">تحديد على الخريطة</span>
                         )}
                         <MapPin className="size-4 shrink-0 text-[#dbb878] opacity-70 transition-opacity group-hover:opacity-100" aria-hidden />
                       </button>
-                      <div>
-                        <label
-                          htmlFor={deliveryAddrId}
-                          className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-[#003749]/55"
-                        >
-                          أو اكتب عنوان التوصيل
-                        </label>
-                        <textarea
-                          id={deliveryAddrId}
-                          value={deliveryAddressText}
-                          onChange={(ev) => setDeliveryAddressText(ev.target.value)}
-                          dir="rtl"
-                          rows={2}
-                          maxLength={DELIVERY_ADDRESS_MAX_CHARS}
-                          placeholder={`مثال: الرياض، حي النرجس، شارع… (${DELIVERY_ADDRESS_MIN_CHARS} أحرف على الأقل إن لم تستخدم الخريطة)`}
-                          className="mt-0.5 w-full resize-y rounded-lg border border-[#ebe4d3]/70 bg-white/80 px-2.5 py-2 text-[13px] font-medium text-[#0f1923] outline-none placeholder:text-[#aaa08e]/90 focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25"
-                        />
-                        <p className="mt-1 text-[9px] font-medium leading-snug text-[#8a7752]/90">
-                          يكفي عنوان واضح أو الخريطة — أو كلاهما. بحد أقصى{" "}
-                          {DELIVERY_ADDRESS_MAX_CHARS} حرفاً.
-                        </p>
-                      </div>
-                      <div className="rounded-lg border border-[#ebe4d3]/60 bg-white/50 p-2.5">
-                        <label
-                          htmlFor={`${uid}-delivery-fee-city-pkg`}
-                          className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-[#003749]/55"
-                        >
-                          مدينة التوصيل (لرسوم الشحن بين المدن)
-                        </label>
-                        <select
-                          id={`${uid}-delivery-fee-city-pkg`}
-                          value={deliveryOriginCitySlug || returnCityEff}
-                          onChange={(ev) => setDeliveryOriginCitySlug(ev.target.value)}
-                          className="w-full cursor-pointer rounded-md border border-[#ebe4d3]/80 bg-white px-2 py-1.5 text-[13px] font-semibold text-[#0f1923] outline-none focus-visible:ring-2 focus-visible:ring-[#dbb878]/30"
-                        >
-                          {dateCities.map((c) => (
-                            <option key={c.slug} value={c.slug}>
-                              {c.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
                     </div>
                     <div className="rounded-xl border border-[#ebe4d3]/60 bg-white/50 p-3">
                       <p className="mb-1.5 text-[10px] font-black uppercase tracking-wide text-[#003749]/55">
@@ -1099,86 +1053,24 @@ export function BookingSearchWidget({
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="col-span-1 flex flex-col gap-2 sm:col-span-2 sm:flex-row sm:items-stretch lg:col-span-2">
                   {mode === "pickup" ? (
-                    <div className="relative w-full min-w-0 flex-1">
-                      <div
-                        role="group"
-                        aria-label="موقع الاستلام وموقع الإرجاع"
-                        className="relative flex flex-col overflow-visible rounded-xl border border-[#ebe4d3]/80 bg-[#fdfbf6] sm:flex-row sm:items-stretch"
+                    <div className="min-w-0 flex-1">
+                      <FieldCard
+                        groupLabelId={`${uid}-field-pickup`}
+                        label="موقع الاستلام"
+                        icon={<MapPin className="size-3.5" />}
                       >
-                        <PickupReturnSwapButton
-                          onClick={swapPickupReturnBranchState}
-                          className="absolute left-3 top-1/2 z-20 -translate-y-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2"
+                        <PickupReturnBranchFields
+                          {...pickupBranchFieldsProps}
+                          hidePickupTitle
                         />
-                        <div
-                          role="group"
-                          aria-labelledby={`${uid}-field-pickup`}
-                          className="border-b border-[#ebe4d3]/80 pb-3 pl-11 pr-3 pt-2.5 sm:min-w-0 sm:flex-1 sm:border-b-0 sm:px-3 sm:pb-3 sm:pe-8 sm:pt-2.5"
-                        >
-                          <span
-                            id={`${uid}-field-pickup`}
-                            className="mb-1.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55"
-                          >
-                            <span className="text-[#dbb878]" aria-hidden>
-                              <MapPin className="size-3.5" />
-                            </span>
-                            موقع الاستلام
-                          </span>
-                          <CityBranchSelects
-                            dateCities={dateCities}
-                            citySlug={pickupCity || defaultCitySlug}
-                            branchSlug={pickupBranch || defaultPickupBranchSlug}
-                            branchOptions={pickupCityBranches}
-                            defaultBranchSlug={defaultPickupBranchSlug}
-                            branchSelectRequired={branchSelectRequired}
-                            cityInputId={pickupCityId}
-                            branchInputId={pickupBranchId}
-                            onCityChange={(slug) => {
-                              setPickupCity(slug);
-                              const list = dateCities.find((c) => c.slug === slug)?.branches ?? [];
-                              setPickupBranch(list[0]?.slug ?? "");
-                            }}
-                            onBranchChange={setPickupBranch}
-                          />
-                        </div>
-                        <div
-                          role="group"
-                          aria-labelledby={`${uid}-field-return`}
-                          className="pb-3 pl-11 pr-3 pt-3 sm:min-w-0 sm:flex-1 sm:border-s sm:border-[#ebe4d3]/80 sm:px-3 sm:pb-3 sm:ps-8 sm:pt-2.5"
-                        >
-                          <span
-                            id={`${uid}-field-return`}
-                            className="mb-1.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55"
-                          >
-                            <span className="text-[#dbb878]" aria-hidden>
-                              <MapPin className="size-3.5" />
-                            </span>
-                            موقع الإرجاع
-                          </span>
-                          <CityBranchSelects
-                            dateCities={dateCities}
-                            citySlug={returnCity || defaultCitySlug}
-                            branchSlug={returnBranch || defaultReturnBranchSlug}
-                            branchOptions={returnCityBranches}
-                            defaultBranchSlug={defaultReturnBranchSlug}
-                            branchSelectRequired={branchSelectRequired}
-                            cityInputId={returnCityId}
-                            branchInputId={returnBranchId}
-                            onCityChange={(slug) => {
-                              setReturnCity(slug);
-                              const list = dateCities.find((c) => c.slug === slug)?.branches ?? [];
-                              setReturnBranch(list[0]?.slug ?? "");
-                            }}
-                            onBranchChange={setReturnBranch}
-                          />
-                        </div>
-                      </div>
+                      </FieldCard>
                     </div>
                   ) : (
                     <>
                       <div className="min-w-0 flex-1">
                         <FieldCard
                           groupLabelId={`${uid}-field-pickup`}
-                          label="موقع التوصيل"
+                          label={deliveryLocationLabel}
                           icon={<MapPin className="size-3.5" />}
                         >
                           <div className="flex flex-col gap-2">
@@ -1192,55 +1084,13 @@ export function BookingSearchWidget({
                                   <span className="flex size-5 items-center justify-center rounded-full bg-emerald-100">
                                     <span className="size-2 rounded-full bg-emerald-500" />
                                   </span>
-                                  تم تحديد الموقع على الخريطة
+                                  تم تحديد الموقع
                                 </span>
                               ) : (
-                                <span className="text-[#6b5a3b]">تحديد على الخريطة (اختياري)</span>
+                                <span className="text-[#6b5a3b]">تحديد على الخريطة</span>
                               )}
                               <MapPin className="size-4 shrink-0 text-[#dbb878] opacity-70 transition-opacity group-hover:opacity-100" aria-hidden />
                             </button>
-                            <div>
-                              <label
-                                htmlFor={deliveryAddrId}
-                                className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-[#003749]/55"
-                              >
-                                أو اكتب عنوان التوصيل
-                              </label>
-                              <textarea
-                                id={deliveryAddrId}
-                                value={deliveryAddressText}
-                                onChange={(ev) => setDeliveryAddressText(ev.target.value)}
-                                dir="rtl"
-                                rows={2}
-                                maxLength={DELIVERY_ADDRESS_MAX_CHARS}
-                                placeholder={`مثال: الرياض، حي النرجس، شارع… (${DELIVERY_ADDRESS_MIN_CHARS} أحرف على الأقل إن لم تستخدم الخريطة)`}
-                                className="mt-0.5 w-full resize-y rounded-lg border border-[#ebe4d3]/70 bg-white/80 px-2.5 py-2 text-[13px] font-medium text-[#0f1923] outline-none placeholder:text-[#aaa08e]/90 focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25"
-                              />
-                              <p className="mt-1 text-[9px] font-medium leading-snug text-[#8a7752]/90">
-                                يكفي عنوان واضح أو الخريطة — أو كلاهما. بحد أقصى{" "}
-                                {DELIVERY_ADDRESS_MAX_CHARS} حرفاً.
-                              </p>
-                            </div>
-                            <div className="rounded-lg border border-[#ebe4d3]/60 bg-white/50 p-2.5">
-                              <label
-                                htmlFor={`${uid}-delivery-fee-city-main`}
-                                className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-[#003749]/55"
-                              >
-                                مدينة التوصيل (لرسوم الشحن بين المدن)
-                              </label>
-                              <select
-                                id={`${uid}-delivery-fee-city-main`}
-                                value={deliveryOriginCitySlug || returnCityEff}
-                                onChange={(ev) => setDeliveryOriginCitySlug(ev.target.value)}
-                                className="w-full cursor-pointer rounded-md border border-[#ebe4d3]/80 bg-white px-2 py-1.5 text-[13px] font-semibold text-[#0f1923] outline-none focus-visible:ring-2 focus-visible:ring-[#dbb878]/30"
-                              >
-                                {dateCities.map((c) => (
-                                  <option key={`m-${c.slug}`} value={c.slug}>
-                                    {c.name}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
                           </div>
                         </FieldCard>
                       </div>
@@ -1596,14 +1446,14 @@ function FieldCard({
   controlHtmlFor,
 }: {
   groupLabelId: string;
-  label: string;
+  label: React.ReactNode;
   icon: React.ReactNode;
   hint?: string;
   children: React.ReactNode;
   controlHtmlFor?: string;
 }) {
   const titleClass =
-    "flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55";
+    "flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55";
 
   return (
     <div
@@ -1639,3 +1489,4 @@ function FieldCard({
     </div>
   );
 }
+

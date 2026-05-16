@@ -13,4 +13,7 @@ export type BookingCityBranchesOption = {
   slug: string;
   name: string;
   branches: BookingBranchOption[];
+  /** مركز تقريبي للمدينة (من فروع قاعدة البيانات أو جدول معروف) — للتعرف على مدينة التوصيل. */
+  centerLat?: number | null;
+  centerLng?: number | null;
 };
