@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { verifyAdminSession } from "@/lib/admin-auth";
 import { listFleetVehiclesForAdmin } from "@/lib/fleet-vehicle-admin-data";
 import { SarAmountWithSymbol } from "@/components/ui/SarAmountWithSymbol";
@@ -15,30 +16,26 @@ export default async function AdminVehiclesPage() {
 
   return (
     <>
-      <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <Link
-            href="/admin"
-            className="mb-3 inline-block text-sm font-bold text-primary hover:underline"
-          >
-            ← لوحة التحكم
-          </Link>
-          <h1 className="text-3xl font-extrabold tracking-tight">المركبات والأسطول</h1>
-          <p className="mt-2 max-w-2xl text-on-surface-variant">
+      <AdminPageHeader
+        title="المركبات والأسطول"
+        description={
+          <>
             المركبات الظاهرة هنا مرتبطة بجدول الأسطول. عدّل السعر أو الصورة أو النصوص كما تظهر للزائر في{" "}
             <Link href="/fleet" className="font-bold text-primary hover:underline">
               صفحة الأسطول
             </Link>
             .
-          </p>
-        </div>
-        <Link
-          href="/admin/vehicles/new"
-          className="gradient-cta rounded-xl px-6 py-3 text-sm font-bold text-white"
-        >
-          إضافة مركبة
-        </Link>
-      </header>
+          </>
+        }
+        actions={
+          <Link
+            href="/admin/vehicles/new"
+            className="gradient-cta rounded-xl px-6 py-3 text-sm font-extrabold text-white shadow-[0_8px_20px_-8px_rgba(119,89,39,0.45)]"
+          >
+            إضافة مركبة
+          </Link>
+        }
+      />
 
       {vehicles.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-outline-variant/50 bg-surface-container-low/50 px-8 py-14 text-center">

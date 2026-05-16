@@ -1,78 +1,144 @@
 "use client";
 
+import {
+  Activity,
+  BarChart2,
+  BadgeDollarSign,
+  Briefcase,
+  Building2,
+  CalendarPlus,
+  Car,
+  ClipboardList,
+  ExternalLink,
+  Home,
+  Image,
+  LayoutDashboard,
+  MapPin,
+  Megaphone,
+  Package,
+  Puzzle,
+  Receipt,
+  Repeat,
+  Scale,
+  ShieldCheck,
+  SlidersHorizontal,
+  Tags,
+  Truck,
+  Users,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogoutButton } from "@/app/admin/LogoutButton";
+import { ADMIN_NAV_GROUPS, isAdminNavActive, type AdminNavItem } from "@/lib/admin-nav";
 
-const nav = [
-  { href: "/admin", label: "لوحة التحكم" },
-  { href: "/admin/customers", label: "العملاء" },
-  { href: "/admin/direct-booking", label: "حجز مباشر (مكتب)" },
-  { href: "/admin/home", label: "هيرو الرئيسية" },
-  { href: "/admin/promo-banner", label: "البانر الترويجي" },
-  { href: "/admin/rental-pricing-display", label: "عرض أسعار التأجير" },
-  { href: "/admin/booking-otp-delivery", label: "رمز التحقق (الحجز)" },
-  { href: "/admin/booking-widget-tabs", label: "تبويبات ويدجت الحجز" },
-  { href: "/admin/vehicles", label: "المركبات" },
-  { href: "/admin/categories", label: "فئات الأسطول" },
-  { href: "/admin/rental-addons", label: "إضافات التأجير" },
-  { href: "/admin/cities", label: "المدن" },
-  { href: "/admin/inter-city-shipping", label: "شحن بين المدن" },
-  { href: "/admin/checkout-fees", label: "رسوم إتمام الحجز" },
-  { href: "/admin/branches", label: "الفروع" },
-  { href: "/admin/subscription-plans", label: "باقات اشتراك" },
-  { href: "/admin/subscriptions", label: "اشتراكات العملاء" },
-  { href: "/admin/car-bookings", label: "حجوزات السيارات" },
-  { href: "/admin/cancellation-policy", label: "سياسات إلغاء الحجز" },
-  { href: "/admin/corporate-leads", label: "حجز الشركات" },
-  { href: "/admin/fleet-availability", label: "توفر المركبات" },
-  { href: "/fleet", label: "عرض الأسطول" },
-] as const;
+const ICONS: Record<AdminNavItem["icon"], LucideIcon> = {
+  "layout-dashboard": LayoutDashboard,
+  users: Users,
+  "calendar-plus": CalendarPlus,
+  car: Car,
+  image: Image,
+  megaphone: Megaphone,
+  "badge-dollar": BadgeDollarSign,
+  "shield-check": ShieldCheck,
+  sliders: SlidersHorizontal,
+  tags: Tags,
+  puzzle: Puzzle,
+  "map-pin": MapPin,
+  truck: Truck,
+  receipt: Receipt,
+  "building-2": Building2,
+  package: Package,
+  repeat: Repeat,
+  "clipboard-list": ClipboardList,
+  scale: Scale,
+  briefcase: Briefcase,
+  activity: Activity,
+  "bar-chart-2": BarChart2,
+  "external-link": ExternalLink,
+  home: Home,
+};
 
-function isActive(pathname: string, href: string) {
-  if (href === "/admin") {
-    return pathname === "/admin";
-  }
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
+type Props = {
+  open: boolean;
+  onClose: () => void;
+};
 
-export function AdminSidebar() {
+export function AdminSidebar({ open, onClose }: Props) {
   const pathname = usePathname() ?? "";
 
   return (
-    <aside className="flex w-full shrink-0 flex-col border-e border-outline-variant/30 bg-surface-container-low/80 md:w-56 lg:w-64">
-      <div className="border-b border-outline-variant/30 px-4 py-5">
-        <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant">
-          إدارة
-        </p>
-        <p className="mt-1 text-lg font-extrabold tracking-tight">Rawaes</p>
-      </div>
-      <nav className="flex flex-1 flex-col gap-1 p-3">
-        {nav.map((item) => {
-          const active = isActive(pathname, item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`whitespace-nowrap rounded-xl px-3 py-2.5 text-sm font-bold transition-colors ${
-                active
-                  ? "bg-primary-container text-on-primary-container"
-                  : "text-on-surface hover:bg-surface-container"
-              }`}
-            >
-              {item.label}
-            </Link>
-          );
-        })}
-        <Link
-          href="/"
-          className="whitespace-nowrap rounded-xl px-3 py-2.5 text-sm font-bold text-on-surface-variant transition-colors hover:bg-surface-container"
+    <aside
+      className={`fixed inset-y-0 end-0 z-50 flex w-[min(100vw-2rem,18rem)] shrink-0 flex-col border-s border-outline-variant/20 bg-[#1c1b1b] text-[#f3f0ef] shadow-2xl transition-transform duration-300 ease-out md:static md:z-auto md:w-60 md:translate-x-0 md:shadow-none lg:w-64 ${
+        open ? "translate-x-0" : "translate-x-full md:translate-x-0"
+      }`}
+      aria-label="قائمة الإدارة"
+    >
+      <div className="flex items-start justify-between gap-2 border-b border-white/10 px-4 py-5">
+        <div className="min-w-0">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#e8c084]/80">
+            إدارة
+          </p>
+          <p className="mt-1 text-lg font-extrabold tracking-tight text-white">روائس</p>
+          <p className="mt-0.5 text-[11px] font-medium text-white/45">لوحة التحكم</p>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex size-9 shrink-0 items-center justify-center rounded-lg text-white/70 transition-colors hover:bg-white/10 hover:text-white md:hidden"
+          aria-label="إغلاق القائمة"
         >
-          الموقع العام
-        </Link>
+          <X className="size-5" aria-hidden />
+        </button>
+      </div>
+
+      <nav className="flex flex-1 flex-col gap-5 overflow-y-auto overscroll-contain px-3 py-4">
+        {ADMIN_NAV_GROUPS.map((group) => (
+          <div key={group.id}>
+            <p className="mb-2 px-2 text-[10px] font-bold uppercase tracking-wider text-white/35">
+              {group.label}
+            </p>
+            <ul className="flex flex-col gap-0.5">
+              {group.items.map((item) => {
+                const active = isAdminNavActive(pathname, item.href);
+                const Icon = ICONS[item.icon];
+                return (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      onClick={onClose}
+                      target={item.external ? "_blank" : undefined}
+                      rel={item.external ? "noopener noreferrer" : undefined}
+                      className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-bold transition-colors ${
+                        active
+                          ? "bg-[#e8c084] text-[#281800] shadow-[0_4px_14px_-4px_rgba(232,192,132,0.5)]"
+                          : "text-white/78 hover:bg-white/8 hover:text-white"
+                      }`}
+                      aria-current={active ? "page" : undefined}
+                    >
+                      <Icon
+                        className={`size-4 shrink-0 ${active ? "text-[#5d4211]" : "text-[#e8c084]/70"}`}
+                        aria-hidden
+                      />
+                      <span className="min-w-0 truncate">{item.label}</span>
+                      {item.external ? (
+                        <ExternalLink
+                          className="ms-auto size-3.5 shrink-0 opacity-50"
+                          aria-hidden
+                        />
+                      ) : null}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
       </nav>
-      <div className="border-t border-outline-variant/30 p-3">
-        <LogoutButton />
+
+      <div className="border-t border-white/10 p-3">
+        <LogoutButton variant="sidebar" />
       </div>
     </aside>
   );

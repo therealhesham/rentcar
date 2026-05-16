@@ -1,12 +1,26 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ConvertInquiryToDirectForm } from "@/components/admin/ConvertInquiryToDirectForm";
+import { AdminCard } from "@/components/admin/AdminCard";
+import { AdminKindBadge, AdminStatusBadge } from "@/components/admin/AdminStatusBadge";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { AdminStatCard } from "@/components/admin/AdminStatCard";
 import { EditBookingRequestForm } from "@/components/admin/EditBookingRequestForm";
 import { RevertDirectToInquiryForm } from "@/components/admin/RevertDirectToInquiryForm";
 import { verifyAdminSession } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
+
+const QUICK_LINKS = [
+  { href: "/admin/statistics", label: "الإحصائيات" },
+  { href: "/admin/car-bookings", label: "حجوزات السيارات" },
+  { href: "/admin/direct-booking", label: "حجز مباشر (مكتب)" },
+  { href: "/admin/vehicles", label: "المركبات" },
+  { href: "/admin/customers", label: "العملاء" },
+  { href: "/admin/fleet-availability", label: "توفر الأسطول" },
+  { href: "/admin/booking-otp-delivery", label: "رمز التحقق" },
+] as const;
 
 export default async function AdminDashboardPage() {
   if (!(await verifyAdminSession())) {
@@ -65,110 +79,80 @@ export default async function AdminDashboardPage() {
 
   const fleetUnits = fleetRows.reduce((sum, row) => sum + row.quantity, 0);
 
-  const statCards = [
-    { label: "فئات الأسطول", value: categoriesCount },
-    { label: "الماركات", value: brandsCount },
-    { label: "موديلات مسجّلة", value: modelsCount },
-    { label: "وحدات في الأسطول (مجموع الكميات)", value: fleetUnits },
-    { label: "طلبات الحجز (الكل)", value: bookingTotal },
-    { label: "طلبات جديدة", value: bookingNew },
-  ];
-
   return (
     <>
-      <header className="mb-10">
-        <h1 className="text-3xl font-extrabold tracking-tight">لوحة التحكم</h1>
-        <p className="mt-2 max-w-2xl text-on-surface-variant">
-          نظرة عامة على المحتوى والطلبات. لإدارة الأسطول والتعديل على السيارات استخدم{" "}
-          <Link href="/admin/vehicles" className="font-bold text-primary hover:underline">
-            المركبات
-          </Link>
-          ، ولإدارة التصنيفات{" "}
-          <Link href="/admin/categories" className="font-bold text-primary hover:underline">
-            فئات الأسطول
-          </Link>
-          ، وللفروع وقسم «فروعنا الجديدة»{" "}
-          <Link href="/admin/branches" className="font-bold text-primary hover:underline">
-            الفروع
-          </Link>
-          ، ولصورة الهيرو في الرئيسية{" "}
-          <Link href="/admin/home" className="font-bold text-primary hover:underline">
-            هيرو الرئيسية
-          </Link>
-          ، ولعرض الحجوزات المباشرة حسب التاريخ{" "}
-          <Link href="/admin/car-bookings" className="font-bold text-primary hover:underline">
-            حجوزات السيارات
-          </Link>
-          ، وللتوفر مقابل الأسطول{" "}
-          <Link href="/admin/fleet-availability" className="font-bold text-primary hover:underline">
-            توفر المركبات
-          </Link>
-          ، ولقائمة العملاء من الطلبات{" "}
-          <Link href="/admin/customers" className="font-bold text-primary hover:underline">
-            العملاء
-          </Link>
-          ، ولتسجيل حجز مباشر نيابة عن عميل{" "}
-          <Link href="/admin/direct-booking" className="font-bold text-primary hover:underline">
-            حجز مباشر (مكتب)
-          </Link>
-          ، ولإضافات صفحة إتمام الحجز (السعر اليومي){" "}
-          <Link href="/admin/rental-addons" className="font-bold text-primary hover:underline">
-            إضافات التأجير
-          </Link>
-          .
-        </p>
-      </header>
+      <AdminPageHeader
+        title="لوحة التحكم"
+        description="نظرة سريعة على الطلبات والأسطول. استخدم الروابط السريعة أو القائمة الجانبية للوصول إلى أي قسم."
+        backHref={undefined}
+      />
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {statCards.map((card) => (
-          <div
-            key={card.label}
-            className="rounded-2xl border border-outline-variant/30 bg-surface-container-low px-5 py-4"
+      <section className="mb-8 flex flex-wrap gap-2">
+        {QUICK_LINKS.map((link) => (
+          <Link
+            key={link.href}
+            href={link.href}
+            className="rounded-full border border-outline-variant/30 bg-white px-4 py-2 text-xs font-bold text-on-surface shadow-sm transition-colors hover:border-primary/35 hover:bg-primary-container/25"
           >
-            <p className="text-sm font-medium text-on-surface-variant">{card.label}</p>
-            <p className="mt-2 text-3xl font-extrabold tabular-nums tracking-tight">
-              {card.value}
-            </p>
-          </div>
+            {link.label}
+          </Link>
         ))}
       </section>
 
-      <section className="mt-10 rounded-2xl border border-outline-variant/30 bg-surface-container-low p-6">
-        <h2 className="text-xl font-extrabold tracking-tight">آخر طلبات الحجز</h2>
-        <p className="mt-1 text-sm text-on-surface-variant">
-          طلب حجز من الرئيسية (استفسار) مقابل حجز مباشر بعد اختيار سيارة — يظهر النوع في العمود الأول.           يمكن
-          ربط طلب الاستفسار بسيارة متاحة في الأسطول وتحويله إلى حجز مباشر من عمود «تحويل»، أو تعديل بيانات الطلب
-          من عمود «تعديل».
-        </p>
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <AdminStatCard
+          label="طلبات جديدة"
+          value={bookingNew}
+          href="/admin/car-bookings"
+          highlight={bookingNew > 0}
+          hint={bookingNew > 0 ? "تحتاج متابعة" : undefined}
+        />
+        <AdminStatCard label="طلبات الحجز (الكل)" value={bookingTotal} href="/admin/car-bookings" />
+        <AdminStatCard label="وحدات الأسطول" value={fleetUnits} href="/admin/vehicles" />
+        <AdminStatCard label="فئات الأسطول" value={categoriesCount} href="/admin/categories" />
+        <AdminStatCard label="الماركات" value={brandsCount} href="/admin/vehicles" />
+        <AdminStatCard label="موديلات مسجّلة" value={modelsCount} href="/admin/vehicles" />
+      </section>
 
+      <AdminCard
+        className="mt-10"
+        title="آخر طلبات الحجز"
+        description="استفسار من الرئيسية أو حجز مباشر بعد اختيار سيارة. حوّل الاستفسار إلى حجز مباشر أو عدّل البيانات من الأعمدة."
+        noPadding
+      >
         {bookingRequests.length === 0 ? (
-          <p className="mt-4 rounded-xl bg-surface-container px-4 py-3 text-sm text-on-surface-variant">
+          <p className="px-6 py-10 text-center text-sm text-on-surface-variant">
             لا توجد طلبات حجز حتى الآن.
           </p>
         ) : (
-          <div className="mt-4 overflow-x-auto">
+          <div className="overflow-x-auto">
             <table className="w-full min-w-[1260px] text-start text-sm">
               <thead>
-                <tr className="border-b border-outline-variant/30 text-on-surface-variant">
-                  <th className="px-3 py-2">تعديل</th>
-                  <th className="px-3 py-2">النوع</th>
-                  <th className="px-3 py-2">السيارة</th>
-                  <th className="px-3 py-2">الاسم</th>
-                  <th className="px-3 py-2">الجوال</th>
-                  <th className="px-3 py-2">العمر</th>
-                  <th className="px-3 py-2">الفئة</th>
-                  <th className="px-3 py-2">الفرع</th>
-                  <th className="px-3 py-2">بداية الحجز</th>
-                  <th className="px-3 py-2">الأيام</th>
-                  <th className="px-3 py-2">الحالة</th>
-                  <th className="px-3 py-2">وقت الإرسال</th>
-                  <th className="px-3 py-2">تحويل / إرجاع</th>
+                <tr className="border-b border-outline-variant/20 bg-surface-container-low/60 text-[11px] font-bold uppercase tracking-wide text-on-surface-variant">
+                  <th className="px-4 py-3">تعديل</th>
+                  <th className="px-4 py-3">النوع</th>
+                  <th className="px-4 py-3">السيارة</th>
+                  <th className="px-4 py-3">الاسم</th>
+                  <th className="px-4 py-3">الجوال</th>
+                  <th className="px-4 py-3">العمر</th>
+                  <th className="px-4 py-3">الفئة</th>
+                  <th className="px-4 py-3">الفرع</th>
+                  <th className="px-4 py-3">بداية الحجز</th>
+                  <th className="px-4 py-3">الأيام</th>
+                  <th className="px-4 py-3">الحالة</th>
+                  <th className="px-4 py-3">وقت الإرسال</th>
+                  <th className="px-4 py-3">تحويل / إرجاع</th>
                 </tr>
               </thead>
               <tbody>
-                {bookingRequests.map((request) => (
-                  <tr key={request.id} className="border-b border-outline-variant/20">
-                    <td className="px-3 py-2 align-top">
+                {bookingRequests.map((request, i) => (
+                  <tr
+                    key={request.id}
+                    className={`border-b border-outline-variant/10 transition-colors hover:bg-surface-container-low/50 ${
+                      i % 2 === 1 ? "bg-surface-container-low/25" : ""
+                    }`}
+                  >
+                    <td className="px-4 py-3 align-top">
                       <EditBookingRequestForm
                         request={{
                           id: request.id,
@@ -193,9 +177,7 @@ export default async function AdminDashboardPage() {
                             : null,
                           addonsJson: request.addonsJson ?? null,
                           paymentStatus: request.paymentStatus ?? null,
-                          paidAt: request.paidAt
-                            ? request.paidAt.toISOString()
-                            : null,
+                          paidAt: request.paidAt ? request.paidAt.toISOString() : null,
                           paymentMethod: request.paymentMethod ?? null,
                           idDocumentKind: request.idDocumentKind ?? null,
                           nationalIdNumber: request.nationalIdNumber ?? null,
@@ -209,10 +191,8 @@ export default async function AdminDashboardPage() {
                           cancelledAt: request.cancelledAt
                             ? request.cancelledAt.toISOString()
                             : null,
-                          cancellationDeductedDays:
-                            request.cancellationDeductedDays ?? null,
-                          cancellationRefundAmountSar:
-                            request.cancellationRefundAmountSar ?? null,
+                          cancellationDeductedDays: request.cancellationDeductedDays ?? null,
+                          cancellationRefundAmountSar: request.cancellationRefundAmountSar ?? null,
                           cancellationRefundExternalRef:
                             request.cancellationRefundExternalRef ?? null,
                         }}
@@ -220,30 +200,32 @@ export default async function AdminDashboardPage() {
                         models={bookableModels}
                       />
                     </td>
-                    <td className="px-3 py-2">
-                      {request.kind === "DIRECT" ? "حجز مباشر" : "طلب حجز"}
+                    <td className="px-4 py-3">
+                      <AdminKindBadge kind={request.kind} />
                     </td>
-                    <td className="px-3 py-2 text-on-surface-variant">
+                    <td className="px-4 py-3 text-on-surface-variant">
                       {request.carModel
                         ? `${request.carModel.brand.name} ${request.carModel.name}`
                         : "—"}
                     </td>
-                    <td className="px-3 py-2 font-medium">{request.fullName}</td>
-                    <td className="px-3 py-2" dir="ltr">
+                    <td className="px-4 py-3 font-semibold">{request.fullName}</td>
+                    <td className="px-4 py-3 tabular-nums" dir="ltr">
                       {request.phone}
                     </td>
-                    <td className="px-3 py-2">{request.ageRange}</td>
-                    <td className="px-3 py-2">{request.carType}</td>
-                    <td className="px-3 py-2">{request.branch}</td>
-                    <td className="px-3 py-2">
+                    <td className="px-4 py-3">{request.ageRange}</td>
+                    <td className="px-4 py-3">{request.carType}</td>
+                    <td className="px-4 py-3">{request.branch}</td>
+                    <td className="px-4 py-3 tabular-nums">
                       {new Date(request.pickupDate).toLocaleDateString("ar-SA")}
                     </td>
-                    <td className="px-3 py-2">{request.numberOfDays}</td>
-                    <td className="px-3 py-2">{request.status}</td>
-                    <td className="px-3 py-2">
+                    <td className="px-4 py-3 tabular-nums">{request.numberOfDays}</td>
+                    <td className="px-4 py-3">
+                      <AdminStatusBadge status={request.status} />
+                    </td>
+                    <td className="px-4 py-3 text-xs text-on-surface-variant tabular-nums">
                       {new Date(request.createdAt).toLocaleString("ar-SA")}
                     </td>
-                    <td className="px-3 py-2 align-top">
+                    <td className="px-4 py-3 align-top">
                       {request.kind === "INQUIRY" ? (
                         <ConvertInquiryToDirectForm
                           bookingRequestId={request.id}
@@ -259,7 +241,7 @@ export default async function AdminDashboardPage() {
             </table>
           </div>
         )}
-      </section>
+      </AdminCard>
     </>
   );
 }

@@ -2,52 +2,63 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
+import { Shield } from "lucide-react";
 import { loginAdmin } from "@/app/admin/actions";
 
 export default function AdminLoginPage() {
   const [state, formAction, pending] = useActionState(loginAdmin, null);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-surface px-6 py-16 text-on-surface">
-      <div className="w-full max-w-md rounded-2xl border border-outline-variant/30 bg-surface-container-low p-8 shadow-lg">
-        <h1 className="mb-2 text-2xl font-extrabold tracking-tight">
-          دخول الإدارة
-        </h1>
-        <p className="mb-8 text-sm text-on-surface-variant">
-          أدخل كلمة المرور المعرّفة في{" "}
-          <code className="rounded bg-surface-container px-1 py-0.5 text-xs">
-            ADMIN_PASSWORD
-          </code>
-        </p>
-        <form action={formAction} className="flex flex-col gap-4">
-          <label className="text-sm font-medium">
-            كلمة المرور
-            <input
-              name="password"
-              type="password"
-              required
-              autoComplete="current-password"
-              className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-3 text-on-surface outline-none ring-primary/30 focus:ring-2"
-            />
-          </label>
-          {state?.error ? (
-            <p className="text-sm font-medium text-error" role="alert">
-              {state.error}
-            </p>
-          ) : null}
-          <button
-            type="submit"
-            disabled={pending}
-            className="gradient-cta rounded-xl py-3 text-sm font-bold text-white transition-opacity disabled:opacity-60"
-          >
-            {pending ? "جاري التحقق…" : "دخول"}
-          </button>
-        </form>
-        <p className="mt-8 text-center text-sm text-on-surface-variant">
-          <Link href="/" className="font-bold text-primary hover:underline">
-            العودة للموقع
-          </Link>
-        </p>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-[#f4f1ee] px-6 py-16 text-on-surface">
+      <div className="w-full max-w-md overflow-hidden rounded-2xl border border-outline-variant/25 bg-white shadow-[0_24px_60px_-20px_rgba(15,61,71,0.15)]">
+        <div className="border-b border-outline-variant/15 bg-[#003749] px-8 py-6 text-center text-white">
+          <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-2xl bg-[#e8c084]/20">
+            <Shield className="size-6 text-[#e8c084]" aria-hidden />
+          </div>
+          <h1 className="text-xl font-extrabold tracking-tight">دخول الإدارة</h1>
+          <p className="mt-1 text-sm text-white/65">روائس لتأجير السيارات</p>
+        </div>
+
+        <div className="p-8">
+          <p className="mb-6 text-sm leading-relaxed text-on-surface-variant">
+            أدخل كلمة المرور المعرّفة في متغير البيئة{" "}
+            <code className="rounded-md bg-surface-container-low px-1.5 py-0.5 text-xs font-bold text-on-surface">
+              ADMIN_PASSWORD
+            </code>
+          </p>
+          <form action={formAction} className="flex flex-col gap-4">
+            <label className="block text-sm font-bold text-on-surface">
+              كلمة المرور
+              <input
+                name="password"
+                type="password"
+                required
+                autoComplete="current-password"
+                className="mt-2 w-full rounded-xl border border-outline-variant/40 bg-surface-container-lowest px-4 py-3 text-on-surface outline-none transition-[box-shadow,border-color] focus:border-primary focus:ring-2 focus:ring-primary/20"
+              />
+            </label>
+            {state?.error ? (
+              <p
+                className="rounded-xl bg-error-container/40 px-3 py-2 text-sm font-bold text-error"
+                role="alert"
+              >
+                {state.error}
+              </p>
+            ) : null}
+            <button
+              type="submit"
+              disabled={pending}
+              className="gradient-cta rounded-xl py-3 text-sm font-extrabold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {pending ? "جاري التحقق…" : "دخول"}
+            </button>
+          </form>
+          <p className="mt-8 text-center text-sm text-on-surface-variant">
+            <Link href="/" className="font-bold text-primary hover:underline">
+              العودة للموقع العام
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );
