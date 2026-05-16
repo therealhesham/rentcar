@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { updateBookingOtpDelivery } from "@/app/admin/booking-otp-delivery-actions";
+import { bookingOtpLengthLabelAr } from "@/lib/booking-otp-constants";
 import type { BookingOtpChannel } from "@/lib/site-settings";
 
 type Props = {
@@ -24,7 +25,7 @@ const OPTIONS: {
   {
     value: "SMS",
     title: "رسالة نصية (SMS) إلى جوال العميل",
-    hint: "يُرسل رمز من 6 أرقام عبر طلب GET إلى الرابط المعرّف في البيئة (BOOKING_OTP_SMS_URL) مع العناصر {otp} و {phone} و {localPhone} و {message}.",
+    hint: `يُرسل رمز من ${bookingOtpLengthLabelAr()} عبر طلب GET إلى الرابط المعرّف في البيئة (BOOKING_OTP_SMS_URL) مع العناصر {otp} و {phone} و {localPhone} و {message}.`,
   },
   {
     value: "EMAIL",
@@ -34,7 +35,7 @@ const OPTIONS: {
   {
     value: "WHATSAPP",
     title: "واتساب (Evolution API)",
-    hint: "يُرسل رمز من 6 أرقام إلى جوال العميل عبر خدمة Evolution المعرّفة في البيئة (نفس إعداد إشعار الحجز بعد الدفع).",
+    hint: `يُرسل رمز من ${bookingOtpLengthLabelAr()} إلى جوال العميل عبر خدمة Evolution المعرّفة في البيئة (نفس إعداد إشعار الحجز بعد الدفع).`,
   },
 ];
 

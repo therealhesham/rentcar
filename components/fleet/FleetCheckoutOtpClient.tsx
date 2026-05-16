@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { SiteFooter } from "@/components/home/SiteFooter";
 import { SiteNav } from "@/components/shared/SiteNav";
+import { BOOKING_OTP_LENGTH, BOOKING_OTP_REGEX, bookingOtpLengthLabelAr } from "@/lib/booking-otp-constants";
 import type { BookingOtpChannel } from "@/lib/site-settings";
 import {
   isBranchOutsideHoursBookingError,
@@ -129,8 +130,8 @@ export function FleetCheckoutOtpClient() {
     e.preventDefault();
     setError(null);
     const code = otp.replace(/\s+/g, "").trim();
-    if (!/^\d{6}$/.test(code)) {
-      setError("أدخل رمز التحقق المكوّن من 6 أرقام.");
+    if (!BOOKING_OTP_REGEX.test(code)) {
+      setError(`أدخل رمز التحقق المكوّن من ${bookingOtpLengthLabelAr()}.`);
       return;
     }
     setPending(true);
@@ -192,7 +193,7 @@ export function FleetCheckoutOtpClient() {
               <div>
                 <h1 className="text-lg font-extrabold text-[#003749]">رمز التحقق</h1>
                 <p className="mt-2 text-[13px] font-semibold leading-relaxed text-[#6b5a3b]">
-                  بعد تأكيد بياناتك في الخطوة السابقة، أُرسل تلقائياً رمز مكوّن من 6 أرقام إلى{" "}
+                  بعد تأكيد بياناتك في الخطوة السابقة، أُرسل تلقائياً رمز مكوّن من {bookingOtpLengthLabelAr()} إلى{" "}
                   {channel === "EMAIL"
                     ? "بريدك الإلكتروني"
                     : channel === "WHATSAPP"
@@ -237,22 +238,22 @@ export function FleetCheckoutOtpClient() {
                     id="checkout-otp-only"
                     inputMode="numeric"
                     autoComplete="one-time-code"
-                    maxLength={6}
+                    maxLength={BOOKING_OTP_LENGTH}
                     value={otp}
                     onChange={(ev) => {
-                      setOtp(ev.target.value.replace(/\D/g, "").slice(0, 6));
+                      setOtp(ev.target.value.replace(/\D/g, "").slice(0, BOOKING_OTP_LENGTH));
                       setError(null);
                     }}
                     className="peer w-full rounded-xl border border-[#ebe4d3] bg-white px-4 pb-3 pt-6 text-[18px] font-extrabold tracking-[0.25em] text-[#003749] outline-none transition-all focus:border-[#dbb878] focus:ring-1 focus:ring-[#dbb878]"
                     placeholder=" "
                     dir="ltr"
-                    aria-label="رمز التحقق من 6 أرقام"
+                    aria-label={`رمز التحقق من ${bookingOtpLengthLabelAr()}`}
                   />
                   <label
                     htmlFor="checkout-otp-only"
                     className="absolute start-4 top-4 text-[13px] font-bold text-[#aaa08e] transition-all peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-[#dbb878] peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:text-[10px]"
                   >
-                    أدخل الرمز (6 أرقام)
+                    {`أدخل الرمز (${bookingOtpLengthLabelAr()})`}
                   </label>
                 </div>
 

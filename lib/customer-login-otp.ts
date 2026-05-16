@@ -13,6 +13,7 @@ import {
   isEvolutionWhatsAppConfigured,
   sendEvolutionWhatsAppText,
 } from "@/lib/evolution-whatsapp";
+import { BOOKING_OTP_LENGTH, BOOKING_OTP_REGEX, bookingOtpLengthLabelAr } from "@/lib/booking-otp-constants";
 import {
   bookingOtpChannelUsesPhone,
   getBookingOtpChannel,
@@ -21,7 +22,7 @@ import {
 
 export type { BookingOtpChannel };
 
-const OTP_LEN = 6;
+const OTP_LEN = BOOKING_OTP_LENGTH;
 const OTP_TTL_MS = 10 * 60 * 1000;
 const RESEND_COOLDOWN_MS = 45 * 1000;
 const MAX_VERIFY_ATTEMPTS = 5;
@@ -214,7 +215,7 @@ export async function sendCustomerLoginOtpForIdentifier(
     const expiresAt = new Date(Date.now() + OTP_TTL_MS);
     const message =
       channel === "WHATSAPP"
-        ? `رمز تسجيل الدخول في روائس: ${otp}\n\nصالح لمدة 10 دقائق. إن لم تطلب هذا الرمز فتجاهل الرسالة.`
+        ? `رمز تسجيل الدخول في روائس لتأجير السيارات: ${otp}\n\nصالح لمدة 10 دقائق. .`
         : `رمز تسجيل الدخول: ${otp}`;
 
     const smsUrl =
@@ -410,8 +411,8 @@ export async function verifyAndConsumeCustomerLoginOtp(opts: {
   const code = String(opts.codeRaw ?? "")
     .replace(/\s+/g, "")
     .trim();
-  if (!/^\d{6}$/.test(code)) {
-    return { ok: false, error: "أدخل رمز التحقق المكوّن من 6 أرقام." };
+  if (!BOOKING_OTP_REGEX.test(code)) {
+    return { ok: false, error: `أدخل رمز التحقق المكوّن من ${bookingOtpLengthLabelAr()}.` };
   }
 
   await purgeExpiredCustomerLoginOtps();

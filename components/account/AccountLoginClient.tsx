@@ -7,6 +7,7 @@ import { Loader2 } from "lucide-react";
 import { loginCustomer, type AuthFormState } from "@/app/account/actions";
 import { SiteFooter } from "@/components/home/SiteFooter";
 import { SiteNav } from "@/components/shared/SiteNav";
+import { BOOKING_OTP_LENGTH, BOOKING_OTP_REGEX, bookingOtpLengthLabelAr } from "@/lib/booking-otp-constants";
 import type { BookingOtpChannel } from "@/lib/site-settings";
 
 const TEAL = "#003749";
@@ -129,8 +130,8 @@ export function AccountLoginClient() {
     e.preventDefault();
     setOtpError(null);
     const code = otp.replace(/\s+/g, "").trim();
-    if (!/^\d{6}$/.test(code)) {
-      setOtpError("أدخل الرمز المكوّن من 6 أرقام.");
+    if (!BOOKING_OTP_REGEX.test(code)) {
+      setOtpError(`أدخل الرمز المكوّن من ${bookingOtpLengthLabelAr()}.`);
       return;
     }
     const toSend =
@@ -236,16 +237,7 @@ export function AccountLoginClient() {
             </div>
           ) : useOtpOnly ? (
             <div className="space-y-6">
-              <div className="flex items-center justify-between rounded-xl bg-[#fdfbf6] px-4 py-2 text-[12px] font-extrabold text-[#8a7752]">
-                <span>الخطوة {otpStep === "identifier" ? "١" : "٢"} من ٢</span>
-                <span className="rounded-md bg-white px-2 py-0.5 text-[11px] text-[#003749]">
-                  {otpChannel === "EMAIL"
-                    ? "تحقق بالبريد"
-                    : otpChannel === "WHATSAPP"
-                      ? "تحقق بالواتساب"
-                      : "تحقق بالجوال"}
-                </span>
-              </div>
+          
 
               {otpStep === "identifier" ? (
                 <div className="space-y-4">
@@ -318,27 +310,27 @@ export function AccountLoginClient() {
                 <form className="space-y-5" onSubmit={handleVerifyOtp}>
                   <div>
                     <span className="mb-1.5 block text-[13px] font-extrabold text-[#003749]">
-                      رمز التحقق (6 أرقام)
+                      {`رمز التحقق (${bookingOtpLengthLabelAr()})`}
                     </span>
                     <input
                       type="text"
                       inputMode="numeric"
-                      maxLength={6}
+                      maxLength={BOOKING_OTP_LENGTH}
                       autoComplete="one-time-code"
                       value={otp}
                       onChange={(ev) => {
-                        setOtp(ev.target.value.replace(/\D/g, "").slice(0, 6));
+                        setOtp(ev.target.value.replace(/\D/g, "").slice(0, BOOKING_OTP_LENGTH));
                         setOtpError(null);
                       }}
                       className="w-full rounded-xl border border-[#ebe4d3] bg-white px-4 py-4 text-center text-[22px] font-extrabold tracking-[0.35em] text-[#003749] outline-none transition-shadow focus:border-[#dbb878] focus:ring-2 focus:ring-[#dbb878]/40"
                       dir="ltr"
-                      placeholder="••••••"
+                      placeholder="••••"
                       aria-label="رمز التحقق"
                     />
                   </div>
                   <button
                     type="submit"
-                    disabled={otpVerifyBusy || otp.length !== 6}
+                    disabled={otpVerifyBusy || otp.length !== BOOKING_OTP_LENGTH}
                     className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#003749] py-4 text-[15px] font-extrabold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-45"
                   >
                     {otpVerifyBusy ? <Loader2 className="size-5 animate-spin text-white" aria-hidden /> : null}

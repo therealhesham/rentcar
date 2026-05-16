@@ -10,11 +10,12 @@ import {
   isEvolutionWhatsAppConfigured,
   sendEvolutionWhatsAppText,
 } from "@/lib/evolution-whatsapp";
+import { BOOKING_OTP_LENGTH, BOOKING_OTP_REGEX, bookingOtpLengthLabelAr } from "@/lib/booking-otp-constants";
 import { bookingOtpChannelUsesPhone, getBookingOtpChannel, type BookingOtpChannel } from "@/lib/site-settings";
 
 export type { BookingOtpChannel };
 
-const OTP_LEN = 6;
+const OTP_LEN = BOOKING_OTP_LENGTH;
 const OTP_TTL_MS = 10 * 60 * 1000;
 const RESEND_COOLDOWN_MS = 45 * 1000;
 const MAX_VERIFY_ATTEMPTS = 5;
@@ -285,7 +286,7 @@ export async function sendBookingCheckoutOtpFromPublicRequest(body: {
 <body style="font-family:Tahoma,Arial,sans-serif;padding:24px;background:#f6f4ef">
 <p style="font-size:16px">رمز التحقق لإتمام حجزك:</p>
 <p style="font-size:28px;font-weight:800;letter-spacing:0.2em" dir="ltr">${escapeHtmlLite(otp)}</p>
-<p style="color:#666;font-size:13px">صالح لمدة 10 دقائق. إن لم تطلب هذا الرمز فتجاهل الرسالة.</p>
+<p style="color:#666;font-size:13px">صالح لمدة 10 دقائق. .</p>
 </body></html>`,
       text: `رمز التحقق لإتمام حجزك: ${otp}\n\nصالح لمدة 10 دقائق.`,
     });
@@ -320,8 +321,8 @@ export async function verifyAndConsumeBookingCheckoutOtp(opts: {
   const code = String(opts.codeRaw ?? "")
     .replace(/\s+/g, "")
     .trim();
-  if (!/^\d{6}$/.test(code)) {
-    return { ok: false, error: "أدخل رمز التحقق المكوّن من 6 أرقام." };
+  if (!BOOKING_OTP_REGEX.test(code)) {
+    return { ok: false, error: `أدخل رمز التحقق المكوّن من ${bookingOtpLengthLabelAr()}.` };
   }
 
   let destinationKey: string;
