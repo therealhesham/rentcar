@@ -434,10 +434,22 @@ export function FleetCheckoutClient({
   }, [car.modelId, trip.pickupIso, trip.days, excludeBookingRequestIdFromUrl]);
 
   function toggleAddon(id: number) {
+    const addon = addons.find((a) => a.id === id);
+    const group = addon?.exclusiveGroup?.trim();
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+        return next;
+      }
+      if (group) {
+        for (const a of addons) {
+          if (a.id !== id && a.exclusiveGroup?.trim() === group) {
+            next.delete(a.id);
+          }
+        }
+      }
+      next.add(id);
       return next;
     });
   }

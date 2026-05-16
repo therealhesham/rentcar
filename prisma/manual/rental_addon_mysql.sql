@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS `RentalAddon` (
   `descriptionAr` TEXT NULL,
   `pricePerDay` INT NOT NULL,
   `iconKey` VARCHAR(32) NULL,
+  `exclusiveGroup` VARCHAR(64) NULL,
   `sortOrder` INT NOT NULL DEFAULT 0,
   `isActive` BOOLEAN NOT NULL DEFAULT true,
   `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -20,9 +21,14 @@ CREATE TABLE IF NOT EXISTS `RentalAddon` (
 ALTER TABLE `BookingRequest`
   ADD COLUMN `addonsJson` TEXT NULL;
 
-INSERT IGNORE INTO `RentalAddon` (`slug`, `titleAr`, `descriptionAr`, `pricePerDay`, `iconKey`, `sortOrder`, `isActive`, `updatedAt`)
+INSERT IGNORE INTO `RentalAddon` (`slug`, `titleAr`, `descriptionAr`, `pricePerDay`, `iconKey`, `exclusiveGroup`, `sortOrder`, `isActive`, `updatedAt`)
 VALUES
-  ('key-protection', 'أمان المفتاح', NULL, 15, 'key', 10, true, CURRENT_TIMESTAMP(3)),
-  ('key-protection-plus', 'أمان المفتاح بلس', NULL, 35, 'key-plus', 20, true, CURRENT_TIMESTAMP(3)),
-  ('child-seat', 'مقعد طفل', NULL, 10, 'child', 30, true, CURRENT_TIMESTAMP(3)),
-  ('unlimited-km', 'كيلومتر مفتوح', NULL, 40, 'gauge', 40, true, CURRENT_TIMESTAMP(3));
+  ('key-protection', 'أمان المفتاح', NULL, 15, 'key', 'key-protection', 10, true, CURRENT_TIMESTAMP(3)),
+  ('key-protection-plus', 'أمان المفتاح بلس', NULL, 35, 'key-plus', 'key-protection', 20, true, CURRENT_TIMESTAMP(3)),
+  ('child-seat', 'مقعد طفل', NULL, 10, 'child', NULL, 30, true, CURRENT_TIMESTAMP(3)),
+  ('unlimited-km', 'كيلومتر مفتوح', NULL, 40, 'gauge', NULL, 40, true, CURRENT_TIMESTAMP(3));
+
+UPDATE `RentalAddon`
+SET `exclusiveGroup` = 'key-protection'
+WHERE `slug` IN ('key-protection', 'key-protection-plus')
+  AND (`exclusiveGroup` IS NULL OR `exclusiveGroup` = '');

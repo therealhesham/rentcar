@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { verifyAdminSession } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
+import { normalizeRentalAddonExclusiveGroup } from "@/lib/rental-addon-exclusive";
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -43,6 +44,10 @@ export async function createRentalAddon(
   const pricePerDay = Number(formData.get("pricePerDay"));
   const sortOrder = Number(formData.get("sortOrder") ?? 0);
   const iconKey = parseIconKey(String(formData.get("iconKey") ?? ""));
+  const exclusiveGroupRaw = String(formData.get("exclusiveGroup") ?? "").trim();
+  const exclusiveGroup = exclusiveGroupRaw
+    ? normalizeRentalAddonExclusiveGroup(exclusiveGroupRaw)
+    : null;
   const isActive = formData.get("isActive") === "on";
 
   if (!titleAr) {
@@ -53,6 +58,13 @@ export async function createRentalAddon(
       ok: false,
       error:
         "المعرّف (slug) بالإنجليزية: أحرف صغيرة وأرقام وشرطات فقط (مثل: child-seat).",
+    };
+  }
+  if (exclusiveGroupRaw && !exclusiveGroup) {
+    return {
+      ok: false,
+      error:
+        "مجموعة التعارض: أحرف إنجليزية صغيرة وأرقام وشرطات فقط (مثل: key-protection)، أو اتركها فارغة.",
     };
   }
   if (!Number.isFinite(pricePerDay) || pricePerDay < 0 || pricePerDay > 1_000_000) {
@@ -70,6 +82,7 @@ export async function createRentalAddon(
         descriptionAr,
         pricePerDay: Math.floor(pricePerDay),
         iconKey,
+        exclusiveGroup,
         sortOrder: Math.round(sortOrder),
         isActive,
       },
@@ -101,6 +114,10 @@ export async function updateRentalAddon(
   const pricePerDay = Number(formData.get("pricePerDay"));
   const sortOrder = Number(formData.get("sortOrder") ?? 0);
   const iconKey = parseIconKey(String(formData.get("iconKey") ?? ""));
+  const exclusiveGroupRaw = String(formData.get("exclusiveGroup") ?? "").trim();
+  const exclusiveGroup = exclusiveGroupRaw
+    ? normalizeRentalAddonExclusiveGroup(exclusiveGroupRaw)
+    : null;
   const isActive = formData.get("isActive") === "on";
 
   if (!Number.isFinite(id) || id < 1) {
@@ -114,6 +131,13 @@ export async function updateRentalAddon(
       ok: false,
       error:
         "المعرّف (slug) بالإنجليزية: أحرف صغيرة وأرقام وشرطات فقط.",
+    };
+  }
+  if (exclusiveGroupRaw && !exclusiveGroup) {
+    return {
+      ok: false,
+      error:
+        "مجموعة التعارض: أحرف إنجليزية صغيرة وأرقام وشرطات فقط، أو اتركها فارغة.",
     };
   }
   if (!Number.isFinite(pricePerDay) || pricePerDay < 0 || pricePerDay > 1_000_000) {
@@ -132,6 +156,7 @@ export async function updateRentalAddon(
         descriptionAr,
         pricePerDay: Math.floor(pricePerDay),
         iconKey,
+        exclusiveGroup,
         sortOrder: Math.round(sortOrder),
         isActive,
       },

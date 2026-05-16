@@ -179,11 +179,12 @@ function PickupReturnSwapButton({
       onClick={onClick}
       className={[
         "inline-flex size-9 shrink-0 items-center justify-center rounded-full",
-        "border border-neutral-200/95 bg-[#f4f4f5] text-neutral-800 shadow-[0_1px_2px_rgba(15,25,35,0.06)]",
+        "border border-[#ebe4d3]/95 bg-gradient-to-b from-white via-[#fffdf8] to-[#faf7f0]",
+        "text-[#c9a356] shadow-[0_1px_2px_rgba(201,163,86,0.14)]",
         "ring-[3px] ring-[#fdfbf6]",
-        "outline-none transition-[border-color,background-color,transform,box-shadow,ring-color]",
-        "hover:border-neutral-300 hover:bg-white hover:text-neutral-950 hover:shadow-[0_2px_6px_rgba(15,25,35,0.08)]",
-        "focus-visible:ring-2 focus-visible:ring-[#dbb878]/35 focus-visible:ring-offset-0",
+        "outline-none transition-[border-color,background-color,transform,box-shadow,ring-color,color]",
+        "hover:border-[#dbb878] hover:from-[#fffdf8] hover:via-[#fffbf5] hover:to-[#fdf6e8] hover:text-[#a67c29] hover:shadow-[0_2px_10px_rgba(219,184,120,0.22)]",
+        "focus-visible:ring-2 focus-visible:ring-[#dbb878]/40 focus-visible:ring-offset-0",
         "active:scale-[0.96]",
         className ?? "",
       ].join(" ")}

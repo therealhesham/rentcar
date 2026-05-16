@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { Suspense } from "react";
 import { FleetCarGrid, FleetFilters } from "@/components/fleet";
 import { BookingWidget } from "@/components/home";
 import { SiteFooter } from "@/components/home/SiteFooter";
@@ -7,7 +8,12 @@ import { SiteNav } from "@/components/shared/SiteNav";
 import { getActiveBranches, getActiveBookingCitiesWithBranches } from "@/lib/branch-data";
 import { computeBookingDays } from "@/lib/booking-days";
 import { listAvailableCarModelIds } from "@/lib/direct-booking";
-import { getFleetCarsForDisplay } from "@/lib/fleet-data";
+import {
+  getFleetBrandsForFilter,
+  getFleetCarsForDisplay,
+  getFleetCategoriesForFilter,
+  getFleetPriceBounds,
+} from "@/lib/fleet-data";
 import { fleetDailyPriceFilterLabel } from "@/components/fleet/FleetDailyPriceFilterLabel";
 import { buildFleetSearchUrlHydrate } from "@/lib/fleet-search-url-hydrate";
 import { getBookingWidgetTabFlags, getRentalPriceDisplayMode } from "@/lib/site-settings";
@@ -37,7 +43,9 @@ export default async function FleetPage({
 }) {
   const params = searchParams ? await searchParams : {};
   const fleetUrlHydrate = buildFleetSearchUrlHydrate(params);
-  const categorySlug = qFirst(params.category);
+  const categoryRaw = qFirst(params.category);
+  const brandRaw = qFirst(params.brand);
+  const maxPriceRaw = qFirst(params.maxPrice);
 
   const pickupRaw = qFirst(params.pickup);
   const dropoffRaw = qFirst(params.dropoff);
@@ -126,8 +134,37 @@ export default async function FleetPage({
     }
   }
 
-  const priceMode = await getRentalPriceDisplayMode();
-  const cars = await getFleetCarsForDisplay(categorySlug, availabilityModelIds, priceMode);
+  const [priceMode, categories, brands, priceBounds] = await Promise.all([
+    getRentalPriceDisplayMode(),
+    getFleetCategoriesForFilter(),
+    getFleetBrandsForFilter(),
+    getFleetPriceBounds(),
+  ]);
+
+  const categorySlug =
+    categoryRaw && categories.some((c) => c.slug === categoryRaw) ? categoryRaw : undefined;
+
+  const brandIdParsed = brandRaw ? Number(brandRaw) : NaN;
+  const brandId =
+    Number.isFinite(brandIdParsed) && brands.some((b) => b.id === brandIdParsed)
+      ? brandIdParsed
+      : undefined;
+
+  const maxPriceParsed = maxPriceRaw ? Number(maxPriceRaw) : NaN;
+  const maxPriceExclTax =
+    Number.isFinite(maxPriceParsed) &&
+    maxPriceParsed >= priceBounds.min &&
+    maxPriceParsed < priceBounds.max
+      ? maxPriceParsed
+      : undefined;
+
+  const cars = await getFleetCarsForDisplay({
+    categorySlug,
+    brandId,
+    maxPriceExclTax,
+    modelIds: availabilityModelIds,
+    priceDisplayMode: priceMode,
+  });
 
   const [branchRows, cities, tabFlags] = await Promise.all([
     getActiveBranches().catch(() => []),
@@ -166,16 +203,38 @@ export default async function FleetPage({
             />
           </div>
         </section>
-        <FleetFilters dailyPriceLabel={fleetDailyPriceFilterLabel(priceMode)} />
-        <main className="mx-auto max-w-screen-2xl px-8 py-24">
+        <Suspense
+          fallback={
+            <section className="bg-surface-container-low px-8 py-12">
+              <div className="mx-auto max-w-screen-2xl">
+                <div className="editorial-shadow h-36 animate-pulse rounded-2xl bg-surface-container-lowest/80" />
+              </div>
+            </section>
+          }
+        >
+          <FleetFilters
+            categories={categories}
+            brands={brands}
+            priceBounds={priceBounds}
+            dailyPriceLabel={fleetDailyPriceFilterLabel(priceMode)}
+          />
+        </Suspense>
+        <main id="fleet-results" className="mx-auto max-w-screen-2xl px-8 py-24 scroll-mt-24">
           {searchBanner}
-          {availabilityModelIds && cars.length === 0 ? (
+          {availabilityModelIds !== undefined && availabilityModelIds.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-outline-variant/50 bg-surface-container-low/50 px-8 py-16 text-center">
               <p className="text-lg font-bold text-on-surface">
                 لا توجد مركبات متاحة للحجز المباشر في الفترة التي اخترتها.
               </p>
               <p className="mt-2 text-on-surface-variant">
                 جرّب تغيير التواريخ أو تصفح الأسطول كاملاً بدون فلترة التوفر.
+              </p>
+            </div>
+          ) : cars.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-outline-variant/50 bg-surface-container-low/50 px-8 py-16 text-center">
+              <p className="text-lg font-bold text-on-surface">لا توجد مركبات تطابق الفلاتر المحددة.</p>
+              <p className="mt-2 text-on-surface-variant">
+                غيّر التصنيف أو الماركة أو نطاق السعر لتصفية النتائج تلقائياً.
               </p>
             </div>
           ) : (

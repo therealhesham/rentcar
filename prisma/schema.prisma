@@ -199,6 +199,8 @@ model RentalAddon {
   pricePerDay    Int
   /// مفتاح أيقونة تقريبي للواجهة (مثل key، child، gauge)
   iconKey        String?  @db.VarChar(32)
+  /// مجموعة تعارض: لا يُختار أكثر من إضافة واحدة لنفس المعرّف (مثل key-protection)
+  exclusiveGroup String?  @db.VarChar(64)
   sortOrder      Int      @default(0)
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())

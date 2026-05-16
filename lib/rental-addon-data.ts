@@ -7,6 +7,8 @@ export type RentalAddonDTO = {
   descriptionAr: string | null;
   pricePerDay: number;
   iconKey: string | null;
+  /** إن وُجدت، لا يُختار أكثر من إضافة واحدة لنفس المجموعة. */
+  exclusiveGroup: string | null;
 };
 
 export async function getActiveRentalAddons(): Promise<RentalAddonDTO[]> {
@@ -21,6 +23,7 @@ export async function getActiveRentalAddons(): Promise<RentalAddonDTO[]> {
         descriptionAr: true,
         pricePerDay: true,
         iconKey: true,
+        exclusiveGroup: true,
       },
     });
     return rows;

@@ -19,6 +19,7 @@ import {
   DELIVERY_ADDRESS_MIN_CHARS,
 } from "@/lib/delivery-address";
 import { formatBranchOutsideHoursError } from "@/lib/direct-booking-user-messages";
+import { validateRentalAddonExclusiveSelection } from "@/lib/rental-addon-exclusive";
 import {
   addDaysToYmd,
   dateOnlyYmd,
@@ -807,9 +808,20 @@ async function buildBookingAddonsJsonSnapshot(
     const uniqueIds = [...new Set(addonIds)];
     const addons = await prisma.rentalAddon.findMany({
       where: { id: { in: uniqueIds }, isActive: true },
+      select: {
+        id: true,
+        slug: true,
+        titleAr: true,
+        pricePerDay: true,
+        exclusiveGroup: true,
+      },
     });
     if (addons.length !== uniqueIds.length) {
       return { ok: false, error: "إحدى الإضافات المختارة غير متاحة." };
+    }
+    const exclusiveCheck = validateRentalAddonExclusiveSelection(addons);
+    if (!exclusiveCheck.ok) {
+      return { ok: false, error: exclusiveCheck.error };
     }
     items = addons.map((a) => ({
       id: a.id,

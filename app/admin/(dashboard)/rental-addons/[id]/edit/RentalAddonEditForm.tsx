@@ -91,6 +91,21 @@ export function RentalAddonEditForm({ addon }: { addon: RentalAddonAdminRow }) {
       </label>
 
       <label className="text-sm font-medium md:col-span-1">
+        مجموعة التعارض (إما/أو)
+        <input
+          name="exclusiveGroup"
+          type="text"
+          defaultValue={addon.exclusiveGroup ?? ""}
+          placeholder="مثال: key-protection"
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+          dir="ltr"
+        />
+        <span className="mt-1 block text-xs font-normal text-on-surface-variant">
+          إضافات بنفس المعرّف لا تُختار معاً. اتركه فارغاً إن لم يكن هناك تعارض.
+        </span>
+      </label>
+
+      <label className="text-sm font-medium md:col-span-1">
         أيقونة الواجهة
         <select
           name="iconKey"
