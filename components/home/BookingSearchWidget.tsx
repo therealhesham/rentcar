@@ -25,6 +25,7 @@ import {
   DeliveryOriginCityLabelSuffix,
   useDeliveryOriginCity,
 } from "@/components/home/DeliveryOriginCityHint";
+import { GroupedBranchSelect } from "@/components/home/GroupedBranchSelect";
 import { PickupReturnBranchFields } from "@/components/home/PickupReturnBranchFields";
 import { SubscriptionPackagesInWidget } from "@/components/subscriptions/SubscriptionPackagesInWidget";
 import { DdMmYyDateWithPicker } from "@/components/ui/DdMmYyDateWithPicker";
@@ -89,81 +90,6 @@ const GOLD = "#dbb878";
 const GOLD_DARK = "#c9a356";
 const TEAL = "#003749";
 
-function CityBranchSelects({
-  dateCities,
-  citySlug,
-  branchSlug,
-  branchOptions,
-  defaultBranchSlug,
-  branchSelectRequired,
-  cityInputId,
-  branchInputId,
-  onCityChange,
-  onBranchChange,
-}: {
-  dateCities: BookingCityBranchesOption[];
-  citySlug: string;
-  branchSlug: string;
-  branchOptions: BookingBranchOption[];
-  defaultBranchSlug: string;
-  branchSelectRequired: boolean;
-  cityInputId: string;
-  branchInputId: string;
-  onCityChange: (slug: string) => void;
-  onBranchChange: (slug: string) => void;
-}) {
-  const pairLabelClass =
-    "shrink-0 self-center text-[10px] font-bold uppercase tracking-wide text-[#003749]/55";
-  return (
-    <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 gap-y-2">
-      <label htmlFor={cityInputId} className={pairLabelClass}>
-        المدينة
-      </label>
-      <div className="relative min-w-0">
-        <select
-          id={cityInputId}
-          value={citySlug}
-          onChange={(ev) => onCityChange(ev.target.value)}
-          required={branchSelectRequired}
-          className="w-full min-w-0 cursor-pointer appearance-none rounded-lg border border-[#ebe4d3]/70 bg-white/70 py-2 pe-8 ps-2.5 text-[13px] font-semibold text-[#0f1923] outline-none transition-[border-color,box-shadow,background-color] hover:bg-white focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25"
-        >
-          {dateCities.map((c) => (
-            <option key={c.slug} value={c.slug}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-        <ChevronDown
-          className="pointer-events-none absolute end-2 top-1/2 size-3.5 -translate-y-1/2 text-[#8a8274]"
-          aria-hidden
-        />
-      </div>
-      <label htmlFor={branchInputId} className={pairLabelClass}>
-        الفرع
-      </label>
-      <div className="relative min-w-0">
-        <select
-          id={branchInputId}
-          value={branchSlug || defaultBranchSlug}
-          onChange={(ev) => onBranchChange(ev.target.value)}
-          required={branchSelectRequired}
-          disabled={branchOptions.length === 0}
-          className="w-full min-w-0 cursor-pointer appearance-none rounded-lg border border-[#ebe4d3]/70 bg-white/70 py-2 pe-8 ps-2.5 text-[13px] font-semibold text-[#0f1923] outline-none transition-[border-color,box-shadow,background-color] hover:bg-white focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25 disabled:cursor-not-allowed disabled:opacity-45"
-        >
-          {branchOptions.map((b) => (
-            <option key={b.slug} value={b.slug}>
-              {b.name}
-            </option>
-          ))}
-        </select>
-        <ChevronDown
-          className="pointer-events-none absolute end-2 top-1/2 size-3.5 -translate-y-1/2 text-[#8a8274]"
-          aria-hidden
-        />
-      </div>
-    </div>
-  );
-}
 
 export function BookingSearchWidget({
   cities,
@@ -467,11 +393,9 @@ export function BookingSearchWidget({
     branchSelectRequired,
     pickupCity,
     pickupBranch,
-    pickupCityBranches,
     defaultPickupBranchSlug,
     returnCity,
     returnBranch,
-    returnCityBranches,
     defaultReturnBranchSlug,
     returnLocationDifferent,
     onReturnLocationDifferentChange: handleReturnLocationDifferentChange,
@@ -485,9 +409,11 @@ export function BookingSearchWidget({
     onReturnBranchChange: setReturnBranch,
   };
 
-  const pickupCityId = `${uid}-pickup-city`;
-  const pickupBranchId = `${uid}-pickup-branch`;
-  const returnCityId = `${uid}-return-city`;
+  function handleDeliveryReturnBranch(branch: string, city: string | null) {
+    if (city) setReturnCity(city);
+    setReturnBranch(branch);
+  }
+
   const returnBranchId = `${uid}-return-branch`;
   const pickupDtId = `${uid}-pickup-dt`;
   const pickupTimeId = `${uid}-pickup-time`;
@@ -1028,21 +954,13 @@ export function BookingSearchWidget({
                       <p className="mb-1.5 text-[10px] font-black uppercase tracking-wide text-[#003749]/55">
                         فرع إرجاع المركبة
                       </p>
-                      <CityBranchSelects
+                      <GroupedBranchSelect
+                        id={returnBranchId}
                         dateCities={dateCities}
-                        citySlug={returnCity || defaultCitySlug}
                         branchSlug={returnBranch || defaultReturnBranchSlug}
-                        branchOptions={returnCityBranches}
                         defaultBranchSlug={defaultReturnBranchSlug}
-                        branchSelectRequired={branchSelectRequired}
-                        cityInputId={returnCityId}
-                        branchInputId={returnBranchId}
-                        onCityChange={(slug) => {
-                          setReturnCity(slug);
-                          const list = dateCities.find((c) => c.slug === slug)?.branches ?? [];
-                          setReturnBranch(list[0]?.slug ?? "");
-                        }}
-                        onBranchChange={setReturnBranch}
+                        required={branchSelectRequired}
+                        onBranchSelect={handleDeliveryReturnBranch}
                       />
                     </div>
                   </>
@@ -1050,7 +968,7 @@ export function BookingSearchWidget({
               </div>
             </SubscriptionPackagesInWidget>
           ) : (
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 items-center gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="col-span-1 flex flex-col gap-2 sm:col-span-2 sm:flex-row sm:items-stretch lg:col-span-2">
                   {mode === "pickup" ? (
                     <div className="min-w-0 flex-1">
@@ -1100,21 +1018,13 @@ export function BookingSearchWidget({
                           label="موقع الإرجاع"
                           icon={<MapPin className="size-3.5" />}
                         >
-                          <CityBranchSelects
+                          <GroupedBranchSelect
+                            id={returnBranchId}
                             dateCities={dateCities}
-                            citySlug={returnCity || defaultCitySlug}
                             branchSlug={returnBranch || defaultReturnBranchSlug}
-                            branchOptions={returnCityBranches}
                             defaultBranchSlug={defaultReturnBranchSlug}
-                            branchSelectRequired={branchSelectRequired}
-                            cityInputId={returnCityId}
-                            branchInputId={returnBranchId}
-                            onCityChange={(slug) => {
-                              setReturnCity(slug);
-                              const list = dateCities.find((c) => c.slug === slug)?.branches ?? [];
-                              setReturnBranch(list[0]?.slug ?? "");
-                            }}
-                            onBranchChange={setReturnBranch}
+                            required={branchSelectRequired}
+                            onBranchSelect={handleDeliveryReturnBranch}
                           />
                         </FieldCard>
                       </div>
@@ -1123,14 +1033,16 @@ export function BookingSearchWidget({
                 </div>
 
                 <FieldCard
+                  layout="inline"
                   groupLabelId={`${uid}-field-pickup-dt`}
                   label="تاريخ ووقت الاستلام"
                   icon={<CalendarClock className="size-3.5" />}
                   controlHtmlFor={pickupDtId}
                 >
-                  <div className="flex flex-col gap-1.5">
+                  <div className="flex flex-wrap items-center gap-2">
                     <DdMmYyDateWithPicker
                       id={pickupDtId}
+                      rowClassName="items-center"
                       value={pickupDateDraft}
                       onChange={(ev) => setPickupDateDraft(ev.target.value)}
                       onBlur={() => {
@@ -1181,15 +1093,17 @@ export function BookingSearchWidget({
                 </FieldCard>
 
                 <FieldCard
+                  layout="inline"
                   groupLabelId={`${uid}-field-dropoff-dt`}
                   label="تاريخ ووقت التسليم"
                   icon={<Clock className="size-3.5" />}
                   hint={rentalDropoffHint(rental)}
                   controlHtmlFor={dropoffDtId}
                 >
-                  <div className="flex flex-col gap-1.5">
+                  <div className="flex flex-wrap items-center gap-2">
                     <DdMmYyDateWithPicker
                       id={dropoffDtId}
+                      rowClassName="items-center"
                       value={dropoffDateDraft}
                       readOnly={rental !== "daily"}
                       onChange={(ev) => setDropoffDateDraft(ev.target.value)}
@@ -1444,6 +1358,7 @@ function FieldCard({
   hint,
   children,
   controlHtmlFor,
+  layout = "stacked",
 }: {
   groupLabelId: string;
   label: React.ReactNode;
@@ -1451,9 +1366,48 @@ function FieldCard({
   hint?: string;
   children: React.ReactNode;
   controlHtmlFor?: string;
+  layout?: "stacked" | "inline";
 }) {
   const titleClass =
     "flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55";
+
+  const titleNode = controlHtmlFor ? (
+    <label
+      id={groupLabelId}
+      htmlFor={controlHtmlFor}
+      className={`${titleClass} cursor-pointer`}
+    >
+      <span className="text-[#dbb878]" aria-hidden>
+        {icon}
+      </span>
+      {label}
+    </label>
+  ) : (
+    <span id={groupLabelId} className={titleClass}>
+      <span className="text-[#dbb878]" aria-hidden>
+        {icon}
+      </span>
+      {label}
+    </span>
+  );
+
+  if (layout === "inline") {
+    return (
+      <div
+        role="group"
+        aria-labelledby={groupLabelId}
+        className="booking-field-card flex h-full min-h-[3.25rem] items-center gap-3 rounded-xl border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3"
+      >
+        <span className="flex shrink-0 flex-col justify-center gap-0.5">
+          {titleNode}
+          {hint ? (
+            <span className="text-[9px] font-medium leading-snug text-[#8a7752]/90">{hint}</span>
+          ) : null}
+        </span>
+        <div className="min-w-0 flex-1">{children}</div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -1462,25 +1416,7 @@ function FieldCard({
       className="booking-field-card flex flex-col gap-1.5 rounded-xl border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3"
     >
       <span className="flex flex-col gap-0.5">
-        {controlHtmlFor ? (
-          <label
-            id={groupLabelId}
-            htmlFor={controlHtmlFor}
-            className={`${titleClass} cursor-pointer`}
-          >
-            <span className="text-[#dbb878]" aria-hidden>
-              {icon}
-            </span>
-            {label}
-          </label>
-        ) : (
-          <span id={groupLabelId} className={titleClass}>
-            <span className="text-[#dbb878]" aria-hidden>
-              {icon}
-            </span>
-            {label}
-          </span>
-        )}
+        {titleNode}
         {hint ? (
           <span className="text-[9px] font-medium leading-snug text-[#8a7752]/90">{hint}</span>
         ) : null}

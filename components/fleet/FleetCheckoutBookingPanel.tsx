@@ -21,6 +21,7 @@ import {
   DeliveryOriginCityLabelSuffix,
   useDeliveryOriginCity,
 } from "@/components/home/DeliveryOriginCityHint";
+import { GroupedBranchSelect } from "@/components/home/GroupedBranchSelect";
 import { PickupReturnBranchFields } from "@/components/home/PickupReturnBranchFields";
 import { SubscriptionPackagesInWidget } from "@/components/subscriptions/SubscriptionPackagesInWidget";
 import type { BookingCityBranchesOption } from "@/lib/booking-location-options";
@@ -53,11 +54,6 @@ function todayYmdLocalCo(): string {
 const GOLD = "#dbb878";
 const GOLD_DARK = "#c9a356";
 const TEAL = "#003749";
-
-/** صفان: «المدينة» + القائمة، ثم «الفرع» + القائمة في سطر واحد لكل منهما */
-const CO_CITY_BRANCH_GRID = "grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 gap-y-2";
-const CO_CITY_BRANCH_LBL =
-  "shrink-0 self-center text-[10px] font-bold uppercase tracking-wide text-[#003749]/45";
 
 function branchLineAr(cities: BookingCityBranchesOption[], branchSlug: string): string {
   const s = branchSlug.trim().toLowerCase();
@@ -336,11 +332,9 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
     branchSelectRequired,
     pickupCity,
     pickupBranch,
-    pickupCityBranches,
     defaultPickupBranchSlug,
     returnCity,
     returnBranch,
-    returnCityBranches,
     defaultReturnBranchSlug,
     returnLocationDifferent,
     onReturnLocationDifferentChange: handleReturnLocationDifferentChange,
@@ -354,6 +348,14 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
     onReturnBranchChange: setReturnBranch,
     dense: true,
   };
+
+  function handleDeliveryReturnBranch(branch: string, city: string | null) {
+    if (city) setReturnCity(city);
+    setReturnBranch(branch);
+  }
+
+  const denseBranchSelectClass =
+    "w-full min-w-0 cursor-pointer appearance-none rounded-lg border border-[#ebe4d3]/70 bg-white/80 py-2 pe-8 ps-2.5 text-[14px] font-semibold text-[#0f1923] outline-none transition-[border-color,box-shadow] focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25 disabled:cursor-not-allowed disabled:opacity-50";
 
   function applyDates(e: React.FormEvent) {
     e.preventDefault();
@@ -758,59 +760,23 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
                         <p className="mb-1.5 text-[10px] font-black uppercase tracking-wide text-[#003749]/45">
                           فرع إرجاع المركبة
                         </p>
-                        <div className={CO_CITY_BRANCH_GRID}>
-                          <label htmlFor={`${coUid}-pkg-return-city`} className={CO_CITY_BRANCH_LBL}>
-                            المدينة
-                          </label>
-                          <div className="relative min-w-0">
-                            <select
-                              id={`${coUid}-pkg-return-city`}
-                              value={returnCity || defaultCitySlug}
-                              onChange={(ev) => {
-                                const slug = ev.target.value;
-                                setReturnCity(slug);
-                                const list = dateCities.find((c) => c.slug === slug)?.branches ?? [];
-                                setReturnBranch(list[0]?.slug ?? "");
-                              }}
-                              required={branchSelectRequired}
-                              className="w-full cursor-pointer appearance-none rounded-lg border border-[#ebe4d3]/70 bg-white/80 py-2 pe-8 ps-2.5 text-[14px] font-semibold text-[#0f1923] outline-none transition-[border-color,box-shadow] focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25"
-                            >
-                              {dateCities.map((c) => (
-                                <option key={c.slug} value={c.slug}>
-                                  {c.name}
-                                </option>
-                              ))}
-                            </select>
-                            <ChevronDown className="pointer-events-none absolute end-2 top-1/2 size-3.5 -translate-y-1/2 text-[#8a8274]" />
-                          </div>
-                          <label htmlFor={`${coUid}-pkg-return-branch`} className={CO_CITY_BRANCH_LBL}>
-                            الفرع
-                          </label>
-                          <div className="relative min-w-0">
-                            <select
-                              id={`${coUid}-pkg-return-branch`}
-                              value={returnBranch || defaultReturnBranchSlug}
-                              onChange={(ev) => setReturnBranch(ev.target.value)}
-                              required={branchSelectRequired}
-                              disabled={returnCityBranches.length === 0}
-                              className="w-full cursor-pointer appearance-none rounded-lg border border-[#ebe4d3]/70 bg-white/80 py-2 pe-8 ps-2.5 text-[14px] font-semibold text-[#0f1923] outline-none transition-[border-color,box-shadow] focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                              {returnCityBranches.map((b) => (
-                                <option key={b.slug} value={b.slug}>
-                                  {b.name}
-                                </option>
-                              ))}
-                            </select>
-                            <ChevronDown className="pointer-events-none absolute end-2 top-1/2 size-3.5 -translate-y-1/2 text-[#8a8274]" />
-                          </div>
-                        </div>
+                        <GroupedBranchSelect
+                          id={`${coUid}-pkg-return-branch`}
+                          dateCities={dateCities}
+                          branchSlug={returnBranch || defaultReturnBranchSlug}
+                          defaultBranchSlug={defaultReturnBranchSlug}
+                          required={branchSelectRequired}
+                          selectClassName={denseBranchSelectClass}
+                          labelClassName="shrink-0 self-center text-[10px] font-bold uppercase tracking-wide text-[#003749]/45"
+                          onBranchSelect={handleDeliveryReturnBranch}
+                        />
                       </div>
                     </>
                   )}
                 </div>
               </SubscriptionPackagesInWidget>
             ) : (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid grid-cols-1 items-center gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <>
               <div className="col-span-1 flex flex-col gap-2 sm:col-span-2 sm:flex-row sm:items-stretch lg:col-span-2">
                 <div className="min-w-0 flex-1">
@@ -851,69 +817,34 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
                 {mode === "delivery" ? (
                 <div className="min-w-0 flex-1">
               <CoFieldCard label="موقع الإرجاع" icon={<MapPin className="size-[15px]" />}>
-                <div className={CO_CITY_BRANCH_GRID}>
-                  <label htmlFor={`${coUid}-main-return-city`} className={CO_CITY_BRANCH_LBL}>
-                    المدينة
-                  </label>
-                  <div className="relative min-w-0">
-                    <select
-                      id={`${coUid}-main-return-city`}
-                      value={returnCity || defaultCitySlug}
-                      onChange={(ev) => {
-                        const slug = ev.target.value;
-                        setReturnCity(slug);
-                        const list = dateCities.find((c) => c.slug === slug)?.branches ?? [];
-                        setReturnBranch(list[0]?.slug ?? "");
-                      }}
-                      required={branchSelectRequired}
-                      className="w-full cursor-pointer appearance-none rounded-lg border border-[#ebe4d3]/70 bg-white/80 py-2 pe-8 ps-2.5 text-[14px] font-semibold text-[#0f1923] outline-none transition-[border-color,box-shadow] focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25"
-                    >
-                      {dateCities.map((c) => (
-                        <option key={c.slug} value={c.slug}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute end-2 top-1/2 size-3.5 -translate-y-1/2 text-[#8a8274]" />
-                  </div>
-                  <label htmlFor={`${coUid}-main-return-branch`} className={CO_CITY_BRANCH_LBL}>
-                    الفرع
-                  </label>
-                  <div className="relative min-w-0">
-                    <select
-                      id={`${coUid}-main-return-branch`}
-                      value={returnBranch || defaultReturnBranchSlug}
-                      onChange={(ev) => setReturnBranch(ev.target.value)}
-                      required={branchSelectRequired}
-                      disabled={returnCityBranches.length === 0}
-                      className="w-full cursor-pointer appearance-none rounded-lg border border-[#ebe4d3]/70 bg-white/80 py-2 pe-8 ps-2.5 text-[14px] font-semibold text-[#0f1923] outline-none transition-[border-color,box-shadow] focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {returnCityBranches.map((b) => (
-                        <option key={b.slug} value={b.slug}>
-                          {b.name}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute end-2 top-1/2 size-3.5 -translate-y-1/2 text-[#8a8274]" />
-                  </div>
-                </div>
+                <GroupedBranchSelect
+                  id={`${coUid}-main-return-branch`}
+                  dateCities={dateCities}
+                  branchSlug={returnBranch || defaultReturnBranchSlug}
+                  defaultBranchSlug={defaultReturnBranchSlug}
+                  required={branchSelectRequired}
+                  selectClassName={denseBranchSelectClass}
+                  labelClassName="shrink-0 self-center text-[10px] font-bold uppercase tracking-wide text-[#003749]/45"
+                  onBranchSelect={handleDeliveryReturnBranch}
+                />
               </CoFieldCard>
                 </div>
               ) : null}
               </div>
 
-              <CoFieldCard label="تاريخ ووقت الاستلام" icon={<CalendarClock className="size-[15px]" />}>
+              <CoFieldCard layout="inline" label="تاريخ ووقت الاستلام" icon={<CalendarClock className="size-[15px]" />}>
                 <input
                   type="datetime-local"
                   value={pickupDt}
                   onChange={(ev) => setPickupDt(ev.target.value)}
                   required
                   dir="ltr"
-                  className="w-full bg-transparent text-[14px] font-semibold text-[#0f1923] outline-none"
+                  className="w-full min-h-[2.25rem] bg-transparent text-[14px] font-semibold tabular-nums text-[#0f1923] outline-none"
                 />
               </CoFieldCard>
 
               <CoFieldCard
+                layout="inline"
                 label="تاريخ ووقت التسليم"
                 icon={<Clock className="size-[15px]" />}
                 hint={rentalDropoffHint(rental)}
@@ -925,7 +856,7 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
                   readOnly={rental !== "daily"}
                   required
                   dir="ltr"
-                  className={`w-full bg-transparent text-[14px] font-semibold text-[#0f1923] outline-none ${rental !== "daily" ? "cursor-default opacity-90" : ""}`}
+                  className={`w-full min-h-[2.25rem] bg-transparent text-[14px] font-semibold tabular-nums text-[#0f1923] outline-none ${rental !== "daily" ? "cursor-default opacity-90" : ""}`}
                   aria-readonly={rental !== "daily"}
                 />
               </CoFieldCard>
@@ -1074,19 +1005,39 @@ function CoFieldCard({
   icon,
   hint,
   children,
+  layout = "stacked",
 }: {
   label: ReactNode;
   icon: ReactNode;
   hint?: string;
   children: ReactNode;
+  layout?: "stacked" | "inline";
 }) {
+  const title = (
+    <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] font-bold uppercase tracking-wider text-[#003749]/55">
+      <span className="text-[#dbb878]">{icon}</span>
+      {label}
+    </span>
+  );
+
+  if (layout === "inline") {
+    return (
+      <label className="checkout-field-card flex h-full min-h-[3.5rem] cursor-text items-center gap-3 rounded-2xl border border-[#ebe4d3]/80 bg-[#fdfbf6] p-4">
+        <span className="flex shrink-0 flex-col justify-center gap-0.5">
+          {title}
+          {hint ? (
+            <span className="text-[10px] font-medium leading-snug text-[#8a7752]/90">{hint}</span>
+          ) : null}
+        </span>
+        <div className="min-w-0 flex-1">{children}</div>
+      </label>
+    );
+  }
+
   return (
     <label className="checkout-field-card flex cursor-text flex-col gap-2 rounded-2xl border border-[#ebe4d3]/80 bg-[#fdfbf6] p-4">
       <span className="flex flex-col gap-0.5">
-        <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] font-bold uppercase tracking-wider text-[#003749]/55">
-          <span className="text-[#dbb878]">{icon}</span>
-          {label}
-        </span>
+        {title}
         {hint ? (
           <span className="text-[10px] font-medium leading-snug text-[#8a7752]/90">{hint}</span>
         ) : null}

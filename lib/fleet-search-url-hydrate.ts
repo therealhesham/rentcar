@@ -66,7 +66,7 @@ export function buildFleetSearchUrlHydrate(
 }
 
 export function citySlugForBranchSlug(
-  dateCities: BookingCityBranchesOption[],
+  dateCities: ReadonlyArray<BookingCityBranchesOption>,
   branchSlug: string,
 ): string | null {
   for (const c of dateCities) {
