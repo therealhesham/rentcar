@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ArrowLeftRight,
   CalendarDays,
   CalendarRange,
   CalendarClock,
@@ -275,6 +276,15 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
     }
     return computeDaysPreview(pickupDt, dropoffDt);
   }, [rental, subPackStartYmd, subPackMonths, pickupDt, dropoffDt]);
+
+  function swapPickupReturnBranchState() {
+    const pc = pickupCity;
+    const pb = pickupBranch;
+    setPickupCity(returnCity);
+    setPickupBranch(returnBranch);
+    setReturnCity(pc);
+    setReturnBranch(pb);
+  }
 
   function applyDates(e: React.FormEvent) {
     e.preventDefault();
@@ -869,6 +879,8 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
             ) : (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <>
+              <div className="col-span-1 flex flex-col gap-2 sm:col-span-2 sm:flex-row sm:items-stretch lg:col-span-2">
+                <div className="min-w-0 flex-1">
               <CoFieldCard
                 label={mode === "pickup" ? "موقع الاستلام" : "موقع التوصيل"}
                 icon={<MapPin className="size-[15px]" />}
@@ -980,7 +992,22 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
                   </div>
                 )}
               </CoFieldCard>
+                </div>
 
+                {mode === "pickup" ? (
+                  <div className="flex shrink-0 justify-center sm:items-center sm:self-center sm:px-0.5">
+                    <button
+                      type="button"
+                      onClick={swapPickupReturnBranchState}
+                      className="inline-flex size-9 items-center justify-center rounded-lg border border-[#ebe4d3]/90 bg-white/95 text-[#c9a356] shadow-sm transition-[border-color,background-color,color,box-shadow] hover:border-[#dbb878] hover:bg-[#fffdf8] hover:text-[#a67c29] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#dbb878]/40"
+                      aria-label="تبديل موقع الاستلام وموقع الإرجاع"
+                    >
+                      <ArrowLeftRight className="size-4" aria-hidden />
+                    </button>
+                  </div>
+                ) : null}
+
+                <div className="min-w-0 flex-1">
               <CoFieldCard label="موقع الإرجاع" icon={<MapPin className="size-[15px]" />}>
                 <div className={CO_CITY_BRANCH_GRID}>
                   <label htmlFor={`${coUid}-main-return-city`} className={CO_CITY_BRANCH_LBL}>
@@ -1029,6 +1056,8 @@ export function FleetCheckoutBookingPanel({ modelId, cities }: Props) {
                   </div>
                 </div>
               </CoFieldCard>
+                </div>
+              </div>
 
               <CoFieldCard label="تاريخ ووقت الاستلام" icon={<CalendarClock className="size-[15px]" />}>
                 <input
