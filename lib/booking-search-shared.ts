@@ -60,8 +60,8 @@ export function computeDaysPreview(pickupDt: string, dropoffDt: string): number 
 
 /** مقطع مساعدة تحت عنوان «تاريخ التسليم» في نماذج البحث */
 export function rentalDropoffHint(rental: RentalTab): string | undefined {
-  if (rental === "weekly") return "يُحدَّد تلقائياً بعد أسبوع من وقت الاستلام.";
-  if (rental === "monthly") return "يُحدَّد تلقائياً بعد شهر تقويمي من الاستلام.";
+  if (rental === "weekly") return "";
+  if (rental === "monthly") return "";
   if (rental === "monthly_packages") {
     return "الباقات من 3 أشهر فما فوق؛ نهاية البحث تُحسب من يوم البداية والمدة التي اخترتها.";
   }

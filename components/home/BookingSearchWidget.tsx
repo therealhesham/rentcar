@@ -1035,7 +1035,7 @@ export function BookingSearchWidget({
                 <FieldCard
                   layout="inline"
                   groupLabelId={`${uid}-field-pickup-dt`}
-                  label="تاريخ ووقت الاستلام"
+                  label="تاريخ الاستلام"
                   icon={<CalendarClock className="size-3.5" />}
                   controlHtmlFor={pickupDtId}
                 >
@@ -1095,7 +1095,7 @@ export function BookingSearchWidget({
                 <FieldCard
                   layout="inline"
                   groupLabelId={`${uid}-field-dropoff-dt`}
-                  label="تاريخ ووقت التسليم"
+                  label="تاريخ  التسليم"
                   icon={<Clock className="size-3.5" />}
                   hint={rentalDropoffHint(rental)}
                   controlHtmlFor={dropoffDtId}
