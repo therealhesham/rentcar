@@ -22,16 +22,16 @@ export function HomeScrollSections({
   return (
     <>
       {hero}
-      <MotionSection className="w-full" delay={0} x={-50}>
+      <MotionSection className="relative z-0 w-full" delay={0} x={-50}>
         {fleetCategories}
       </MotionSection>
-      <MotionSection className="w-full" delay={0.2} x={50}>
+      <MotionSection className="relative z-0 w-full" delay={0.2} x={50}>
         {promoBanner}
       </MotionSection>
-      <MotionSection className="w-full" delay={0.2} x={-50}>
+      <MotionSection className="relative z-0 w-full" delay={0.2} x={-50}>
         {services}
       </MotionSection>
-      <MotionSection className="w-full" delay={0.2} x={50}>
+      <MotionSection className="relative z-0 w-full" delay={0.2} x={50}>
         {branches}
       </MotionSection>
     </>

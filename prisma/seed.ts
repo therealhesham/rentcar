@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { hashPassword } from "../lib/password";
+import { saudiLocalNineToE164 } from "../lib/normalize-saudi-phone";
 
 const prisma = new PrismaClient();
 
@@ -105,24 +106,53 @@ async function main() {
     });
   }
 
-  const seedUserEmail = "hesham@gmail.com";
-  const seedUserPassword = "password";
-  const heshamHash = await hashPassword(seedUserPassword);
-  await prisma.user.upsert({
-    where: { email: seedUserEmail },
-    create: {
-      email: seedUserEmail,
-      passwordHash: heshamHash,
+  const seedUsers: {
+    email: string;
+    password: string;
+    name: string;
+    phoneLocalNine: string | null;
+    isAdmin?: boolean;
+  }[] = [
+    {
+      email: "heshammoha231992@gmail.com",
+      password: "225666",
       name: "Hesham",
-      phone: null,
-      isAdmin: false,
+      phoneLocalNine: "582187287",
     },
-    update: {
-      passwordHash: heshamHash,
+    {
+      email: "hesham@gmail.com",
+      password: "password",
       name: "Hesham",
+      phoneLocalNine: null,
     },
-  });
-  console.log(`User seeded: ${seedUserEmail} (password: ${seedUserPassword})`);
+  ];
+
+  for (const u of seedUsers) {
+    const passwordHash = await hashPassword(u.password);
+    const phone = u.phoneLocalNine ? saudiLocalNineToE164(u.phoneLocalNine) : null;
+    if (u.phoneLocalNine && !phone) {
+      throw new Error(`Invalid seed phone for ${u.email}: ${u.phoneLocalNine}`);
+    }
+    await prisma.user.upsert({
+      where: { email: u.email },
+      create: {
+        email: u.email,
+        passwordHash,
+        name: u.name,
+        phone,
+        isAdmin: u.isAdmin ?? false,
+      },
+      update: {
+        passwordHash,
+        name: u.name,
+        phone,
+        isAdmin: u.isAdmin ?? false,
+      },
+    });
+    console.log(
+      `User seeded: ${u.email} (password: ${u.password})${phone ? ` phone: ${phone}` : ""}`,
+    );
+  }
 
   /**
    * خطط اشتراك شهرية تجريبية مشروطة بوجود موديل في الجدول Fleet.

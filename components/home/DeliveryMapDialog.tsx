@@ -2,6 +2,8 @@
 
 import "leaflet/dist/leaflet.css";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { OVERLAY_BACKDROP_Z } from "@/lib/overlay-z-index";
 
 type LatLng = { lat: number; lng: number };
 
@@ -159,9 +161,10 @@ export function DeliveryMapDialog({ open, onClose, initial, onConfirm }: Props) 
 
   if (!open) return null;
 
-  return (
+  const dialog = (
     <div
-      className="fixed inset-0 z-[300] flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 flex items-center justify-center bg-black/50 p-4"
+      style={{ zIndex: OVERLAY_BACKDROP_Z }}
       role="dialog"
       aria-modal="true"
       aria-labelledby="delivery-map-title"
@@ -234,6 +237,9 @@ export function DeliveryMapDialog({ open, onClose, initial, onConfirm }: Props) 
       </div>
     </div>
   );
+
+  if (typeof document === "undefined") return dialog;
+  return createPortal(dialog, document.body);
 }
 
 function ManualLatLng({
@@ -279,7 +285,7 @@ function ManualLatLng({
         <button
           type="button"
           onClick={onConfirm}
-          className="w-full rounded-xl bg-[#f97316] py-3 text-sm font-extrabold text-white hover:bg-[#ea580c]"
+          className="w-full rounded-xl bg-[#163332] py-3 text-sm font-extrabold text-white hover:bg-[#163332]/80"
         >
           تأكيد الموقع
         </button>

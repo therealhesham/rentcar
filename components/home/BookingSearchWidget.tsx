@@ -681,7 +681,7 @@ export function BookingSearchWidget({
         ref={formRef}
         onSubmit={handleSearch}
         dir="rtl"
-        className={`booking-card w-full overflow-hidden rounded-2xl bg-white/[0.97] shadow-[0_28px_72px_-20px_rgba(15,61,71,0.18),0_8px_24px_-6px_rgba(15,61,71,0.07)] ring-1 ring-black/[0.03] backdrop-blur-xl ${
+        className={`booking-card relative z-0 w-full overflow-visible rounded-2xl bg-white/[0.97] shadow-[0_28px_72px_-20px_rgba(15,61,71,0.18),0_8px_24px_-6px_rgba(15,61,71,0.07)] ring-1 ring-black/[0.03] backdrop-blur-xl ${
           mounted ? "" : "opacity-0"
         }`}
       >

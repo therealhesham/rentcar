@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
+import { OVERLAY_BACKDROP_Z, OVERLAY_PANEL_Z } from "@/lib/overlay-z-index";
 
 export type DdMmYyDateWithPickerProps = {
   id: string;
@@ -137,7 +138,7 @@ export function DdMmYyDateWithPicker({
       top: r.bottom + 6,
       left,
       width: panelW,
-      zIndex: 70,
+      zIndex: OVERLAY_PANEL_Z,
     });
   }, []);
 
@@ -201,7 +202,8 @@ export function DdMmYyDateWithPicker({
       ? createPortal(
           <>
             <div
-              className="fixed inset-0 z-[65] bg-black/[0.04]"
+              className="fixed inset-0 bg-black/[0.04]"
+              style={{ zIndex: OVERLAY_BACKDROP_Z }}
               aria-hidden
               onMouseDown={() => setOpen(false)}
             />

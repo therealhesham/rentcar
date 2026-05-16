@@ -113,13 +113,12 @@ export function Hero({
       <div
         className={
           SHOW_HERO_IMAGES
-            ? "-mt-8 border-b border-[#ebe4d3]/70 bg-white/92 shadow-[0_8px_28px_-6px_rgba(15,61,71,0.1)] backdrop-blur-md sm:-mt-12 md:-mt-12 lg:-mt-16"
-            : "-mt-2 border-b border-[#ebe4d3]/70 bg-white/92 shadow-[0_8px_28px_-6px_rgba(15,61,71,0.1)] backdrop-blur-md sm:-mt-3"
+            ? "relative z-30 -mt-8 border-b border-[#ebe4d3]/70 bg-white/92 shadow-[0_8px_28px_-6px_rgba(15,61,71,0.1)] backdrop-blur-md sm:-mt-12 md:-mt-12 lg:-mt-16"
+            : "relative z-30 -mt-2 border-b border-[#ebe4d3]/70 bg-white/92 shadow-[0_8px_28px_-6px_rgba(15,61,71,0.1)] backdrop-blur-md sm:-mt-3"
         }
         dir="rtl"
       >
-        <HeroEntrance className="w-full" delay={0.1}>
-          <div className="mx-auto w-full max-w-[72rem] px-4 pb-3 pt-2.5 sm:px-6 sm:pb-3.5 sm:pt-3 lg:px-8 lg:pb-4">
+        <div className="mx-auto w-full max-w-[72rem] px-4 pb-3 pt-2.5 sm:px-6 sm:pb-3.5 sm:pt-3 lg:px-8 lg:pb-4">
             <div className="mb-2 flex items-center justify-center gap-3 sm:mb-3">
               <span className="h-px w-12 bg-gradient-to-l from-[#dbb878]/50 to-transparent" />
               <span className="text-[11px] font-bold uppercase tracking-[0.25em] text-[#003749]/40">
@@ -129,8 +128,7 @@ export function Hero({
             </div>
 
             <BookingWidget cities={cities} tabFlags={tabFlags} />
-          </div>
-        </HeroEntrance>
+        </div>
       </div>
     </>
   );
