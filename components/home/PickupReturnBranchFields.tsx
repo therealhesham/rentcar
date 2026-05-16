@@ -1,140 +1,7 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
+import { GroupedBranchSelect } from "@/components/home/GroupedBranchSelect";
 import type { BookingCityBranchesOption } from "@/lib/booking-location-options";
-
-const DEFAULT_SELECT_CLASS =
-  "w-full min-w-0 cursor-pointer appearance-none rounded-lg border border-[#ebe4d3]/70 bg-white/70 py-2 pe-8 ps-2.5 text-[13px] font-semibold text-[#0f1923] outline-none transition-[border-color,box-shadow,background-color] duration-200 hover:bg-white focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25 disabled:cursor-not-allowed disabled:opacity-45";
-
-const DEFAULT_LABEL_CLASS =
-  "shrink-0 self-center text-[10px] font-bold uppercase tracking-wide text-[#003749]/55";
-
-export type CityBranchSelectPairProps = {
-  cityId: string;
-  branchId: string;
-  dateCities: BookingCityBranchesOption[];
-  citySlug: string;
-  branchSlug: string;
-  defaultCitySlug: string;
-  defaultBranchSlug: string;
-  branchSelectRequired: boolean;
-  onCityChange: (slug: string) => void;
-  onBranchChange: (slug: string) => void;
-  dense?: boolean;
-  selectClassName?: string;
-  labelClassName?: string;
-};
-
-/** مدينة ثم فرع — نفس أسلوب العرض السابق في الـ widget. */
-export function CityBranchSelectPair({
-  cityId,
-  branchId,
-  dateCities,
-  citySlug,
-  branchSlug,
-  defaultCitySlug,
-  defaultBranchSlug,
-  branchSelectRequired,
-  onCityChange,
-  onBranchChange,
-  dense = false,
-  selectClassName,
-  labelClassName,
-}: CityBranchSelectPairProps) {
-  const sel = selectClassName ?? DEFAULT_SELECT_CLASS;
-  const lab = labelClassName ?? DEFAULT_LABEL_CLASS;
-  const hasAnyBranches = dateCities.some((c) => c.branches.length > 0);
-  const cityVal = citySlug || defaultCitySlug;
-  const branches = dateCities.find((c) => c.slug === cityVal)?.branches ?? [];
-  const rawBranch = branchSlug || defaultBranchSlug;
-  const branchVal = branches.some((b) => b.slug === rawBranch)
-    ? rawBranch
-    : (branches[0]?.slug ?? "");
-
-  const citySelect = (
-    <div className="relative min-w-0">
-      <select
-        id={cityId}
-        value={cityVal}
-        onChange={(ev) => onCityChange(ev.target.value)}
-        required={branchSelectRequired}
-        disabled={!hasAnyBranches}
-        className={sel}
-      >
-        {dateCities.map((city) =>
-          city.branches.length > 0 ? (
-            <option key={city.slug} value={city.slug}>
-              {city.name}
-            </option>
-          ) : null,
-        )}
-      </select>
-      <ChevronDown
-        className="pointer-events-none absolute end-2 top-1/2 size-3.5 -translate-y-1/2 text-[#8a8274]"
-        aria-hidden
-      />
-    </div>
-  );
-
-  const branchSelect = (
-    <div className="relative min-w-0">
-      <select
-        id={branchId}
-        value={branchVal}
-        onChange={(ev) => onBranchChange(ev.target.value)}
-        required={branchSelectRequired}
-        disabled={!hasAnyBranches || branches.length === 0}
-        className={sel}
-      >
-        {branches.map((branch) => (
-          <option key={branch.slug} value={branch.slug}>
-            {branch.name}
-          </option>
-        ))}
-      </select>
-      <ChevronDown
-        className="pointer-events-none absolute end-2 top-1/2 size-3.5 -translate-y-1/2 text-[#8a8274]"
-        aria-hidden
-      />
-    </div>
-  );
-
-  if (dense) {
-    return (
-      <div className="flex flex-col gap-2">
-        <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 gap-y-2">
-          <label htmlFor={cityId} className={lab}>
-            المدينة
-          </label>
-          {citySelect}
-        </div>
-        <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 gap-y-2">
-          <label htmlFor={branchId} className={lab}>
-            الفرع
-          </label>
-          {branchSelect}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid gap-3 sm:grid-cols-2 sm:gap-x-4">
-      <div className="flex min-w-0 flex-col gap-1">
-        <label htmlFor={cityId} className={lab}>
-          المدينة
-        </label>
-        {citySelect}
-      </div>
-      <div className="flex min-w-0 flex-col gap-1">
-        <label htmlFor={branchId} className={lab}>
-          الفرع
-        </label>
-        {branchSelect}
-      </div>
-    </div>
-  );
-}
 
 export type PickupReturnBranchFieldsProps = {
   uidPrefix: string;
@@ -162,10 +29,8 @@ export function PickupReturnBranchFields({
   dateCities,
   defaultCitySlug,
   branchSelectRequired,
-  pickupCity,
   pickupBranch,
   defaultPickupBranchSlug,
-  returnCity,
   returnBranch,
   defaultReturnBranchSlug,
   returnLocationDifferent,
@@ -197,26 +62,24 @@ export function PickupReturnBranchFields({
         {!hidePickupTitle ? (
           <p className={pickupTitleClass}>موقع الاستلام</p>
         ) : null}
-        <CityBranchSelectPair
-          cityId={`${uidPrefix}-pickup-city`}
-          branchId={`${uidPrefix}-pickup-branch`}
+        <GroupedBranchSelect
+          id={`${uidPrefix}-pickup-branch`}
           dateCities={dateCities}
-          citySlug={pickupCity}
-          branchSlug={pickupBranch}
-          defaultCitySlug={defaultCitySlug}
+          branchSlug={pickupBranch || defaultPickupBranchSlug}
           defaultBranchSlug={defaultPickupBranchSlug}
-          branchSelectRequired={branchSelectRequired}
-          onCityChange={onPickupCityChange}
-          onBranchChange={onPickupBranchChange}
-          dense={dense}
+          required={branchSelectRequired}
           selectClassName={selectClass}
           labelClassName={labelClass}
+          onBranchSelect={(branch, city) => {
+            if (city) onPickupCityChange(city);
+            onPickupBranchChange(branch);
+          }}
         />
       </div>
 
       <label
         htmlFor={checkboxId}
-        className="-mx-1 flex cursor-pointer items-center gap-2.5 rounded-lg border border-transparent px-2 py-2 text-[12px] font-semibold text-[#0f1923]/85 transition-colors hover:border-[#ebe4d3]/90 hover:bg-white/50"
+        className="flex cursor-pointer items-center gap-2 text-[12px] font-semibold text-[#0f1923]/85"
       >
         <input
           id={checkboxId}
@@ -231,20 +94,18 @@ export function PickupReturnBranchFields({
       {returnLocationDifferent ? (
         <div className={returnBoxClass}>
           <p className={pickupTitleClass}>موقع الإرجاع</p>
-          <CityBranchSelectPair
-            cityId={`${uidPrefix}-return-city`}
-            branchId={`${uidPrefix}-return-branch`}
+          <GroupedBranchSelect
+            id={`${uidPrefix}-return-branch`}
             dateCities={dateCities}
-            citySlug={returnCity}
-            branchSlug={returnBranch}
-            defaultCitySlug={defaultCitySlug}
+            branchSlug={returnBranch || defaultReturnBranchSlug}
             defaultBranchSlug={defaultReturnBranchSlug}
-            branchSelectRequired={branchSelectRequired}
-            onCityChange={onReturnCityChange}
-            onBranchChange={onReturnBranchChange}
-            dense={dense}
+            required={branchSelectRequired}
             selectClassName={selectClass}
             labelClassName={labelClass}
+            onBranchSelect={(branch, city) => {
+              if (city) onReturnCityChange(city);
+              onReturnBranchChange(branch);
+            }}
           />
         </div>
       ) : null}

@@ -14,7 +14,6 @@ import {
   Send,
   Truck,
   ChevronDown,
-  X,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -26,12 +25,11 @@ import {
   DeliveryOriginCityLabelSuffix,
   useDeliveryOriginCity,
 } from "@/components/home/DeliveryOriginCityHint";
-import {
-  CityBranchSelectPair,
-  PickupReturnBranchFields,
-} from "@/components/home/PickupReturnBranchFields";
+import { GroupedBranchSelect } from "@/components/home/GroupedBranchSelect";
+import { PickupReturnBranchFields } from "@/components/home/PickupReturnBranchFields";
 import { SubscriptionPackagesInWidget } from "@/components/subscriptions/SubscriptionPackagesInWidget";
 import { DdMmYyDateWithPicker } from "@/components/ui/DdMmYyDateWithPicker";
+import { TimeInput24h } from "@/components/ui/TimeInput24h";
 import { computeBookingDays } from "@/lib/booking-days";
 import {
   composeDatetimeLocal,
@@ -92,10 +90,6 @@ export type { BookingBranchOption, BookingCityBranchesOption } from "@/lib/booki
 const GOLD = "#dbb878";
 const GOLD_DARK = "#c9a356";
 const TEAL = "#003749";
-
-/** زر تحديد موقع التوصيل — يُستخدم في أكثر من مسار داخل الـ widget */
-const DELIVERY_MAP_TRIGGER_CLASS =
-  "group flex w-full items-center justify-between gap-3 rounded-xl border border-dashed border-[#c9a356]/50 bg-gradient-to-l from-white/90 to-[#fdfbf6]/80 px-3 py-2.5 text-start outline-none shadow-sm transition-[border-color,box-shadow,transform,background-color] hover:border-[#dbb878] hover:bg-[#fffdf8] hover:shadow-md active:scale-[0.99] focus-visible:ring-2 focus-visible:ring-[#dbb878]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fdfbf6]";
 
 
 export function BookingSearchWidget({
@@ -416,8 +410,12 @@ export function BookingSearchWidget({
     onReturnBranchChange: setReturnBranch,
   };
 
+  function handleDeliveryReturnBranch(branch: string, city: string | null) {
+    if (city) setReturnCity(city);
+    setReturnBranch(branch);
+  }
+
   const returnBranchId = `${uid}-return-branch`;
-  const deliveryReturnCityId = `${uid}-delivery-return-city`;
   const pickupDtId = `${uid}-pickup-dt`;
   const pickupTimeId = `${uid}-pickup-time`;
   const dropoffDtId = `${uid}-dropoff-dt`;
@@ -632,11 +630,15 @@ export function BookingSearchWidget({
           from { opacity: 0; transform: translateY(16px); }
           to { opacity: 1; transform: translateY(0); }
         }
+        @keyframes pulseGlow {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(219, 184, 120, 0.4); }
+          50% { box-shadow: 0 0 0 8px rgba(219, 184, 120, 0); }
+        }
         .booking-card {
           animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
         }
         .booking-field-card {
-          transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .booking-field-card:hover {
           background: #fffdf8;
@@ -650,39 +652,28 @@ export function BookingSearchWidget({
           background: #fffef9;
         }
         .cta-btn {
-          box-shadow: 0 4px 16px -4px rgba(219, 184, 120, 0.45);
-          transition: transform 0.2s ease, box-shadow 0.2s ease;
+          animation: pulseGlow 2.5s ease-in-out infinite;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .cta-btn:hover {
+          animation: none;
           transform: translateY(-2px);
-          box-shadow: 0 12px 28px -6px rgba(219, 184, 120, 0.55);
+          box-shadow: 0 12px 28px -6px rgba(219, 184, 120, 0.7);
         }
         .cta-btn:active {
           transform: translateY(0);
         }
         .cta-shimmer {
-          opacity: 0;
-          transition: opacity 0.25s ease;
-        }
-        .cta-btn:hover .cta-shimmer {
-          opacity: 1;
-          animation: shimmer 2.2s ease-in-out infinite;
+          animation: shimmer 3s ease-in-out infinite;
         }
         @media (prefers-reduced-motion: reduce) {
-          .booking-card {
+          .booking-card,
+          .cta-btn,
+          .cta-shimmer {
             animation: none !important;
           }
-          .booking-field-card:hover {
-            transform: none;
-          }
           .cta-btn {
-            box-shadow: 0 2px 8px -2px rgba(219, 184, 120, 0.35);
-          }
-          .cta-btn:hover {
-            transform: none;
-          }
-          .cta-shimmer {
-            display: none;
+            box-shadow: none;
           }
         }
       `}</style>
@@ -706,7 +697,7 @@ export function BookingSearchWidget({
             {/* مدة الإيجار + حجز الشركات (بجوار الباقات الشهرية) */}
             <div className="border-b border-[#f0ebe4]">
               <div
-                className="flex w-full flex-wrap items-center gap-1 p-2 sm:p-1.5"
+                className="flex w-full flex-wrap items-center gap-0.5 p-1.5"
                 role="tablist"
                 aria-label="نوع الحجز"
               >
@@ -757,7 +748,7 @@ export function BookingSearchWidget({
             (tabFlagsEff.modePickup || tabFlagsEff.modeDelivery) ? (
               <div className="border-b border-[#f0ebe4] bg-[#fcfaf7]/40">
                 <div
-                  className="flex w-full flex-wrap items-center gap-1 p-2 sm:p-1.5"
+                  className="flex w-full flex-wrap items-center gap-0.5 p-1.5"
                   role="tablist"
                   aria-label="طريقة الاستلام"
                 >
@@ -788,7 +779,7 @@ export function BookingSearchWidget({
         {/* ═══════════════════════════════════════
             SECTION 2: Form Fields Grid
         ═══════════════════════════════════════ */}
-        <div className="px-4 py-4 sm:px-5 sm:py-5">
+        <div className="px-4 py-3.5 sm:px-5 sm:py-4">
           {rental === "corporate" ? (
             <div
               className="flex flex-col gap-3 rounded-xl border border-[#ebe4d3]/70 bg-[#fdfbf6] p-4"
@@ -945,30 +936,32 @@ export function BookingSearchWidget({
                       <button
                         type="button"
                         onClick={() => setMapOpen(true)}
-                        className={DELIVERY_MAP_TRIGGER_CLASS}
-                        aria-haspopup="dialog"
-                        aria-expanded={mapOpen}
+                        className="group flex w-full items-center justify-between gap-2 rounded-lg border border-dashed border-[#c9a356]/55 bg-white/60 px-2.5 py-2 text-start text-[13px] font-semibold text-[#0f1923] outline-none transition-[border-color,background-color,box-shadow] hover:border-[#dbb878] hover:bg-[#fffdf8] focus-visible:ring-2 focus-visible:ring-[#dbb878]/35"
                       >
-                        <DeliveryMapTriggerContent
-                          hasLocation={deliveryLat != null && deliveryLng != null}
-                        />
+                        {deliveryLat != null && deliveryLng != null ? (
+                          <span className="flex items-center gap-2 text-[#0f3d47]">
+                            <span className="flex size-5 items-center justify-center rounded-full bg-emerald-100">
+                              <span className="size-2 rounded-full bg-emerald-500" />
+                            </span>
+                            تم تحديد الموقع
+                          </span>
+                        ) : (
+                          <span className="text-[#6b5a3b]">تحديد على الخريطة</span>
+                        )}
+                        <MapPin className="size-4 shrink-0 text-[#dbb878] opacity-70 transition-opacity group-hover:opacity-100" aria-hidden />
                       </button>
                     </div>
                     <div className="rounded-xl border border-[#ebe4d3]/60 bg-white/50 p-3">
                       <p className="mb-1.5 text-[10px] font-black uppercase tracking-wide text-[#003749]/55">
                         فرع إرجاع المركبة
                       </p>
-                      <CityBranchSelectPair
-                        cityId={deliveryReturnCityId}
-                        branchId={returnBranchId}
+                      <GroupedBranchSelect
+                        id={returnBranchId}
                         dateCities={dateCities}
-                        citySlug={returnCity}
-                        branchSlug={returnBranch}
-                        defaultCitySlug={defaultCitySlug}
+                        branchSlug={returnBranch || defaultReturnBranchSlug}
                         defaultBranchSlug={defaultReturnBranchSlug}
-                        branchSelectRequired={branchSelectRequired}
-                        onCityChange={pickupBranchFieldsProps.onReturnCityChange}
-                        onBranchChange={pickupBranchFieldsProps.onReturnBranchChange}
+                        required={branchSelectRequired}
+                        onBranchSelect={handleDeliveryReturnBranch}
                       />
                     </div>
                   </>
@@ -976,7 +969,7 @@ export function BookingSearchWidget({
               </div>
             </SubscriptionPackagesInWidget>
           ) : (
-            <div className="grid grid-cols-1 items-stretch gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 items-center gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="col-span-1 flex flex-col gap-2 sm:col-span-2 sm:flex-row sm:items-stretch lg:col-span-2">
                   {mode === "pickup" ? (
                     <div className="min-w-0 flex-1">
@@ -1003,13 +996,19 @@ export function BookingSearchWidget({
                             <button
                               type="button"
                               onClick={() => setMapOpen(true)}
-                              className={DELIVERY_MAP_TRIGGER_CLASS}
-                              aria-haspopup="dialog"
-                              aria-expanded={mapOpen}
+                              className="group flex w-full items-center justify-between gap-2 rounded-lg border border-dashed border-[#c9a356]/55 bg-white/60 px-2.5 py-2 text-start text-[13px] font-semibold text-[#0f1923] outline-none transition-[border-color,background-color,box-shadow] hover:border-[#dbb878] hover:bg-[#fffdf8] focus-visible:ring-2 focus-visible:ring-[#dbb878]/35"
                             >
-                              <DeliveryMapTriggerContent
-                                hasLocation={deliveryLat != null && deliveryLng != null}
-                              />
+                              {deliveryLat != null && deliveryLng != null ? (
+                                <span className="flex items-center gap-2 text-[#0f3d47]">
+                                  <span className="flex size-5 items-center justify-center rounded-full bg-emerald-100">
+                                    <span className="size-2 rounded-full bg-emerald-500" />
+                                  </span>
+                                  تم تحديد الموقع
+                                </span>
+                              ) : (
+                                <span className="text-[#6b5a3b]">تحديد على الخريطة</span>
+                              )}
+                              <MapPin className="size-4 shrink-0 text-[#dbb878] opacity-70 transition-opacity group-hover:opacity-100" aria-hidden />
                             </button>
                           </div>
                         </FieldCard>
@@ -1020,17 +1019,13 @@ export function BookingSearchWidget({
                           label="موقع الإرجاع"
                           icon={<MapPin className="size-3.5" />}
                         >
-                          <CityBranchSelectPair
-                            cityId={deliveryReturnCityId}
-                            branchId={returnBranchId}
+                          <GroupedBranchSelect
+                            id={returnBranchId}
                             dateCities={dateCities}
-                            citySlug={returnCity}
-                            branchSlug={returnBranch}
-                            defaultCitySlug={defaultCitySlug}
+                            branchSlug={returnBranch || defaultReturnBranchSlug}
                             defaultBranchSlug={defaultReturnBranchSlug}
-                            branchSelectRequired={branchSelectRequired}
-                            onCityChange={pickupBranchFieldsProps.onReturnCityChange}
-                            onBranchChange={pickupBranchFieldsProps.onReturnBranchChange}
+                            required={branchSelectRequired}
+                            onBranchSelect={handleDeliveryReturnBranch}
                           />
                         </FieldCard>
                       </div>
@@ -1077,12 +1072,10 @@ export function BookingSearchWidget({
                       }}
                       required
                     />
-                    <input
+                    <TimeInput24h
                       id={pickupTimeId}
-                      type="time"
                       value={pickupTimeDraft}
-                      onChange={(ev) => {
-                        const v = ev.target.value;
+                      onChange={(v) => {
                         setPickupTimeDraft(v);
                         let ymd = parseDdMmYyToYmd(pickupDateDraft);
                         if (!ymd && pickupDt.length >= 10) ymd = pickupDt.slice(0, 10);
@@ -1090,10 +1083,8 @@ export function BookingSearchWidget({
                         const c = composeDatetimeLocal(ymd, v);
                         if (c) setPickupDt(c);
                       }}
-                      required
-                      dir="ltr"
                       aria-label="وقت الاستلام"
-                      className="w-full cursor-pointer rounded-md border border-[#ebe4d3]/80 bg-white/80 px-2 py-1 text-[13px] font-semibold tabular-nums text-[#0f1923] outline-none focus-visible:ring-2 focus-visible:ring-[#dbb878]/30"
+                      className="flex min-w-0 w-full cursor-pointer items-center gap-0.5 rounded-md border border-[#ebe4d3]/80 bg-white/80 px-1 py-0.5 text-[13px] font-semibold tabular-nums text-[#0f1923] outline-none focus-within:ring-2 focus-within:ring-[#dbb878]/30"
                     />
                   </div>
                 </FieldCard>
@@ -1142,14 +1133,12 @@ export function BookingSearchWidget({
                       required
                       inputClassName={rental !== "daily" ? "cursor-default" : ""}
                     />
-                    <input
+                    <TimeInput24h
                       id={dropoffTimeId}
-                      type="time"
                       value={dropoffTimeDraft}
                       readOnly={rental !== "daily"}
-                      onChange={(ev) => {
+                      onChange={(v) => {
                         if (rental !== "daily") return;
-                        const v = ev.target.value;
                         setDropoffTimeDraft(v);
                         let ymd = parseDdMmYyToYmd(dropoffDateDraft);
                         if (!ymd && dropoffDt.length >= 10) ymd = dropoffDt.slice(0, 10);
@@ -1157,11 +1146,8 @@ export function BookingSearchWidget({
                         const c = composeDatetimeLocal(ymd, v);
                         if (c) setDropoffDt(c);
                       }}
-                      required
-                      dir="ltr"
                       aria-label="وقت التسليم"
-                      className={`w-full rounded-md border border-[#ebe4d3]/80 bg-white/80 px-2 py-1 text-[13px] font-semibold tabular-nums text-[#0f1923] outline-none focus-visible:ring-2 focus-visible:ring-[#dbb878]/30 ${rental !== "daily" ? "cursor-default opacity-90" : "cursor-pointer"}`}
-                      aria-readonly={rental !== "daily"}
+                      className={`flex min-w-0 w-full items-center gap-0.5 rounded-md border border-[#ebe4d3]/80 bg-white/80 px-1 py-0.5 text-[13px] font-semibold tabular-nums text-[#0f1923] outline-none focus-within:ring-2 focus-within:ring-[#dbb878]/30 ${rental !== "daily" ? "cursor-default opacity-90" : "cursor-pointer"}`}
                     />
                   </div>
                 </FieldCard>
@@ -1208,7 +1194,7 @@ export function BookingSearchWidget({
               disabled={
                 corpPending || (rental !== "corporate" && dateCities.length === 0)
               }
-              className="cta-btn group relative flex min-h-[2.75rem] w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-8 py-2.5 text-white disabled:pointer-events-none disabled:opacity-45 sm:min-h-0 sm:w-auto"
+              className="cta-btn group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-8 py-2.5 text-white disabled:pointer-events-none disabled:opacity-45 sm:w-auto"
               style={{
                 background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)`,
               }}
@@ -1237,24 +1223,23 @@ export function BookingSearchWidget({
           </div>
 
           {/* Bottom info row */}
-          <div className="mt-3 flex flex-col gap-2 border-t border-[#ebe4d3]/60 pt-3 sm:mt-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:pt-2">
-            <p className="text-[10px] leading-relaxed text-[#aaa08e] sm:max-w-[58%]">
+          <div className="mt-2 flex items-center justify-between border-t border-[#ebe4d3]/60 pt-2">
+            <p className="text-[10px] text-[#aaa08e]">
               {rental === "corporate"
                 ? "البيانات تُستخدم للتواصل فقط — لا يتم تأكيد حجز آلياً من هذه الخطوة."
                 : "يُعرض المتوفر للحجز المباشر حسب الفترة المحددة"}
             </p>
             {rental === "corporate" ? (
-              <span className="text-[10.5px] font-bold text-[#6b5a3b] sm:text-end">
+              <span className="text-[10.5px] font-bold text-[#6b5a3b]">
                 فريق المبيعات يتابع الطلبات خلال أوقات العمل
               </span>
             ) : (
             <Link
               href="/fleet"
-              className="shrink-0 text-[10.5px] font-bold text-[#003749] underline-offset-4 transition-colors hover:text-[#dbb878] hover:underline sm:text-end"
+              className="text-[10.5px] font-bold text-[#003749] underline-offset-4 transition-colors hover:text-[#dbb878] hover:underline"
               style={{ textDecorationColor: GOLD }}
             >
-              احجز الآن
-            </Link>
+احجز الآن            </Link>
             )}
           </div>
         </div>
@@ -1271,20 +1256,12 @@ export function BookingSearchWidget({
           <div
             ref={errorRef}
             role="alert"
-            className="flex items-start gap-2 border-t border-red-200 bg-gradient-to-l from-red-50 to-red-50/50 px-4 py-3 pe-2 text-[12px] font-semibold text-red-800 sm:items-center sm:py-2.5"
+            className="flex items-center gap-2 border-t border-red-200 bg-gradient-to-l from-red-50 to-red-50/50 px-4 py-2 text-[12px] font-semibold text-red-700"
           >
-            <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-red-100 sm:mt-0">
-              <span className="size-2 rounded-full bg-red-500" aria-hidden />
+            <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-red-100">
+              <span className="size-2 rounded-full bg-red-500" />
             </span>
-            <p className="min-w-0 flex-1 leading-snug">{error}</p>
-            <button
-              type="button"
-              onClick={() => setError(null)}
-              className="flex size-9 shrink-0 items-center justify-center rounded-lg text-red-600/80 outline-none transition-colors hover:bg-red-100/90 hover:text-red-800 focus-visible:ring-2 focus-visible:ring-red-400/50"
-              aria-label="إغلاق التنبيه"
-            >
-              <X className="size-4" aria-hidden />
-            </button>
+            {error}
           </div>
         )}
       </form>
@@ -1321,42 +1298,6 @@ export function BookingSearchWidget({
    Sub-components
 ───────────────────────────────────────── */
 
-function DeliveryMapTriggerContent({ hasLocation }: { hasLocation: boolean }) {
-  return (
-    <>
-      <div className="flex min-w-0 flex-1 flex-col items-start gap-0.5 text-start">
-        {hasLocation ? (
-          <>
-            <span className="flex items-center gap-2 text-[13px] font-bold text-[#0f3d47]">
-              <span
-                className="flex size-5 items-center justify-center rounded-full bg-emerald-100 ring-2 ring-emerald-200/50"
-                aria-hidden
-              >
-                <span className="size-2 rounded-full bg-emerald-500" />
-              </span>
-              تم تحديد الموقع
-            </span>
-            <span className="max-w-[20rem] pe-1 text-[10px] font-medium leading-snug text-[#6b5a3b]">
-              اضغط لتعديل الموقع على الخريطة
-            </span>
-          </>
-        ) : (
-          <>
-            <span className="text-[13px] font-bold text-[#0f1923]">تحديد موقع التوصيل</span>
-            <span className="max-w-[20rem] pe-1 text-[10px] font-medium leading-snug text-[#8a7752]">
-              افتح الخريطة وحدّد النقطة بدقّة لعرض المركبات المتاحة
-            </span>
-          </>
-        )}
-      </div>
-      <MapPin
-        className="size-5 shrink-0 text-[#dbb878] opacity-85 transition-[transform,opacity] duration-200 group-hover:scale-105 group-hover:opacity-100"
-        aria-hidden
-      />
-    </>
-  );
-}
-
 function PillTab({
   active,
   onClick,
@@ -1378,11 +1319,7 @@ function PillTab({
       role="tab"
       aria-selected={active}
       onClick={onClick}
-      className={`flex min-h-[2.75rem] flex-1 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-[12px] font-bold outline-none transition-[color,transform,box-shadow,background-color] duration-200 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-[#fdfbf6] sm:min-h-[2.5rem] ${
-        isGold
-          ? "focus-visible:ring-[#dbb878]/80"
-          : "focus-visible:ring-[#003749]/45"
-      } ${active ? "" : "hover:bg-black/[0.04] active:scale-[0.99]"}`}
+      className="flex flex-1 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-[12px] font-bold outline-none transition-all duration-250 focus-visible:ring-2 focus-visible:ring-[#dbb878] focus-visible:ring-offset-1 focus-visible:ring-offset-[#fdfbf6]"
       style={
         active
           ? {
@@ -1451,7 +1388,7 @@ function FieldCard({
       <div
         role="group"
         aria-labelledby={groupLabelId}
-        className="booking-field-card flex h-full min-h-[3.25rem] items-center gap-3 rounded-xl border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3 sm:min-h-[3.5rem]"
+        className="booking-field-card flex h-full min-h-[3.25rem] items-center gap-3 rounded-xl border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3"
       >
         <span className="flex shrink-0 flex-col justify-center gap-0.5">
           {titleNode}
