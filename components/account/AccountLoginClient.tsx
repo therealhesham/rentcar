@@ -39,7 +39,9 @@ export function AccountLoginClient() {
         const ch = String(j.channel ?? "").trim().toUpperCase();
         setOtpRequired(Boolean(j.required));
         setOtpChannel(
-          ch === "SMS" || ch === "EMAIL" || ch === "OFF" ? (ch as BookingOtpChannel) : "OFF",
+          ch === "SMS" || ch === "EMAIL" || ch === "WHATSAPP" || ch === "OFF"
+            ? (ch as BookingOtpChannel)
+            : "OFF",
         );
       } catch {
         /* ignore */
@@ -66,7 +68,7 @@ export function AccountLoginClient() {
       }
       return null;
     }
-    if (otpChannel === "SMS") {
+    if (otpChannel === "SMS" || otpChannel === "WHATSAPP") {
       const d = raw.replace(/\s+/g, "").replace(/\D/g, "");
       if (!/^5\d{8}$/.test(d)) {
         return "أدخل جوالك المسجّل: 9 أرقام تبدأ بـ 5 (بدون 966).";
@@ -87,7 +89,9 @@ export function AccountLoginClient() {
     setOtpSendBusy(true);
     try {
       const toSend =
-        otpChannel === "SMS" ? identifier.trim().replace(/\s+/g, "").replace(/\D/g, "") : identifier.trim();
+        otpChannel === "SMS" || otpChannel === "WHATSAPP"
+          ? identifier.trim().replace(/\s+/g, "").replace(/\D/g, "")
+          : identifier.trim();
       const res = await fetch("/api/auth/customer/send-login-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -103,7 +107,9 @@ export function AccountLoginClient() {
         setOtpHint(
           otpChannel === "EMAIL"
             ? "تم إرسال الرمز إلى بريدك المسجّل. تحقق من صندوق الوارد والبريد غير الهام."
-            : "تم إرسال الرمز إلى جوالك المسجّل كرسالة نصية.",
+            : otpChannel === "WHATSAPP"
+              ? "تم إرسال الرمز إلى واتساب جوالك المسجّل."
+              : "تم إرسال الرمز إلى جوالك المسجّل كرسالة نصية.",
         );
         setOtpCooldownSec(45);
         return;
@@ -128,7 +134,9 @@ export function AccountLoginClient() {
       return;
     }
     const toSend =
-      otpChannel === "SMS" ? identifier.trim().replace(/\s+/g, "").replace(/\D/g, "") : identifier.trim();
+      otpChannel === "SMS" || otpChannel === "WHATSAPP"
+        ? identifier.trim().replace(/\s+/g, "").replace(/\D/g, "")
+        : identifier.trim();
     setOtpVerifyBusy(true);
     try {
       const res = await fetch("/api/auth/customer/verify-login-otp", {
@@ -162,7 +170,9 @@ export function AccountLoginClient() {
     setOtpSendBusy(true);
     try {
       const toSend =
-        otpChannel === "SMS" ? identifier.trim().replace(/\s+/g, "").replace(/\D/g, "") : identifier.trim();
+        otpChannel === "SMS" || otpChannel === "WHATSAPP"
+          ? identifier.trim().replace(/\s+/g, "").replace(/\D/g, "")
+          : identifier.trim();
       const res = await fetch("/api/auth/customer/send-login-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -177,7 +187,9 @@ export function AccountLoginClient() {
         setOtpHint(
           otpChannel === "EMAIL"
             ? "تم إرسال رمز جديد إلى بريدك."
-            : "تم إرسال رمز جديد إلى جوالك.",
+            : otpChannel === "WHATSAPP"
+              ? "تم إرسال رمز جديد إلى واتساب جوالك."
+              : "تم إرسال رمز جديد إلى جوالك.",
         );
         setOtpCooldownSec(45);
         return;
@@ -193,7 +205,10 @@ export function AccountLoginClient() {
     }
   }
 
-  const useOtpOnly = cfgLoaded && otpRequired && (otpChannel === "SMS" || otpChannel === "EMAIL");
+  const useOtpOnly =
+    cfgLoaded &&
+    otpRequired &&
+    (otpChannel === "SMS" || otpChannel === "EMAIL" || otpChannel === "WHATSAPP");
 
   return (
     <div className="flex min-h-screen flex-col bg-[#fdfbf6] text-on-surface">
@@ -208,7 +223,9 @@ export function AccountLoginClient() {
             {useOtpOnly
               ? otpChannel === "EMAIL"
                 ? "أدخل البريد المسجّل في حسابك، ثم الرمز الذي يصلك بالبريد — دون الحاجة إلى كلمة مرور."
-                : "أدخل جوالك المسجّل في حسابك، ثم الرمز الذي يصلك برسالة نصية — دون الحاجة إلى كلمة مرور."
+                : otpChannel === "WHATSAPP"
+                  ? "أدخل جوالك المسجّل في حسابك، ثم الرمز الذي يصلك على واتساب — دون الحاجة إلى كلمة مرور."
+                  : "أدخل جوالك المسجّل في حسابك، ثم الرمز الذي يصلك برسالة نصية — دون الحاجة إلى كلمة مرور."
               : "سجّل الدخول بالبريد وكلمة المرور، أو أنشئ حساباً جديداً."}
           </p>
 
@@ -222,7 +239,11 @@ export function AccountLoginClient() {
               <div className="flex items-center justify-between rounded-xl bg-[#fdfbf6] px-4 py-2 text-[12px] font-extrabold text-[#8a7752]">
                 <span>الخطوة {otpStep === "identifier" ? "١" : "٢"} من ٢</span>
                 <span className="rounded-md bg-white px-2 py-0.5 text-[11px] text-[#003749]">
-                  {otpChannel === "EMAIL" ? "تحقق بالبريد" : "تحقق بالجوال"}
+                  {otpChannel === "EMAIL"
+                    ? "تحقق بالبريد"
+                    : otpChannel === "WHATSAPP"
+                      ? "تحقق بالواتساب"
+                      : "تحقق بالجوال"}
                 </span>
               </div>
 

@@ -53,10 +53,21 @@ function fmtDateTime(d: Date): string {
   });
 }
 
-function storedPhoneToEvolutionNumber(stored: string): string | null {
-  const nine = e164ToLocalNine(stored);
+/** رقم E.164 (مثل +9665xxxxxxxx) إلى صيغة Evolution (9665xxxxxxxx). */
+export function e164ToEvolutionWhatsAppNumber(storedE164: string): string | null {
+  const nine = e164ToLocalNine(storedE164);
   if (!nine) return null;
   return `966${nine}`;
+}
+
+export async function sendEvolutionWhatsAppText(opts: {
+  number: string;
+  text: string;
+}): Promise<void> {
+  if (!isEvolutionWhatsAppConfigured()) {
+    throw new Error("Evolution API غير مهيأ (EVOLUTION_API_BASE_URL / EVOLUTION_API_KEY / EVOLUTION_INSTANCE_NAME).");
+  }
+  await postSendText(opts);
 }
 
 function buildBookingCompletionMessage(booking: BookingPaymentSnapshot): string {
@@ -142,7 +153,7 @@ export async function sendBookingCompletionWhatsAppAfterPayment(bookingRequestId
     return;
   }
 
-  const number = storedPhoneToEvolutionNumber(snapshot.phone);
+  const number = e164ToEvolutionWhatsAppNumber(snapshot.phone);
   if (!number) {
     console.warn(
       `[evolution-whatsapp] رقم الجوال غير صالح لإرسال واتساب (طلب #${bookingRequestId}): ${snapshot.phone}`,

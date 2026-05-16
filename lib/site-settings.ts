@@ -216,9 +216,13 @@ export async function getCustomerCancellationDeductTiers(): Promise<Cancellation
 /** قناة إرسال رمز التحقق عند إتمام الحجز المباشر (يحددها المسؤول). */
 export const SITE_KEY_BOOKING_OTP_CHANNEL = "booking_otp_channel";
 
-export type BookingOtpChannel = "OFF" | "SMS" | "EMAIL";
+export type BookingOtpChannel = "OFF" | "SMS" | "EMAIL" | "WHATSAPP";
 
-const BOOKING_OTP_CHANNELS = new Set<BookingOtpChannel>(["OFF", "SMS", "EMAIL"]);
+const BOOKING_OTP_CHANNELS = new Set<BookingOtpChannel>(["OFF", "SMS", "EMAIL", "WHATSAPP"]);
+
+export function bookingOtpChannelUsesPhone(channel: BookingOtpChannel): boolean {
+  return channel === "SMS" || channel === "WHATSAPP";
+}
 
 export function parseBookingOtpChannel(raw: string | null | undefined): BookingOtpChannel {
   const s = String(raw ?? "")

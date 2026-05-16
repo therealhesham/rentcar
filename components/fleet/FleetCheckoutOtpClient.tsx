@@ -71,7 +71,9 @@ export function FleetCheckoutOtpClient() {
         }
         const ch = String(j.channel ?? "").trim().toUpperCase();
         setChannel(
-          ch === "SMS" || ch === "EMAIL" || ch === "OFF" ? (ch as BookingOtpChannel) : "OFF",
+          ch === "SMS" || ch === "EMAIL" || ch === "WHATSAPP" || ch === "OFF"
+            ? (ch as BookingOtpChannel)
+            : "OFF",
         );
         setDestinationHint(typeof j.destinationHint === "string" ? j.destinationHint : null);
       } catch {
@@ -105,7 +107,9 @@ export function FleetCheckoutOtpClient() {
         setOtpHint(
           channel === "EMAIL"
             ? "تم إرسال رمز جديد. تحقق من البريد (والبريد غير الهام)."
-            : "تم إرسال رمز جديد. تحقق من رسائل الجوال.",
+            : channel === "WHATSAPP"
+              ? "تم إرسال رمز جديد. تحقق من واتساب على جوالك."
+              : "تم إرسال رمز جديد. تحقق من رسائل الجوال.",
         );
         setOtpCooldownSec(45);
         return;
@@ -189,7 +193,11 @@ export function FleetCheckoutOtpClient() {
                 <h1 className="text-lg font-extrabold text-[#003749]">رمز التحقق</h1>
                 <p className="mt-2 text-[13px] font-semibold leading-relaxed text-[#6b5a3b]">
                   بعد تأكيد بياناتك في الخطوة السابقة، أُرسل تلقائياً رمز مكوّن من 6 أرقام إلى{" "}
-                  {channel === "EMAIL" ? "بريدك الإلكتروني" : "جوالك"}
+                  {channel === "EMAIL"
+                    ? "بريدك الإلكتروني"
+                    : channel === "WHATSAPP"
+                      ? "واتساب جوالك"
+                      : "جوالك"}
                   {destinationHint ? (
                     <>
                       {" "}

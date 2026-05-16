@@ -8,6 +8,7 @@ type Props = {
   currentChannel: BookingOtpChannel;
   smsUrlConfigured: boolean;
   mailConfigured: boolean;
+  whatsappConfigured: boolean;
 };
 
 const OPTIONS: {
@@ -30,12 +31,18 @@ const OPTIONS: {
     title: "بريد إلكتروني",
     hint: "يُرسل الرمز إلى نفس البريد الذي يُدخله العميل لإرسال الفاتورة، عبر SMTP أو Resend كما في إشعارات الموقع.",
   },
+  {
+    value: "WHATSAPP",
+    title: "واتساب (Evolution API)",
+    hint: "يُرسل رمز من 6 أرقام إلى جوال العميل عبر خدمة Evolution المعرّفة في البيئة (نفس إعداد إشعار الحجز بعد الدفع).",
+  },
 ];
 
 export function BookingOtpDeliveryForm({
   currentChannel,
   smsUrlConfigured,
   mailConfigured,
+  whatsappConfigured,
 }: Props) {
   const [state, formAction, pending] = useActionState(updateBookingOtpDelivery, null);
 
@@ -73,6 +80,12 @@ export function BookingOtpDeliveryForm({
               {opt.value === "EMAIL" && !mailConfigured ? (
                 <span className="mt-2 block text-xs font-bold text-error">
                   التنبيه: إرسال البريد غير مهيأ (SMTP أو Resend) — لن يعمل الإرسال حتى تضبطه.
+                </span>
+              ) : null}
+              {opt.value === "WHATSAPP" && !whatsappConfigured ? (
+                <span className="mt-2 block text-xs font-bold text-error">
+                  التنبيه: Evolution API غير مضبوط (EVOLUTION_API_BASE_URL و EVOLUTION_API_KEY و
+                  EVOLUTION_INSTANCE_NAME) — لن يعمل الإرسال حتى تضيفه.
                 </span>
               ) : null}
             </span>

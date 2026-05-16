@@ -9,6 +9,7 @@ import {
 } from "@/lib/site-settings";
 import { isBookingOtpSmsUrlConfigured } from "@/lib/booking-checkout-otp";
 import { isOutgoingMailTransportConfigured } from "@/lib/booking-invoice-email";
+import { isEvolutionWhatsAppConfigured } from "@/lib/evolution-whatsapp";
 import { prisma } from "@/lib/prisma";
 
 function validateChannelForServer(channel: BookingOtpChannel): { ok: true } | { ok: false; error: string } {
@@ -24,6 +25,13 @@ function validateChannelForServer(channel: BookingOtpChannel): { ok: true } | { 
       ok: false,
       error:
         "لإرسال الرمز عبر البريد يجب ضبط SMTP (MAIL_HOST و MAIL_USER و MAIL_PASS) أو Resend (RESEND_API_KEY) في بيئة الخادم.",
+    };
+  }
+  if (channel === "WHATSAPP" && !isEvolutionWhatsAppConfigured()) {
+    return {
+      ok: false,
+      error:
+        "لإرسال الرمز عبر واتساب يجب ضبط Evolution API في البيئة: EVOLUTION_API_BASE_URL و EVOLUTION_API_KEY و EVOLUTION_INSTANCE_NAME.",
     };
   }
   return { ok: true };
@@ -57,6 +65,7 @@ export async function updateBookingOtpDelivery(
 
   revalidatePath("/fleet/checkout");
   revalidatePath("/fleet");
+  revalidatePath("/account");
   revalidatePath("/admin/booking-otp-delivery");
   return { ok: true };
 }

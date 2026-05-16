@@ -5,7 +5,12 @@ import {
 } from "@/lib/booking-invoice-email";
 import { prisma } from "@/lib/prisma";
 import { saudiLocalNineToE164 } from "@/lib/normalize-saudi-phone";
-import { getBookingOtpChannel, type BookingOtpChannel } from "@/lib/site-settings";
+import {
+  e164ToEvolutionWhatsAppNumber,
+  isEvolutionWhatsAppConfigured,
+  sendEvolutionWhatsAppText,
+} from "@/lib/evolution-whatsapp";
+import { bookingOtpChannelUsesPhone, getBookingOtpChannel, type BookingOtpChannel } from "@/lib/site-settings";
 
 export type { BookingOtpChannel };
 
@@ -68,6 +73,7 @@ export async function isBookingCheckoutOtpStepRequired(): Promise<boolean> {
   const ch = await getBookingOtpChannel();
   if (ch === "OFF") return false;
   if (ch === "SMS") return isBookingOtpSmsUrlConfigured();
+  if (ch === "WHATSAPP") return isEvolutionWhatsAppConfigured();
   if (ch === "EMAIL") return isOutgoingMailTransportConfigured();
   return false;
 }
@@ -88,7 +94,7 @@ export async function sendBookingCheckoutOtpFromPublicRequest(body: {
     return { ok: false, error: "خدمة رمز التحقق غير مفعّلة من لوحة التحكم." };
   }
 
-  if (channel === "SMS") {
+  if (bookingOtpChannelUsesPhone(channel)) {
     const localNine = String(body.phone ?? "")
       .replace(/\s+/g, "")
       .trim();
@@ -97,9 +103,17 @@ export async function sendBookingCheckoutOtpFromPublicRequest(body: {
       return { ok: false, error: "رقم الجوال غير صالح." };
     }
 
-    const template = getSmsTemplate();
-    if (!template) {
-      return { ok: false, error: "عنوان إرسال الرسائل النصية غير مضبوط في البيئة (BOOKING_OTP_SMS_URL)." };
+    if (channel === "SMS") {
+      const template = getSmsTemplate();
+      if (!template) {
+        return { ok: false, error: "عنوان إرسال الرسائل النصية غير مضبوط في البيئة (BOOKING_OTP_SMS_URL)." };
+      }
+    } else if (!isEvolutionWhatsAppConfigured()) {
+      return {
+        ok: false,
+        error:
+          "إرسال واتساب غير مهيأ (EVOLUTION_API_BASE_URL و EVOLUTION_API_KEY و EVOLUTION_INSTANCE_NAME).",
+      };
     }
 
     await purgeExpiredBookingCheckoutOtps();
@@ -124,14 +138,20 @@ export async function sendBookingCheckoutOtpFromPublicRequest(body: {
     const otp = randomDigits(OTP_LEN);
     const codeHash = await bcrypt.hash(otp, 10);
     const expiresAt = new Date(Date.now() + OTP_TTL_MS);
-    const message = `رمز تأكيد الحجز: ${otp}`;
+    const message =
+      channel === "WHATSAPP"
+        ? `رمز تأكيد الحجز في روائس: ${otp}\n\nصالح لمدة 10 دقائق. إن لم تطلب هذا الرمز فتجاهل الرسالة.`
+        : `رمز تأكيد الحجز: ${otp}`;
 
-    const smsUrl = expandSmsUrl(template, {
-      otp,
-      phone: phoneE164,
-      localPhone: localNine.replace(/\D/g, ""),
-      message,
-    });
+    const smsUrl =
+      channel === "SMS"
+        ? expandSmsUrl(getSmsTemplate(), {
+            otp,
+            phone: phoneE164,
+            localPhone: localNine.replace(/\D/g, ""),
+            message,
+          })
+        : null;
 
     try {
       await prisma.bookingCheckoutOtp.upsert({
@@ -159,23 +179,38 @@ export async function sendBookingCheckoutOtpFromPublicRequest(body: {
       };
     }
 
-    let httpOk = false;
-    try {
-      const res = await fetch(smsUrl, {
-        method: "GET",
-        redirect: "follow",
-        signal: AbortSignal.timeout(20_000),
-      });
-      httpOk = res.ok;
-    } catch (e) {
-      console.error("booking checkout OTP SMS fetch failed", e);
-      await prisma.bookingCheckoutOtp.delete({ where: { destinationKey: dest } }).catch(() => {});
-      return { ok: false, error: "تعذّر الاتصال بخدمة الرسائل. حاول لاحقاً." };
-    }
+    if (channel === "SMS" && smsUrl) {
+      let httpOk = false;
+      try {
+        const res = await fetch(smsUrl, {
+          method: "GET",
+          redirect: "follow",
+          signal: AbortSignal.timeout(20_000),
+        });
+        httpOk = res.ok;
+      } catch (e) {
+        console.error("booking checkout OTP SMS fetch failed", e);
+        await prisma.bookingCheckoutOtp.delete({ where: { destinationKey: dest } }).catch(() => {});
+        return { ok: false, error: "تعذّر الاتصال بخدمة الرسائل. حاول لاحقاً." };
+      }
 
-    if (!httpOk) {
-      await prisma.bookingCheckoutOtp.delete({ where: { destinationKey: dest } }).catch(() => {});
-      return { ok: false, error: "رفضت خدمة الرسائل الطلب. تحقق من الإعدادات." };
+      if (!httpOk) {
+        await prisma.bookingCheckoutOtp.delete({ where: { destinationKey: dest } }).catch(() => {});
+        return { ok: false, error: "رفضت خدمة الرسائل الطلب. تحقق من الإعدادات." };
+      }
+    } else {
+      const waNumber = e164ToEvolutionWhatsAppNumber(phoneE164);
+      if (!waNumber) {
+        await prisma.bookingCheckoutOtp.delete({ where: { destinationKey: dest } }).catch(() => {});
+        return { ok: false, error: "رقم الجوال غير صالح لإرسال واتساب." };
+      }
+      try {
+        await sendEvolutionWhatsAppText({ number: waNumber, text: message });
+      } catch (e) {
+        console.error("booking checkout OTP WhatsApp failed", e);
+        await prisma.bookingCheckoutOtp.delete({ where: { destinationKey: dest } }).catch(() => {});
+        return { ok: false, error: "تعذّر إرسال رمز التحقق عبر واتساب. حاول لاحقاً." };
+      }
     }
 
     return { ok: true };
@@ -290,7 +325,7 @@ export async function verifyAndConsumeBookingCheckoutOtp(opts: {
   }
 
   let destinationKey: string;
-  if (channel === "SMS") {
+  if (bookingOtpChannelUsesPhone(channel)) {
     const phoneE164 = saudiLocalNineToE164(opts.phoneLocalNine.replace(/\s+/g, "").trim());
     if (!phoneE164) {
       return { ok: false, error: "رقم الجوال غير صالح." };
@@ -313,7 +348,7 @@ export async function verifyAndConsumeBookingCheckoutOtp(opts: {
     return {
       ok: false,
       error:
-        channel === "SMS"
+        bookingOtpChannelUsesPhone(channel)
           ? "لم يُعثر على رمز تحقق لهذا الجوال. اطلب رمزاً جديداً."
           : "لم يُعثر على رمز تحقق لهذا البريد. اطلب رمزاً جديداً.",
     };

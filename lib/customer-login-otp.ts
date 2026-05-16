@@ -8,7 +8,16 @@ import {
 } from "@/lib/booking-checkout-otp";
 import { prisma } from "@/lib/prisma";
 import { e164ToLocalNine, saudiLocalNineToE164 } from "@/lib/normalize-saudi-phone";
-import { getBookingOtpChannel, type BookingOtpChannel } from "@/lib/site-settings";
+import {
+  e164ToEvolutionWhatsAppNumber,
+  isEvolutionWhatsAppConfigured,
+  sendEvolutionWhatsAppText,
+} from "@/lib/evolution-whatsapp";
+import {
+  bookingOtpChannelUsesPhone,
+  getBookingOtpChannel,
+  type BookingOtpChannel,
+} from "@/lib/site-settings";
 
 export type { BookingOtpChannel };
 
@@ -108,12 +117,14 @@ function destinationForUserAndChannel(
 ):
   | { ok: true; destinationKey: string; smsLocalNine?: string; emailTo?: string }
   | { ok: false; error: string } {
-  if (channel === "SMS") {
+  if (bookingOtpChannelUsesPhone(channel)) {
     if (!user.phone) {
       return {
         ok: false,
         error:
-          "لا يوجد جوال مسجّل في حسابك لتلقي الرمز. حدّث بياناتك من الدعم أو استخدم تسجيل الدخول بكلمة المرور إن وُجدت.",
+          channel === "WHATSAPP"
+            ? "لا يوجد جوال مسجّل في حسابك لتلقي الرمز عبر واتساب. حدّث بياناتك من الدعم أو استخدم تسجيل الدخول بكلمة المرور إن وُجدت."
+            : "لا يوجد جوال مسجّل في حسابك لتلقي الرمز. حدّث بياناتك من الدعم أو استخدم تسجيل الدخول بكلمة المرور إن وُجدت.",
       };
     }
     const local = e164ToLocalNine(user.phone);
@@ -160,16 +171,24 @@ export async function sendCustomerLoginOtpForIdentifier(
   const dest = destinationForUserAndChannel(user, channel);
   if (!dest.ok) return dest;
 
-  if (channel === "SMS") {
-    const template = getSmsTemplate();
-    if (!template) {
-      return { ok: false, error: "عنوان إرسال الرسائل النصية غير مضبوط في البيئة (BOOKING_OTP_SMS_URL)." };
-    }
-
+  if (bookingOtpChannelUsesPhone(channel)) {
     const localNine = dest.smsLocalNine!;
     const phoneE164 = saudiLocalNineToE164(localNine);
     if (!phoneE164) {
       return { ok: false, error: "رقم الجوال غير صالح." };
+    }
+
+    if (channel === "SMS") {
+      const template = getSmsTemplate();
+      if (!template) {
+        return { ok: false, error: "عنوان إرسال الرسائل النصية غير مضبوط في البيئة (BOOKING_OTP_SMS_URL)." };
+      }
+    } else if (!isEvolutionWhatsAppConfigured()) {
+      return {
+        ok: false,
+        error:
+          "إرسال واتساب غير مهيأ (EVOLUTION_API_BASE_URL و EVOLUTION_API_KEY و EVOLUTION_INSTANCE_NAME).",
+      };
     }
 
     await purgeExpiredCustomerLoginOtps();
@@ -193,14 +212,20 @@ export async function sendCustomerLoginOtpForIdentifier(
     const otp = randomDigits(OTP_LEN);
     const codeHash = await bcrypt.hash(otp, 10);
     const expiresAt = new Date(Date.now() + OTP_TTL_MS);
-    const message = `رمز تسجيل الدخول: ${otp}`;
+    const message =
+      channel === "WHATSAPP"
+        ? `رمز تسجيل الدخول في روائس: ${otp}\n\nصالح لمدة 10 دقائق. إن لم تطلب هذا الرمز فتجاهل الرسالة.`
+        : `رمز تسجيل الدخول: ${otp}`;
 
-    const smsUrl = expandSmsUrl(template, {
-      otp,
-      phone: phoneE164,
-      localPhone: localNine.replace(/\D/g, ""),
-      message,
-    });
+    const smsUrl =
+      channel === "SMS"
+        ? expandSmsUrl(getSmsTemplate(), {
+            otp,
+            phone: phoneE164,
+            localPhone: localNine.replace(/\D/g, ""),
+            message,
+          })
+        : null;
 
     try {
       await prisma.customerLoginOtp.upsert({
@@ -220,7 +245,7 @@ export async function sendCustomerLoginOtpForIdentifier(
         },
       });
     } catch (e) {
-      console.error("customer login OTP DB upsert (SMS) failed", e);
+      console.error("customer login OTP DB upsert (phone) failed", e);
       return {
         ok: false,
         error:
@@ -228,27 +253,46 @@ export async function sendCustomerLoginOtpForIdentifier(
       };
     }
 
-    let httpOk = false;
-    try {
-      const res = await fetch(smsUrl, {
-        method: "GET",
-        redirect: "follow",
-        signal: AbortSignal.timeout(20_000),
-      });
-      httpOk = res.ok;
-    } catch (e) {
-      console.error("customer login OTP SMS fetch failed", e);
-      await prisma.customerLoginOtp
-        .delete({ where: { destinationKey: dest.destinationKey } })
-        .catch(() => {});
-      return { ok: false, error: "تعذّر الاتصال بخدمة الرسائل. حاول لاحقاً." };
-    }
+    if (channel === "SMS" && smsUrl) {
+      let httpOk = false;
+      try {
+        const res = await fetch(smsUrl, {
+          method: "GET",
+          redirect: "follow",
+          signal: AbortSignal.timeout(20_000),
+        });
+        httpOk = res.ok;
+      } catch (e) {
+        console.error("customer login OTP SMS fetch failed", e);
+        await prisma.customerLoginOtp
+          .delete({ where: { destinationKey: dest.destinationKey } })
+          .catch(() => {});
+        return { ok: false, error: "تعذّر الاتصال بخدمة الرسائل. حاول لاحقاً." };
+      }
 
-    if (!httpOk) {
-      await prisma.customerLoginOtp
-        .delete({ where: { destinationKey: dest.destinationKey } })
-        .catch(() => {});
-      return { ok: false, error: "رفضت خدمة الرسائل الطلب. تحقق من الإعدادات." };
+      if (!httpOk) {
+        await prisma.customerLoginOtp
+          .delete({ where: { destinationKey: dest.destinationKey } })
+          .catch(() => {});
+        return { ok: false, error: "رفضت خدمة الرسائل الطلب. تحقق من الإعدادات." };
+      }
+    } else {
+      const waNumber = e164ToEvolutionWhatsAppNumber(phoneE164);
+      if (!waNumber) {
+        await prisma.customerLoginOtp
+          .delete({ where: { destinationKey: dest.destinationKey } })
+          .catch(() => {});
+        return { ok: false, error: "رقم الجوال غير صالح لإرسال واتساب." };
+      }
+      try {
+        await sendEvolutionWhatsAppText({ number: waNumber, text: message });
+      } catch (e) {
+        console.error("customer login OTP WhatsApp failed", e);
+        await prisma.customerLoginOtp
+          .delete({ where: { destinationKey: dest.destinationKey } })
+          .catch(() => {});
+        return { ok: false, error: "تعذّر إرسال رمز التحقق عبر واتساب. حاول لاحقاً." };
+      }
     }
 
     return { ok: true };
@@ -379,7 +423,7 @@ export async function verifyAndConsumeCustomerLoginOtp(opts: {
     return {
       ok: false,
       error:
-        channel === "SMS"
+        bookingOtpChannelUsesPhone(channel)
           ? "لم يُعثر على رمز لهذا الحساب. اطلب رمزاً جديداً."
           : "لم يُعثر على رمز لهذا البريد. اطلب رمزاً جديداً.",
     };
