@@ -4,7 +4,7 @@ import { ChevronDown } from "lucide-react";
 import type { BookingCityBranchesOption } from "@/lib/booking-location-options";
 
 const DEFAULT_SELECT_CLASS =
-  "w-full min-w-0 cursor-pointer appearance-none rounded-lg border border-[#ebe4d3]/70 bg-white/70 py-2 pe-8 ps-2.5 text-[13px] font-semibold text-[#0f1923] outline-none transition-[border-color,box-shadow,background-color] hover:bg-white focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25 disabled:cursor-not-allowed disabled:opacity-45";
+  "w-full min-w-0 cursor-pointer appearance-none rounded-lg border border-[#ebe4d3]/70 bg-white/70 py-2 pe-8 ps-2.5 text-[13px] font-semibold text-[#0f1923] outline-none transition-[border-color,box-shadow,background-color] duration-200 hover:bg-white focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25 disabled:cursor-not-allowed disabled:opacity-45";
 
 const DEFAULT_LABEL_CLASS =
   "shrink-0 self-center text-[10px] font-bold uppercase tracking-wide text-[#003749]/55";
@@ -51,59 +51,86 @@ export function CityBranchSelectPair({
     ? rawBranch
     : (branches[0]?.slug ?? "");
 
+  const citySelect = (
+    <div className="relative min-w-0">
+      <select
+        id={cityId}
+        value={cityVal}
+        onChange={(ev) => onCityChange(ev.target.value)}
+        required={branchSelectRequired}
+        disabled={!hasAnyBranches}
+        className={sel}
+      >
+        {dateCities.map((city) =>
+          city.branches.length > 0 ? (
+            <option key={city.slug} value={city.slug}>
+              {city.name}
+            </option>
+          ) : null,
+        )}
+      </select>
+      <ChevronDown
+        className="pointer-events-none absolute end-2 top-1/2 size-3.5 -translate-y-1/2 text-[#8a8274]"
+        aria-hidden
+      />
+    </div>
+  );
+
+  const branchSelect = (
+    <div className="relative min-w-0">
+      <select
+        id={branchId}
+        value={branchVal}
+        onChange={(ev) => onBranchChange(ev.target.value)}
+        required={branchSelectRequired}
+        disabled={!hasAnyBranches || branches.length === 0}
+        className={sel}
+      >
+        {branches.map((branch) => (
+          <option key={branch.slug} value={branch.slug}>
+            {branch.name}
+          </option>
+        ))}
+      </select>
+      <ChevronDown
+        className="pointer-events-none absolute end-2 top-1/2 size-3.5 -translate-y-1/2 text-[#8a8274]"
+        aria-hidden
+      />
+    </div>
+  );
+
+  if (dense) {
+    return (
+      <div className="flex flex-col gap-2">
+        <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 gap-y-2">
+          <label htmlFor={cityId} className={lab}>
+            المدينة
+          </label>
+          {citySelect}
+        </div>
+        <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 gap-y-2">
+          <label htmlFor={branchId} className={lab}>
+            الفرع
+          </label>
+          {branchSelect}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className={dense ? "flex flex-col gap-2" : "flex flex-col gap-2.5"}>
-      <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 gap-y-2">
+    <div className="grid gap-3 sm:grid-cols-2 sm:gap-x-4">
+      <div className="flex min-w-0 flex-col gap-1">
         <label htmlFor={cityId} className={lab}>
           المدينة
         </label>
-        <div className="relative min-w-0">
-          <select
-            id={cityId}
-            value={cityVal}
-            onChange={(ev) => onCityChange(ev.target.value)}
-            required={branchSelectRequired}
-            disabled={!hasAnyBranches}
-            className={sel}
-          >
-            {dateCities.map((city) =>
-              city.branches.length > 0 ? (
-                <option key={city.slug} value={city.slug}>
-                  {city.name}
-                </option>
-              ) : null,
-            )}
-          </select>
-          <ChevronDown
-            className="pointer-events-none absolute end-2 top-1/2 size-3.5 -translate-y-1/2 text-[#8a8274]"
-            aria-hidden
-          />
-        </div>
+        {citySelect}
       </div>
-      <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 gap-y-2">
+      <div className="flex min-w-0 flex-col gap-1">
         <label htmlFor={branchId} className={lab}>
           الفرع
         </label>
-        <div className="relative min-w-0">
-          <select
-            id={branchId}
-            value={branchVal}
-            onChange={(ev) => onBranchChange(ev.target.value)}
-            required={branchSelectRequired}
-            disabled={!hasAnyBranches || branches.length === 0}
-            className={sel}
-          >
-            {branches.map((branch) => (
-              <option key={branch.slug} value={branch.slug}>
-                {branch.name}
-              </option>
-            ))}
-          </select>
-          <ChevronDown
-            className="pointer-events-none absolute end-2 top-1/2 size-3.5 -translate-y-1/2 text-[#8a8274]"
-            aria-hidden
-          />
-        </div>
+        {branchSelect}
       </div>
     </div>
   );
@@ -189,7 +216,7 @@ export function PickupReturnBranchFields({
 
       <label
         htmlFor={checkboxId}
-        className="flex cursor-pointer items-center gap-2 text-[12px] font-semibold text-[#0f1923]/85"
+        className="-mx-1 flex cursor-pointer items-center gap-2.5 rounded-lg border border-transparent px-2 py-2 text-[12px] font-semibold text-[#0f1923]/85 transition-colors hover:border-[#ebe4d3]/90 hover:bg-white/50"
       >
         <input
           id={checkboxId}
