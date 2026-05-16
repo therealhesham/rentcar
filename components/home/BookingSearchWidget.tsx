@@ -1,8 +1,7 @@
 "use client";
 
 import {
-  ArrowDown,
-  ArrowUp,
+  ArrowLeftRight,
   Building2,
   CalendarDays,
   CalendarRange,
@@ -190,14 +189,7 @@ function PickupReturnSwapButton({
       ].join(" ")}
       aria-label="تبديل موقع الاستلام وموقع الإرجاع"
     >
-      <span
-        dir="ltr"
-        className="inline-flex items-center justify-center gap-px px-0.5"
-        aria-hidden
-      >
-        <ArrowUp className="size-2.5 stroke-[2.25]" />
-        <ArrowDown className="size-2.5 stroke-[2.25]" />
-      </span>
+      <ArrowLeftRight className="size-3.5 stroke-[2.25]" aria-hidden />
     </button>
   );
 }
