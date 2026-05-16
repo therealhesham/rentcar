@@ -25,8 +25,10 @@ import {
   DeliveryOriginCityLabelSuffix,
   useDeliveryOriginCity,
 } from "@/components/home/DeliveryOriginCityHint";
-import { GroupedBranchSelect } from "@/components/home/GroupedBranchSelect";
-import { PickupReturnBranchFields } from "@/components/home/PickupReturnBranchFields";
+import {
+  CityBranchSelectPair,
+  PickupReturnBranchFields,
+} from "@/components/home/PickupReturnBranchFields";
 import { SubscriptionPackagesInWidget } from "@/components/subscriptions/SubscriptionPackagesInWidget";
 import { DdMmYyDateWithPicker } from "@/components/ui/DdMmYyDateWithPicker";
 import { computeBookingDays } from "@/lib/booking-days";
@@ -409,12 +411,8 @@ export function BookingSearchWidget({
     onReturnBranchChange: setReturnBranch,
   };
 
-  function handleDeliveryReturnBranch(branch: string, city: string | null) {
-    if (city) setReturnCity(city);
-    setReturnBranch(branch);
-  }
-
   const returnBranchId = `${uid}-return-branch`;
+  const deliveryReturnCityId = `${uid}-delivery-return-city`;
   const pickupDtId = `${uid}-pickup-dt`;
   const pickupTimeId = `${uid}-pickup-time`;
   const dropoffDtId = `${uid}-dropoff-dt`;
@@ -954,13 +952,17 @@ export function BookingSearchWidget({
                       <p className="mb-1.5 text-[10px] font-black uppercase tracking-wide text-[#003749]/55">
                         فرع إرجاع المركبة
                       </p>
-                      <GroupedBranchSelect
-                        id={returnBranchId}
+                      <CityBranchSelectPair
+                        cityId={deliveryReturnCityId}
+                        branchId={returnBranchId}
                         dateCities={dateCities}
-                        branchSlug={returnBranch || defaultReturnBranchSlug}
+                        citySlug={returnCity}
+                        branchSlug={returnBranch}
+                        defaultCitySlug={defaultCitySlug}
                         defaultBranchSlug={defaultReturnBranchSlug}
-                        required={branchSelectRequired}
-                        onBranchSelect={handleDeliveryReturnBranch}
+                        branchSelectRequired={branchSelectRequired}
+                        onCityChange={pickupBranchFieldsProps.onReturnCityChange}
+                        onBranchChange={pickupBranchFieldsProps.onReturnBranchChange}
                       />
                     </div>
                   </>
@@ -1018,13 +1020,17 @@ export function BookingSearchWidget({
                           label="موقع الإرجاع"
                           icon={<MapPin className="size-3.5" />}
                         >
-                          <GroupedBranchSelect
-                            id={returnBranchId}
+                          <CityBranchSelectPair
+                            cityId={deliveryReturnCityId}
+                            branchId={returnBranchId}
                             dateCities={dateCities}
-                            branchSlug={returnBranch || defaultReturnBranchSlug}
+                            citySlug={returnCity}
+                            branchSlug={returnBranch}
+                            defaultCitySlug={defaultCitySlug}
                             defaultBranchSlug={defaultReturnBranchSlug}
-                            required={branchSelectRequired}
-                            onBranchSelect={handleDeliveryReturnBranch}
+                            branchSelectRequired={branchSelectRequired}
+                            onCityChange={pickupBranchFieldsProps.onReturnCityChange}
+                            onBranchChange={pickupBranchFieldsProps.onReturnBranchChange}
                           />
                         </FieldCard>
                       </div>

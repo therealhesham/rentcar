@@ -1,7 +1,113 @@
 "use client";
 
-import { GroupedBranchSelect } from "@/components/home/GroupedBranchSelect";
+import { ChevronDown } from "lucide-react";
 import type { BookingCityBranchesOption } from "@/lib/booking-location-options";
+
+const DEFAULT_SELECT_CLASS =
+  "w-full min-w-0 cursor-pointer appearance-none rounded-lg border border-[#ebe4d3]/70 bg-white/70 py-2 pe-8 ps-2.5 text-[13px] font-semibold text-[#0f1923] outline-none transition-[border-color,box-shadow,background-color] hover:bg-white focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25 disabled:cursor-not-allowed disabled:opacity-45";
+
+const DEFAULT_LABEL_CLASS =
+  "shrink-0 self-center text-[10px] font-bold uppercase tracking-wide text-[#003749]/55";
+
+export type CityBranchSelectPairProps = {
+  cityId: string;
+  branchId: string;
+  dateCities: BookingCityBranchesOption[];
+  citySlug: string;
+  branchSlug: string;
+  defaultCitySlug: string;
+  defaultBranchSlug: string;
+  branchSelectRequired: boolean;
+  onCityChange: (slug: string) => void;
+  onBranchChange: (slug: string) => void;
+  dense?: boolean;
+  selectClassName?: string;
+  labelClassName?: string;
+};
+
+/** مدينة ثم فرع — نفس أسلوب العرض السابق في الـ widget. */
+export function CityBranchSelectPair({
+  cityId,
+  branchId,
+  dateCities,
+  citySlug,
+  branchSlug,
+  defaultCitySlug,
+  defaultBranchSlug,
+  branchSelectRequired,
+  onCityChange,
+  onBranchChange,
+  dense = false,
+  selectClassName,
+  labelClassName,
+}: CityBranchSelectPairProps) {
+  const sel = selectClassName ?? DEFAULT_SELECT_CLASS;
+  const lab = labelClassName ?? DEFAULT_LABEL_CLASS;
+  const hasAnyBranches = dateCities.some((c) => c.branches.length > 0);
+  const cityVal = citySlug || defaultCitySlug;
+  const branches = dateCities.find((c) => c.slug === cityVal)?.branches ?? [];
+  const rawBranch = branchSlug || defaultBranchSlug;
+  const branchVal = branches.some((b) => b.slug === rawBranch)
+    ? rawBranch
+    : (branches[0]?.slug ?? "");
+
+  return (
+    <div className={dense ? "flex flex-col gap-2" : "flex flex-col gap-2.5"}>
+      <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 gap-y-2">
+        <label htmlFor={cityId} className={lab}>
+          المدينة
+        </label>
+        <div className="relative min-w-0">
+          <select
+            id={cityId}
+            value={cityVal}
+            onChange={(ev) => onCityChange(ev.target.value)}
+            required={branchSelectRequired}
+            disabled={!hasAnyBranches}
+            className={sel}
+          >
+            {dateCities.map((city) =>
+              city.branches.length > 0 ? (
+                <option key={city.slug} value={city.slug}>
+                  {city.name}
+                </option>
+              ) : null,
+            )}
+          </select>
+          <ChevronDown
+            className="pointer-events-none absolute end-2 top-1/2 size-3.5 -translate-y-1/2 text-[#8a8274]"
+            aria-hidden
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 gap-y-2">
+        <label htmlFor={branchId} className={lab}>
+          الفرع
+        </label>
+        <div className="relative min-w-0">
+          <select
+            id={branchId}
+            value={branchVal}
+            onChange={(ev) => onBranchChange(ev.target.value)}
+            required={branchSelectRequired}
+            disabled={!hasAnyBranches || branches.length === 0}
+            className={sel}
+          >
+            {branches.map((branch) => (
+              <option key={branch.slug} value={branch.slug}>
+                {branch.name}
+              </option>
+            ))}
+          </select>
+          <ChevronDown
+            className="pointer-events-none absolute end-2 top-1/2 size-3.5 -translate-y-1/2 text-[#8a8274]"
+            aria-hidden
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export type PickupReturnBranchFieldsProps = {
   uidPrefix: string;
@@ -29,8 +135,10 @@ export function PickupReturnBranchFields({
   dateCities,
   defaultCitySlug,
   branchSelectRequired,
+  pickupCity,
   pickupBranch,
   defaultPickupBranchSlug,
+  returnCity,
   returnBranch,
   defaultReturnBranchSlug,
   returnLocationDifferent,
@@ -62,18 +170,20 @@ export function PickupReturnBranchFields({
         {!hidePickupTitle ? (
           <p className={pickupTitleClass}>موقع الاستلام</p>
         ) : null}
-        <GroupedBranchSelect
-          id={`${uidPrefix}-pickup-branch`}
+        <CityBranchSelectPair
+          cityId={`${uidPrefix}-pickup-city`}
+          branchId={`${uidPrefix}-pickup-branch`}
           dateCities={dateCities}
-          branchSlug={pickupBranch || defaultPickupBranchSlug}
+          citySlug={pickupCity}
+          branchSlug={pickupBranch}
+          defaultCitySlug={defaultCitySlug}
           defaultBranchSlug={defaultPickupBranchSlug}
-          required={branchSelectRequired}
+          branchSelectRequired={branchSelectRequired}
+          onCityChange={onPickupCityChange}
+          onBranchChange={onPickupBranchChange}
+          dense={dense}
           selectClassName={selectClass}
           labelClassName={labelClass}
-          onBranchSelect={(branch, city) => {
-            if (city) onPickupCityChange(city);
-            onPickupBranchChange(branch);
-          }}
         />
       </div>
 
@@ -94,18 +204,20 @@ export function PickupReturnBranchFields({
       {returnLocationDifferent ? (
         <div className={returnBoxClass}>
           <p className={pickupTitleClass}>موقع الإرجاع</p>
-          <GroupedBranchSelect
-            id={`${uidPrefix}-return-branch`}
+          <CityBranchSelectPair
+            cityId={`${uidPrefix}-return-city`}
+            branchId={`${uidPrefix}-return-branch`}
             dateCities={dateCities}
-            branchSlug={returnBranch || defaultReturnBranchSlug}
+            citySlug={returnCity}
+            branchSlug={returnBranch}
+            defaultCitySlug={defaultCitySlug}
             defaultBranchSlug={defaultReturnBranchSlug}
-            required={branchSelectRequired}
+            branchSelectRequired={branchSelectRequired}
+            onCityChange={onReturnCityChange}
+            onBranchChange={onReturnBranchChange}
+            dense={dense}
             selectClassName={selectClass}
             labelClassName={labelClass}
-            onBranchSelect={(branch, city) => {
-              if (city) onReturnCityChange(city);
-              onReturnBranchChange(branch);
-            }}
           />
         </div>
       ) : null}
