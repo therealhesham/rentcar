@@ -716,7 +716,7 @@ export function BookingSearchWidget({
           <div className="relative flex flex-col">
             <div className="border-b border-[#f0ebe4]">
               <div
-                className="flex w-full flex-wrap items-center gap-0.5 p-1.5"
+                className="flex w-full items-center gap-1 overflow-x-auto overscroll-x-contain p-1.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                 role="tablist"
                 aria-label="نوع الحجز"
               >
@@ -767,7 +767,7 @@ export function BookingSearchWidget({
             (tabFlagsEff.modePickup || tabFlagsEff.modeDelivery) ? (
               <div className="border-b border-[#f0ebe4] bg-[#fcfaf7]/40">
                 <div
-                  className="flex w-full flex-wrap items-center gap-0.5 p-1.5"
+                  className="flex w-full items-center gap-1 overflow-x-auto overscroll-x-contain p-1.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                   role="tablist"
                   aria-label="طريقة الاستلام"
                 >
@@ -798,7 +798,7 @@ export function BookingSearchWidget({
         {/* ═══════════════════════════════════════
             SECTION 2: Form Fields
         ═══════════════════════════════════════ */}
-        <div className="px-4 py-3.5 sm:px-5 sm:py-4">
+        <div className="px-3 py-3 sm:px-5 sm:py-4">
           {rental === "corporate" ? (
             <div
               className="flex flex-col gap-3 rounded-xl border border-[#ebe4d3]/70 bg-[#fdfbf6] p-4"
@@ -1001,7 +1001,7 @@ export function BookingSearchWidget({
                       aria-expanded={pickupLocOpen}
                       aria-haspopup="dialog"
                       onClick={() => { setPickupLocOpen((v) => !v); setReturnLocOpen(false); setPickupDtOpen(false); setDropoffDtOpen(false); }}
-                      className="field-trigger flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 text-right rounded-xl sm:rounded-none sm:border-0 sm:border-l sm:border-[#ebe4d3]  focus:outline-none"
+                      className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-right rounded-xl sm:rounded-none sm:border-0 sm:border-l sm:border-[#ebe4d3] focus:outline-none"
                     >
                       <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
                         <MapPin className="size-3 text-[#dbb878]" aria-hidden />
@@ -1031,7 +1031,7 @@ export function BookingSearchWidget({
                   <button
                     type="button"
                     onClick={() => setMapOpen(true)}
-                    className="field-trigger flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 text-right rounded-xl sm:rounded-none sm:border-0 sm:border-l sm:border-[#ebe4d3] focus:outline-none"
+                    className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-right rounded-xl sm:rounded-none sm:border-0 sm:border-l sm:border-[#ebe4d3] focus:outline-none"
                   >
                     <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
                       <MapPin className="size-3 text-[#dbb878]" aria-hidden />
@@ -1060,7 +1060,7 @@ export function BookingSearchWidget({
                     aria-expanded={returnLocOpen}
                     aria-haspopup="dialog"
                     onClick={() => { setReturnLocOpen((v) => !v); setPickupLocOpen(false); setPickupDtOpen(false); setDropoffDtOpen(false); }}
-                    className="field-trigger flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 text-right rounded-xl sm:rounded-none sm:border-0 sm:border-l sm:border-[#ebe4d3] focus:outline-none"
+                    className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-right rounded-xl sm:rounded-none sm:border-0 sm:border-l sm:border-[#ebe4d3] focus:outline-none"
                   >
                     <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
                       <MapPin className="size-3 text-[#dbb878]" aria-hidden />
@@ -1088,7 +1088,7 @@ export function BookingSearchWidget({
 
               {/* pickup mode: show "return different" toggle inside the bar */}
               {mode === "pickup" && !returnLocationDifferent && (
-                <div className="flex items-center border border-[#ebe4d3]/80 bg-[#fdfbf6] px-3 rounded-xl sm:rounded-none sm:border-0 sm:border-l sm:border-[#ebe4d3]">
+                <div className="flex w-full items-center border border-[#ebe4d3]/80 bg-[#fdfbf6] px-3 py-1 rounded-xl sm:w-auto sm:rounded-none sm:border-0 sm:border-l sm:border-[#ebe4d3] sm:py-0">
                   <label className="flex cursor-pointer items-center gap-2 py-2 text-[11px] font-semibold text-[#6b5a3b]">
                     <input
                       type="checkbox"
@@ -1109,7 +1109,7 @@ export function BookingSearchWidget({
                   aria-expanded={pickupDtOpen}
                   aria-haspopup="dialog"
                   onClick={() => { setPickupDtOpen((v) => !v); setDropoffDtOpen(false); setPickupLocOpen(false); setReturnLocOpen(false); }}
-                  className="field-trigger flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 text-right rounded-xl sm:rounded-none sm:border-0 sm:border-l sm:border-[#ebe4d3] focus:outline-none"
+                  className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-right rounded-xl sm:rounded-none sm:border-0 sm:border-l sm:border-[#ebe4d3] focus:outline-none"
                 >
                   <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
                     <CalendarClock className="size-3 text-[#dbb878]" aria-hidden />
@@ -1153,7 +1153,7 @@ export function BookingSearchWidget({
                   aria-expanded={dropoffDtOpen}
                   aria-haspopup="dialog"
                   onClick={() => { setDropoffDtOpen((v) => !v); setPickupDtOpen(false); setPickupLocOpen(false); setReturnLocOpen(false); }}
-                  className="field-trigger flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 text-right rounded-xl sm:rounded-none sm:border-0 sm:border-l sm:border-[#ebe4d3] focus:outline-none"
+                  className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-right rounded-xl sm:rounded-none sm:border-0 sm:border-l sm:border-[#ebe4d3] focus:outline-none"
                   disabled={rental !== "daily"}
                 >
                   <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
@@ -1197,7 +1197,7 @@ export function BookingSearchWidget({
                 <button
                   type="submit"
                   disabled={dateCities.length === 0}
-                  className="cta-btn group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-5 py-3 text-white disabled:pointer-events-none disabled:opacity-45 sm:rounded-none sm:rounded-l-2xl"
+                  className="cta-btn group relative flex min-h-[48px] w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-5 py-3.5 text-white disabled:pointer-events-none disabled:opacity-45 sm:min-h-0 sm:rounded-none sm:rounded-l-2xl sm:py-3"
                   style={{ background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)` }}
                 >
                   <span
@@ -1215,20 +1215,20 @@ export function BookingSearchWidget({
         {/* ═══════════════════════════════════════
             SECTION 3: CTA + Info Footer
         ═══════════════════════════════════════ */}
-        <div className="border-t border-[#f0ebe4] bg-gradient-to-b from-[#fdfbf6] to-[#f9f5ee] px-4 py-3 sm:px-5">
+        <div className="border-t border-[#f0ebe4] bg-gradient-to-b from-[#fdfbf6] to-[#f9f5ee] px-3 py-3 sm:px-5">
           {/* CTA row */}
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
             {/* Duration badge + helper text */}
             <div className="flex flex-1 items-center gap-3" aria-live="polite">
               {rental === "corporate" ? (
-                <>
+                <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <span className="text-[11px] font-medium leading-snug text-[#6b5a3b]">
                     لا يُحتسب البحث في الأسطول — طلب تواصل لحجوزات الشركات والعقود.
                   </span>
                   <button
                     type="submit"
                     disabled={corpPending}
-                    className="cta-btn group relative flex items-center justify-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-white disabled:pointer-events-none disabled:opacity-45 sm:ms-auto"
+                    className="cta-btn group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-white disabled:pointer-events-none disabled:opacity-45 sm:w-auto"
                     style={{ background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)` }}
                   >
                     <span className="cta-shimmer pointer-events-none absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0" aria-hidden />
@@ -1237,7 +1237,7 @@ export function BookingSearchWidget({
                       {corpPending ? "جاري الإرسال…" : "إرسال طلب التواصل"}
                     </span>
                   </button>
-                </>
+                </div>
               ) : daysPreview != null ? (
                 <div className="flex items-center gap-2">
                   <span
@@ -1261,8 +1261,8 @@ export function BookingSearchWidget({
           </div>
 
           {/* Bottom info row */}
-          <div className="mt-2 flex items-center justify-between border-t border-[#ebe4d3]/60 pt-2">
-            <p className="text-[10px] text-[#aaa08e]">
+          <div className="mt-2 flex flex-col gap-2 border-t border-[#ebe4d3]/60 pt-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+            <p className="text-[10px] leading-relaxed text-[#aaa08e]">
               {rental === "corporate"
                 ? "البيانات تُستخدم للتواصل فقط — لا يتم تأكيد حجز آلياً من هذه الخطوة."
                 : "يُعرض المتوفر للحجز المباشر حسب الفترة المحددة"}
@@ -1358,7 +1358,7 @@ function PillTab({
       role="tab"
       aria-selected={active}
       onClick={onClick}
-      className="flex flex-1 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-[12px] font-bold outline-none transition-all duration-250 focus-visible:ring-2 focus-visible:ring-[#dbb878] focus-visible:ring-offset-1 focus-visible:ring-offset-[#fdfbf6]"
+      className="flex min-h-[40px] shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-[11px] font-bold outline-none transition-all duration-250 focus-visible:ring-2 focus-visible:ring-[#dbb878] focus-visible:ring-offset-1 focus-visible:ring-offset-[#fdfbf6] sm:min-h-0 sm:flex-1 sm:text-[12px]"
       style={
         active
           ? {

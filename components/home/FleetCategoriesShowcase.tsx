@@ -27,11 +27,11 @@ export function FleetCategoriesShowcase({ tabs }: Props) {
   const hasCards = cars.length > 0;
 
   return (
-    <div className="relative mx-auto max-w-screen-xl px-4 sm:px-8">
-      <header className="mb-10 flex flex-col items-center text-center sm:mb-14">
+    <div className="relative mx-auto max-w-screen-xl px-3 sm:px-8">
+      <header className="mb-8 flex flex-col items-center text-center sm:mb-14">
         <h2
           id="fleet-categories-heading"
-          className="max-w-4xl text-pretty text-2xl font-black leading-tight tracking-wide text-[#0f1923] sm:text-3xl md:text-4xl lg:text-[2.35rem]"
+          className="max-w-4xl text-pretty text-xl font-black leading-tight tracking-wide text-[#0f1923] sm:text-3xl md:text-4xl lg:text-[2.35rem]"
         >
           المركبة المناسبة
           <span className="mx-2 inline-block font-light text-[#003749]/35">|</span>
@@ -43,11 +43,11 @@ export function FleetCategoriesShowcase({ tabs }: Props) {
         </p>
       </header>
 
-      <div className="mb-12 flex justify-center">
+      <div className="mb-8 flex justify-center sm:mb-12">
         <div
           role="tablist"
           aria-label="فئات الأسطول"
-          className="flex w-full max-w-4xl flex-wrap items-center justify-center gap-2 sm:gap-0 sm:rounded-2xl sm:border sm:border-[#e5e2dc] sm:bg-white sm:p-1.5 sm:shadow-sm"
+          className="flex w-full max-w-4xl items-center gap-2 overflow-x-auto overscroll-x-contain rounded-xl border border-[#e5e2dc] bg-white p-1.5 shadow-sm [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:justify-center sm:overflow-visible sm:rounded-2xl [&::-webkit-scrollbar]:hidden"
         >
           {tabs.map((tab, i) => {
             const isOn = i === active;
@@ -60,7 +60,7 @@ export function FleetCategoriesShowcase({ tabs }: Props) {
                 id={`fleet-cat-tab-${tab.slug}`}
                 aria-controls={`fleet-cat-panel-${tab.slug}`}
                 onClick={() => setActive(i)}
-                className={`min-h-[44px] flex-1 rounded-xl px-3 py-2.5 text-center text-[11px] font-extrabold tracking-wide transition-all duration-200 sm:flex-none sm:px-5 sm:text-[12.5px] ${
+                className={`min-h-[44px] shrink-0 rounded-xl px-3 py-2.5 text-center text-[11px] font-extrabold tracking-wide transition-all duration-200 sm:flex-1 sm:px-5 sm:text-[12.5px] md:flex-none ${
                   isOn
                     ? "text-white shadow-md sm:shadow-none"
                     : "border border-[#ebe8e2] bg-white text-[#0f1923] hover:border-[#003749]/28 sm:border-0 sm:bg-transparent"
@@ -86,7 +86,7 @@ export function FleetCategoriesShowcase({ tabs }: Props) {
           role="tabpanel"
           id={`fleet-cat-panel-${current.slug}`}
           aria-labelledby={`fleet-cat-tab-${current.slug}`}
-          className="grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-3"
+          className="grid grid-cols-1 gap-6 sm:gap-8 md:grid-cols-2 lg:grid-cols-3"
         >
           {cars.map((car) => (
             <FleetCarCard key={`${current.slug}-${car.modelId}`} car={car} />

@@ -8,16 +8,15 @@ type MotionSectionProps = {
   className?: string;
   /** تأخير بداية الانتقال (ثوانٍ) */
   delay?: number;
-  /** موضع البداية على المحور X (مثل المثال: انزلاق من الجانب) */
+  /** محفوظ للتوافق — الانتقال عمودي الآن لتجنّب تمرير أفقي على الجوال */
   x?: number;
 };
 
-/** قسم يظهر عند التمرير: opacity + translateX، مرة واحدة — نفس أسلوب AboutSection */
+/** قسم يظهر عند التمرير — انزلاق عمودي لتجنّب تمرير أفقي على الشاشات الضيقة */
 export function MotionSection({
   children,
   className,
   delay = 0,
-  x = 50,
 }: MotionSectionProps) {
   const reduced = useReducedMotion();
   if (reduced) {
@@ -27,10 +26,10 @@ export function MotionSection({
   return (
     <motion.div
       className={className}
-      initial={{ opacity: 0, x }}
-      whileInView={{ opacity: 1, x: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.8, delay }}
+      initial={{ opacity: 0, y: 28 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-40px 0px" }}
+      transition={{ duration: 0.65, delay, ease: [0.22, 1, 0.36, 1] }}
     >
       {children}
     </motion.div>

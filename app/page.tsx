@@ -21,9 +21,9 @@ export default async function Home() {
   ]);
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col overflow-x-clip">
       <TopNav />
-      <main className="flex-1">
+      <main className="flex-1 overflow-x-clip">
         <HomeScrollSections
           hero={
             <Hero

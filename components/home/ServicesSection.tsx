@@ -77,18 +77,18 @@ export function ServicesSection() {
       <>
         <div className="absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-gradient-to-r from-[#dbb878] to-[#c9a356] transition-transform duration-500 ease-out group-hover:scale-x-100" />
 
-        <div className="mb-8 flex items-center justify-between">
-          <div className="relative flex size-16 items-center justify-center rounded-2xl bg-[#fdfbf6] shadow-sm ring-1 ring-[#ebe4d3] transition-all duration-500 group-hover:scale-110 group-hover:shadow-md">
+        <div className="mb-5 flex items-center justify-between sm:mb-8">
+          <div className="relative flex size-12 items-center justify-center rounded-xl bg-[#fdfbf6] shadow-sm ring-1 ring-[#ebe4d3] transition-all duration-500 group-hover:scale-110 group-hover:shadow-md sm:size-16 sm:rounded-2xl">
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#dbb878]/10 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-            <Icon className="relative z-10 size-7 text-[#003749] transition-colors duration-300 group-hover:text-[#dbb878]" />
+            <Icon className="relative z-10 size-6 text-[#003749] transition-colors duration-300 group-hover:text-[#dbb878] sm:size-7" />
           </div>
-          <div className="text-4xl font-black text-[#003749]/[0.03] transition-colors duration-500 group-hover:text-[#dbb878]/10">
+          <div className="text-3xl font-black text-[#003749]/[0.03] transition-colors duration-500 group-hover:text-[#dbb878]/10 sm:text-4xl">
             0{index + 1}
           </div>
         </div>
 
         <div className="flex-1">
-          <h3 className="mb-4 text-xl font-extrabold text-[#003749] transition-colors duration-300 group-hover:text-[#6b5a3b]">
+          <h3 className="mb-3 text-lg font-extrabold text-[#003749] transition-colors duration-300 group-hover:text-[#6b5a3b] sm:mb-4 sm:text-xl">
             {service.title}
           </h3>
           <p className="text-[14.5px] font-medium leading-[1.8] text-[#8a7752]">
@@ -98,7 +98,7 @@ export function ServicesSection() {
       </>
     );
 
-    const baseClass = `group relative flex flex-col overflow-hidden rounded-[2rem] border border-[#ebe4d3]/60 bg-white/80 p-8 shadow-[0_8px_24px_-12px_rgba(15,61,71,0.08)] backdrop-blur-md transition-all duration-500 hover:-translate-y-1.5 hover:border-[#dbb878]/40 hover:bg-white hover:shadow-[0_20px_40px_-12px_rgba(219,184,120,0.15)] ${colSpanClass}`;
+    const baseClass = `group relative flex flex-col overflow-hidden rounded-2xl border border-[#ebe4d3]/60 bg-white/80 p-5 shadow-[0_8px_24px_-12px_rgba(15,61,71,0.08)] backdrop-blur-md transition-all duration-500 hover:-translate-y-1.5 hover:border-[#dbb878]/40 hover:bg-white hover:shadow-[0_20px_40px_-12px_rgba(219,184,120,0.15)] sm:rounded-[2rem] sm:p-8 ${colSpanClass}`;
 
     if (reduced) {
       return (
@@ -120,7 +120,7 @@ export function ServicesSection() {
   });
 
   const header = (
-    <div className="mb-16 flex flex-col items-center justify-center text-center">
+    <div className="mb-10 flex flex-col items-center justify-center px-1 text-center sm:mb-16">
       <div className="mb-4 flex items-center justify-center gap-3">
         <span className="h-[1.5px] w-12 rounded-full bg-gradient-to-l from-[#dbb878] to-transparent" />
         <span className="text-[12px] font-bold uppercase tracking-[0.2em] text-[#dbb878]">
@@ -128,7 +128,7 @@ export function ServicesSection() {
         </span>
         <span className="h-[1.5px] w-12 rounded-full bg-gradient-to-r from-[#dbb878] to-transparent" />
       </div>
-      <h2 className="text-3xl font-extrabold tracking-tight text-[#003749] sm:text-4xl lg:text-5xl">
+      <h2 className="text-2xl font-extrabold tracking-tight text-[#003749] sm:text-4xl lg:text-5xl">
         خدمات تصنع الفارق
       </h2>
       <p className="mt-5 max-w-2xl text-pretty text-base font-medium leading-relaxed text-[#003749]/70 sm:text-lg">
@@ -169,7 +169,7 @@ export function ServicesSection() {
   );
 
   return (
-    <section className="relative overflow-hidden bg-[#fdfbf6] px-4 py-20 sm:px-8 sm:py-28" dir="rtl">
+    <section className="relative overflow-hidden bg-[#fdfbf6] px-4 py-12 sm:px-8 sm:py-28" dir="rtl">
       <div
         className="absolute inset-0 opacity-[0.02]"
         style={{

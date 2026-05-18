@@ -29,7 +29,7 @@ export function Hero({
   const headlineBlock = (
     <div
       dir="rtl"
-      className="relative flex flex-col items-center justify-center px-4 py-3 text-center sm:px-6 sm:py-4"
+      className="relative flex flex-col items-center justify-center px-3 py-2.5 text-center sm:px-6 sm:py-4"
     >
       <div
         className="absolute inset-0 opacity-[0.03]"
@@ -102,7 +102,7 @@ export function Hero({
           </HeroEntrance>
         </header>
       ) : (
-        <section className="relative flex flex-col overflow-x-hidden bg-white pt-[4.5rem] sm:pt-24">
+        <section className="relative flex flex-col overflow-x-hidden bg-white pt-16 sm:pt-24">
           <HeroEntrance className="flex flex-col items-center">
             {headlineBlock}
           </HeroEntrance>
@@ -118,13 +118,13 @@ export function Hero({
         }
         dir="rtl"
       >
-        <div className="mx-auto w-full max-w-[72rem] px-4 pb-3 pt-2.5 sm:px-6 sm:pb-3.5 sm:pt-3 lg:px-8 lg:pb-4">
-            <div className="mb-2 flex items-center justify-center gap-3 sm:mb-3">
-              <span className="h-px w-12 bg-gradient-to-l from-[#dbb878]/50 to-transparent" />
-              <span className="text-[11px] font-bold uppercase tracking-[0.25em] text-[#003749]/40">
+        <div className="mx-auto w-full max-w-[72rem] px-3 pb-3 pt-2 sm:px-6 sm:pb-3.5 sm:pt-3 lg:px-8 lg:pb-4">
+            <div className="mb-2 flex items-center justify-center gap-2 sm:mb-3 sm:gap-3">
+              <span className="hidden h-px w-10 bg-gradient-to-l from-[#dbb878]/50 to-transparent sm:block sm:w-12" />
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#003749]/40 sm:text-[11px] sm:tracking-[0.25em]">
                 احجز مركبتك الآن
               </span>
-              <span className="h-px w-12 bg-gradient-to-r from-[#dbb878]/50 to-transparent" />
+              <span className="hidden h-px w-10 bg-gradient-to-r from-[#dbb878]/50 to-transparent sm:block sm:w-12" />
             </div>
 
             <BookingWidget cities={cities} tabFlags={tabFlags} />

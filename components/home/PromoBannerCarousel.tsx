@@ -51,7 +51,7 @@ export function PromoBannerCarousel({ slides }: { slides: PromoBannerSlide[] }) 
       key={current}
       src={slide.imageUrl}
       alt={`عرض ${current + 1}`}
-      className="mx-auto block w-full max-w-5xl object-contain"
+      className="mx-auto block h-auto max-h-[min(52vw,240px)] w-full max-w-5xl object-contain sm:max-h-none"
       style={{ animation: "promo-fade-in 0.4s ease" }}
     />
   );

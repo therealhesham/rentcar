@@ -37,7 +37,7 @@ export function SiteNav({ active = "home" }: SiteNavProps) {
             />
           </Link>
 
-          <div className="hidden items-center gap-1 rounded-full bg-[#dbb878] p-1.5 shadow-[0_8px_32px_rgba(119,89,39,0.15)] sm:absolute sm:left-1/2 sm:-translate-x-1/2 sm:flex">
+          <div className="hidden items-center gap-1 rounded-full bg-[#dbb878] p-1.5 shadow-[0_8px_32px_rgba(119,89,39,0.15)] md:absolute md:left-1/2 md:-translate-x-1/2 md:flex">
             {links.map((l) => {
               const isActive = active === l.key;
               return (
@@ -61,7 +61,7 @@ export function SiteNav({ active = "home" }: SiteNavProps) {
             <button
               onClick={() => setOpen((v) => !v)}
               aria-label={open ? "إغلاق القائمة" : "فتح القائمة"}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#dbb878] text-[#2a2520] shadow-[0_8px_32px_rgba(119,89,39,0.15)] transition-colors active:bg-[#c9a55e] sm:hidden"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#dbb878] text-[#2a2520] shadow-[0_8px_32px_rgba(119,89,39,0.15)] transition-colors active:bg-[#c9a55e] md:hidden"
             >
               {open ? (
                 <svg
@@ -92,7 +92,7 @@ export function SiteNav({ active = "home" }: SiteNavProps) {
       </div>
 
       {open && (
-        <div className="absolute left-3 right-3 top-[72px] overflow-hidden rounded-2xl bg-[#dbb878] shadow-[0_12px_40px_rgba(119,89,39,0.25)] sm:hidden">
+        <div className="absolute left-3 right-3 top-[4.25rem] overflow-hidden rounded-2xl bg-[#dbb878] shadow-[0_12px_40px_rgba(119,89,39,0.25)] md:hidden">
           {links.map((l) => {
             const isActive = active === l.key;
             return (

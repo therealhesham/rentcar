@@ -31,7 +31,10 @@ export function useAnchoredPopoverPosition(
     const vw = window.innerWidth;
     const vh = window.innerHeight;
     const panelW = Math.min(panelWidth, vw - 16);
-    let left = r.right - panelW;
+    const isNarrow = vw < 640;
+    let left = isNarrow
+      ? Math.max(8, (vw - panelW) / 2)
+      : r.right - panelW;
     if (left < 8) left = 8;
     if (left + panelW > vw - 8) left = vw - 8 - panelW;
 

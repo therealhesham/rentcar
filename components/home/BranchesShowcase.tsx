@@ -157,8 +157,8 @@ export async function BranchesShowcase() {
     <section id="branches-new" className="overflow-x-clip">
       <Reveal>
         <div>
-          <div className="relative overflow-hidden bg-[#003749] px-4 py-14 text-center sm:px-6 sm:py-16 lg:px-8">
-            <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
+          <div className="relative overflow-hidden bg-[#003749] px-4 py-10 text-center sm:px-6 sm:py-16 lg:px-8">
+            <h2 className="text-2xl font-extrabold tracking-tight text-white sm:text-4xl">
               فروعنا
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-sm font-medium text-white/80 sm:text-base">

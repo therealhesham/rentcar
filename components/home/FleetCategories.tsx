@@ -29,7 +29,7 @@ export async function FleetCategories() {
   return (
     <section
       id="fleet-categories"
-      className="relative overflow-hidden bg-[#fafafa] py-20 text-on-surface sm:py-28"
+      className="relative overflow-hidden bg-[#fafafa] py-12 text-on-surface sm:py-28"
       dir="rtl"
       aria-labelledby="fleet-categories-heading"
     >
