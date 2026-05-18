@@ -15,6 +15,8 @@ import {
   Truck,
   ChevronDown,
 } from "lucide-react";
+import { LocationPickerPopover } from "@/components/home/LocationPickerPopover";
+import { DateTimePickerPopover } from "@/components/home/DateTimePickerPopover";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
@@ -141,6 +143,18 @@ export function BookingSearchWidget({
   const errorRef = useRef<HTMLDivElement>(null);
   const prevModeRef = useRef<ModeTab>("pickup");
   const uid = useId();
+
+  // ── Popover open states ──
+  const [pickupLocOpen, setPickupLocOpen] = useState(false);
+  const [returnLocOpen, setReturnLocOpen] = useState(false);
+  const [pickupDtOpen, setPickupDtOpen] = useState(false);
+  const [dropoffDtOpen, setDropoffDtOpen] = useState(false);
+
+  // ── Anchor refs for popover positioning ──
+  const pickupLocRef = useRef<HTMLButtonElement>(null);
+  const returnLocRef = useRef<HTMLButtonElement>(null);
+  const pickupDtRef = useRef<HTMLButtonElement>(null);
+  const dropoffDtRef = useRef<HTMLButtonElement>(null);
 
   const tabFlagsEff = useMemo(
     () => tabFlags ?? DEFAULT_BOOKING_WIDGET_TAB_FLAGS,
@@ -618,6 +632,15 @@ export function BookingSearchWidget({
     persistAndNavigate(params, ctx);
   }
 
+  // Resolve label for a branch slug
+  function branchLabel(slug: string): string {
+    for (const city of dateCities) {
+      const found = city.branches.find((b) => b.slug === slug);
+      if (found) return found.name;
+    }
+    return "";
+  }
+
   return (
     <>
       {/* ─── CSS for animations ─── */}
@@ -637,18 +660,17 @@ export function BookingSearchWidget({
         .booking-card {
           animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
         }
-        .booking-field-card {
-          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        /* trigger field button */
+        .field-trigger {
+          transition: background 0.18s, border-color 0.18s, box-shadow 0.18s;
         }
-        .booking-field-card:hover {
+        .field-trigger:hover {
           background: #fffdf8;
-          border-color: #dbb87866;
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px -4px rgba(219, 184, 120, 0.15);
+          border-color: rgba(219,184,120,0.55);
         }
-        .booking-field-card:focus-within {
+        .field-trigger[aria-expanded="true"] {
           border-color: #dbb878;
-          box-shadow: 0 0 0 3px rgba(219, 184, 120, 0.15), 0 4px 12px -4px rgba(219, 184, 120, 0.2);
+          box-shadow: 0 0 0 3px rgba(219,184,120,0.18);
           background: #fffef9;
         }
         .cta-btn {
@@ -690,11 +712,8 @@ export function BookingSearchWidget({
             SECTION 1: Tab Header
         ═══════════════════════════════════════ */}
         <div className="relative">
-          {/* Subtle gradient background for the tabs */}
           <div className="absolute inset-0 bg-gradient-to-b from-[#fdfbf6] to-white" />
-
           <div className="relative flex flex-col">
-            {/* مدة الإيجار + حجز الشركات (بجوار الباقات الشهرية) */}
             <div className="border-b border-[#f0ebe4]">
               <div
                 className="flex w-full flex-wrap items-center gap-0.5 p-1.5"
@@ -777,7 +796,7 @@ export function BookingSearchWidget({
         </div>
 
         {/* ═══════════════════════════════════════
-            SECTION 2: Form Fields Grid
+            SECTION 2: Form Fields
         ═══════════════════════════════════════ */}
         <div className="px-4 py-3.5 sm:px-5 sm:py-4">
           {rental === "corporate" ? (
@@ -969,188 +988,226 @@ export function BookingSearchWidget({
               </div>
             </SubscriptionPackagesInWidget>
           ) : (
-            <div className="grid grid-cols-1 items-center gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="col-span-1 flex flex-col gap-2 sm:col-span-2 sm:flex-row sm:items-stretch lg:col-span-2">
-                  {mode === "pickup" ? (
-                    <div className="min-w-0 flex-1">
-                      <FieldCard
-                        groupLabelId={`${uid}-field-pickup`}
-                        label="موقع الاستلام"
-                        icon={<MapPin className="size-3.5" />}
-                      >
-                        <PickupReturnBranchFields
-                          {...pickupBranchFieldsProps}
-                          hidePickupTitle
-                        />
-                      </FieldCard>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="min-w-0 flex-1">
-                        <FieldCard
-                          groupLabelId={`${uid}-field-pickup`}
-                          label={deliveryLocationLabel}
-                          icon={<MapPin className="size-3.5" />}
-                        >
-                          <div className="flex flex-col gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setMapOpen(true)}
-                              className="group flex w-full items-center justify-between gap-2 rounded-lg border border-dashed border-[#c9a356]/55 bg-white/60 px-2.5 py-2 text-start text-[13px] font-semibold text-[#0f1923] outline-none transition-[border-color,background-color,box-shadow] hover:border-[#dbb878] hover:bg-[#fffdf8] focus-visible:ring-2 focus-visible:ring-[#dbb878]/35"
-                            >
-                              {deliveryLat != null && deliveryLng != null ? (
-                                <span className="flex items-center gap-2 text-[#0f3d47]">
-                                  <span className="flex size-5 items-center justify-center rounded-full bg-emerald-100">
-                                    <span className="size-2 rounded-full bg-emerald-500" />
-                                  </span>
-                                  تم تحديد الموقع
-                                </span>
-                              ) : (
-                                <span className="text-[#6b5a3b]">تحديد على الخريطة</span>
-                              )}
-                              <MapPin className="size-4 shrink-0 text-[#dbb878] opacity-70 transition-opacity group-hover:opacity-100" aria-hidden />
-                            </button>
-                          </div>
-                        </FieldCard>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <FieldCard
-                          groupLabelId={`${uid}-field-return`}
-                          label="موقع الإرجاع"
-                          icon={<MapPin className="size-3.5" />}
-                        >
-                          <GroupedBranchSelect
-                            id={returnBranchId}
-                            dateCities={dateCities}
-                            branchSlug={returnBranch || defaultReturnBranchSlug}
-                            defaultBranchSlug={defaultReturnBranchSlug}
-                            required={branchSelectRequired}
-                            onBranchSelect={handleDeliveryReturnBranch}
-                          />
-                        </FieldCard>
-                      </div>
-                    </>
-                  )}
+            /* ═══ KEY.SA-STYLE HORIZONTAL BAR ═══ */
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch sm:gap-0 sm:rounded-2xl sm:border sm:border-[#ebe4d3] sm:overflow-hidden sm:shadow-[0_2px_12px_-4px_rgba(0,55,73,0.08)]">
+
+              {/* ── 1. موقع الاستلام ── */}
+              <div className="relative flex-1 min-w-0">
+                {mode === "pickup" ? (
+                  <>
+                    <button
+                      ref={pickupLocRef}
+                      type="button"
+                      aria-expanded={pickupLocOpen}
+                      aria-haspopup="dialog"
+                      onClick={() => { setPickupLocOpen((v) => !v); setReturnLocOpen(false); setPickupDtOpen(false); setDropoffDtOpen(false); }}
+                      className="field-trigger flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 text-right rounded-xl sm:rounded-none sm:border-0 sm:border-l sm:border-[#ebe4d3]  focus:outline-none"
+                    >
+                      <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
+                        <MapPin className="size-3 text-[#dbb878]" aria-hidden />
+                        موقع الاستلام
+                      </span>
+                      <span className="truncate text-[13px] font-bold text-[#0f1923]">
+                        {branchLabel(pickupBranchEffective) || <span className="font-medium text-[#aaa08e]">{dateCities.length === 0 ? "لا توجد فروع" : "اختر الفرع"}</span>}
+                      </span>
+                      <ChevronDown className={`absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${pickupLocOpen ? "rotate-180" : ""}`} aria-hidden />
+                    </button>
+                    <LocationPickerPopover
+                      isOpen={pickupLocOpen}
+                      onClose={() => setPickupLocOpen(false)}
+                      dateCities={dateCities}
+                      selectedBranchSlug={pickupBranch}
+                      defaultBranchSlug={defaultPickupBranchSlug}
+                      onBranchSelect={(branch, city) => {
+                        handlePickupCityChange(city);
+                        handlePickupBranchChange(branch);
+                      }}
+                      anchorRef={pickupLocRef}
+                      label="موقع الاستلام"
+                    />
+                  </>
+                ) : (
+                  /* delivery mode – map trigger */
+                  <button
+                    type="button"
+                    onClick={() => setMapOpen(true)}
+                    className="field-trigger flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 text-right rounded-xl sm:rounded-none sm:border-0 sm:border-l sm:border-[#ebe4d3] focus:outline-none"
+                  >
+                    <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
+                      <MapPin className="size-3 text-[#dbb878]" aria-hidden />
+                      {deliveryLocationLabel}
+                    </span>
+                    {deliveryLat != null && deliveryLng != null ? (
+                      <span className="flex items-center gap-2 text-[13px] font-bold text-[#0f3d47]">
+                        <span className="flex size-4 items-center justify-center rounded-full bg-emerald-100">
+                          <span className="size-1.5 rounded-full bg-emerald-500" />
+                        </span>
+                        تم تحديد الموقع
+                      </span>
+                    ) : (
+                      <span className="text-[13px] font-medium text-[#aaa08e]">تحديد على الخريطة</span>
+                    )}
+                  </button>
+                )}
+              </div>
+
+              {/* ── 2. موقع الإرجاع (delivery mode only / or return-diff) ── */}
+              {(mode === "delivery" || returnLocationDifferent) && (
+                <div className="relative flex-1 min-w-0">
+                  <button
+                    ref={returnLocRef}
+                    type="button"
+                    aria-expanded={returnLocOpen}
+                    aria-haspopup="dialog"
+                    onClick={() => { setReturnLocOpen((v) => !v); setPickupLocOpen(false); setPickupDtOpen(false); setDropoffDtOpen(false); }}
+                    className="field-trigger flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 text-right rounded-xl sm:rounded-none sm:border-0 sm:border-l sm:border-[#ebe4d3] focus:outline-none"
+                  >
+                    <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
+                      <MapPin className="size-3 text-[#dbb878]" aria-hidden />
+                      موقع الإرجاع
+                    </span>
+                    <span className="truncate text-[13px] font-bold text-[#0f1923]">
+                      {branchLabel(returnBranchEffective) || <span className="font-medium text-[#aaa08e]">اختر الفرع</span>}
+                    </span>
+                    <ChevronDown className={`absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${returnLocOpen ? "rotate-180" : ""}`} aria-hidden />
+                  </button>
+                  <LocationPickerPopover
+                    isOpen={returnLocOpen}
+                    onClose={() => setReturnLocOpen(false)}
+                    dateCities={dateCities}
+                    selectedBranchSlug={returnBranch}
+                    defaultBranchSlug={defaultReturnBranchSlug}
+                    onBranchSelect={(branch, city) => {
+                      handleDeliveryReturnBranch(branch, city);
+                    }}
+                    anchorRef={returnLocRef}
+                    label="موقع الإرجاع"
+                  />
                 </div>
+              )}
 
-                <FieldCard
-                  layout="inline"
-                  groupLabelId={`${uid}-field-pickup-dt`}
+              {/* pickup mode: show "return different" toggle inside the bar */}
+              {mode === "pickup" && !returnLocationDifferent && (
+                <div className="flex items-center border border-[#ebe4d3]/80 bg-[#fdfbf6] px-3 rounded-xl sm:rounded-none sm:border-0 sm:border-l sm:border-[#ebe4d3]">
+                  <label className="flex cursor-pointer items-center gap-2 py-2 text-[11px] font-semibold text-[#6b5a3b]">
+                    <input
+                      type="checkbox"
+                      checked={returnLocationDifferent}
+                      onChange={(ev) => handleReturnLocationDifferentChange(ev.target.checked)}
+                      className="size-3.5 shrink-0 cursor-pointer rounded border-[#c9a356]/60 text-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/35"
+                    />
+                    إرجاع مختلف
+                  </label>
+                </div>
+              )}
+
+              {/* ── 3. تاريخ الاستلام ── */}
+              <div className="relative flex-1 min-w-0">
+                <button
+                  ref={pickupDtRef}
+                  type="button"
+                  aria-expanded={pickupDtOpen}
+                  aria-haspopup="dialog"
+                  onClick={() => { setPickupDtOpen((v) => !v); setDropoffDtOpen(false); setPickupLocOpen(false); setReturnLocOpen(false); }}
+                  className="field-trigger flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 text-right rounded-xl sm:rounded-none sm:border-0 sm:border-l sm:border-[#ebe4d3] focus:outline-none"
+                >
+                  <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
+                    <CalendarClock className="size-3 text-[#dbb878]" aria-hidden />
+                    تاريخ الاستلام
+                  </span>
+                  {pickupDateDraft ? (
+                    <span className="text-[13px] font-bold text-[#0f1923]">
+                      {pickupDateDraft} <span className="text-[#dbb878]" dir="ltr">{pickupTimeDraft}</span>
+                    </span>
+                  ) : (
+                    <span className="text-[13px] font-medium text-[#aaa08e]">اختر التاريخ والوقت</span>
+                  )}
+                  <ChevronDown className={`absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${pickupDtOpen ? "rotate-180" : ""}`} aria-hidden />
+                </button>
+                <DateTimePickerPopover
+                  isOpen={pickupDtOpen}
+                  onClose={() => setPickupDtOpen(false)}
                   label="تاريخ الاستلام"
-                  icon={<CalendarClock className="size-3.5" />}
-                  controlHtmlFor={pickupDtId}
-                >
-                  <div className="flex flex-wrap items-center gap-2">
-                    <DdMmYyDateWithPicker
-                      id={pickupDtId}
-                      rowClassName="items-center"
-                      value={pickupDateDraft}
-                      onChange={(ev) => setPickupDateDraft(ev.target.value)}
-                      onBlur={() => {
-                        if (!pickupDateDraft.trim()) {
-                          setPickupDt("");
-                          return;
-                        }
-                        const ymd = parseDdMmYyToYmd(pickupDateDraft);
-                        if (!ymd) {
-                          if (pickupDt) {
-                            const { dateDdMmYy, hm } = draftFromDatetimeLocal(pickupDt);
-                            setPickupDateDraft(dateDdMmYy);
-                            setPickupTimeDraft(hm);
-                          }
-                          return;
-                        }
-                        setPickupDateDraft(formatYmdAsDdMmYy(ymd));
-                        const c = composeDatetimeLocal(ymd, pickupTimeDraft);
-                        if (c) setPickupDt(c);
-                      }}
-                      nativeYmd={pickupDt.length >= 10 ? pickupDt.slice(0, 10) : ""}
-                      onCalendarSelect={(ymd) => {
-                        setPickupDateDraft(formatYmdAsDdMmYy(ymd));
-                        const c = composeDatetimeLocal(ymd, pickupTimeDraft);
-                        if (c) setPickupDt(c);
-                      }}
-                      required
-                    />
-                    <TimeInput24h
-                      id={pickupTimeId}
-                      value={pickupTimeDraft}
-                      onChange={(v) => {
-                        setPickupTimeDraft(v);
-                        let ymd = parseDdMmYyToYmd(pickupDateDraft);
-                        if (!ymd && pickupDt.length >= 10) ymd = pickupDt.slice(0, 10);
-                        if (!ymd) return;
-                        const c = composeDatetimeLocal(ymd, v);
-                        if (c) setPickupDt(c);
-                      }}
-                      aria-label="وقت الاستلام"
-                      className="flex min-w-0 w-full cursor-pointer items-center gap-0.5 rounded-md border border-[#ebe4d3]/80 bg-white/80 px-1 py-0.5 text-[13px] font-semibold tabular-nums text-[#0f1923] outline-none focus-within:ring-2 focus-within:ring-[#dbb878]/30"
-                    />
-                  </div>
-                </FieldCard>
+                  dateDdMmYy={pickupDateDraft}
+                  time={pickupTimeDraft}
+                  minDateYmd={undefined}
+                  onConfirm={(date, time) => {
+                    setPickupDateDraft(date);
+                    setPickupTimeDraft(time);
+                    const parts = date.split("/");
+                    const ymd = parts.length === 3 ? `${parts[2]}-${parts[1]}-${parts[0]}` : "";
+                    if (ymd) {
+                      const c = `${ymd}T${time}`;
+                      setPickupDt(c);
+                    }
+                  }}
+                  anchorRef={pickupDtRef}
+                />
+              </div>
 
-                <FieldCard
-                  layout="inline"
-                  groupLabelId={`${uid}-field-dropoff-dt`}
-                  label="تاريخ  التسليم"
-                  icon={<Clock className="size-3.5" />}
-                  hint={rentalDropoffHint(rental)}
-                  controlHtmlFor={dropoffDtId}
+              {/* ── 4. تاريخ التسليم ── */}
+              <div className="relative flex-1 min-w-0">
+                <button
+                  ref={dropoffDtRef}
+                  type="button"
+                  aria-expanded={dropoffDtOpen}
+                  aria-haspopup="dialog"
+                  onClick={() => { setDropoffDtOpen((v) => !v); setPickupDtOpen(false); setPickupLocOpen(false); setReturnLocOpen(false); }}
+                  className="field-trigger flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 text-right rounded-xl sm:rounded-none sm:border-0 sm:border-l sm:border-[#ebe4d3] focus:outline-none"
+                  disabled={rental !== "daily"}
                 >
-                  <div className="flex flex-wrap items-center gap-2">
-                    <DdMmYyDateWithPicker
-                      id={dropoffDtId}
-                      rowClassName="items-center"
-                      value={dropoffDateDraft}
-                      readOnly={rental !== "daily"}
-                      onChange={(ev) => setDropoffDateDraft(ev.target.value)}
-                      onBlur={() => {
-                        if (rental !== "daily") return;
-                        if (!dropoffDateDraft.trim()) {
-                          setDropoffDt("");
-                          return;
-                        }
-                        const ymd = parseDdMmYyToYmd(dropoffDateDraft);
-                        if (!ymd) {
-                          if (dropoffDt) {
-                            const { dateDdMmYy, hm } = draftFromDatetimeLocal(dropoffDt);
-                            setDropoffDateDraft(dateDdMmYy);
-                            setDropoffTimeDraft(hm);
-                          }
-                          return;
-                        }
-                        setDropoffDateDraft(formatYmdAsDdMmYy(ymd));
-                        const c = composeDatetimeLocal(ymd, dropoffTimeDraft);
-                        if (c) setDropoffDt(c);
-                      }}
-                      nativeYmd={dropoffDt.length >= 10 ? dropoffDt.slice(0, 10) : ""}
-                      onCalendarSelect={(ymd) => {
-                        if (rental !== "daily") return;
-                        setDropoffDateDraft(formatYmdAsDdMmYy(ymd));
-                        const c = composeDatetimeLocal(ymd, dropoffTimeDraft);
-                        if (c) setDropoffDt(c);
-                      }}
-                      required
-                      inputClassName={rental !== "daily" ? "cursor-default" : ""}
-                    />
-                    <TimeInput24h
-                      id={dropoffTimeId}
-                      value={dropoffTimeDraft}
-                      readOnly={rental !== "daily"}
-                      onChange={(v) => {
-                        if (rental !== "daily") return;
-                        setDropoffTimeDraft(v);
-                        let ymd = parseDdMmYyToYmd(dropoffDateDraft);
-                        if (!ymd && dropoffDt.length >= 10) ymd = dropoffDt.slice(0, 10);
-                        if (!ymd) return;
-                        const c = composeDatetimeLocal(ymd, v);
-                        if (c) setDropoffDt(c);
-                      }}
-                      aria-label="وقت التسليم"
-                      className={`flex min-w-0 w-full items-center gap-0.5 rounded-md border border-[#ebe4d3]/80 bg-white/80 px-1 py-0.5 text-[13px] font-semibold tabular-nums text-[#0f1923] outline-none focus-within:ring-2 focus-within:ring-[#dbb878]/30 ${rental !== "daily" ? "cursor-default opacity-90" : "cursor-pointer"}`}
-                    />
-                  </div>
-                </FieldCard>
+                  <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
+                    <Clock className="size-3 text-[#dbb878]" aria-hidden />
+                    تاريخ التسليم
+                    {rental !== "daily" && <span className="text-[9px] font-medium text-[#8a7752]/70">(تلقائي)</span>}
+                  </span>
+                  {dropoffDateDraft ? (
+                    <span className="text-[13px] font-bold text-[#0f1923]">
+                      {dropoffDateDraft} <span className="text-[#dbb878]" dir="ltr">{dropoffTimeDraft}</span>
+                    </span>
+                  ) : (
+                    <span className="text-[13px] font-medium text-[#aaa08e]">اختر التاريخ والوقت</span>
+                  )}
+                  <ChevronDown className={`absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${dropoffDtOpen ? "rotate-180" : ""}`} aria-hidden />
+                </button>
+                <DateTimePickerPopover
+                  isOpen={dropoffDtOpen}
+                  onClose={() => setDropoffDtOpen(false)}
+                  label="تاريخ التسليم"
+                  dateDdMmYy={dropoffDateDraft}
+                  time={dropoffTimeDraft}
+                  minDateYmd={pickupDt ? pickupDt.slice(0, 10) : undefined}
+                  timeReadOnly={rental !== "daily"}
+                  onConfirm={(date, time) => {
+                    setDropoffDateDraft(date);
+                    setDropoffTimeDraft(time);
+                    const parts = date.split("/");
+                    const ymd = parts.length === 3 ? `${parts[2]}-${parts[1]}-${parts[0]}` : "";
+                    if (ymd) {
+                      const c = `${ymd}T${time}`;
+                      setDropoffDt(c);
+                    }
+                  }}
+                  anchorRef={dropoffDtRef}
+                />
+              </div>
+
+              {/* ── 5. زر البحث ── */}
+              <div className="flex items-stretch">
+                <button
+                  type="submit"
+                  disabled={dateCities.length === 0}
+                  className="cta-btn group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-5 py-3 text-white disabled:pointer-events-none disabled:opacity-45 sm:rounded-none sm:rounded-l-2xl"
+                  style={{ background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)` }}
+                >
+                  <span
+                    className="cta-shimmer pointer-events-none absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0"
+                    aria-hidden
+                  />
+                  <Search className="size-4 shrink-0" aria-hidden />
+                  <span className="text-[14px] font-extrabold tracking-wide">بحث</span>
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -1164,9 +1221,23 @@ export function BookingSearchWidget({
             {/* Duration badge + helper text */}
             <div className="flex flex-1 items-center gap-3" aria-live="polite">
               {rental === "corporate" ? (
-                <span className="text-[11px] font-medium leading-snug text-[#6b5a3b]">
-                  لا يُحتسب البحث في الأسطول — طلب تواصل لحجوزات الشركات والعقود.
-                </span>
+                <>
+                  <span className="text-[11px] font-medium leading-snug text-[#6b5a3b]">
+                    لا يُحتسب البحث في الأسطول — طلب تواصل لحجوزات الشركات والعقود.
+                  </span>
+                  <button
+                    type="submit"
+                    disabled={corpPending}
+                    className="cta-btn group relative flex items-center justify-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-white disabled:pointer-events-none disabled:opacity-45 sm:ms-auto"
+                    style={{ background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)` }}
+                  >
+                    <span className="cta-shimmer pointer-events-none absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0" aria-hidden />
+                    <Send className="size-4 shrink-0" aria-hidden />
+                    <span className="text-[14px] font-extrabold tracking-wide">
+                      {corpPending ? "جاري الإرسال…" : "إرسال طلب التواصل"}
+                    </span>
+                  </button>
+                </>
               ) : daysPreview != null ? (
                 <div className="flex items-center gap-2">
                   <span
@@ -1187,39 +1258,6 @@ export function BookingSearchWidget({
                 </span>
               )}
             </div>
-
-            {/* Search / submit button */}
-            <button
-              type="submit"
-              disabled={
-                corpPending || (rental !== "corporate" && dateCities.length === 0)
-              }
-              className="cta-btn group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-8 py-2.5 text-white disabled:pointer-events-none disabled:opacity-45 sm:w-auto"
-              style={{
-                background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)`,
-              }}
-            >
-              {/* shimmer overlay */}
-              <span
-                className="cta-shimmer pointer-events-none absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0"
-                aria-hidden
-              />
-              {rental === "corporate" ? (
-                <>
-                  <Send className="size-4 shrink-0" aria-hidden />
-                  <span className="text-[14px] font-extrabold tracking-wide">
-                    {corpPending ? "جاري الإرسال…" : "إرسال طلب التواصل"}
-                  </span>
-                </>
-              ) : (
-                <>
-                  <Search className="size-4 shrink-0" aria-hidden />
-                  <span className="text-[14px] font-extrabold tracking-wide">
-                    بحث 
-                  </span>
-                </>
-              )}
-            </button>
           </div>
 
           {/* Bottom info row */}
@@ -1234,12 +1272,13 @@ export function BookingSearchWidget({
                 فريق المبيعات يتابع الطلبات خلال أوقات العمل
               </span>
             ) : (
-            <Link
-              href="/fleet"
-              className="text-[10.5px] font-bold text-[#003749] underline-offset-4 transition-colors hover:text-[#dbb878] hover:underline"
-              style={{ textDecorationColor: GOLD }}
-            >
-احجز الآن            </Link>
+              <Link
+                href="/fleet"
+                className="text-[10.5px] font-bold text-[#003749] underline-offset-4 transition-colors hover:text-[#dbb878] hover:underline"
+                style={{ textDecorationColor: GOLD }}
+              >
+                احجز الآن
+              </Link>
             )}
           </div>
         </div>
