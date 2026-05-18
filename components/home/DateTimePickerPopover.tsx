@@ -18,10 +18,10 @@ type Props = {
 };
 
 const MONTHS_AR = [
-  "يناير","فبراير","مارس","أبريل","مايو","يونيو",
-  "يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر",
+  "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
+  "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر",
 ];
-const DAYS_AR = ["ح","ن","ث","ر","خ","ج","س"];
+const DAYS_AR = ["ح", "ن", "ث", "ر", "خ", "ج", "س"];
 
 function ymdToDate(ymd: string): Date | null {
   if (!ymd || ymd.length < 10) return null;
@@ -34,7 +34,7 @@ function ddMmYyToYmd(ddmmyy: string): string {
   const parts = ddmmyy.split("/");
   if (parts.length !== 3) return "";
   const [d, m, y] = parts;
-  return `${y}-${m?.padStart(2,"0")}-${d?.padStart(2,"0")}`;
+  return `${y}-${m?.padStart(2, "0")}-${d?.padStart(2, "0")}`;
 }
 
 function ymdToDdMmYy(ymd: string): string {
@@ -45,13 +45,13 @@ function ymdToDdMmYy(ymd: string): string {
 
 function todayYmd(): string {
   const t = new Date();
-  return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,"0")}-${String(t.getDate()).padStart(2,"0")}`;
+  return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
 }
 
 const TIME_OPTIONS: string[] = [];
 for (let h = 0; h < 24; h++) {
-  for (const m of [0, 30]) {
-    TIME_OPTIONS.push(`${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`);
+  for (const m of [0, 15, 30, 45]) {
+    TIME_OPTIONS.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
   }
 }
 
@@ -136,14 +136,14 @@ export function DateTimePickerPopover({
       const d = prevMonthDays - i;
       const m = calMonth === 0 ? 12 : calMonth;
       const y = calMonth === 0 ? calYear - 1 : calYear;
-      const ymd = `${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+      const ymd = `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
       cells.push({ ymd, day: d, currMonth: false, disabled: true });
     }
     // Days in current month
     const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
     const effMin = minDateYmd || todayYmd();
     for (let d = 1; d <= daysInMonth; d++) {
-      const ymd = `${calYear}-${String(calMonth+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+      const ymd = `${calYear}-${String(calMonth + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
       cells.push({ ymd, day: d, currMonth: true, disabled: ymd < effMin });
     }
     // Fill remaining to 42 cells (6 rows)
@@ -151,7 +151,7 @@ export function DateTimePickerPopover({
     while (cells.length < 42) {
       const m = calMonth === 11 ? 1 : calMonth + 2;
       const y = calMonth === 11 ? calYear + 1 : calYear;
-      const ymd = `${y}-${String(m).padStart(2,"0")}-${String(nextDay).padStart(2,"0")}`;
+      const ymd = `${y}-${String(m).padStart(2, "0")}-${String(nextDay).padStart(2, "0")}`;
       cells.push({ ymd, day: nextDay, currMonth: false, disabled: true });
       nextDay++;
     }
@@ -261,10 +261,10 @@ export function DateTimePickerPopover({
                     ${isSelected && !cell.disabled
                       ? "bg-gradient-to-br from-[#dbb878] to-[#c9a356] text-white shadow-[0_2px_8px_-2px_rgba(219,184,120,0.6)]"
                       : isToday && !cell.disabled
-                      ? "border border-[#dbb878]/60 text-[#003749]"
-                      : !cell.disabled && cell.currMonth
-                      ? "text-[#3a2f1e] hover:bg-[#fdfbf6]"
-                      : ""
+                        ? "border border-[#dbb878]/60 text-[#003749]"
+                        : !cell.disabled && cell.currMonth
+                          ? "text-[#3a2f1e] hover:bg-[#fdfbf6]"
+                          : ""
                     }`}
                 >
                   {cell.day}
