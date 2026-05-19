@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { verifyAdminSession } from "@/lib/admin-auth";
+import { requireAdminPage } from "@/lib/admin-page";
 import { addDaysToYmd, getDirectBookingAvailability } from "@/lib/direct-booking";
 import { prisma } from "@/lib/prisma";
 
@@ -23,26 +22,36 @@ function parseDays(raw: string | undefined): number {
 export default async function FleetAvailabilityPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ date?: string; days?: string }>;
+  searchParams?: Promise<{ date?: string; days?: string; branch?: string }>;
 }) {
-  if (!(await verifyAdminSession())) {
-    redirect("/admin/login");
-  }
-
+  const session = await requireAdminPage();
   const sp = searchParams ? await searchParams : {};
+  const branchFromQuery = sp.branch?.trim().toLowerCase();
+  const branchSlug = session.isSuperAdmin
+    ? branchFromQuery || session.branchSlug || "jeddah"
+    : session.branchSlug ?? "jeddah";
+
   const startYmd = parseYmd(sp.date);
   const numberOfDays = parseDays(sp.days);
   const pickupDate = new Date(`${startYmd}T12:00:00.000Z`);
   const endInclusiveYmd = addDaysToYmd(startYmd, numberOfDays - 1);
 
-  const models = await prisma.carModel.findMany({
-    orderBy: [{ brand: { name: "asc" } }, { name: "asc" }],
-    select: {
-      id: true,
-      name: true,
-      brand: { select: { name: true } },
-    },
-  });
+  const [models, branchRow] = await Promise.all([
+    prisma.carModel.findMany({
+      orderBy: [{ brand: { name: "asc" } }, { name: "asc" }],
+      select: {
+        id: true,
+        name: true,
+        brand: { select: { name: true } },
+      },
+    }),
+    branchSlug
+      ? prisma.branch.findFirst({
+          where: { slug: branchSlug },
+          select: { name: true },
+        })
+      : Promise.resolve(null),
+  ]);
 
   const rows = await Promise.all(
     models.map(async (m) => {
@@ -50,6 +59,7 @@ export default async function FleetAvailabilityPage({
         carModelId: m.id,
         pickupDate,
         numberOfDays,
+        branchSlug,
       });
       const freeSlots = Math.max(0, av.fleetUnits - av.overlapping);
       return {
@@ -71,11 +81,18 @@ export default async function FleetAvailabilityPage({
       <header className="mb-8">
         <h1 className="text-3xl font-extrabold tracking-tight">توفر المركبات</h1>
         <p className="mt-2 max-w-2xl text-on-surface-variant">
-          مقارنة{" "}
-          <span className="font-bold text-on-surface">وحدات الأسطول</span> بعدد{" "}
-          <span className="font-bold text-on-surface">الحجوزات المباشرة النشطة</span> التي تتداخل مع
-          الفترة المختارة. «المحجوز» = عدد الحجوزات المتزامنة في نفس الفترة، و«المتاح» = الفرق عن حد
-          الأسطول.
+          {branchRow ? (
+            <>
+              توفر الأسطول لفرع{" "}
+              <span className="font-bold text-on-surface">{branchRow.name}</span>: «المحجوز» =
+              حجوزات مباشرة نشطة من هذا الفرع فقط في الفترة المختارة.
+            </>
+          ) : (
+            <>
+              مقارنة <span className="font-bold text-on-surface">وحدات الأسطول</span> بعدد{" "}
+              <span className="font-bold text-on-surface">الحجوزات المباشرة النشطة</span> في الفترة.
+            </>
+          )}
         </p>
         <p className="mt-3 text-sm text-on-surface-variant">
           <Link href="/admin" className="font-bold text-primary hover:underline">
@@ -90,7 +107,7 @@ export default async function FleetAvailabilityPage({
         </h2>
         <p className="mt-2 text-sm text-on-surface">
           من <span className="font-mono font-bold" dir="ltr">{startYmd}</span> لمدة{" "}
-          <span className="font-bold tabular-nums">{numberOfDays}</span> يومًا (آخر يوم ضمن الفترة:{" "}
+          <span className="font-bold tabular-nums">{numberOfDays}</span> يومًا (آخر يوم:{" "}
           <span className="font-mono font-bold" dir="ltr">{endInclusiveYmd}</span>).
         </p>
         <form method="get" className="mt-4 flex flex-wrap items-end gap-4">
@@ -135,7 +152,9 @@ export default async function FleetAvailabilityPage({
                 <tr className="border-b border-outline-variant/30 text-on-surface-variant">
                   <th className="px-3 py-2">المركبة</th>
                   <th className="px-3 py-2 tabular-nums">وحدات الأسطول</th>
-                  <th className="px-3 py-2 tabular-nums">محجوز (متزامن)</th>
+                  <th className="px-3 py-2 tabular-nums">
+                    {branchSlug ? "محجوز (فرعك)" : "محجوز (متزامن)"}
+                  </th>
                   <th className="px-3 py-2 tabular-nums">متاح في الفترة</th>
                   <th className="px-3 py-2">الحالة</th>
                 </tr>
@@ -171,9 +190,6 @@ export default async function FleetAvailabilityPage({
           <h2 className="text-lg font-extrabold tracking-tight text-on-surface-variant">
             بدون كمية في الأسطول ({noStock.length})
           </h2>
-          <p className="mt-2 text-sm text-on-surface-variant">
-            لا تظهر في الحجز المباشر حتى تُضاف كمية من «إضافة مركبة» أو من إدارة الأسطول.
-          </p>
           <ul className="mt-3 columns-1 gap-2 text-sm sm:columns-2">
             {noStock.map((r) => (
               <li key={r.id} className="break-inside-avoid py-0.5">

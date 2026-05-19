@@ -64,9 +64,15 @@ export default async function FleetPage({
       dropoffDate.getTime() >= pickupDate.getTime()
     ) {
       const days = computeBookingDays(pickupDate, dropoffDate);
+      const returnBranch =
+        qFirst(params.returnBranch)?.toLowerCase() ??
+        qFirst(params.pickupBranch)?.toLowerCase() ??
+        qFirst(params.branch)?.toLowerCase() ??
+        "jeddah";
       availabilityModelIds = await listAvailableCarModelIds({
         pickupDate,
         numberOfDays: days,
+        branchSlug: returnBranch,
       });
 
       const modeLabel = qFirst(params.mode) === "delivery" ? "توصيل" : "استلام من الفرع";
@@ -158,11 +164,18 @@ export default async function FleetPage({
       ? maxPriceParsed
       : undefined;
 
+  const displayBranchSlug =
+    qFirst(params.returnBranch)?.toLowerCase() ??
+    qFirst(params.pickupBranch)?.toLowerCase() ??
+    qFirst(params.branch)?.toLowerCase() ??
+    null;
+
   const cars = await getFleetCarsForDisplay({
     categorySlug,
     brandId,
     maxPriceExclTax,
     modelIds: availabilityModelIds,
+    branchSlug: displayBranchSlug,
     priceDisplayMode: priceMode,
   });
 

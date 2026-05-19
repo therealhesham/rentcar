@@ -4,6 +4,7 @@ import { verifyAdminSession } from "@/lib/admin-auth";
 import { AdminAddCarForm } from "@/app/admin/AdminAddCarForm";
 import { getFleetCategoriesForAdminSelect } from "@/lib/fleet-category-data";
 import { getBrandsForAdminSelect } from "@/lib/brand-data";
+import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
@@ -12,9 +13,16 @@ export default async function AdminVehiclesNewPage() {
     redirect("/admin/login");
   }
 
-  const [categories, brands] = await Promise.all([
+  const [categories, brands, branches] = await Promise.all([
     getFleetCategoriesForAdminSelect().catch(() => []),
     getBrandsForAdminSelect().catch(() => []),
+    prisma.branch
+      .findMany({
+        where: { isActive: true },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+        select: { id: true, name: true, slug: true },
+      })
+      .catch(() => []),
   ]);
 
   return (
@@ -36,7 +44,7 @@ export default async function AdminVehiclesNewPage() {
         </p>
       </header>
 
-      <AdminAddCarForm categories={categories} brands={brands} />
+      <AdminAddCarForm categories={categories} brands={brands} branches={branches} />
     </>
   );
 }

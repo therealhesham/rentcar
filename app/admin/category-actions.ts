@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
-import { verifyAdminSession } from "@/lib/admin-auth";
+import { requireSuperAdminForAction } from "@/lib/admin-access";
 import { requireGalleryFolderSlug } from "@/lib/gallery-folder";
 import { prisma } from "@/lib/prisma";
 import {
@@ -34,9 +34,8 @@ export async function createFleetCategory(
   _prev: { ok: boolean; error?: string } | null,
   formData: FormData,
 ): Promise<{ ok: boolean; error?: string }> {
-  if (!(await verifyAdminSession())) {
-    return { ok: false, error: "غير مصرّح." };
-  }
+  const auth = await requireSuperAdminForAction();
+  if (!auth.ok) return { ok: false, error: auth.error };
 
   const title = String(formData.get("title") ?? "").trim();
   const slugRaw = String(formData.get("slug") ?? "").trim();
@@ -115,9 +114,8 @@ export async function updateFleetCategory(
   _prev: { ok: boolean; error?: string } | null,
   formData: FormData,
 ): Promise<{ ok: boolean; error?: string }> {
-  if (!(await verifyAdminSession())) {
-    return { ok: false, error: "غير مصرّح." };
-  }
+  const auth = await requireSuperAdminForAction();
+  if (!auth.ok) return { ok: false, error: auth.error };
 
   const id = Number(formData.get("id"));
   const title = String(formData.get("title") ?? "").trim();
@@ -204,9 +202,8 @@ export async function deleteFleetCategory(
   _prev: { ok: boolean; error?: string } | null,
   formData: FormData,
 ): Promise<{ ok: boolean; error?: string }> {
-  if (!(await verifyAdminSession())) {
-    return { ok: false, error: "غير مصرّح." };
-  }
+  const auth = await requireSuperAdminForAction();
+  if (!auth.ok) return { ok: false, error: auth.error };
 
   const id = Number(formData.get("id"));
   if (!Number.isFinite(id) || id < 1) {

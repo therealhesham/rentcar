@@ -26,7 +26,9 @@ export type AdminNavItem = {
     | "activity"
     | "bar-chart-2"
     | "external-link"
-    | "home";
+    | "home"
+    | "user-cog"
+    | "corner-down-left";
   external?: boolean;
 };
 
@@ -50,6 +52,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     label: "الحجوزات والعملاء",
     items: [
       { href: "/admin/car-bookings", label: "حجوزات السيارات", icon: "clipboard-list" },
+      { href: "/admin/branch-returns", label: "مرتجعات الفرع", icon: "corner-down-left" },
       { href: "/admin/customers", label: "العملاء", icon: "users" },
       { href: "/admin/direct-booking", label: "حجز مباشر (مكتب)", icon: "calendar-plus" },
       { href: "/admin/corporate-leads", label: "حجز الشركات", icon: "briefcase" },
@@ -76,6 +79,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/admin/rental-addons", label: "إضافات التأجير", icon: "puzzle" },
       { href: "/admin/cities", label: "المدن", icon: "map-pin" },
       { href: "/admin/branches", label: "الفروع", icon: "building-2" },
+      { href: "/admin/employees", label: "موظفو الفروع", icon: "user-cog" },
       { href: "/admin/inter-city-shipping", label: "شحن بين المدن", icon: "truck" },
       { href: "/admin/checkout-fees", label: "رسوم إتمام الحجز", icon: "receipt" },
       { href: "/admin/subscription-plans", label: "باقات اشتراك", icon: "package" },

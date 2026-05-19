@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { verifyAdminSession } from "@/lib/admin-auth";
+import { requireSuperAdminForAction } from "@/lib/admin-access";
 import { prisma } from "@/lib/prisma";
 
 const SLUG = /^[a-z0-9-]{1,64}$/;
@@ -12,9 +12,8 @@ export async function createCheckoutOneTimeFee(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  if (!(await verifyAdminSession())) {
-    return { ok: false, error: "غير مصرّح." };
-  }
+  const auth = await requireSuperAdminForAction();
+  if (!auth.ok) return { ok: false, error: auth.error };
   const slug = String(formData.get("slug") ?? "").trim().toLowerCase();
   const labelAr = String(formData.get("labelAr") ?? "").trim();
   const feeRaw = Number(formData.get("feeExclVatSar"));
@@ -56,9 +55,8 @@ export async function updateCheckoutOneTimeFee(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  if (!(await verifyAdminSession())) {
-    return { ok: false, error: "غير مصرّح." };
-  }
+  const auth = await requireSuperAdminForAction();
+  if (!auth.ok) return { ok: false, error: auth.error };
   const id = Number(formData.get("id"));
   const labelAr = String(formData.get("labelAr") ?? "").trim();
   const feeRaw = Number(formData.get("feeExclVatSar"));
@@ -90,9 +88,8 @@ export async function deleteCheckoutOneTimeFee(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  if (!(await verifyAdminSession())) {
-    return { ok: false, error: "غير مصرّح." };
-  }
+  const auth = await requireSuperAdminForAction();
+  if (!auth.ok) return { ok: false, error: auth.error };
   const id = Number(formData.get("id"));
   if (!Number.isInteger(id) || id < 1) {
     return { ok: false, error: "معرّف غير صالح." };
@@ -106,9 +103,8 @@ export async function setCheckoutOneTimeFeeActive(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  if (!(await verifyAdminSession())) {
-    return { ok: false, error: "غير مصرّح." };
-  }
+  const auth = await requireSuperAdminForAction();
+  if (!auth.ok) return { ok: false, error: auth.error };
   const id = Number(formData.get("id"));
   const isActive = String(formData.get("isActive") ?? "") === "true";
   if (!Number.isInteger(id) || id < 1) {

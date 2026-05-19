@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { verifyAdminSession } from "@/lib/admin-auth";
+import { requireSuperAdminForAction } from "@/lib/admin-access";
 import { parseCancellationDeductTiersFromAdminForm } from "@/lib/cancellation-deduct";
 import {
   SITE_KEY_CUSTOMER_CANCEL_MIN_HOURS_BEFORE_PICKUP,
@@ -18,9 +18,8 @@ export async function updateCustomerCancellationPolicy(
   _prev: CancellationPolicyFormState,
   formData: FormData,
 ): Promise<CancellationPolicyFormState> {
-  if (!(await verifyAdminSession())) {
-    return { ok: false, error: "غير مصرّح." };
-  }
+  const auth = await requireSuperAdminForAction();
+  if (!auth.ok) return { ok: false, error: auth.error };
 
   const policyAr = String(formData.get("policyAr") ?? "").trim();
   if (policyAr.length > 8000) {

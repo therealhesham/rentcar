@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyAdminSession } from "@/lib/admin-auth";
+import { getAdminSession } from "@/lib/admin-auth";
 import {
   galleryFolderExists,
   isValidGalleryFolderSlug,
@@ -9,7 +9,8 @@ import {
 import { isSpacesConfigured, listImagesInFolder, uploadImageToSpaces } from "@/lib/spaces-upload";
 
 export async function GET(req: NextRequest) {
-  if (!(await verifyAdminSession())) {
+  const session = await getAdminSession();
+  if (!session?.isSuperAdmin) {
     return NextResponse.json({ error: "غير مصرّح." }, { status: 401 });
   }
   if (!isSpacesConfigured()) {
@@ -58,7 +59,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!(await verifyAdminSession())) {
+  const session = await getAdminSession();
+  if (!session?.isSuperAdmin) {
     return NextResponse.json({ error: "غير مصرّح." }, { status: 401 });
   }
   if (!isSpacesConfigured()) {

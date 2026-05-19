@@ -15,7 +15,7 @@ model SiteSetting {
   updatedAt DateTime @updatedAt
 }
 
-/// حساب عميل على الموقع (تسجيل / دخول).
+/// حساب عميل على الموقع العام فقط (تسجيل / دخول / حجز). موظفو الإدارة في `AdminEmployee`.
 model User {
   id           Int      @id @default(autoincrement())
   email        String   @unique @db.VarChar(255)
@@ -23,8 +23,6 @@ model User {
   name         String?  @db.VarChar(255)
   /// موحّد مع الحجز: +9665XXXXXXXX
   phone        String?  @unique @db.VarChar(16)
-  /// حساب بصلاحيات إدارية (لوحة التحكم المستقبلية أو تقارير داخلية).
-  isAdmin      Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -105,10 +103,31 @@ model Branch {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  employees AdminEmployee[]
+  fleetItems Fleet[]
+
   @@index([cityId])
   @@index([sortOrder])
   @@index([isActive])
   @@index([isNew])
+}
+
+/// موظفو لوحة الإدارة: سوبر أدمن ومديرو/موظفو الفروع — ليسوا في جدول `User`.
+model AdminEmployee {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique @db.VarChar(255)
+  passwordHash String   @db.VarChar(255)
+  name         String?  @db.VarChar(255)
+  /// null للسوبر أدمن؛ مطلوب لموظف الفرع
+  branchId     Int?
+  branch       Branch?  @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  isSuperAdmin Boolean  @default(false)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([branchId])
+  @@index([isActive])
 }
 
 model FleetCategory {
@@ -179,14 +198,21 @@ model CarModel {
   @@unique([brandId, name, year])
 }
 
+/// كمية متاحة من موديل سيارة في فرع محدّد (التوفر يُحسب لكل فرع على حدة).
 model Fleet {
   id         Int       @id @default(autoincrement())
-  modelId     Int
-  model       CarModel  @relation(fields: [modelId], references: [id])
-  quantity    Int       @default(0)
+  modelId    Int
+  model      CarModel  @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  branchId   Int
+  branch     Branch    @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  quantity   Int       @default(0)
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@unique([modelId, branchId])
+  @@index([branchId])
+  @@index([modelId])
 }
 
 /// إضافات اختيارية للتأجير (يومية، غير شامل الضريبة) — تُعرض في صفحة إتمام الحجز.

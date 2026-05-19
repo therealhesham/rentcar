@@ -4,11 +4,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { FuelType, Transmission } from "@prisma/client";
 import { Prisma } from "@prisma/client";
-import {
-  clearAdminSessionCookie,
-  setAdminSessionCookie,
-  verifyAdminSession,
-} from "@/lib/admin-auth";
+import { clearAdminSessionCookie, setAdminSessionCookie } from "@/lib/admin-auth";
+import { requireSuperAdminForAction } from "@/lib/admin-access";
+import { verifyPassword } from "@/lib/password";
 import { requireGalleryFolderSlug } from "@/lib/gallery-folder";
 import { prisma } from "@/lib/prisma";
 import {
@@ -17,19 +15,60 @@ import {
   uploadImageToSpaces,
 } from "@/lib/spaces-upload";
 
+export type AdminLoginState = { ok: true } | { ok: false; error: string };
+
 export async function loginAdmin(
-  _prev: { ok: boolean; error?: string } | null,
+  _prev: AdminLoginState | null,
   formData: FormData,
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<AdminLoginState> {
+  const email = String(formData.get("email") ?? "")
+    .trim()
+    .toLowerCase();
   const password = String(formData.get("password") ?? "");
-  if (!process.env.ADMIN_PASSWORD) {
-    return { ok: false, error: "لم يُضبط ADMIN_PASSWORD في البيئة." };
+
+  if (!email || !password) {
+    return { ok: false, error: "أدخل البريد وكلمة المرور." };
   }
-  if (password !== process.env.ADMIN_PASSWORD) {
-    return { ok: false, error: "كلمة المرور غير صحيحة." };
+
+  const employee = await prisma.adminEmployee.findUnique({
+    where: { email },
+    include: { branch: { select: { id: true, slug: true, name: true } } },
+  });
+
+  if (employee?.isActive) {
+    const match = await verifyPassword(password, employee.passwordHash);
+    if (!match) {
+      return { ok: false, error: "البريد أو كلمة المرور غير صحيحة." };
+    }
+    if (!employee.isSuperAdmin && !employee.branch) {
+      return { ok: false, error: "حسابك غير مرتبط بفرع. تواصل مع مدير النظام." };
+    }
+    await setAdminSessionCookie({
+      employeeId: employee.id,
+      isSuperAdmin: employee.isSuperAdmin,
+      branchId: employee.branch?.id ?? null,
+      branchSlug: employee.branch?.slug ?? null,
+      branchName: employee.branch?.name ?? null,
+      displayName: employee.name?.trim() || employee.email,
+    });
+    return { ok: true };
   }
-  await setAdminSessionCookie();
-  redirect("/admin");
+
+  const envEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+  const envPassword = process.env.ADMIN_PASSWORD;
+  if (envEmail && envPassword && email === envEmail && password === envPassword) {
+    await setAdminSessionCookie({
+      employeeId: null,
+      isSuperAdmin: true,
+      branchId: null,
+      branchSlug: null,
+      branchName: null,
+      displayName: "مدير النظام",
+    });
+    return { ok: true };
+  }
+
+  return { ok: false, error: "البريد أو كلمة المرور غير صحيحة." };
 }
 
 export async function logoutAdmin(): Promise<void> {
@@ -41,9 +80,8 @@ export async function createFleetVehicle(
   _prev: { ok: boolean; error?: string } | null,
   formData: FormData,
 ): Promise<{ ok: boolean; error?: string }> {
-  if (!(await verifyAdminSession())) {
-    return { ok: false, error: "غير مصرّح." };
-  }
+  const auth = await requireSuperAdminForAction();
+  if (!auth.ok) return { ok: false, error: auth.error };
 
   const categoryId = Number(formData.get("categoryId"));
   const brandId = Number(formData.get("brandId"));
@@ -56,6 +94,7 @@ export async function createFleetVehicle(
   const price = Number(formData.get("price"));
   const vatRatePercentRaw = Number(formData.get("vatRatePercent"));
   const quantity = Number(formData.get("quantity") ?? 1);
+  const branchIdRaw = Number(formData.get("branchId"));
   const imageFile = formData.get("imageFile");
   const galleryImageUrl = String(formData.get("galleryImageUrl") ?? "").trim();
   const alt = String(formData.get("alt") ?? "").trim() || null;
@@ -111,6 +150,16 @@ export async function createFleetVehicle(
   if (!Number.isFinite(quantity) || quantity < 1) {
     return { ok: false, error: "الكمية غير صالحة." };
   }
+  if (!Number.isInteger(branchIdRaw) || branchIdRaw < 1) {
+    return { ok: false, error: "اختر فرع الإسطول." };
+  }
+  const branchExists = await prisma.branch.findFirst({
+    where: { id: branchIdRaw, isActive: true },
+    select: { id: true },
+  });
+  if (!branchExists) {
+    return { ok: false, error: "الفرع غير موجود أو غير مفعّل." };
+  }
 
   let image: string | null = null;
   if (imageFile instanceof File && imageFile.size > 0) {
@@ -159,6 +208,7 @@ export async function createFleetVehicle(
       await tx.fleet.create({
         data: {
           modelId: model.id,
+          branchId: branchIdRaw,
           quantity: Math.round(quantity),
         },
       });
@@ -186,9 +236,8 @@ export async function updateFleetVehicle(
   _prev: { ok: boolean; error?: string } | null,
   formData: FormData,
 ): Promise<{ ok: boolean; error?: string }> {
-  if (!(await verifyAdminSession())) {
-    return { ok: false, error: "غير مصرّح." };
-  }
+  const auth = await requireSuperAdminForAction();
+  if (!auth.ok) return { ok: false, error: auth.error };
 
   const modelId = Number(formData.get("modelId"));
   if (!Number.isFinite(modelId) || modelId < 1) {
@@ -197,10 +246,10 @@ export async function updateFleetVehicle(
 
   const existing = await prisma.carModel.findUnique({
     where: { id: Math.floor(modelId) },
-    include: { fleetItems: { orderBy: { id: "asc" }, take: 1 } },
+    include: { fleetItems: true },
   });
-  if (!existing || !existing.fleetItems[0]) {
-    return { ok: false, error: "المركبة غير موجودة في الأسطول." };
+  if (!existing) {
+    return { ok: false, error: "المركبة غير موجودة." };
   }
 
   const modelName = String(formData.get("modelName") ?? "").trim();
@@ -284,10 +333,20 @@ export async function updateFleetVehicle(
           badge,
         },
       });
-      await tx.fleet.updateMany({
-        where: { modelId: existing.id },
-        data: { quantity: Math.max(0, Math.round(quantity)) },
-      });
+      const editBranchId = Number(formData.get("fleetBranchId"));
+      if (Number.isInteger(editBranchId) && editBranchId > 0) {
+        await tx.fleet.upsert({
+          where: {
+            modelId_branchId: { modelId: existing.id, branchId: editBranchId },
+          },
+          create: {
+            modelId: existing.id,
+            branchId: editBranchId,
+            quantity: Math.max(0, Math.round(quantity)),
+          },
+          update: { quantity: Math.max(0, Math.round(quantity)) },
+        });
+      }
     });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { verifyAdminSession } from "@/lib/admin-auth";
+import { enforceBranchOnFormData, requireAdminForAction } from "@/lib/admin-access";
 import {
   createDirectBooking,
   parseCommonBookingFieldsFromFormData,
@@ -11,16 +11,16 @@ export async function submitAdminDirectBooking(
   _prev: { ok: boolean; error?: string } | null,
   formData: FormData,
 ): Promise<{ ok: boolean; error?: string }> {
-  if (!(await verifyAdminSession())) {
-    return { ok: false, error: "غير مصرّح." };
-  }
+  const auth = await requireAdminForAction();
+  if (!auth.ok) return { ok: false, error: auth.error };
 
-  const carModelId = Number(formData.get("carModelId"));
+  const scopedForm = enforceBranchOnFormData(auth.session, formData);
+  const carModelId = Number(scopedForm.get("carModelId"));
   if (!Number.isInteger(carModelId) || carModelId < 1) {
     return { ok: false, error: "اختر المركبة." };
   }
 
-  const parsed = parseCommonBookingFieldsFromFormData(formData);
+  const parsed = parseCommonBookingFieldsFromFormData(scopedForm);
   if (!parsed.ok) {
     return parsed;
   }

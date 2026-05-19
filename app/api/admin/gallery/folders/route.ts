@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyAdminSession } from "@/lib/admin-auth";
+import { getAdminSession } from "@/lib/admin-auth";
 import { createGalleryFolder } from "@/lib/gallery-folder";
 
 export async function POST(req: NextRequest) {
-  if (!(await verifyAdminSession())) {
+  const session = await getAdminSession();
+  if (!session?.isSuperAdmin) {
     return NextResponse.json({ error: "غير مصرّح." }, { status: 401 });
   }
 

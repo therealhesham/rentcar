@@ -19,7 +19,13 @@ type AvailabilityState =
       overlapping: number;
     };
 
-export function AdminDirectBookingForm({ brands }: { brands: BrandWithBookableModels[] }) {
+export function AdminDirectBookingForm({
+  brands,
+  lockedBranchSlug = null,
+}: {
+  brands: BrandWithBookableModels[];
+  lockedBranchSlug?: string | null;
+}) {
   const formRef = useRef<HTMLFormElement>(null);
   const [state, formAction, pending] = useActionState(submitAdminDirectBooking, null);
   const [brandId, setBrandId] = useState("");
@@ -27,6 +33,8 @@ export function AdminDirectBookingForm({ brands }: { brands: BrandWithBookableMo
   const [pickupDate, setPickupDate] = useState("");
   const [days, setDays] = useState("");
   const [availability, setAvailability] = useState<AvailabilityState>(null);
+  const [branchSlug, setBranchSlug] = useState(lockedBranchSlug ?? "jeddah");
+  const effectiveBranch = (lockedBranchSlug ?? branchSlug).trim().toLowerCase();
 
   const modelsForBrand = useMemo(() => {
     const b = brands.find((x) => String(x.id) === brandId);
@@ -44,7 +52,7 @@ export function AdminDirectBookingForm({ brands }: { brands: BrandWithBookableMo
 
   useEffect(() => {
     const id = Number(carModelId);
-    if (!Number.isInteger(id) || id < 1 || !pickupDate || !days.trim()) {
+    if (!Number.isInteger(id) || id < 1 || !pickupDate || !days.trim() || !effectiveBranch) {
       setAvailability(null);
       return;
     }
@@ -62,6 +70,7 @@ export function AdminDirectBookingForm({ brands }: { brands: BrandWithBookableMo
           carModelId: String(id),
           pickupDate,
           days: String(Math.round(n)),
+          branch: effectiveBranch,
         });
         const res = await fetch(`/api/bookings/direct?${params}`, { signal: ctrl.signal });
         const data = (await res.json()) as {
@@ -90,7 +99,7 @@ export function AdminDirectBookingForm({ brands }: { brands: BrandWithBookableMo
       ctrl.abort();
       window.clearTimeout(t);
     };
-  }, [carModelId, pickupDate, days]);
+  }, [carModelId, pickupDate, days, effectiveBranch]);
 
   const slotBlocked = Boolean(
     availability && !availability.loading && !availability.available,
@@ -216,17 +225,30 @@ export function AdminDirectBookingForm({ brands }: { brands: BrandWithBookableMo
       <div className="space-y-2">
         <label className="text-sm font-medium text-on-surface">
           فرع الاستلام
-          <select
-            name="branch"
-            required
-            defaultValue="jeddah"
-            dir="rtl"
-            className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary"
-          >
-            <option value="jeddah">جدة</option>
-            <option value="madinah">المدينة المنورة</option>
-            <option value="tabuk">تبوك</option>
-          </select>
+          {lockedBranchSlug ? (
+            <>
+              <input type="hidden" name="branch" value={lockedBranchSlug} />
+              <p className="mt-2 rounded-xl border border-outline-variant/40 bg-surface-container-low px-4 py-2.5 text-sm font-bold text-on-surface">
+                {lockedBranchSlug}
+              </p>
+            </>
+          ) : (
+            <select
+              name="branch"
+              required
+              value={branchSlug}
+              onChange={(e) => {
+                setBranchSlug(e.target.value);
+                setAvailability(null);
+              }}
+              dir="rtl"
+              className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="jeddah">جدة</option>
+              <option value="madinah">المدينة المنورة</option>
+              <option value="tabuk">تبوك</option>
+            </select>
+          )}
         </label>
       </div>
 

@@ -2,6 +2,7 @@ import type { FuelType, Transmission } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { FleetCar } from "@/lib/fleet-types";
 import { buildFleetCardPriceParts, type RentalPriceDisplayMode } from "@/lib/pricing";
+import { fleetWhereForBranchSlug } from "@/lib/fleet-branch-stock";
 import { getRentalPriceDisplayMode } from "@/lib/site-settings";
 
 const FUEL_AR: Record<FuelType, string> = {
@@ -100,6 +101,8 @@ export type FleetDisplayFilters = {
   maxPriceExclTax?: number | null;
   /** `undefined` = بدون فلترة توفر؛ `[]` = لا نتائج متاحة */
   modelIds?: number[] | null;
+  /** فرع الإرجاع — عرض مركبات لها مخزون في هذا الفرع فقط */
+  branchSlug?: string | null;
   priceDisplayMode?: RentalPriceDisplayMode;
 };
 
@@ -111,6 +114,7 @@ export async function getFleetCarsForDisplay(
     brandId,
     maxPriceExclTax,
     modelIds,
+    branchSlug,
     priceDisplayMode: priceDisplayModeIn,
   } = filters;
 
@@ -127,9 +131,13 @@ export async function getFleetCarsForDisplay(
         }
       : {};
 
+  const branchFilter = branchSlug?.trim()
+    ? fleetWhereForBranchSlug(branchSlug)
+    : { quantity: { gt: 0 } as const };
+
   const rows = await prisma.fleet.findMany({
     where: {
-      quantity: { gt: 0 },
+      ...branchFilter,
       ...(modelIds !== undefined && modelIds !== null
         ? { modelId: { in: modelIds } }
         : {}),

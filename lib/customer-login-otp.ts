@@ -101,14 +101,14 @@ async function findCustomerUserForLogin(norm: Exclude<NormalizedLoginIdentifier,
   if (norm.kind === "email") {
     return prisma.user.findUnique({
       where: { email: norm.email },
-      select: { id: true, isAdmin: true, email: true, phone: true },
+      select: { id: true, email: true, phone: true },
     });
   }
   const e164 = saudiLocalNineToE164(norm.localNine);
   if (!e164) return null;
   return prisma.user.findUnique({
     where: { phone: e164 },
-    select: { id: true, isAdmin: true, email: true, phone: true },
+    select: { id: true, email: true, phone: true },
   });
 }
 
@@ -165,7 +165,7 @@ export async function sendCustomerLoginOtpForIdentifier(
   }
 
   const user = await findCustomerUserForLogin(norm);
-  if (!user || user.isAdmin) {
+  if (!user) {
     return { ok: false, error: "لا يوجد حساب عميل بهذه البيانات." };
   }
 
@@ -401,7 +401,7 @@ export async function verifyAndConsumeCustomerLoginOtp(opts: {
   }
 
   const user = await findCustomerUserForLogin(norm);
-  if (!user || user.isAdmin) {
+  if (!user) {
     return { ok: false, error: "لا يوجد حساب بهذه البيانات." };
   }
 

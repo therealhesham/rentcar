@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { verifyAdminSession } from "@/lib/admin-auth";
+import { bookingBranchWhere } from "@/lib/admin-access";
+import { requireAdminPage } from "@/lib/admin-page";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -52,23 +52,24 @@ function aggregateClientsFromBookings(
 }
 
 export default async function AdminCustomersPage() {
-  if (!(await verifyAdminSession())) {
-    redirect("/admin/login");
-  }
+  const session = await requireAdminPage();
 
   const [users, bookingRows] = await Promise.all([
-    prisma.user.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 200,
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        phone: true,
-        createdAt: true,
-      },
-    }),
+    session.isSuperAdmin
+      ? prisma.user.findMany({
+          orderBy: { createdAt: "desc" },
+          take: 200,
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            phone: true,
+            createdAt: true,
+          },
+        })
+      : Promise.resolve([]),
     prisma.bookingRequest.findMany({
+      where: bookingBranchWhere(session),
       orderBy: { createdAt: "desc" },
       take: 3000,
       select: {

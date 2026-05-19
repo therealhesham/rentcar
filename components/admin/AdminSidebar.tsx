@@ -8,6 +8,7 @@ import {
   Building2,
   CalendarPlus,
   Car,
+  CornerDownLeft,
   ClipboardList,
   ExternalLink,
   Home,
@@ -24,6 +25,7 @@ import {
   SlidersHorizontal,
   Tags,
   Truck,
+  UserCog,
   Users,
   X,
   type LucideIcon,
@@ -31,7 +33,9 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogoutButton } from "@/app/admin/LogoutButton";
-import { ADMIN_NAV_GROUPS, isAdminNavActive, type AdminNavItem } from "@/lib/admin-nav";
+import type { AdminSession } from "@/lib/admin-auth";
+import { adminBranchDisplayName } from "@/lib/admin-branch-display";
+import { isAdminNavActive, type AdminNavGroup, type AdminNavItem } from "@/lib/admin-nav";
 
 const ICONS: Record<AdminNavItem["icon"], LucideIcon> = {
   "layout-dashboard": LayoutDashboard,
@@ -58,14 +62,18 @@ const ICONS: Record<AdminNavItem["icon"], LucideIcon> = {
   "bar-chart-2": BarChart2,
   "external-link": ExternalLink,
   home: Home,
+  "user-cog": UserCog,
+  "corner-down-left": CornerDownLeft,
 };
 
 type Props = {
   open: boolean;
   onClose: () => void;
+  session: AdminSession;
+  navGroups: AdminNavGroup[];
 };
 
-export function AdminSidebar({ open, onClose }: Props) {
+export function AdminSidebar({ open, onClose, session, navGroups }: Props) {
   const pathname = usePathname() ?? "";
 
   return (
@@ -81,7 +89,13 @@ export function AdminSidebar({ open, onClose }: Props) {
             إدارة
           </p>
           <p className="mt-1 text-lg font-extrabold tracking-tight text-white">روائس</p>
-          <p className="mt-0.5 text-[11px] font-medium text-white/45">لوحة التحكم</p>
+          <p className="mt-0.5 text-[11px] font-medium text-white/45">
+            {session.isSuperAdmin
+              ? "مدير النظام"
+              : session.branchSlug
+                ? adminBranchDisplayName(session)
+                : "لوحة التحكم"}
+          </p>
         </div>
         <button
           type="button"
@@ -94,7 +108,7 @@ export function AdminSidebar({ open, onClose }: Props) {
       </div>
 
       <nav className="flex flex-1 flex-col gap-5 overflow-y-auto overscroll-contain px-3 py-4">
-        {ADMIN_NAV_GROUPS.map((group) => (
+        {navGroups.map((group) => (
           <div key={group.id}>
             <p className="mb-2 px-2 text-[10px] font-bold uppercase tracking-wider text-white/35">
               {group.label}

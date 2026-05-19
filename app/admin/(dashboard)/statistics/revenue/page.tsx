@@ -5,6 +5,7 @@ import { AdminStatCard } from "@/components/admin/AdminStatCard";
 import { AdminBarChart } from "@/components/admin/stats/AdminBarChart";
 import { AdminLabelBreakdown } from "@/components/admin/stats/AdminLabelBreakdown";
 import { AdminPeriodSelect } from "@/components/admin/stats/AdminPeriodSelect";
+import { requireAdminPage } from "@/lib/admin-page";
 import {
   formatSar,
   getAdminRevenueStats,
@@ -16,9 +17,13 @@ export const dynamic = "force-dynamic";
 type Props = { searchParams: Promise<{ days?: string }> };
 
 export default async function AdminStatisticsRevenuePage({ searchParams }: Props) {
+  const session = await requireAdminPage();
   const sp = await searchParams;
   const days = parseAdminStatsPeriod(sp.days);
-  const stats = await getAdminRevenueStats(days);
+  const stats = await getAdminRevenueStats(
+    days,
+    session.isSuperAdmin ? null : session.branchSlug,
+  );
 
   return (
     <>

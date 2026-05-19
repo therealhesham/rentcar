@@ -54,20 +54,46 @@ export function AdminEditCarForm({ vehicle }: AdminEditCarFormProps) {
           className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
         />
       </label>
-      <label className="text-sm font-medium">
-        الكمية في الأسطول
-        <input
-          name="quantity"
-          type="number"
-          required
-          min={0}
-          defaultValue={vehicle.quantity}
-          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
-        />
-        <span className="mt-1 block text-xs text-on-surface-variant">
-          صفر يخفي المركبة من صفحة الأسطول للزائر.
+      <div className="md:col-span-2 space-y-3">
+        <p className="text-sm font-bold text-on-surface">الكمية في كل فرع</p>
+        {vehicle.branchFleet.length === 0 ? (
+          <p className="text-xs text-on-surface-variant">
+            لا يوجد مخزون فرعي بعد — أضف من صفحة أسطول الفرع أو عند الإنشاء.
+          </p>
+        ) : (
+          <div className="overflow-x-auto rounded-xl border border-outline-variant/30">
+            <table className="w-full min-w-[320px] text-start text-sm">
+              <thead>
+                <tr className="border-b border-outline-variant/30 bg-surface-container-low text-on-surface-variant">
+                  <th className="px-3 py-2">الفرع</th>
+                  <th className="px-3 py-2">الكمية</th>
+                </tr>
+              </thead>
+              <tbody>
+                {vehicle.branchFleet.map((bf, i) => (
+                  <tr key={bf.branchId} className="border-b border-outline-variant/15">
+                    <td className="px-3 py-2 font-medium">{bf.branchName}</td>
+                    <td className="px-3 py-2">
+                      <input type="hidden" name="fleetBranchId" value={bf.branchId} />
+                      <input
+                        name={i === 0 ? "quantity" : `quantity_${bf.branchId}`}
+                        type="number"
+                        min={0}
+                        defaultValue={bf.quantity}
+                        className="w-24 rounded-lg border border-outline-variant px-2 py-1.5 text-sm font-bold tabular-nums"
+                        dir="ltr"
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <span className="block text-xs text-on-surface-variant">
+          يُحفظ صف الفرع الأول في النموذج؛ لباقي الفروع استخدم «أسطول الفرع» من موظفي الفروع.
         </span>
-      </label>
+      </div>
 
       <label className="text-sm font-medium md:col-span-2">
         المحرك / الأداء

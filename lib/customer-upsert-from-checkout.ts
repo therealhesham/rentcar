@@ -20,16 +20,12 @@ export async function upsertCustomerFromFleetBooking(opts: {
 
   const byEmail = await prisma.user.findUnique({
     where: { email },
-    select: { id: true, isAdmin: true, phone: true },
+    select: { id: true, phone: true },
   });
   const byPhone = await prisma.user.findUnique({
     where: { phone },
-    select: { id: true, isAdmin: true, email: true },
+    select: { id: true, email: true },
   });
-
-  if (byEmail?.isAdmin || byPhone?.isAdmin) {
-    return { ok: false, error: "لا يمكن ربط الحجز بحساب إداري." };
-  }
 
   if (byEmail && byPhone && byEmail.id !== byPhone.id) {
     return {
@@ -78,7 +74,6 @@ export async function upsertCustomerFromFleetBooking(opts: {
       phone,
       name,
       passwordHash: null,
-      isAdmin: false,
     },
     select: { id: true },
   });

@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { verifyAdminSession } from "@/lib/admin-auth";
+import { bookingBranchWhere } from "@/lib/admin-access";
+import { requireAdminPage } from "@/lib/admin-page";
 import { addDaysToYmd, NON_BLOCKING_BOOKING_STATUSES } from "@/lib/direct-booking";
 import { prisma } from "@/lib/prisma";
 
@@ -29,16 +29,14 @@ function formatSectionDate(ymd: string): string {
 }
 
 export default async function AdminCarBookingsPage() {
-  if (!(await verifyAdminSession())) {
-    redirect("/admin/login");
-  }
+  const session = await requireAdminPage();
 
   const rows = await prisma.bookingRequest.findMany({
-    where: {
+    where: bookingBranchWhere(session, {
       kind: "DIRECT",
       carModelId: { not: null },
       NOT: { status: { in: [...NON_BLOCKING_BOOKING_STATUSES] } },
-    },
+    }),
     include: {
       carModel: { include: { brand: true, category: true } },
     },

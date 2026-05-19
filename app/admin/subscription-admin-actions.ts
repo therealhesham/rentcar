@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { verifyAdminSession } from "@/lib/admin-auth";
+import { requireSuperAdminForAction } from "@/lib/admin-access";
 import { prisma } from "@/lib/prisma";
 import { computeSubscriptionPeriodFromApproval } from "@/lib/subscriptions/lifecycle";
 import { parseDurationOptionsCsv } from "@/lib/subscriptions/duration-options";
@@ -11,7 +11,8 @@ function fail(msg: string) {
 }
 
 export async function approveUserSubscription(subscriptionId: number) {
-  if (!(await verifyAdminSession())) return fail("غير مصرّح.");
+  const auth = await requireSuperAdminForAction();
+  if (!auth.ok) return fail(auth.error);
   if (!Number.isInteger(subscriptionId) || subscriptionId < 1) return fail("معرّف غير صالح.");
 
   const row = await prisma.userSubscription.findUnique({
@@ -52,7 +53,8 @@ export async function approveUserSubscription(subscriptionId: number) {
 }
 
 export async function rejectUserSubscription(subscriptionId: number, reasonAr: string) {
-  if (!(await verifyAdminSession())) return fail("غير مصرّح.");
+  const auth = await requireSuperAdminForAction();
+  if (!auth.ok) return fail(auth.error);
   const row = await prisma.userSubscription.findUnique({ where: { id: subscriptionId } });
   if (!row) return fail("غير موجود.");
   await prisma.userSubscription.update({
@@ -78,7 +80,8 @@ export async function setUserSubscriptionStatus(opts: {
     | "REJECTED";
   suspendedReasonAr?: string;
 }) {
-  if (!(await verifyAdminSession())) return fail("غير مصرّح.");
+  const auth = await requireSuperAdminForAction();
+  if (!auth.ok) return fail(auth.error);
   const { subscriptionId, status } = opts;
 
   await prisma.userSubscription.update({
@@ -98,7 +101,8 @@ export async function setUserSubscriptionStatus(opts: {
 
 /** إنشاء خطة اشتراك مرتبطة بموديل موجود (أسعار غير شامل الضريبة). */
 export async function createSubscriptionPlan(data: FormData) {
-  if (!(await verifyAdminSession())) return fail("غير مصرّح.");
+  const auth = await requireSuperAdminForAction();
+  if (!auth.ok) return fail(auth.error);
   const slug = String(data.get("slug") ?? "")
     .trim()
     .toLowerCase()
@@ -140,7 +144,8 @@ export async function createSubscriptionPlan(data: FormData) {
 }
 
 export async function deactivateSubscriptionPlan(planId: number) {
-  if (!(await verifyAdminSession())) return fail("غير مصرّح.");
+  const auth = await requireSuperAdminForAction();
+  if (!auth.ok) return fail(auth.error);
   await prisma.subscriptionPlan.updateMany({
     where: { id: planId },
     data: { isActive: false },

@@ -1,4 +1,14 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+
+function bookingScope(
+  branchSlug: string | null | undefined,
+  extra?: Prisma.BookingRequestWhereInput,
+): Prisma.BookingRequestWhereInput {
+  const scope: Prisma.BookingRequestWhereInput = branchSlug ? { branch: branchSlug } : {};
+  if (!extra || Object.keys(extra).length === 0) return scope;
+  return { AND: [scope, extra] };
+}
 
 export type AdminStatsPeriod = 7 | 30 | 90 | 365;
 
@@ -76,10 +86,14 @@ export type AdminOverviewStats = {
   paymentSplit: LabelCount[];
 };
 
-export async function getAdminOverviewStats(days: AdminStatsPeriod): Promise<AdminOverviewStats> {
+export async function getAdminOverviewStats(
+  days: AdminStatsPeriod,
+  branchSlug?: string | null,
+): Promise<AdminOverviewStats> {
   const start = periodStart(days);
   const prevStart = new Date(start);
   prevStart.setDate(prevStart.getDate() - days);
+  const scoped = (extra?: Prisma.BookingRequestWhereInput) => bookingScope(branchSlug, extra);
 
   const [
     bookingsInPeriod,
@@ -95,35 +109,45 @@ export async function getAdminOverviewStats(days: AdminStatsPeriod): Promise<Adm
     byKind,
     byPayment,
   ] = await Promise.all([
-    prisma.bookingRequest.count({ where: { createdAt: { gte: start } } }),
+    prisma.bookingRequest.count({ where: scoped({ createdAt: { gte: start } }) }),
     prisma.bookingRequest.count({
-      where: { createdAt: { gte: prevStart, lt: start } },
+      where: scoped({ createdAt: { gte: prevStart, lt: start } }),
     }),
     prisma.bookingRequest.count({
-      where: { createdAt: { gte: start }, paymentStatus: "PAID" },
+      where: scoped({ createdAt: { gte: start }, paymentStatus: "PAID" }),
     }),
     prisma.bookingRequest.count({
-      where: { createdAt: { gte: start }, status: "NEW" },
+      where: scoped({ createdAt: { gte: start }, status: "NEW" }),
     }),
     prisma.bookingRequest.count({
-      where: { createdAt: { gte: start }, kind: "DIRECT" },
+      where: scoped({ createdAt: { gte: start }, kind: "DIRECT" }),
     }),
-    prisma.corporateBookingLead.count({ where: { createdAt: { gte: start } } }),
-    prisma.userSubscription.count({ where: { status: "ACTIVE" } }),
-    prisma.fleet.findMany({ select: { quantity: true } }),
-    prisma.user.count({ where: { isAdmin: false } }),
+    branchSlug
+      ? Promise.resolve(0)
+      : prisma.corporateBookingLead.count({ where: { createdAt: { gte: start } } }),
+    branchSlug ? Promise.resolve(0) : prisma.userSubscription.count({ where: { status: "ACTIVE" } }),
+    branchSlug ? Promise.resolve([]) : prisma.fleet.findMany({ select: { quantity: true } }),
+    branchSlug
+      ? prisma.bookingRequest
+          .findMany({
+            where: scoped(),
+            select: { phone: true },
+            distinct: ["phone"],
+          })
+          .then((r) => r.length)
+      : prisma.user.count(),
     prisma.bookingRequest.findMany({
-      where: { createdAt: { gte: start } },
+      where: scoped({ createdAt: { gte: start } }),
       select: { createdAt: true },
     }),
     prisma.bookingRequest.groupBy({
       by: ["kind"],
-      where: { createdAt: { gte: start } },
+      where: scoped({ createdAt: { gte: start } }),
       _count: { _all: true },
     }),
     prisma.bookingRequest.groupBy({
       by: ["paymentStatus"],
-      where: { createdAt: { gte: start } },
+      where: scoped({ createdAt: { gte: start } }),
       _count: { _all: true },
     }),
   ]);
@@ -190,43 +214,47 @@ const STATUS_LABELS: Record<string, string> = {
   COMPLETED: "مكتمل",
 };
 
-export async function getAdminBookingStats(days: AdminStatsPeriod): Promise<AdminBookingStats> {
+export async function getAdminBookingStats(
+  days: AdminStatsPeriod,
+  branchSlug?: string | null,
+): Promise<AdminBookingStats> {
   const start = periodStart(days);
+  const scoped = (extra?: Prisma.BookingRequestWhereInput) => bookingScope(branchSlug, extra);
 
   const [total, trendRows, byStatus, byBranch, byPickupMode, byPaymentMethod, aggregates, topModelsRaw] =
     await Promise.all([
-      prisma.bookingRequest.count({ where: { createdAt: { gte: start } } }),
+      prisma.bookingRequest.count({ where: scoped({ createdAt: { gte: start } }) }),
       prisma.bookingRequest.findMany({
-        where: { createdAt: { gte: start } },
+        where: scoped({ createdAt: { gte: start } }),
         select: { createdAt: true },
       }),
       prisma.bookingRequest.groupBy({
         by: ["status"],
-        where: { createdAt: { gte: start } },
+        where: scoped({ createdAt: { gte: start } }),
         _count: { _all: true },
       }),
       prisma.bookingRequest.groupBy({
         by: ["branch"],
-        where: { createdAt: { gte: start } },
+        where: scoped({ createdAt: { gte: start } }),
         _count: { _all: true },
       }),
       prisma.bookingRequest.groupBy({
         by: ["pickupMode"],
-        where: { createdAt: { gte: start } },
+        where: scoped({ createdAt: { gte: start } }),
         _count: { _all: true },
       }),
       prisma.bookingRequest.groupBy({
         by: ["paymentMethod"],
-        where: { createdAt: { gte: start }, paymentMethod: { not: null } },
+        where: scoped({ createdAt: { gte: start }, paymentMethod: { not: null } }),
         _count: { _all: true },
       }),
       prisma.bookingRequest.aggregate({
-        where: { createdAt: { gte: start } },
+        where: scoped({ createdAt: { gte: start } }),
         _avg: { numberOfDays: true },
       }),
       prisma.bookingRequest.groupBy({
         by: ["carModelId"],
-        where: { createdAt: { gte: start }, carModelId: { not: null } },
+        where: scoped({ createdAt: { gte: start }, carModelId: { not: null } }),
         _count: { _all: true },
         orderBy: { _count: { carModelId: "desc" } },
         take: 8,
@@ -394,8 +422,12 @@ export type AdminRevenueStats = {
   subscriptionPaymentsByMethod: LabelCount[];
 };
 
-export async function getAdminRevenueStats(days: AdminStatsPeriod): Promise<AdminRevenueStats> {
+export async function getAdminRevenueStats(
+  days: AdminStatsPeriod,
+  branchSlug?: string | null,
+): Promise<AdminRevenueStats> {
   const start = periodStart(days);
+  const scoped = (extra?: Prisma.BookingRequestWhereInput) => bookingScope(branchSlug, extra);
 
   const [
     subPayments,
@@ -407,44 +439,52 @@ export async function getAdminRevenueStats(days: AdminStatsPeriod): Promise<Admi
     bySubStatus,
     subPaymentsByMethod,
   ] = await Promise.all([
-    prisma.subscriptionPayment.aggregate({
-      where: { status: "PAID", paidAt: { gte: start } },
-      _sum: { amountSar: true },
-      _count: { _all: true },
-    }),
-    prisma.subscriptionPayment.findMany({
-      where: { status: "PAID", paidAt: { gte: start } },
-      select: { paidAt: true },
+    branchSlug
+      ? Promise.resolve({ _sum: { amountSar: 0 }, _count: { _all: 0 } })
+      : prisma.subscriptionPayment.aggregate({
+          where: { status: "PAID", paidAt: { gte: start } },
+          _sum: { amountSar: true },
+          _count: { _all: true },
+        }),
+    branchSlug
+      ? Promise.resolve([])
+      : prisma.subscriptionPayment.findMany({
+          where: { status: "PAID", paidAt: { gte: start } },
+          select: { paidAt: true },
+        }),
+    prisma.bookingRequest.count({
+      where: scoped({ createdAt: { gte: start }, paymentStatus: "PAID" }),
     }),
     prisma.bookingRequest.count({
-      where: { createdAt: { gte: start }, paymentStatus: "PAID" },
-    }),
-    prisma.bookingRequest.count({
-      where: { createdAt: { gte: start }, paymentStatus: "PENDING" },
+      where: scoped({ createdAt: { gte: start }, paymentStatus: "PENDING" }),
     }),
     prisma.bookingRequest.aggregate({
-      where: {
+      where: scoped({
         createdAt: { gte: start },
         cancellationRefundAmountSar: { not: null },
-      },
+      }),
       _sum: { cancellationRefundAmountSar: true },
     }),
     prisma.bookingRequest.count({
-      where: {
+      where: scoped({
         createdAt: { gte: start },
         cancellationRefundAmountSar: { not: null },
-      },
+      }),
     }),
-    prisma.userSubscription.groupBy({
-      by: ["status"],
-      _count: { _all: true },
-    }),
-    prisma.subscriptionPayment.groupBy({
-      by: ["paymentMethod"],
-      where: { status: "PAID", paidAt: { gte: start }, paymentMethod: { not: null } },
-      _count: { _all: true },
-      _sum: { amountSar: true },
-    }),
+    branchSlug
+      ? Promise.resolve([])
+      : prisma.userSubscription.groupBy({
+          by: ["status"],
+          _count: { _all: true },
+        }),
+    branchSlug
+      ? Promise.resolve([])
+      : prisma.subscriptionPayment.groupBy({
+          by: ["paymentMethod"],
+          where: { status: "PAID", paidAt: { gte: start }, paymentMethod: { not: null } },
+          _count: { _all: true },
+          _sum: { amountSar: true },
+        }),
   ]);
 
   const subStatusLabels: Record<string, string> = {

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { verifyAdminSession } from "@/lib/admin-auth";
+import { requireSuperAdminForAction } from "@/lib/admin-access";
 import { prisma } from "@/lib/prisma";
 
 const CITY_SLUG = /^[a-z0-9-]{1,64}$/;
@@ -12,9 +12,8 @@ export async function createInterCityShippingFee(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  if (!(await verifyAdminSession())) {
-    return { ok: false, error: "غير مصرّح." };
-  }
+  const auth = await requireSuperAdminForAction();
+  if (!auth.ok) return { ok: false, error: auth.error };
   const fromSlug = String(formData.get("fromCitySlug") ?? "").trim().toLowerCase();
   const toSlug = String(formData.get("toCitySlug") ?? "").trim().toLowerCase();
   const feeRaw = Number(formData.get("feeExclVatSar"));
@@ -64,9 +63,8 @@ export async function deleteInterCityShippingFee(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  if (!(await verifyAdminSession())) {
-    return { ok: false, error: "غير مصرّح." };
-  }
+  const auth = await requireSuperAdminForAction();
+  if (!auth.ok) return { ok: false, error: auth.error };
   const id = Number(formData.get("id"));
   if (!Number.isInteger(id) || id < 1) {
     return { ok: false, error: "معرّف غير صالح." };
@@ -80,9 +78,8 @@ export async function setInterCityShippingFeeActive(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  if (!(await verifyAdminSession())) {
-    return { ok: false, error: "غير مصرّح." };
-  }
+  const auth = await requireSuperAdminForAction();
+  if (!auth.ok) return { ok: false, error: auth.error };
   const id = Number(formData.get("id"));
   const isActive = String(formData.get("isActive") ?? "") === "true";
   if (!Number.isInteger(id) || id < 1) {

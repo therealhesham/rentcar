@@ -10,15 +10,16 @@ const LINKS: { href: string; label: string; exact?: boolean }[] = [
   { href: "/admin/statistics/revenue", label: "الإيرادات" },
 ];
 
-export function AdminStatisticsNav() {
+export function AdminStatisticsNav({ isSuperAdmin = true }: { isSuperAdmin?: boolean }) {
   const pathname = usePathname() ?? "";
+  const links = isSuperAdmin ? LINKS : LINKS.filter((l) => l.href !== "/admin/statistics/fleet");
 
   return (
     <nav
       className="mb-8 flex flex-wrap gap-2 border-b border-outline-variant/20 pb-4"
       aria-label="أقسام الإحصائيات"
     >
-      {LINKS.map((link) => {
+      {links.map((link) => {
         const active = link.exact
           ? pathname === link.href
           : pathname === link.href || pathname.startsWith(`${link.href}/`);

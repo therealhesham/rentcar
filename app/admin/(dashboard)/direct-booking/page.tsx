@@ -1,15 +1,16 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { verifyAdminSession } from "@/lib/admin-auth";
+import { requireAdminPage } from "@/lib/admin-page";
 import { prisma } from "@/lib/prisma";
 import { AdminDirectBookingForm } from "./AdminDirectBookingForm";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminDirectBookingPage() {
-  if (!(await verifyAdminSession())) {
-    redirect("/admin/login");
-  }
+  const session = await requireAdminPage();
+
+  const fleetAtBranch = session.branchId
+    ? { branchId: session.branchId, quantity: { gt: 0 } }
+    : { quantity: { gt: 0 } };
 
   const brandsRaw = await prisma.brand
     .findMany({
@@ -18,7 +19,7 @@ export default async function AdminDirectBookingPage() {
         id: true,
         name: true,
         models: {
-          where: { fleetItems: { some: { quantity: { gt: 0 } } } },
+          where: { fleetItems: { some: fleetAtBranch } },
           select: { id: true, name: true, year: true },
           orderBy: [{ name: "asc" }, { year: "desc" }],
         },
@@ -63,7 +64,10 @@ export default async function AdminDirectBookingPage() {
       </header>
 
       <section className="rounded-2xl border border-outline-variant/30 bg-surface-container-low p-6 md:p-8">
-        <AdminDirectBookingForm brands={brands} />
+        <AdminDirectBookingForm
+          brands={brands}
+          lockedBranchSlug={session.isSuperAdmin ? null : session.branchSlug}
+        />
       </section>
     </>
   );

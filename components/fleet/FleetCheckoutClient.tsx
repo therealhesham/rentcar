@@ -402,6 +402,7 @@ export function FleetCheckoutClient({
           carModelId: String(car.modelId),
           pickupDate,
           days: String(trip.days),
+          branch: trip.branchSlug,
         });
         if (excludeBookingRequestIdFromUrl != null) {
           params.set("excludeBookingRequestId", String(excludeBookingRequestIdFromUrl));

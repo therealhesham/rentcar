@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { verifyAdminSession } from "@/lib/admin-auth";
+import { requireSuperAdminForAction } from "@/lib/admin-access";
 import { requireGalleryFolderSlug } from "@/lib/gallery-folder";
 import {
   DEFAULT_HOME_HERO_LEFT_IMAGE_URL,
@@ -75,9 +75,8 @@ export async function updateHomeHero(
   _prev: { ok: boolean; error?: string } | null,
   formData: FormData,
 ): Promise<{ ok: boolean; error?: string }> {
-  if (!(await verifyAdminSession())) {
-    return { ok: false, error: "غير مصرّح." };
-  }
+  const auth = await requireSuperAdminForAction();
+  if (!auth.ok) return { ok: false, error: auth.error };
 
   const altLeft = String(formData.get("altLeft") ?? "").trim();
   const altRight = String(formData.get("altRight") ?? "").trim();

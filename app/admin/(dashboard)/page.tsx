@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { ConvertInquiryToDirectForm } from "@/components/admin/ConvertInquiryToDirectForm";
 import { AdminCard } from "@/components/admin/AdminCard";
 import { AdminKindBadge, AdminStatusBadge } from "@/components/admin/AdminStatusBadge";
@@ -7,25 +6,29 @@ import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminStatCard } from "@/components/admin/AdminStatCard";
 import { EditBookingRequestForm } from "@/components/admin/EditBookingRequestForm";
 import { RevertDirectToInquiryForm } from "@/components/admin/RevertDirectToInquiryForm";
-import { verifyAdminSession } from "@/lib/admin-auth";
+import { adminBranchDisplayName, bookingBranchWhere } from "@/lib/admin-access";
+import { requireAdminPage } from "@/lib/admin-page";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-const QUICK_LINKS = [
+const QUICK_LINKS_ALL = [
   { href: "/admin/statistics", label: "الإحصائيات" },
   { href: "/admin/car-bookings", label: "حجوزات السيارات" },
+  { href: "/admin/branch-returns", label: "مرتجعات الفرع" },
   { href: "/admin/direct-booking", label: "حجز مباشر (مكتب)" },
   { href: "/admin/vehicles", label: "المركبات" },
+  { href: "/admin/employees", label: "موظفو الفروع", superOnly: true },
   { href: "/admin/customers", label: "العملاء" },
   { href: "/admin/fleet-availability", label: "توفر الأسطول" },
-  { href: "/admin/booking-otp-delivery", label: "رمز التحقق" },
+  { href: "/admin/booking-otp-delivery", label: "رمز التحقق", superOnly: true },
 ] as const;
 
 export default async function AdminDashboardPage() {
-  if (!(await verifyAdminSession())) {
-    redirect("/admin/login");
-  }
+  const session = await requireAdminPage();
+  const branchScope = (extra?: Parameters<typeof bookingBranchWhere>[1]) =>
+    bookingBranchWhere(session, extra);
+  const quickLinks = QUICK_LINKS_ALL.filter((l) => session.isSuperAdmin || !("superOnly" in l && l.superOnly));
 
   const [
     categoriesCount,
@@ -38,14 +41,17 @@ export default async function AdminDashboardPage() {
     bookableModelsRaw,
     fleetCategoriesForEdit,
   ] = await Promise.all([
-    prisma.fleetCategory.count(),
-    prisma.brand.count(),
-    prisma.carModel.count(),
-    prisma.fleet.findMany({ select: { quantity: true } }),
-    prisma.bookingRequest.count(),
-    prisma.bookingRequest.count({ where: { status: "NEW" } }),
+    session.isSuperAdmin ? prisma.fleetCategory.count() : Promise.resolve(0),
+    session.isSuperAdmin ? prisma.brand.count() : Promise.resolve(0),
+    session.isSuperAdmin ? prisma.carModel.count() : Promise.resolve(0),
+    session.isSuperAdmin
+      ? prisma.fleet.findMany({ select: { quantity: true } })
+      : Promise.resolve([]),
+    prisma.bookingRequest.count({ where: branchScope() }),
+    prisma.bookingRequest.count({ where: branchScope({ status: "NEW" }) }),
     prisma.bookingRequest
       .findMany({
+        where: branchScope(),
         orderBy: { createdAt: "desc" },
         take: 25,
         include: {
@@ -64,12 +70,14 @@ export default async function AdminDashboardPage() {
         orderBy: [{ brand: { name: "asc" } }, { name: "asc" }],
       })
       .catch(() => []),
-    prisma.fleetCategory
-      .findMany({
-        orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
-        select: { slug: true, title: true },
-      })
-      .catch(() => []),
+    session.isSuperAdmin
+      ? prisma.fleetCategory
+          .findMany({
+            orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+            select: { slug: true, title: true },
+          })
+          .catch(() => [])
+      : Promise.resolve([]),
   ]);
 
   const bookableModels = bookableModelsRaw.map((m) => ({
@@ -83,12 +91,25 @@ export default async function AdminDashboardPage() {
     <>
       <AdminPageHeader
         title="لوحة التحكم"
-        description="نظرة سريعة على الطلبات والأسطول. استخدم الروابط السريعة أو القائمة الجانبية للوصول إلى أي قسم."
+        description={
+          session.isSuperAdmin
+            ? "نظرة سريعة على الطلبات والأسطول. استخدم الروابط السريعة أو القائمة الجانبية للوصول إلى أي قسم."
+            : `بيانات فرع ${adminBranchDisplayName(session)} فقط. مرحباً ${session.displayName}. الحجوزات والعملاء والمركبات مرتبطة بهذا الفرع.`
+        }
         backHref={undefined}
       />
 
+      {!session.isSuperAdmin && session.branchSlug ? (
+        <div className="mb-6 rounded-2xl border border-primary/25 bg-primary-container/25 px-5 py-4 text-sm text-on-surface">
+          <span className="font-bold">فرعك: </span>
+          {adminBranchDisplayName(session)}
+          <span className="mx-2 text-on-surface-variant">·</span>
+          <span className="text-on-surface-variant">{session.displayName}</span>
+        </div>
+      ) : null}
+
       <section className="mb-8 flex flex-wrap gap-2">
-        {QUICK_LINKS.map((link) => (
+        {quickLinks.map((link) => (
           <Link
             key={link.href}
             href={link.href}

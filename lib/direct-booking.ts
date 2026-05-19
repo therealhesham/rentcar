@@ -20,6 +20,7 @@ import {
 } from "@/lib/delivery-address";
 import { formatBranchOutsideHoursError } from "@/lib/direct-booking-user-messages";
 import { validateRentalAddonExclusiveSelection } from "@/lib/rental-addon-exclusive";
+import { sumFleetQuantityForModelAtBranch } from "@/lib/fleet-branch-stock";
 import {
   addDaysToYmd,
   dateOnlyYmd,
@@ -303,12 +304,14 @@ async function loadBlockingDirectBookings(
   client: Pick<FleetBookingClient, "bookingRequest">,
   carModelId: number,
   excludeBookingRequestId?: number,
+  branchSlug?: string,
 ): Promise<OverlapRow[]> {
   return client.bookingRequest.findMany({
     where: {
       kind: "DIRECT",
       carModelId,
       NOT: { status: { in: [...NON_BLOCKING_BOOKING_STATUSES] } },
+      ...(branchSlug ? { branch: branchSlug } : {}),
       ...(excludeBookingRequestId
         ? { id: { not: excludeBookingRequestId } }
         : {}),
@@ -370,8 +373,13 @@ export async function getDirectBookingAvailability(input: {
   pickupDate: Date;
   numberOfDays: number;
   excludeBookingRequestId?: number;
+  /** فرع الإرجاع (مطلوب لاحتساب مخزون الفرع والحجوزات المتزامنة) */
+  branchSlug: string;
 }): Promise<DirectAvailabilityResult> {
-  const fleetUnits = await sumFleetQuantityForModel(prisma, input.carModelId);
+  const branchSlug = input.branchSlug.trim().toLowerCase();
+  const fleetUnits = await sumFleetQuantityForModelAtBranch(prisma, input.carModelId, {
+    branchSlug,
+  });
   if (fleetUnits <= 0) {
     return { available: false, fleetUnits: 0, overlapping: 0 };
   }
@@ -379,6 +387,7 @@ export async function getDirectBookingAvailability(input: {
     prisma,
     input.carModelId,
     input.excludeBookingRequestId,
+    branchSlug,
   );
   const overlapping = countOverlapsFromRows(
     rows,
@@ -396,10 +405,16 @@ export async function getDirectBookingAvailability(input: {
 export async function listAvailableCarModelIds(input: {
   pickupDate: Date;
   numberOfDays: number;
+  /** فرع الإرجاع — يُعرض فقط الموديلات المتوفرة في هذا الفرع */
+  branchSlug: string;
 }): Promise<number[]> {
   const safeDays = safeBookingDays(input.numberOfDays);
+  const branchSlug = input.branchSlug.trim().toLowerCase();
   const rows = await prisma.fleet.findMany({
-    where: { quantity: { gt: 0 } },
+    where: {
+      quantity: { gt: 0 },
+      branch: { slug: branchSlug, isActive: true },
+    },
     select: { modelId: true },
     distinct: ["modelId"],
   });
@@ -410,6 +425,7 @@ export async function listAvailableCarModelIds(input: {
       carModelId: modelId,
       pickupDate: input.pickupDate,
       numberOfDays: safeDays,
+      branchSlug,
     });
     if (res.available) {
       available.push(modelId);
@@ -1060,16 +1076,23 @@ export async function createDirectBooking(
   const runOnce = () =>
     prisma.$transaction(
       async (tx) => {
-        const fleetUnits = await sumFleetQuantityForModel(tx, carModelId);
+        const fleetUnits = await sumFleetQuantityForModelAtBranch(tx, carModelId, {
+          branchSlug: branchSlug,
+        });
         if (fleetUnits <= 0) {
           throw new DirectBookingCapacityError(
             "NO_FLEET",
-            "لا توجد وحدات لهذا الموديل في الأسطول.",
+            "لا توجد وحدات لهذا الموديل في فرع الإرجاع.",
             0,
             0,
           );
         }
-        const rows = await loadBlockingDirectBookings(tx, carModelId, verifiedExcludeBlockingId);
+        const rows = await loadBlockingDirectBookings(
+          tx,
+          carModelId,
+          verifiedExcludeBlockingId,
+          branchSlug,
+        );
         const overlapping = countOverlapsFromRows(rows, commonNormalized.pickupDate, days);
         if (overlapping >= fleetUnits) {
           throw new DirectBookingCapacityError(
@@ -1199,6 +1222,7 @@ export async function convertInquiryBookingToDirect(
           select: {
             id: true,
             kind: true,
+            branch: true,
             pickupDate: true,
             numberOfDays: true,
           },
@@ -1224,17 +1248,20 @@ export async function convertInquiryBookingToDirect(
           });
         }
 
-        const fleetUnits = await sumFleetQuantityForModel(tx, carModelId);
+        const branchSlug = booking.branch.trim().toLowerCase();
+        const fleetUnits = await sumFleetQuantityForModelAtBranch(tx, carModelId, {
+          branchSlug,
+        });
         if (fleetUnits <= 0) {
           throw new DirectBookingCapacityError(
             "NO_FLEET",
-            "لا توجد وحدات لهذا الموديل في الأسطول.",
+            "لا توجد وحدات لهذا الموديل في فرع الإرجاع.",
             0,
             0,
           );
         }
 
-        const rows = await loadBlockingDirectBookings(tx, carModelId);
+        const rows = await loadBlockingDirectBookings(tx, carModelId, undefined, branchSlug);
         const overlapping = countOverlapsFromRows(
           rows,
           booking.pickupDate,
@@ -1243,7 +1270,7 @@ export async function convertInquiryBookingToDirect(
         if (overlapping >= fleetUnits) {
           throw new DirectBookingCapacityError(
             "SLOT_FULL",
-            "الفترة ممتلئة بالنسبة لعدد العربيات في الأسطول.",
+            "الفترة ممتلئة في فرع الإرجاع لهذه الفترة.",
             fleetUnits,
             overlapping,
           );
@@ -1373,7 +1400,7 @@ export async function updateBookingRequestByAdmin(
       async (tx) => {
         const row = await tx.bookingRequest.findUnique({
           where: { id: bookingRequestId },
-          select: { id: true, kind: true },
+          select: { id: true, kind: true, branch: true },
         });
         if (!row || row.kind !== "DIRECT") {
           throw Object.assign(new Error("NOT_DIRECT"), {
@@ -1394,16 +1421,24 @@ export async function updateBookingRequestByAdmin(
         const carType = model.category.slug || model.category.title;
 
         if (isBlockingBookingStatus(statusTrim)) {
-          const fleetUnits = await sumFleetQuantityForModel(tx, carModelId);
+          const branchSlug = row.branch.trim().toLowerCase();
+          const fleetUnits = await sumFleetQuantityForModelAtBranch(tx, carModelId, {
+            branchSlug,
+          });
           if (fleetUnits <= 0) {
             throw new DirectBookingCapacityError(
               "NO_FLEET",
-              "لا توجد وحدات لهذا الموديل في الأسطول.",
+              "لا توجد وحدات لهذا الموديل في فرع الإرجاع.",
               0,
               0,
             );
           }
-          const rows = await loadBlockingDirectBookings(tx, carModelId, bookingRequestId);
+          const rows = await loadBlockingDirectBookings(
+            tx,
+            carModelId,
+            bookingRequestId,
+            branchSlug,
+          );
           const overlapping = countOverlapsFromRows(rows, input.pickupDate, days);
           if (overlapping >= fleetUnits) {
             throw new DirectBookingCapacityError(

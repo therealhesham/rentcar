@@ -16,12 +16,19 @@ export type AdminBrandOption = {
   name: string;
 };
 
+export type AdminBranchOption = {
+  id: number;
+  name: string;
+  slug: string;
+};
+
 type AdminAddCarFormProps = {
   categories: AdminCategoryOption[];
   brands: AdminBrandOption[];
+  branches: AdminBranchOption[];
 };
 
-export function AdminAddCarForm({ categories, brands }: AdminAddCarFormProps) {
+export function AdminAddCarForm({ categories, brands, branches }: AdminAddCarFormProps) {
   const [state, formAction, pending] = useActionState(createFleetVehicle, null);
 
   if (categories.length === 0) {
@@ -208,7 +215,22 @@ export function AdminAddCarForm({ categories, brands }: AdminAddCarFormProps) {
         </span>
       </label>
       <label className="text-sm font-medium">
-        الكمية في الأسطول
+        فرع الإسطول (أول كمية)
+        <select
+          name="branchId"
+          required
+          defaultValue={branches[0]?.id}
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+        >
+          {branches.map((b) => (
+            <option key={b.id} value={b.id}>
+              {b.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="text-sm font-medium">
+        الكمية في هذا الفرع
         <input
           name="quantity"
           type="number"

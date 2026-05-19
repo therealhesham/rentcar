@@ -1,6 +1,5 @@
-import { redirect } from "next/navigation";
 import { AdminStatisticsNav } from "@/components/admin/stats/AdminStatisticsNav";
-import { verifyAdminSession } from "@/lib/admin-auth";
+import { requireAdminPage } from "@/lib/admin-page";
 
 export const dynamic = "force-dynamic";
 
@@ -9,13 +8,11 @@ export default async function AdminStatisticsLayout({
 }: {
   children: React.ReactNode;
 }) {
-  if (!(await verifyAdminSession())) {
-    redirect("/admin/login");
-  }
+  const session = await requireAdminPage();
 
   return (
     <div className="pb-10">
-      <AdminStatisticsNav />
+      <AdminStatisticsNav isSuperAdmin={session.isSuperAdmin} />
       {children}
     </div>
   );

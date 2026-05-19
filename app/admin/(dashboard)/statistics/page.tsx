@@ -7,6 +7,7 @@ import { AdminBarChart } from "@/components/admin/stats/AdminBarChart";
 import { AdminLabelBreakdown } from "@/components/admin/stats/AdminLabelBreakdown";
 import { AdminPeriodSelect } from "@/components/admin/stats/AdminPeriodSelect";
 import { AdminTrendPill } from "@/components/admin/stats/AdminTrendPill";
+import { requireAdminPage } from "@/lib/admin-page";
 import {
   getAdminOverviewStats,
   parseAdminStatsPeriod,
@@ -18,9 +19,11 @@ export const dynamic = "force-dynamic";
 type Props = { searchParams: Promise<{ days?: string }> };
 
 export default async function AdminStatisticsOverviewPage({ searchParams }: Props) {
+  const session = await requireAdminPage();
   const sp = await searchParams;
   const days = parseAdminStatsPeriod(sp.days);
-  const stats = await getAdminOverviewStats(days);
+  const branchSlug = session.isSuperAdmin ? null : session.branchSlug;
+  const stats = await getAdminOverviewStats(days, branchSlug);
   const bookingDelta = trendDeltaPct(stats.bookingsInPeriod, stats.bookingsPrevPeriod);
 
   return (

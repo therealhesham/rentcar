@@ -18,6 +18,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const carModelId = Number(url.searchParams.get("carModelId"));
   const pickupRaw = url.searchParams.get("pickupDate") ?? "";
+  const branchRaw = url.searchParams.get("branch") ?? "";
   const days = Number(url.searchParams.get("days"));
 
   if (!Number.isInteger(carModelId) || carModelId < 1) {
@@ -42,6 +43,13 @@ export async function GET(request: Request) {
   if (!Number.isFinite(days) || days < 1 || days > 60) {
     return NextResponse.json(
       { ok: false, error: "days يجب أن يكون بين 1 و 60." },
+      { status: 400 },
+    );
+  }
+  const branchSlug = branchRaw.trim().toLowerCase();
+  if (!branchSlug || !/^[a-z0-9-]{1,64}$/.test(branchSlug)) {
+    return NextResponse.json(
+      { ok: false, error: "branch (فرع الإرجاع) مطلوب." },
       { status: 400 },
     );
   }
@@ -89,6 +97,7 @@ export async function GET(request: Request) {
     pickupDate,
     numberOfDays: Math.round(days),
     excludeBookingRequestId: verifiedExcludeBookingRequestId,
+    branchSlug,
   });
 
   return NextResponse.json({

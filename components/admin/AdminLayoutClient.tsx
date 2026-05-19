@@ -3,12 +3,17 @@
 import { Menu } from "lucide-react";
 import { useState } from "react";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import type { AdminSession } from "@/lib/admin-auth";
+import { adminBranchDisplayName } from "@/lib/admin-branch-display";
+import type { AdminNavGroup } from "@/lib/admin-nav";
 
 type Props = {
   children: React.ReactNode;
+  session: AdminSession;
+  navGroups: AdminNavGroup[];
 };
 
-export function AdminLayoutClient({ children }: Props) {
+export function AdminLayoutClient({ children, session, navGroups }: Props) {
   const [navOpen, setNavOpen] = useState(false);
 
   return (
@@ -22,7 +27,12 @@ export function AdminLayoutClient({ children }: Props) {
         />
       ) : null}
 
-      <AdminSidebar open={navOpen} onClose={() => setNavOpen(false)} />
+      <AdminSidebar
+        open={navOpen}
+        onClose={() => setNavOpen(false)}
+        session={session}
+        navGroups={navGroups}
+      />
 
       <div className="flex min-h-screen min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-outline-variant/25 bg-white/90 px-4 py-3 backdrop-blur-md md:hidden">
@@ -39,6 +49,11 @@ export function AdminLayoutClient({ children }: Props) {
               لوحة الإدارة
             </p>
             <p className="truncate text-base font-extrabold tracking-tight text-[#003749]">روائس</p>
+            {!session.isSuperAdmin && session.branchSlug ? (
+              <p className="truncate text-[11px] font-medium text-on-surface-variant">
+                فرع: {adminBranchDisplayName(session)}
+              </p>
+            ) : null}
           </div>
         </header>
 

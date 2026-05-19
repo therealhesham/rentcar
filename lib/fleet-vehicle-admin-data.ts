@@ -11,23 +11,34 @@ export type AdminFleetVehicleListRow = {
   image: string | null;
 };
 
-/** مركبات لها سجل أسطول (للعرض والتعديل من الإدارة) */
-export async function listFleetVehiclesForAdmin(): Promise<AdminFleetVehicleListRow[]> {
+/** مركبات الكتالوج مع كمية الفرع (إن وُجد branchId) أو مجموع الكميات (سوبر أدمن) */
+export async function listFleetVehiclesForAdmin(
+  branchId?: number | null,
+): Promise<AdminFleetVehicleListRow[]> {
   const rows = await prisma.carModel.findMany({
-    where: { fleetItems: { some: {} } },
-    include: { brand: true, fleetItems: { orderBy: { id: "asc" }, take: 1 } },
     orderBy: [{ brand: { name: "asc" } }, { name: "asc" }, { year: "desc" }],
+    include: {
+      brand: true,
+      fleetItems: branchId
+        ? { where: { branchId }, take: 1 }
+        : { orderBy: { quantity: "desc" } },
+    },
   });
 
-  return rows.map((r) => ({
-    id: r.id,
-    brandName: r.brand.name.trim(),
-    modelName: r.name.trim(),
-    year: r.year,
-    price: r.price,
-    quantity: r.fleetItems[0]?.quantity ?? 0,
-    image: r.image?.trim() || null,
-  }));
+  return rows.map((r) => {
+    const qty = branchId
+      ? (r.fleetItems[0]?.quantity ?? 0)
+      : r.fleetItems.reduce((s, f) => s + f.quantity, 0);
+    return {
+      id: r.id,
+      brandName: r.brand.name.trim(),
+      modelName: r.name.trim(),
+      year: r.year,
+      price: r.price,
+      quantity: qty,
+      image: r.image?.trim() || null,
+    };
+  });
 }
 
 export type AdminFleetVehicleEditPayload = {
@@ -48,22 +59,27 @@ export type AdminFleetVehicleEditPayload = {
   image: string | null;
   alt: string | null;
   badge: string | null;
+  branchFleet: { branchId: number; branchName: string; quantity: number }[];
 };
 
 export async function getFleetVehicleForAdminEdit(
   modelId: number,
 ): Promise<AdminFleetVehicleEditPayload | null> {
-  const row = await prisma.carModel.findFirst({
-    where: { id: modelId, fleetItems: { some: {} } },
+  const row = await prisma.carModel.findUnique({
+    where: { id: modelId },
     include: {
       brand: true,
       category: true,
-      fleetItems: { orderBy: { id: "asc" }, take: 1 },
+      fleetItems: {
+        include: { branch: { select: { id: true, name: true } } },
+        orderBy: { branch: { sortOrder: "asc" } },
+      },
     },
   });
-  if (!row || !row.fleetItems[0]) {
-    return null;
-  }
+  if (!row) return null;
+
+  const totalQty = row.fleetItems.reduce((s, f) => s + f.quantity, 0);
+
   return {
     id: row.id,
     brandId: row.brandId,
@@ -78,9 +94,14 @@ export async function getFleetVehicleForAdminEdit(
     fuel: row.fuel,
     price: row.price,
     vatRatePercent: row.vatRatePercent,
-    quantity: row.fleetItems[0].quantity,
+    quantity: totalQty,
     image: row.image?.trim() || null,
     alt: row.alt?.trim() || null,
     badge: row.badge?.trim() || null,
+    branchFleet: row.fleetItems.map((f) => ({
+      branchId: f.branchId,
+      branchName: f.branch.name,
+      quantity: f.quantity,
+    })),
   };
 }
