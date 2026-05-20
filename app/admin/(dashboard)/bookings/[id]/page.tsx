@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { BookingDetailEditActions } from "@/components/admin/BookingDetailEditActions";
 import { BookingDetailView } from "@/components/admin/BookingDetailView";
 import { assertBookingRequestInScope } from "@/lib/admin-access";
+import { loadAdminBookingCancellationContext } from "@/lib/admin-booking-cancellation";
 import {
   loadAdminBookingDetail,
   loadAdminBookingEditContext,
@@ -50,6 +51,8 @@ export default async function AdminBookingDetailPage({
   ]);
   if (!booking) notFound();
 
+  const cancellation = await loadAdminBookingCancellationContext(booking);
+
   const editable = toEditableBookingRow(booking);
 
   const editActions = (
@@ -62,5 +65,11 @@ export default async function AdminBookingDetailPage({
     </Suspense>
   );
 
-  return <BookingDetailView booking={booking} editActions={editActions} />;
+  return (
+    <BookingDetailView
+      booking={booking}
+      editActions={editActions}
+      cancellation={cancellation}
+    />
+  );
 }

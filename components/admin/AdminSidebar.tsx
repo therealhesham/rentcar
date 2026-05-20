@@ -2,6 +2,7 @@
 
 import {
   Activity,
+  Ban,
   BarChart2,
   BadgeDollarSign,
   Briefcase,
@@ -64,6 +65,7 @@ const ICONS: Record<AdminNavItem["icon"], LucideIcon> = {
   home: Home,
   "user-cog": UserCog,
   "corner-down-left": CornerDownLeft,
+  ban: Ban,
 };
 
 type Props = {

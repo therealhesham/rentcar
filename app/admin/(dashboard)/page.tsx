@@ -1,11 +1,23 @@
 import Link from "next/link";
-import { ConvertInquiryToDirectForm } from "@/components/admin/ConvertInquiryToDirectForm";
+import {
+  BarChart3,
+  CalendarPlus,
+  Car,
+  ClipboardList,
+  KeyRound,
+  LayoutGrid,
+  MapPin,
+  Shield,
+  Truck,
+  Users,
+} from "lucide-react";
 import { AdminCard } from "@/components/admin/AdminCard";
-import { AdminKindBadge, AdminStatusBadge } from "@/components/admin/AdminStatusBadge";
+import {
+  AdminDashboardBookingsSection,
+  type DashboardBookingRow,
+} from "@/components/admin/AdminDashboardBookingsSection";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminStatCard } from "@/components/admin/AdminStatCard";
-import { EditBookingRequestForm } from "@/components/admin/EditBookingRequestForm";
-import { RevertDirectToInquiryForm } from "@/components/admin/RevertDirectToInquiryForm";
 import { adminBranchDisplayName, bookingBranchWhere } from "@/lib/admin-access";
 import { requireAdminPage } from "@/lib/admin-page";
 import { prisma } from "@/lib/prisma";
@@ -13,15 +25,15 @@ import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 
 const QUICK_LINKS_ALL = [
-  { href: "/admin/statistics", label: "الإحصائيات" },
-  { href: "/admin/car-bookings", label: "حجوزات السيارات" },
-  { href: "/admin/branch-returns", label: "مرتجعات الفرع" },
-  { href: "/admin/direct-booking", label: "حجز مباشر (مكتب)" },
-  { href: "/admin/vehicles", label: "المركبات" },
-  { href: "/admin/employees", label: "موظفو الفروع", superOnly: true },
-  { href: "/admin/customers", label: "العملاء" },
-  { href: "/admin/fleet-availability", label: "توفر الأسطول" },
-  { href: "/admin/booking-otp-delivery", label: "رمز التحقق", superOnly: true },
+  { href: "/admin/statistics", label: "الإحصائيات", icon: BarChart3 },
+  { href: "/admin/car-bookings", label: "حجوزات السيارات", icon: ClipboardList },
+  { href: "/admin/branch-returns", label: "مرتجعات الفرع", icon: Truck },
+  { href: "/admin/direct-booking", label: "حجز مباشر (مكتب)", icon: CalendarPlus },
+  { href: "/admin/vehicles", label: "المركبات", icon: Car },
+  { href: "/admin/employees", label: "موظفو الفروع", icon: Users, superOnly: true },
+  { href: "/admin/customers", label: "العملاء", icon: Users },
+  { href: "/admin/fleet-availability", label: "توفر الأسطول", icon: LayoutGrid },
+  { href: "/admin/booking-otp-delivery", label: "رمز التحقق", icon: KeyRound, superOnly: true },
 ] as const;
 
 export default async function AdminDashboardPage() {
@@ -36,7 +48,6 @@ export default async function AdminDashboardPage() {
     modelsCount,
     fleetRows,
     bookingTotal,
-    bookingNew,
     bookingRequests,
     bookableModelsRaw,
     fleetCategoriesForEdit,
@@ -48,7 +59,6 @@ export default async function AdminDashboardPage() {
       ? prisma.fleet.findMany({ select: { quantity: true } })
       : Promise.resolve([]),
     prisma.bookingRequest.count({ where: branchScope() }),
-    prisma.bookingRequest.count({ where: branchScope({ status: "NEW" }) }),
     prisma.bookingRequest
       .findMany({
         where: branchScope(),
@@ -89,6 +99,51 @@ export default async function AdminDashboardPage() {
 
   const fleetUnits = fleetRows.reduce((sum, row) => sum + row.quantity, 0);
 
+  const dashboardRows: DashboardBookingRow[] = bookingRequests.map((request) => ({
+    id: request.id,
+    kind: request.kind as "INQUIRY" | "DIRECT",
+    fullName: request.fullName,
+    phone: request.phone,
+    ageRange: request.ageRange,
+    carType: request.carType,
+    branch:
+      request.returnBranch?.slug ?? request.pickupBranch?.slug ?? "jeddah",
+    pickupMode: request.pickupMode,
+    deliveryLat: request.deliveryLat,
+    deliveryLng: request.deliveryLng,
+    deliveryAddress:
+      (request as { deliveryAddress?: string | null }).deliveryAddress ?? null,
+    pickupDateYmd: request.pickupDate.toISOString().slice(0, 10),
+    numberOfDays: request.numberOfDays,
+    termsAccepted: request.termsAccepted,
+    status: request.status,
+    carModelId: request.carModelId,
+    carModelLabel: request.carModel
+      ? `${request.carModel.brand.name} ${request.carModel.name}`
+      : null,
+    addonsJson: request.addonsJson ?? null,
+    paymentStatus: request.paymentStatus ?? null,
+    paidAt: request.paidAt ? request.paidAt.toISOString() : null,
+    paymentMethod: request.paymentMethod ?? null,
+    idDocumentKind: request.idDocumentKind ?? null,
+    nationalIdNumber: request.nationalIdNumber ?? null,
+    passportNumber: request.passportNumber ?? null,
+    licenseNumber: request.licenseNumber ?? null,
+    licenseExpiryDate: request.licenseExpiryDate
+      ? request.licenseExpiryDate.toISOString().slice(0, 10)
+      : null,
+    idCardImageUrl: request.idCardImageUrl ?? null,
+    driverLicenseImageUrl: request.driverLicenseImageUrl ?? null,
+    cancelledAt: request.cancelledAt ? request.cancelledAt.toISOString() : null,
+    cancellationDeductedDays: request.cancellationDeductedDays ?? null,
+    cancellationRefundAmountSar: request.cancellationRefundAmountSar ?? null,
+    cancellationRefundExternalRef: request.cancellationRefundExternalRef ?? null,
+    pickupBranchName: request.pickupBranch?.name ?? null,
+    returnBranchName: request.returnBranch?.name ?? null,
+    createdAtLabel: new Date(request.createdAt).toLocaleString("ar-SA"),
+    pickupDateLabel: new Date(request.pickupDate).toLocaleDateString("ar-SA"),
+  }));
+
   return (
     <>
       <AdminPageHeader
@@ -102,188 +157,85 @@ export default async function AdminDashboardPage() {
       />
 
       {!session.isSuperAdmin && session.branchSlug ? (
-        <div className="mb-6 rounded-2xl border border-primary/25 bg-primary-container/25 px-5 py-4 text-sm text-on-surface">
-          <span className="font-bold">فرعك: </span>
-          {adminBranchDisplayName(session)}
-          <span className="mx-2 text-on-surface-variant">·</span>
-          <span className="text-on-surface-variant">{session.displayName}</span>
+        <div className="mb-6 flex items-start gap-3 rounded-2xl border border-primary/25 bg-primary-container/25 px-5 py-4 text-sm text-on-surface">
+          <MapPin className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden />
+          <div>
+            <span className="font-bold">فرعك: </span>
+            {adminBranchDisplayName(session)}
+            <span className="mx-2 text-on-surface-variant">·</span>
+            <span className="text-on-surface-variant">{session.displayName}</span>
+          </div>
         </div>
       ) : null}
 
-      <section className="mb-8 flex flex-wrap gap-2">
-        {quickLinks.map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            className="rounded-full border border-outline-variant/30 bg-white px-4 py-2 text-xs font-bold text-on-surface shadow-sm transition-colors hover:border-primary/35 hover:bg-primary-container/25"
-          >
-            {link.label}
-          </Link>
-        ))}
-      </section>
-
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <AdminStatCard
-          label="طلبات جديدة"
-          value={bookingNew}
-          href="/admin/car-bookings"
-          highlight={bookingNew > 0}
-          hint={bookingNew > 0 ? "تحتاج متابعة" : undefined}
-        />
-        <AdminStatCard label="طلبات الحجز (الكل)" value={bookingTotal} href="/admin/car-bookings" />
-        <AdminStatCard label="وحدات الأسطول" value={fleetUnits} href="/admin/vehicles" />
-        <AdminStatCard label="فئات الأسطول" value={categoriesCount} href="/admin/categories" />
-        <AdminStatCard label="الماركات" value={brandsCount} href="/admin/vehicles" />
-        <AdminStatCard label="موديلات مسجّلة" value={modelsCount} href="/admin/vehicles" />
-      </section>
-
-      <AdminCard
-        className="mt-10"
-        title="آخر طلبات الحجز"
-        description="استفسار من الرئيسية أو حجز مباشر بعد اختيار سيارة. حوّل الاستفسار إلى حجز مباشر أو عدّل البيانات من الأعمدة."
-        noPadding
-      >
-        {bookingRequests.length === 0 ? (
-          <p className="px-6 py-10 text-center text-sm text-on-surface-variant">
-            لا توجد طلبات حجز حتى الآن.
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[1260px] text-start text-sm">
-              <thead>
-                <tr className="border-b border-outline-variant/20 bg-surface-container-low/60 text-[11px] font-bold uppercase tracking-wide text-on-surface-variant">
-                  <th className="px-4 py-3">عرض</th>
-                  <th className="px-4 py-3">تعديل</th>
-                  <th className="px-4 py-3">النوع</th>
-                  <th className="px-4 py-3">السيارة</th>
-                  <th className="px-4 py-3">الاسم</th>
-                  <th className="px-4 py-3">الجوال</th>
-                  <th className="px-4 py-3">العمر</th>
-                  <th className="px-4 py-3">الفئة</th>
-                  <th className="px-4 py-3">استلام / إرجاع</th>
-                  <th className="px-4 py-3">بداية الحجز</th>
-                  <th className="px-4 py-3">الأيام</th>
-                  <th className="px-4 py-3">الحالة</th>
-                  <th className="px-4 py-3">وقت الإرسال</th>
-                  <th className="px-4 py-3">تحويل / إرجاع</th>
-                </tr>
-              </thead>
-              <tbody>
-                {bookingRequests.map((request, i) => (
-                  <tr
-                    key={request.id}
-                    className={`border-b border-outline-variant/10 transition-colors hover:bg-surface-container-low/50 ${
-                      i % 2 === 1 ? "bg-surface-container-low/25" : ""
-                    }`}
-                  >
-                    <td className="px-4 py-3 align-top">
-                      <Link
-                        href={`/admin/bookings/${request.id}`}
-                        className="text-sm font-bold text-primary hover:underline"
-                      >
-                        التفاصيل
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3 align-top">
-                      <EditBookingRequestForm
-                        request={{
-                          id: request.id,
-                          kind: request.kind,
-                          fullName: request.fullName,
-                          phone: request.phone,
-                          ageRange: request.ageRange,
-                          carType: request.carType,
-                          branch:
-                            request.returnBranch?.slug ??
-                            request.pickupBranch?.slug ??
-                            "jeddah",
-                          pickupMode: request.pickupMode,
-                          deliveryLat: request.deliveryLat,
-                          deliveryLng: request.deliveryLng,
-                          deliveryAddress:
-                            (request as { deliveryAddress?: string | null }).deliveryAddress ?? null,
-                          pickupDateYmd: request.pickupDate.toISOString().slice(0, 10),
-                          numberOfDays: request.numberOfDays,
-                          termsAccepted: request.termsAccepted,
-                          status: request.status,
-                          carModelId: request.carModelId,
-                          carModelLabel: request.carModel
-                            ? `${request.carModel.brand.name} ${request.carModel.name}`
-                            : null,
-                          addonsJson: request.addonsJson ?? null,
-                          paymentStatus: request.paymentStatus ?? null,
-                          paidAt: request.paidAt ? request.paidAt.toISOString() : null,
-                          paymentMethod: request.paymentMethod ?? null,
-                          idDocumentKind: request.idDocumentKind ?? null,
-                          nationalIdNumber: request.nationalIdNumber ?? null,
-                          passportNumber: request.passportNumber ?? null,
-                          licenseNumber: request.licenseNumber ?? null,
-                          licenseExpiryDate: request.licenseExpiryDate
-                            ? request.licenseExpiryDate.toISOString().slice(0, 10)
-                            : null,
-                          idCardImageUrl: request.idCardImageUrl ?? null,
-                          driverLicenseImageUrl: request.driverLicenseImageUrl ?? null,
-                          cancelledAt: request.cancelledAt
-                            ? request.cancelledAt.toISOString()
-                            : null,
-                          cancellationDeductedDays: request.cancellationDeductedDays ?? null,
-                          cancellationRefundAmountSar: request.cancellationRefundAmountSar ?? null,
-                          cancellationRefundExternalRef:
-                            request.cancellationRefundExternalRef ?? null,
-                        }}
-                        categories={fleetCategoriesForEdit}
-                        models={bookableModels}
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      <AdminKindBadge kind={request.kind} />
-                    </td>
-                    <td className="px-4 py-3 text-on-surface-variant">
-                      {request.carModel
-                        ? `${request.carModel.brand.name} ${request.carModel.name}`
-                        : "—"}
-                    </td>
-                    <td className="px-4 py-3 font-semibold">{request.fullName}</td>
-                    <td className="px-4 py-3 tabular-nums" dir="ltr">
-                      {request.phone}
-                    </td>
-                    <td className="px-4 py-3">{request.ageRange}</td>
-                    <td className="px-4 py-3">{request.carType}</td>
-                    <td className="px-4 py-3 text-xs">
-                      <span className="block">
-                        استلام: {request.pickupBranch?.name ?? "—"}
-                      </span>
-                      <span className="mt-0.5 block text-on-surface-variant">
-                        إرجاع: {request.returnBranch?.name ?? "—"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 tabular-nums">
-                      {new Date(request.pickupDate).toLocaleDateString("ar-SA")}
-                    </td>
-                    <td className="px-4 py-3 tabular-nums">{request.numberOfDays}</td>
-                    <td className="px-4 py-3">
-                      <AdminStatusBadge status={request.status} />
-                    </td>
-                    <td className="px-4 py-3 text-xs text-on-surface-variant tabular-nums">
-                      {new Date(request.createdAt).toLocaleString("ar-SA")}
-                    </td>
-                    <td className="px-4 py-3 align-top">
-                      {request.kind === "INQUIRY" ? (
-                        <ConvertInquiryToDirectForm
-                          bookingRequestId={request.id}
-                          models={bookableModels}
-                        />
-                      ) : (
-                        <RevertDirectToInquiryForm bookingRequestId={request.id} />
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+      <AdminCard className="mb-8" title="روابط سريعة" description="الوصول المباشر إلى الأقسام الأكثر استخداماً.">
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {quickLinks.map((link) => {
+            const Icon = link.icon;
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="flex items-center gap-3 rounded-xl border border-outline-variant/20 bg-surface-container-low/30 px-4 py-3 text-sm font-bold text-on-surface transition-all hover:border-primary/30 hover:bg-primary-container/20 hover:text-primary"
+              >
+                <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-white text-primary shadow-sm ring-1 ring-outline-variant/15">
+                  <Icon className="size-4" aria-hidden />
+                </span>
+                {link.label}
+              </Link>
+            );
+          })}
+        </div>
       </AdminCard>
+
+      <section className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <AdminStatCard label="حجوزات (الكل)" value={bookingTotal} href="/admin/car-bookings" />
+        {session.isSuperAdmin ? (
+          <>
+            <AdminStatCard label="وحدات الأسطول" value={fleetUnits} href="/admin/vehicles" />
+            <AdminStatCard label="فئات الأسطول" value={categoriesCount} href="/admin/categories" />
+            <AdminStatCard label="الماركات" value={brandsCount} href="/admin/vehicles" />
+            <AdminStatCard label="موديلات مسجّلة" value={modelsCount} href="/admin/vehicles" />
+          </>
+        ) : (
+          <AdminStatCard
+            label="موديلات متاحة للحجز"
+            value={bookableModels.length}
+            href="/admin/fleet-availability"
+            hint="في نطاق فرعك"
+          />
+        )}
+      </section>
+
+      <AdminCard className="mt-2" noPadding>
+        <div className="flex flex-col gap-1 border-b border-outline-variant/15 bg-surface-container-low/40 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div>
+            <h2 className="text-lg font-extrabold tracking-tight text-on-surface">آخر الحجوزات</h2>
+            <p className="mt-1 text-sm leading-relaxed text-on-surface-variant">
+              أحدث 25 حجزاً مباشراً. للتفاصيل الكاملة افتح صفحة الحجز.
+            </p>
+          </div>
+          <Link
+            href="/admin/car-bookings"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-outline-variant/30 bg-white px-4 py-2 text-xs font-bold text-primary shadow-sm transition-colors hover:bg-surface-container-low"
+          >
+            <ClipboardList className="size-3.5" aria-hidden />
+            عرض كل الحجوزات
+          </Link>
+        </div>
+        <AdminDashboardBookingsSection
+          rows={dashboardRows}
+          categories={fleetCategoriesForEdit}
+          models={bookableModels}
+        />
+      </AdminCard>
+
+      {session.isSuperAdmin ? (
+        <p className="mt-6 flex items-center gap-2 text-xs text-on-surface-variant">
+          <Shield className="size-3.5" aria-hidden />
+          صلاحيات مدير النظام — جميع الفروع والإعدادات متاحة.
+        </p>
+      ) : null}
     </>
   );
 }

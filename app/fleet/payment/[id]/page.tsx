@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { SiteFooter } from "@/components/home/SiteFooter";
 import { PaymentClient } from "@/components/fleet/PaymentClient";
@@ -5,6 +6,11 @@ import { SiteNav } from "@/components/shared/SiteNav";
 import { getBookingForPayment } from "@/lib/booking-payment-data";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "إتمام الدفع | Rawaes",
+  description: "اختر طريقة الدفع وأكمل حجز السيارة.",
+};
 
 export default async function FleetPaymentPage({
   params,
@@ -19,9 +25,9 @@ export default async function FleetPaymentPage({
   if (!booking) notFound();
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#f4f4f5] text-on-surface">
+    <div className="flex min-h-screen flex-col bg-[#fdfbf6] text-on-surface">
       <SiteNav active="fleet" />
-      <div className="pt-24 pb-16">
+      <div className="pt-24 pb-20">
         <PaymentClient booking={booking} />
       </div>
       <SiteFooter />

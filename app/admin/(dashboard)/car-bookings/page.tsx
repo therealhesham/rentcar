@@ -61,10 +61,13 @@ export default async function AdminCarBookingsPage() {
         <h1 className="text-3xl font-extrabold tracking-tight">حجوزات السيارات</h1>
         <p className="mt-2 max-w-2xl text-on-surface-variant">
           الحجوزات المباشرة المرتبطة بموديل سيارة، مرتبة حسب{" "}
-          <span className="font-bold text-on-surface">تاريخ بداية الحجز</span>. الحالات الملغاة أو
-          المرفوضة لا تظهر هنا.
+          <span className="font-bold text-on-surface">تاريخ بداية الحجز</span>. الحجوزات الملغاة لا
+          تظهر هنا.
         </p>
-        <p className="mt-3 text-sm text-on-surface-variant">
+        <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-on-surface-variant">
+          <Link href="/admin/cancelled-bookings" className="font-bold text-primary hover:underline">
+            الحجوزات الملغاة
+          </Link>
           <Link href="/admin" className="font-bold text-primary hover:underline">
             العودة للوحة التحكم
           </Link>

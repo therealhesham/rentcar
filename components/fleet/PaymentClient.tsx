@@ -1,6 +1,15 @@
 "use client";
 
-import { CheckCircle2, CreditCard, Gift, Lock, Shield, Wallet } from "lucide-react";
+import {
+  Check,
+  CheckCircle2,
+  CreditCard,
+  Gift,
+  Loader2,
+  Lock,
+  Shield,
+  Wallet,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useActionState, useMemo, useState, type ReactNode } from "react";
@@ -92,6 +101,12 @@ type MethodOption =
       hint: string;
       Icon: typeof CreditCard;
     };
+
+const CHECKOUT_STEPS = [
+  { label: "الأسطول", href: "/fleet", done: true },
+  { label: "إتمام الحجز", href: "/fleet/checkout", done: true },
+  { label: "الدفع", done: false },
+] as const;
 
 const METHOD_OPTIONS: MethodOption[] = [
   {
@@ -214,54 +229,124 @@ export function PaymentClient({ booking }: Props) {
 
   return (
     <main dir="rtl" className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-      <nav className="mb-6 text-sm text-on-surface-variant">
-        <Link href="/fleet" className="font-bold text-[#003749] hover:underline">
+      <nav className="mb-6 flex items-center gap-2 text-[13px] font-semibold text-[#aaa08e]">
+        <Link href="/fleet" className="transition-colors hover:text-[#dbb878]">
           الأسطول
         </Link>
-        <span className="mx-2 opacity-50">/</span>
-        <Link href="/fleet/checkout" className="font-bold text-[#003749] hover:underline">
-          الإتمام
-        </Link>
-        <span className="mx-2 opacity-50">/</span>
-        <span className="font-semibold text-on-surface">الدفع</span>
+        <span aria-hidden>/</span>
+        <span className="text-[#003749]/70">إتمام الحجز</span>
+        <span aria-hidden>/</span>
+        <span className="text-[#003749]">الدفع</span>
       </nav>
 
-      <h1 className="mb-2 text-xl font-extrabold text-[#ea580c] sm:text-2xl">إتمام الدفع</h1>
-      <p className="mb-6 text-sm text-on-surface-variant">
-        طلب الحجز رقم{" "}
-        <span dir="ltr" className="tabular-nums font-bold text-[#003749]">
-          #{booking.id}
-        </span>{" "}
-        —{" "}
-        {paid
-          ? ps === "REFUNDED"
-            ? `تم استرداد المبلغ بالكامل عبر ${paymentMethodLabelAr(resolvedMethodCode)}.`
-            : ps === "PARTIAL_REFUND"
-              ? `تم استرداد جزء من المبلغ عبر ${paymentMethodLabelAr(resolvedMethodCode)}.`
-              : ps === "NO_REFUND"
-                ? "لا يوجد مبلغ مسترد بحسب سياسة الإلغاء."
-                : resolvedMethodCode
-                  ? `تم الدفع عبر ${paymentMethodLabelAr(resolvedMethodCode)}.`
-                  : "تم الدفع بنجاح."
-          : "اختر طريقة الدفع وأكمل الإجراء."}
-      </p>
+      <ol className="mb-8 flex flex-wrap items-center gap-2 sm:gap-3">
+        {CHECKOUT_STEPS.map((step, i) => {
+          const isLast = i === CHECKOUT_STEPS.length - 1;
+          const isDone = step.done && !isLast;
+          const content = (
+            <>
+              <span
+                className={`grid size-7 shrink-0 place-items-center rounded-full text-xs font-extrabold ${
+                  isLast
+                    ? "bg-[#003749] text-white"
+                    : isDone
+                      ? "bg-[#ecfdf5] text-[#047857]"
+                      : "bg-[#f4f0ea] text-[#6b5a3b]"
+                }`}
+              >
+                {isDone ? <Check className="size-3.5" aria-hidden /> : i + 1}
+              </span>
+              <span className={isLast ? "font-extrabold text-[#003749]" : "text-[#6b5a3b]"}>
+                {step.label}
+              </span>
+            </>
+          );
+          return (
+            <li key={step.label} className="flex items-center gap-2">
+              {"href" in step && step.href && !isLast ? (
+                <Link href={step.href} className="flex items-center gap-2 transition-opacity hover:opacity-80">
+                  {content}
+                </Link>
+              ) : (
+                <span className="flex items-center gap-2">{content}</span>
+              )}
+              {!isLast ? (
+                <span className="mx-1 hidden h-px w-6 bg-[#ebe4d3] sm:block" aria-hidden />
+              ) : null}
+            </li>
+          );
+        })}
+      </ol>
 
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)]">
+      <div className="mb-8">
+        <h1 className="text-2xl font-extrabold tracking-tight text-[#003749] sm:text-3xl">إتمام الدفع</h1>
+        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#6b5a3b]">
+          طلب الحجز رقم{" "}
+          <span dir="ltr" className="tabular-nums font-bold text-[#003749]">
+            #{booking.id}
+          </span>
+          {" — "}
+          {paid
+            ? ps === "REFUNDED"
+              ? `تم استرداد المبلغ بالكامل عبر ${paymentMethodLabelAr(resolvedMethodCode)}.`
+              : ps === "PARTIAL_REFUND"
+                ? `تم استرداد جزء من المبلغ عبر ${paymentMethodLabelAr(resolvedMethodCode)}.`
+                : ps === "NO_REFUND"
+                  ? "لا يوجد مبلغ مسترد بحسب سياسة الإلغاء."
+                  : resolvedMethodCode
+                    ? `تم الدفع عبر ${paymentMethodLabelAr(resolvedMethodCode)}.`
+                    : "تم الدفع بنجاح."
+            : "اختر طريقة الدفع المناسبة وأكمل الإجراء."}
+        </p>
+      </div>
+
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] xl:gap-12">
         <section className="order-2 space-y-6 lg:order-1">
           {paid ? (
-            <div className="overflow-hidden rounded-2xl border border-emerald-200 bg-emerald-50">
-              <div className="flex flex-col items-center gap-3 p-8 text-center">
-                <div className="grid size-16 place-items-center rounded-full bg-emerald-100 text-emerald-700">
+            <div
+              className={`overflow-hidden rounded-3xl border shadow-sm ${
+                ps === "REFUNDED" || ps === "PARTIAL_REFUND" || ps === "NO_REFUND"
+                  ? "border-amber-200 bg-amber-50"
+                  : "border-emerald-200 bg-emerald-50"
+              }`}
+            >
+              <div className="flex flex-col items-center gap-3 p-8 text-center sm:p-10">
+                <div
+                  className={`grid size-16 place-items-center rounded-full ${
+                    ps === "REFUNDED" || ps === "PARTIAL_REFUND" || ps === "NO_REFUND"
+                      ? "bg-amber-100 text-amber-700"
+                      : "bg-emerald-100 text-emerald-700"
+                  }`}
+                >
                   <CheckCircle2 className="size-9" aria-hidden />
                 </div>
-                <h2 className="text-lg font-extrabold text-emerald-800">
+                <h2
+                  className={`text-lg font-extrabold ${
+                    ps === "REFUNDED" || ps === "PARTIAL_REFUND" || ps === "NO_REFUND"
+                      ? "text-amber-900"
+                      : "text-emerald-800"
+                  }`}
+                >
                   {ps === "REFUNDED" || ps === "PARTIAL_REFUND" || ps === "NO_REFUND"
                     ? "حالة الدفع بعد الإلغاء"
                     : "تم استلام الدفع"}
                 </h2>
-                <p className="max-w-md text-sm text-emerald-900/80">
-                  شكراً لك! تم تأكيد حجزك وسيتواصل معك فريقنا قريباً لتأكيد التسليم
-                  وأي إجراءات إضافية. احتفظ برقم الطلب للمراجعة.
+                <p
+                  className={`max-w-md text-sm leading-relaxed ${
+                    ps === "REFUNDED" || ps === "PARTIAL_REFUND" || ps === "NO_REFUND"
+                      ? "text-amber-950/80"
+                      : "text-emerald-900/80"
+                  }`}
+                >
+                  {ps === "REFUNDED" || ps === "PARTIAL_REFUND" || ps === "NO_REFUND"
+                    ? "تم تحديث حالة الدفع وفق سياسة الإلغاء. للاستفسار تواصل مع فريق الدعم."
+                    : "شكراً لك! تم تأكيد حجزك وسيتواصل معك فريقنا قريباً لتأكيد التسليم وأي إجراءات إضافية."}
+                </p>
+                <p
+                  dir="ltr"
+                  className="rounded-xl bg-white/70 px-4 py-2 text-sm font-extrabold tabular-nums text-[#003749]"
+                >
+                  #{booking.id}
                 </p>
                 {resolvedMethodCode ? (
                   <p className="text-sm font-bold text-emerald-900">
@@ -335,7 +420,7 @@ export function PaymentClient({ booking }: Props) {
             <form
               action={formAction}
               onSubmit={onSubmit}
-              className="space-y-5 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm"
+              className="space-y-5 rounded-3xl border border-[#ebe4d3] bg-white p-6 shadow-sm sm:p-8"
             >
               <input type="hidden" name="bookingRequestId" value={booking.id} />
               <input type="hidden" name="paymentMethod" value={method} />
@@ -368,13 +453,18 @@ export function PaymentClient({ booking }: Props) {
                         setMethod(opt.id);
                         setClientError(null);
                       }}
-                      className={`flex flex-col items-start gap-2 rounded-xl border px-4 py-3 text-start transition-colors ${
+                      className={`relative flex flex-col items-start gap-2 rounded-xl border px-4 py-3 text-start transition-all ${
                         on
                           ? "border-[#dbb878] bg-[#003749]/[0.04] ring-2 ring-[#dbb878]/35"
-                          : "border-neutral-200 bg-white hover:border-neutral-300"
+                          : "border-[#ebe4d3] bg-white hover:border-[#dbb878]/40 hover:shadow-sm"
                       }`}
                     >
-                      <span className="flex w-full flex-wrap items-center gap-3">
+                      {on ? (
+                        <span className="absolute end-3 top-3 grid size-5 place-items-center rounded-full bg-[#003749] text-white">
+                          <Check className="size-3" aria-hidden />
+                        </span>
+                      ) : null}
+                      <span className="flex w-full flex-wrap items-center gap-3 pe-6">
                         {"logoSrc" in opt ? (
                           <span className="relative flex h-10 shrink-0 items-center overflow-hidden rounded-xl shadow-sm ring-1 ring-black/[0.06]">
                             <Image
@@ -526,24 +616,34 @@ export function PaymentClient({ booking }: Props) {
               </p>
 
               {(clientError || serverError) ? (
-                <p className="text-sm font-bold text-error" role="alert">
+                <div
+                  className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-800"
+                  role="alert"
+                >
                   {clientError ?? serverError}
-                </p>
+                </div>
               ) : null}
 
               <button
                 type="submit"
                 disabled={pending}
-                className="w-full rounded-xl bg-[#003749] py-3.5 text-sm font-extrabold text-white transition-opacity hover:opacity-95 disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#003749] py-3.5 text-sm font-extrabold text-white transition-opacity hover:opacity-95 disabled:opacity-50"
               >
-                {pending ? "جاري المعالجة…" : submitLabel}
+                {pending ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" aria-hidden />
+                    جاري المعالجة…
+                  </>
+                ) : (
+                  submitLabel
+                )}
               </button>
             </form>
           )}
         </section>
 
-        <aside className="order-1 space-y-4 lg:order-2">
-          <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-md">
+        <aside className="order-1 space-y-4 lg:order-2 lg:sticky lg:top-28 lg:self-start">
+          <div className="overflow-hidden rounded-3xl border border-[#ebe4d3] bg-white shadow-md">
             <div className="relative aspect-[16/10] bg-neutral-100">
               <Image
                 src={booking.car.image}
@@ -684,6 +784,12 @@ export function PaymentClient({ booking }: Props) {
               </div>
             </div>
           </div>
+
+          {!paid ? (
+            <p className="rounded-2xl border border-[#ebe4d3] bg-[#fffdf9] px-4 py-3 text-center text-xs leading-relaxed text-[#6b5a3b]">
+              المبلغ المعروض شاملاً ضريبة القيمة المضافة. لن يُخصم أي مبلغ حتى تؤكد الدفع.
+            </p>
+          ) : null}
         </aside>
       </div>
     </main>

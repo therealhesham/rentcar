@@ -1,17 +1,22 @@
+import {
+  isBookingPaymentMethod,
+  type BookingPaymentMethod,
+} from "@/lib/booking-payment-methods";
+
+const LABELS_AR: Record<BookingPaymentMethod, string> = {
+  CASH: "نقدي (كاش)",
+  CARD: "بطاقة ائتمانية",
+  TABBY: "تابي",
+  TAMARA: "تمارا",
+  APPLE_PAY: "Apple Pay",
+  POINTS: "استبدال نقاط",
+};
+
 /** تسمية عربية لوسيلة الدفع المخزّنة على الحجز. */
 export function bookingPaymentMethodLabelAr(code: string | null | undefined): string {
-  switch (code?.trim().toUpperCase()) {
-    case "TABBY":
-      return "تابي";
-    case "TAMARA":
-      return "تمارا";
-    case "CARD":
-      return "بطاقة ائتمانية";
-    case "APPLE_PAY":
-      return "Apple Pay";
-    case "POINTS":
-      return "استبدال نقاط";
-    default:
-      return code?.trim() ? code : "—";
+  const key = code?.trim().toUpperCase() ?? "";
+  if (isBookingPaymentMethod(key)) {
+    return LABELS_AR[key];
   }
+  return code?.trim() ? code : "—";
 }

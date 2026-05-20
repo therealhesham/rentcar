@@ -602,6 +602,10 @@ export type CreateDirectBookingInput = DirectBookingCommon & {
    * عند تعديل حجز من الحساب: يُستثنى هذا الطلب من احتساب التداخل داخل المعاملة (بعد التحقق من الملكية).
    */
   excludeBlockingBookingRequestId?: number | null;
+  /** تسجيل دفع فوري من المكتب (إدارة) عند إنشاء الحجز. */
+  officePayment?:
+    | { recordNow: false }
+    | { recordNow: true; method: string };
 };
 
 export function parsePickupCitySlugFromJson(
@@ -1034,8 +1038,12 @@ export async function createDirectBooking(
     contactEmail,
     kyc,
     excludeBlockingBookingRequestId: _excludeIgnored,
+    officePayment,
     ...common
   } = prepared;
+
+  const payNow = officePayment?.recordNow === true;
+  const paymentMethodStored = payNow ? officePayment.method.trim().toUpperCase() : null;
 
   if (!Number.isInteger(carModelId) || carModelId < 1) {
     return { ok: false, error: "معرّف السيارة غير صالح." };
@@ -1156,6 +1164,9 @@ export async function createDirectBooking(
             numberOfDays: days,
             termsAccepted: commonNormalized.termsAccepted,
             addonsJson: addonsSnap.json,
+            paymentStatus: payNow ? "PAID" : "PENDING",
+            paymentMethod: paymentMethodStored,
+            paidAt: payNow ? new Date() : null,
           },
           select: { id: true },
         });

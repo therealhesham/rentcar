@@ -1,0 +1,242 @@
+import Link from "next/link";
+import { ArrowLeft, Calendar, Car, Phone, User } from "lucide-react";
+import { AdminStatusBadge } from "@/components/admin/AdminStatusBadge";
+import { EditBookingRequestForm } from "@/components/admin/EditBookingRequestForm";
+
+export type DashboardBookingRow = {
+  id: number;
+  kind: "INQUIRY" | "DIRECT";
+  fullName: string;
+  phone: string;
+  ageRange: string;
+  carType: string;
+  branch: string;
+  pickupMode: string | null;
+  deliveryLat: number | null;
+  deliveryLng: number | null;
+  deliveryAddress: string | null;
+  pickupDateYmd: string;
+  numberOfDays: number;
+  termsAccepted: boolean;
+  status: string;
+  carModelId: number | null;
+  carModelLabel: string | null;
+  addonsJson: string | null;
+  paymentStatus: string | null;
+  paidAt: string | null;
+  paymentMethod: string | null;
+  idDocumentKind: string | null;
+  nationalIdNumber: string | null;
+  passportNumber: string | null;
+  licenseNumber: string | null;
+  licenseExpiryDate: string | null;
+  idCardImageUrl: string | null;
+  driverLicenseImageUrl: string | null;
+  cancelledAt: string | null;
+  cancellationDeductedDays: number | null;
+  cancellationRefundAmountSar: number | null;
+  cancellationRefundExternalRef: string | null;
+  pickupBranchName: string | null;
+  returnBranchName: string | null;
+  createdAtLabel: string;
+  pickupDateLabel: string;
+};
+
+type Props = {
+  rows: DashboardBookingRow[];
+  categories: { slug: string; title: string }[];
+  models: { id: number; label: string }[];
+};
+
+function editRequestPayload(request: DashboardBookingRow) {
+  return {
+    id: request.id,
+    kind: request.kind,
+    fullName: request.fullName,
+    phone: request.phone,
+    ageRange: request.ageRange,
+    carType: request.carType,
+    branch: request.branch,
+    pickupMode: request.pickupMode,
+    deliveryLat: request.deliveryLat,
+    deliveryLng: request.deliveryLng,
+    deliveryAddress: request.deliveryAddress,
+    pickupDateYmd: request.pickupDateYmd,
+    numberOfDays: request.numberOfDays,
+    termsAccepted: request.termsAccepted,
+    status: request.status,
+    carModelId: request.carModelId,
+    carModelLabel: request.carModelLabel,
+    addonsJson: request.addonsJson,
+    paymentStatus: request.paymentStatus,
+    paidAt: request.paidAt,
+    paymentMethod: request.paymentMethod,
+    idDocumentKind: request.idDocumentKind,
+    nationalIdNumber: request.nationalIdNumber,
+    passportNumber: request.passportNumber,
+    licenseNumber: request.licenseNumber,
+    licenseExpiryDate: request.licenseExpiryDate,
+    idCardImageUrl: request.idCardImageUrl,
+    driverLicenseImageUrl: request.driverLicenseImageUrl,
+    cancelledAt: request.cancelledAt,
+    cancellationDeductedDays: request.cancellationDeductedDays,
+    cancellationRefundAmountSar: request.cancellationRefundAmountSar,
+    cancellationRefundExternalRef: request.cancellationRefundExternalRef,
+  };
+}
+
+export function AdminDashboardBookingsSection({ rows, categories, models }: Props) {
+  if (rows.length === 0) {
+    return (
+      <div className="flex flex-col items-center gap-4 px-6 py-14 text-center">
+        <div className="grid size-14 place-items-center rounded-2xl bg-surface-container-low text-on-surface-variant">
+          <Calendar className="size-7" aria-hidden />
+        </div>
+        <div>
+          <p className="font-bold text-on-surface">لا توجد حجوزات حتى الآن</p>
+          <p className="mt-1 text-sm text-on-surface-variant">
+            ستظهر الحجوزات المباشرة هنا فور تسجيلها.
+          </p>
+        </div>
+        <Link
+          href="/admin/direct-booking"
+          className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-on-primary hover:opacity-95"
+        >
+          حجز مباشر من المكتب
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {/* Mobile cards */}
+      <ul className="divide-y divide-outline-variant/15 md:hidden">
+        {rows.map((request) => (
+          <li key={request.id} className="px-4 py-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <AdminStatusBadge status={request.status} />
+                <p className="mt-2 font-extrabold text-on-surface">{request.fullName}</p>
+                <p className="mt-0.5 flex items-center gap-1.5 text-sm text-on-surface-variant">
+                  <Phone className="size-3.5 shrink-0" aria-hidden />
+                  <span dir="ltr" className="tabular-nums">
+                    {request.phone}
+                  </span>
+                </p>
+              </div>
+              <Link
+                href={`/admin/bookings/${request.id}`}
+                className="shrink-0 rounded-lg bg-primary-container/50 px-3 py-1.5 text-xs font-bold text-primary"
+              >
+                التفاصيل
+              </Link>
+            </div>
+
+            <dl className="mt-3 space-y-2 text-sm">
+              <div className="flex items-start gap-2">
+                <Car className="mt-0.5 size-4 shrink-0 text-on-surface-variant" aria-hidden />
+                <div>
+                  <dt className="sr-only">السيارة</dt>
+                  <dd className="font-semibold text-on-surface">
+                    {request.carModelLabel ?? "—"}
+                  </dd>
+                  <dd className="text-xs text-on-surface-variant">
+                    {request.pickupDateLabel} · {request.numberOfDays} يوم
+                  </dd>
+                </div>
+              </div>
+              <div className="text-xs text-on-surface-variant">
+                استلام: {request.pickupBranchName ?? "—"} · إرجاع:{" "}
+                {request.returnBranchName ?? "—"}
+              </div>
+              <div className="text-[11px] text-on-surface-variant">{request.createdAtLabel}</div>
+            </dl>
+
+            <div className="mt-3 border-t border-outline-variant/10 pt-3">
+              <EditBookingRequestForm
+                request={editRequestPayload(request)}
+                categories={categories}
+                models={models}
+              />
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      {/* Desktop table */}
+      <div className="hidden overflow-x-auto md:block">
+        <table className="w-full min-w-[880px] text-start text-sm">
+          <thead className="sticky top-0 z-10 bg-white shadow-[0_1px_0_0_rgba(0,0,0,0.06)]">
+            <tr className="border-b border-outline-variant/20 bg-surface-container-low/80 text-[11px] font-bold uppercase tracking-wide text-on-surface-variant">
+              <th className="px-4 py-3">العميل</th>
+              <th className="px-4 py-3">السيارة</th>
+              <th className="px-4 py-3">الاستلام</th>
+              <th className="px-4 py-3">الأيام</th>
+              <th className="px-4 py-3">الحالة</th>
+              <th className="px-4 py-3">الوقت</th>
+              <th className="px-4 py-3">إجراءات</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((request, i) => (
+              <tr
+                key={request.id}
+                className={`border-b border-outline-variant/10 transition-colors hover:bg-surface-container-low/50 ${
+                  i % 2 === 1 ? "bg-surface-container-low/25" : ""
+                }`}
+              >
+                <td className="px-4 py-3 align-top">
+                  <Link
+                    href={`/admin/bookings/${request.id}`}
+                    className="group block min-w-[140px]"
+                  >
+                    <span className="flex items-center gap-1.5 font-semibold text-on-surface group-hover:text-primary">
+                      <User className="size-3.5 shrink-0 text-on-surface-variant" aria-hidden />
+                      {request.fullName}
+                    </span>
+                    <span className="mt-0.5 block tabular-nums text-xs text-on-surface-variant" dir="ltr">
+                      {request.phone}
+                    </span>
+                  </Link>
+                </td>
+                <td className="px-4 py-3 align-top text-on-surface-variant">
+                  {request.carModelLabel ?? "—"}
+                </td>
+                <td className="px-4 py-3 align-top">
+                  <span className="block tabular-nums">{request.pickupDateLabel}</span>
+                  <span className="mt-0.5 block text-xs text-on-surface-variant">
+                    {request.pickupBranchName ?? "—"}
+                  </span>
+                </td>
+                <td className="px-4 py-3 align-top tabular-nums">{request.numberOfDays}</td>
+                <td className="px-4 py-3 align-top">
+                  <AdminStatusBadge status={request.status} />
+                </td>
+                <td className="px-4 py-3 align-top text-xs text-on-surface-variant tabular-nums">
+                  {request.createdAtLabel}
+                </td>
+                <td className="px-4 py-3 align-top">
+                  <div className="flex min-w-[160px] flex-col gap-2">
+                    <Link
+                      href={`/admin/bookings/${request.id}`}
+                      className="inline-flex items-center gap-1 text-sm font-bold text-primary hover:underline"
+                    >
+                      <ArrowLeft className="size-3.5" aria-hidden />
+                      التفاصيل
+                    </Link>
+                    <EditBookingRequestForm
+                      request={editRequestPayload(request)}
+                      categories={categories}
+                      models={models}
+                    />
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}

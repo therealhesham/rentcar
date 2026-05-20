@@ -1,16 +1,26 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { enforceBranchOnFormData, requireAdminForAction } from "@/lib/admin-access";
+import { sendBookingInvoiceEmailAfterPayment } from "@/lib/booking-invoice-email";
+import { sendBookingCompletionWhatsAppAfterPayment } from "@/lib/evolution-whatsapp";
+import { parseAdminOfficePaymentFromFormData } from "@/lib/booking-payment-methods";
 import {
   createDirectBooking,
   parseCommonBookingFieldsFromFormData,
 } from "@/lib/direct-booking";
 
+export type AdminDirectBookingActionState = {
+  ok: boolean;
+  error?: string;
+  bookingRequestId?: number;
+};
+
 export async function submitAdminDirectBooking(
-  _prev: { ok: boolean; error?: string } | null,
+  _prev: AdminDirectBookingActionState | null,
   formData: FormData,
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<AdminDirectBookingActionState> {
   const auth = await requireAdminForAction();
   if (!auth.ok) return { ok: false, error: auth.error };
 
@@ -25,12 +35,39 @@ export async function submitAdminDirectBooking(
     return parsed;
   }
 
+  const paymentParsed = parseAdminOfficePaymentFromFormData(scopedForm);
+  if (!paymentParsed.ok) {
+    return paymentParsed;
+  }
+
+  const customerIdRaw = scopedForm.get("customerId");
+  const customerId = Number(customerIdRaw);
+  const linkedCustomerId =
+    Number.isInteger(customerId) && customerId > 0 ? customerId : null;
+
   const created = await createDirectBooking({
     carModelId,
+    customerId: linkedCustomerId,
+    officePayment: paymentParsed.recordNow
+      ? { recordNow: true, method: paymentParsed.method }
+      : { recordNow: false },
     ...parsed.data,
   });
   if (!created.ok) {
     return { ok: false, error: created.error };
+  }
+
+  if (paymentParsed.recordNow) {
+    try {
+      await sendBookingInvoiceEmailAfterPayment(created.bookingRequestId);
+    } catch (e) {
+      console.error("[booking-invoice-email] بعد حجز المكتب:", e);
+    }
+    try {
+      await sendBookingCompletionWhatsAppAfterPayment(created.bookingRequestId);
+    } catch (e) {
+      console.error("[evolution-whatsapp] بعد حجز المكتب:", e);
+    }
   }
 
   revalidatePath("/admin");
@@ -38,5 +75,7 @@ export async function submitAdminDirectBooking(
   revalidatePath("/admin/customers");
   revalidatePath("/admin/fleet-availability");
   revalidatePath("/fleet");
-  return { ok: true };
+  revalidatePath("/admin/direct-booking");
+  revalidatePath(`/admin/bookings/${created.bookingRequestId}`);
+  redirect(`/admin/bookings/${created.bookingRequestId}`);
 }

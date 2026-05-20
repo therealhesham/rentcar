@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   ArrowLeftRight,
+  Ban,
   Calendar,
   Car,
   CreditCard,
@@ -18,7 +19,9 @@ import { AdminKindBadge, AdminStatusBadge } from "@/components/admin/AdminStatus
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { BookingAddonsSnapshot } from "@/components/admin/BookingAddonsSnapshot";
 import { BookingAttachmentsPanel } from "@/components/admin/BookingAttachmentsPanel";
+import { BookingCancelPanel } from "@/components/admin/BookingCancelPanel";
 import { BookingDetailSection } from "@/components/admin/BookingDetailSection";
+import type { AdminBookingCancellationContext } from "@/lib/admin-booking-cancellation";
 import type { AdminBookingDetail } from "@/lib/admin-booking-detail";
 import { isInterBranchPickupReturn } from "@/lib/booking-branches";
 import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
@@ -114,9 +117,10 @@ function BranchPill({ label, name }: { label: string; name: string }) {
 type Props = {
   booking: AdminBookingDetail;
   editActions?: ReactNode;
+  cancellation: AdminBookingCancellationContext;
 };
 
-export function BookingDetailView({ booking, editActions }: Props) {
+export function BookingDetailView({ booking, editActions, cancellation }: Props) {
   const pickupYmd = booking.pickupDate.toISOString().slice(0, 10);
   const returnYmd = addDaysToYmd(pickupYmd, booking.numberOfDays);
   const carLabel = booking.carModel
@@ -399,6 +403,29 @@ export function BookingDetailView({ booking, editActions }: Props) {
             </BookingDetailSection>
           ) : null}
 
+          <BookingDetailSection
+            icon={Ban}
+            title="إلغاء الحجز"
+            description="سياسة العميل: شرائح الخصم والاسترداد"
+          >
+            <BookingCancelPanel
+              bookingRequestId={booking.id}
+              kind={booking.kind}
+              status={booking.status}
+              paymentStatus={booking.paymentStatus}
+              paymentMethod={booking.paymentMethod}
+              pickupDateIso={booking.pickupDate.toISOString()}
+              numberOfDays={booking.numberOfDays}
+              cancellationDeductedDays={booking.cancellationDeductedDays}
+              cancellationRefundAmountSar={booking.cancellationRefundAmountSar}
+              cancellationRefundExternalRef={booking.cancellationRefundExternalRef}
+              cancellationPolicyAr={cancellation.cancellationPolicyAr}
+              cancelMinHoursBeforePickup={cancellation.cancelMinHoursBeforePickup}
+              cancellationDeductTiers={cancellation.cancellationDeductTiers}
+              cancellationFinancePreview={cancellation.cancellationFinancePreview}
+            />
+          </BookingDetailSection>
+
           <BookingDetailSection icon={Calendar} title="السجل">
             <dl className="space-y-3 text-sm">
               <DetailRow label="أُنشئ">
@@ -407,6 +434,11 @@ export function BookingDetailView({ booking, editActions }: Props) {
               <DetailRow label="آخر تحديث">
                 <span className="text-xs">{booking.updatedAt.toLocaleString("ar-SA")}</span>
               </DetailRow>
+              {booking.cancelledAt ? (
+                <DetailRow label="أُلغي في">
+                  <span className="text-xs">{booking.cancelledAt.toLocaleString("ar-SA")}</span>
+                </DetailRow>
+              ) : null}
               <DetailRow label="رقم الطلب" mono>
                 #{booking.id}
               </DetailRow>

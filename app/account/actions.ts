@@ -11,19 +11,7 @@ import {
 import { saudiLocalNineToE164 } from "@/lib/normalize-saudi-phone";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
-import {
-  computeCancellationRefundBreakdown,
-  paymentStatusAfterCancellationRefund,
-} from "@/lib/booking-cancellation-refund";
-import { executeCancellationRefundByPaymentMethod } from "@/lib/booking-refund-executor";
-import {
-  computeCancellationDeductedDays,
-  hoursBeforePickup,
-} from "@/lib/cancellation-deduct";
-import {
-  getCustomerCancelMinHoursBeforePickup,
-  getCustomerCancellationDeductTiers,
-} from "@/lib/site-settings";
+import { cancelBookingWithPolicy } from "@/lib/booking-cancellation-service";
 
 export type AuthFormState = { error?: string } | null;
 
@@ -43,121 +31,26 @@ export async function cancelCustomerBooking(formData: FormData): Promise<CancelB
     return { ok: false, error: "معرّف الطلب غير صالح." };
   }
 
-  const row = await prisma.bookingRequest.findFirst({
-    where: {
-      id,
-      OR: [{ customerId: profile.id }, ...(profile.phone ? [{ phone: profile.phone }] : [])],
-    },
-    select: {
-      id: true,
-      status: true,
-      pickupDate: true,
-      numberOfDays: true,
-      kind: true,
-      paymentStatus: true,
-      paymentMethod: true,
-      addonsJson: true,
-      carModel: { select: { price: true, vatRatePercent: true } },
-    },
+  const result = await cancelBookingWithPolicy({
+    bookingRequestId: id,
+    role: "customer",
+    customerId: profile.id,
+    customerPhone: profile.phone,
   });
 
-  if (!row) {
-    return { ok: false, error: "الطلب غير موجود أو لا يخص حسابك." };
-  }
-
-  const st = row.status.trim().toUpperCase();
-  if (st === "CANCELLED") {
-    return { ok: false, error: "الطلب ملغى بالفعل." };
-  }
-
-  const minHours = await getCustomerCancelMinHoursBeforePickup();
-  if (minHours > 0) {
-    const pickup = row.pickupDate;
-    const now = new Date();
-    if (pickup.getTime() > now.getTime()) {
-      const lastMs = pickup.getTime() - minHours * 60 * 60 * 1000;
-      if (now.getTime() >= lastMs) {
-        return {
-          ok: false,
-          error: `انتهت مهلة الإلغاء . يجب إلغاء الحجز قبل موعد الاستلام بما لا يقل عن ${minHours} ساعة. للاستفسار تواصل معنا.`,
-        };
-      }
-    }
-  }
-
-  const tiers = await getCustomerCancellationDeductTiers();
-  const nowCancel = new Date();
-  const hoursBefore = hoursBeforePickup(row.pickupDate, nowCancel);
-  const deductDays = computeCancellationDeductedDays(
-    hoursBefore,
-    tiers,
-    row.numberOfDays,
-  );
-
-  const baseData = {
-    status: "CANCELLED" as const,
-    cancelledAt: nowCancel,
-    cancellationDeductedDays: deductDays > 0 ? deductDays : null,
-  };
-
-  let refundInclTaxSar: number | undefined;
-  let paymentMethodOut: string | null | undefined;
-
-  const ps = row.paymentStatus.trim().toUpperCase();
-  const paidEligible =
-    row.kind === "DIRECT" && ps === "PAID" && row.carModel != null;
-
-  let paymentPatch: {
-    paymentStatus?: string;
-    cancellationRefundAmountSar?: number | null;
-    cancellationRefundExternalRef?: string | null;
-  } = {};
-
-  if (paidEligible && row.carModel) {
-    const br = computeCancellationRefundBreakdown({
-      numberOfDays: row.numberOfDays,
-      deductDays,
-      pricePerDayExclTax: row.carModel.price,
-      vatRatePercent: row.carModel.vatRatePercent,
-      addonsJson: row.addonsJson,
-    });
-    if (br) {
-      const exec = await executeCancellationRefundByPaymentMethod({
-        bookingRequestId: row.id,
-        paymentMethod: row.paymentMethod,
-        refundAmountInclTaxSar: br.refundInclTax,
-      });
-      if (exec.ok) {
-        paymentPatch = {
-          paymentStatus: paymentStatusAfterCancellationRefund(
-            br.paidTotalInclTax,
-            br.refundInclTax,
-          ),
-          cancellationRefundAmountSar: br.refundInclTax,
-          cancellationRefundExternalRef: exec.externalRef,
-        };
-        refundInclTaxSar = br.refundInclTax;
-        paymentMethodOut = row.paymentMethod;
-      } else {
-        console.error("[cancelCustomerBooking] refund execution failed:", exec.error);
-      }
-    }
-  }
-
-  await prisma.bookingRequest.update({
-    where: { id: row.id },
-    data: {
-      ...baseData,
-      ...paymentPatch,
-    },
-  });
+  if (!result.ok) return result;
 
   revalidatePath("/account");
   revalidatePath("/admin");
   revalidatePath("/admin/car-bookings");
-  revalidatePath(`/fleet/payment/${row.id}`);
+  revalidatePath(`/admin/bookings/${id}`);
+  revalidatePath(`/fleet/payment/${id}`);
 
-  return { ok: true, refundInclTaxSar, paymentMethod: paymentMethodOut };
+  return {
+    ok: true,
+    refundInclTaxSar: result.refundInclTaxSar,
+    paymentMethod: result.paymentMethod,
+  };
 }
 
 export async function registerCustomer(

@@ -1,20 +1,24 @@
+import { bookingStatusLabelAr } from "@/lib/booking-display-labels";
+
 const STATUS_STYLES: Record<string, string> = {
   NEW: "bg-[#fff7ed] text-[#9a3412] ring-[#fdba74]/40",
   CONTACTED: "bg-[#eff6ff] text-[#1d4ed8] ring-[#93c5fd]/40",
   CONFIRMED: "bg-[#ecfdf5] text-[#047857] ring-[#6ee7b7]/40",
   CANCELLED: "bg-[#fef2f2] text-[#b91c1c] ring-[#fecaca]/40",
+  REJECTED: "bg-surface-container-high text-on-surface-variant ring-outline-variant/35",
   COMPLETED: "bg-surface-container-low text-on-surface-variant ring-outline-variant/30",
 };
 
 export function AdminStatusBadge({ status }: { status: string }) {
+  const code = status.trim().toUpperCase();
   const style =
-    STATUS_STYLES[status] ?? "bg-surface-container-low text-on-surface ring-outline-variant/25";
+    STATUS_STYLES[code] ?? "bg-surface-container-low text-on-surface ring-outline-variant/25";
 
   return (
     <span
       className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold ring-1 ring-inset ${style}`}
     >
-      {status}
+      {bookingStatusLabelAr(code)}
     </span>
   );
 }

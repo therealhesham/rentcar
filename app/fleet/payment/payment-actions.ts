@@ -10,14 +10,19 @@ export type ConfirmPaymentResult =
   | { ok: true; paymentMethod: string }
   | { ok: false; error: string };
 
-const PAYMENT_METHODS = ["TABBY", "TAMARA", "CARD", "APPLE_PAY", "POINTS"] as const;
+import {
+  BOOKING_PAYMENT_METHODS,
+  type BookingPaymentMethod,
+} from "@/lib/booking-payment-methods";
 
-function parsePaymentMethod(formData: FormData): (typeof PAYMENT_METHODS)[number] | null {
+const PAYMENT_METHODS = BOOKING_PAYMENT_METHODS;
+
+function parsePaymentMethod(formData: FormData): BookingPaymentMethod | null {
   const raw = String(formData.get("paymentMethod") ?? "CARD")
     .trim()
     .toUpperCase();
-  return PAYMENT_METHODS.includes(raw as (typeof PAYMENT_METHODS)[number])
-    ? (raw as (typeof PAYMENT_METHODS)[number])
+  return PAYMENT_METHODS.includes(raw as BookingPaymentMethod)
+    ? (raw as BookingPaymentMethod)
     : null;
 }
 
