@@ -41,6 +41,7 @@ export async function convertInquiryToDirect(
   revalidatePath("/admin");
   revalidatePath("/fleet");
   revalidatePath("/admin/car-bookings");
+  revalidatePath(`/admin/bookings/${bookingRequestId}`);
   return { ok: true };
 }
 
@@ -68,6 +69,7 @@ export async function revertDirectToInquiry(
   revalidatePath("/admin");
   revalidatePath("/fleet");
   revalidatePath("/admin/car-bookings");
+  revalidatePath(`/admin/bookings/${bookingRequestId}`);
   return { ok: true };
 }
 
@@ -115,5 +117,6 @@ export async function updateBookingRequest(
   revalidatePath("/admin");
   revalidatePath("/fleet");
   revalidatePath("/admin/car-bookings");
+  revalidatePath(`/admin/bookings/${bookingRequestId}`);
   return { ok: true };
 }

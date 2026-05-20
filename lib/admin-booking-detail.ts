@@ -15,3 +15,29 @@ export async function loadAdminBookingDetail(id: number) {
 }
 
 export type AdminBookingDetail = NonNullable<Awaited<ReturnType<typeof loadAdminBookingDetail>>>;
+
+export async function loadAdminBookingEditContext() {
+  const [categories, modelsRaw] = await Promise.all([
+    prisma.fleetCategory.findMany({
+      orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+      select: { slug: true, title: true },
+    }),
+    prisma.carModel.findMany({
+      where: { fleetItems: { some: { quantity: { gt: 0 } } } },
+      select: {
+        id: true,
+        name: true,
+        brand: { select: { name: true } },
+      },
+      orderBy: [{ brand: { name: "asc" } }, { name: "asc" }],
+    }),
+  ]);
+
+  return {
+    categories,
+    models: modelsRaw.map((m) => ({
+      id: m.id,
+      label: `${m.brand.name} ${m.name}`,
+    })),
+  };
+}

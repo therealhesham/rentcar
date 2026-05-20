@@ -16,40 +16,9 @@ import { BookingAttachmentsPanel } from "@/components/admin/BookingAttachmentsPa
 import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
 import { formatDeductDaysSummaryAr } from "@/lib/cancellation-deduct";
 
-export type EditableBookingRow = {
-  id: number;
-  kind: "INQUIRY" | "DIRECT";
-  fullName: string;
-  phone: string;
-  ageRange: string;
-  carType: string;
-  branch: string;
-  pickupMode: string | null;
-  deliveryLat: number | null;
-  deliveryLng: number | null;
-  deliveryAddress: string | null;
-  pickupDateYmd: string;
-  numberOfDays: number;
-  termsAccepted: boolean;
-  status: string;
-  carModelId: number | null;
-  carModelLabel: string | null;
-  addonsJson: string | null;
-  paymentStatus: string | null;
-  paidAt: string | null;
-  paymentMethod: string | null;
-  idDocumentKind: string | null;
-  nationalIdNumber: string | null;
-  passportNumber: string | null;
-  licenseNumber: string | null;
-  licenseExpiryDate: string | null;
-  idCardImageUrl: string | null;
-  driverLicenseImageUrl: string | null;
-  cancelledAt: string | null;
-  cancellationDeductedDays: number | null;
-  cancellationRefundAmountSar: number | null;
-  cancellationRefundExternalRef: string | null;
-};
+import type { EditableBookingRow } from "@/lib/admin-booking-edit-types";
+
+export type { EditableBookingRow } from "@/lib/admin-booking-edit-types";
 
 type CategoryOption = { slug: string; title: string };
 
@@ -68,6 +37,13 @@ type Props = {
   request: EditableBookingRow;
   categories: CategoryOption[];
   models: BookableModelOption[];
+  /** فتح نافذة التعديل فوراً (مثلاً من صفحة التفاصيل أو ?edit=1) */
+  defaultOpen?: boolean;
+  /** إخفاء رابط «عرض التفاصيل» داخل النافذة */
+  hideDetailLink?: boolean;
+  triggerLabel?: string;
+  triggerClassName?: string;
+  onModalClose?: () => void;
 };
 
 function localPhoneFromStored(phone: string): string {
@@ -96,13 +72,15 @@ type InnerProps = {
   categories: CategoryOption[];
   models: BookableModelOption[];
   onClose: () => void;
+  hideDetailLink?: boolean;
 };
 
-function EditBookingModalInner({
+export function EditBookingModalInner({
   request,
   categories,
   models,
   onClose,
+  hideDetailLink = false,
 }: InnerProps) {
   const router = useRouter();
   const titleId = useId();
@@ -165,12 +143,14 @@ function EditBookingModalInner({
             <p className="mt-1 text-xs text-on-surface-variant">
               {request.kind === "DIRECT" ? "حجز مباشر" : "طلب استفسار"}
             </p>
-            <Link
-              href={`/admin/bookings/${request.id}`}
-              className="mt-2 inline-block text-xs font-bold text-primary hover:underline"
-            >
-              عرض التفاصيل والمرفقات
-            </Link>
+            {hideDetailLink ? null : (
+              <Link
+                href={`/admin/bookings/${request.id}`}
+                className="mt-2 inline-block text-xs font-bold text-primary hover:underline"
+              >
+                عرض التفاصيل والمرفقات
+              </Link>
+            )}
           </div>
           <button
             type="button"
@@ -553,9 +533,19 @@ export function EditBookingRequestForm({
   request,
   categories,
   models,
+  defaultOpen = false,
+  hideDetailLink = false,
+  triggerLabel = "تعديل",
+  triggerClassName,
+  onModalClose,
 }: Props) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [innerKey, setInnerKey] = useState(0);
+
+  const closeModal = () => {
+    setOpen(false);
+    onModalClose?.();
+  };
 
   if (request.kind === "INQUIRY" && categories.length === 0) {
     return (
@@ -573,10 +563,13 @@ export function EditBookingRequestForm({
           setInnerKey((k) => k + 1);
           setOpen(true);
         }}
-        className="inline-flex items-center gap-1 rounded-lg border border-outline-variant/60 bg-surface-container px-2 py-1.5 text-xs font-bold text-on-surface hover:bg-surface-container-high"
+        className={
+          triggerClassName ??
+          "inline-flex items-center gap-1 rounded-lg border border-outline-variant/60 bg-surface-container px-2 py-1.5 text-xs font-bold text-on-surface hover:bg-surface-container-high"
+        }
       >
         <Pencil className="h-3.5 w-3.5 shrink-0" aria-hidden />
-        تعديل
+        {triggerLabel}
       </button>
 
       {open ? (
@@ -589,7 +582,8 @@ export function EditBookingRequestForm({
             request={request}
             categories={categories}
             models={models}
-            onClose={() => setOpen(false)}
+            hideDetailLink={hideDetailLink}
+            onClose={closeModal}
           />
         </div>
       ) : null}

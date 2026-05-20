@@ -164,12 +164,20 @@ export default async function AdminCarBookingsPage() {
                             </td>
                             <td className="px-3 py-2">{b.status}</td>
                             <td className="px-3 py-2">
-                              <Link
-                                href={`/admin/bookings/${b.id}`}
-                                className="font-bold text-primary hover:underline"
-                              >
-                                التفاصيل
-                              </Link>
+                              <div className="flex flex-col gap-1">
+                                <Link
+                                  href={`/admin/bookings/${b.id}`}
+                                  className="font-bold text-primary hover:underline"
+                                >
+                                  التفاصيل
+                                </Link>
+                                <Link
+                                  href={`/admin/bookings/${b.id}?edit=1`}
+                                  className="text-xs font-bold text-on-surface-variant hover:text-primary hover:underline"
+                                >
+                                  تعديل
+                                </Link>
+                              </div>
                             </td>
                             <td className="px-3 py-2 tabular-nums text-on-surface-variant">
                               #{b.id}
