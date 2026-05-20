@@ -1,5 +1,12 @@
 import Link from "next/link";
-import { bookingBranchWhere } from "@/lib/admin-access";
+import { CalendarDays, CalendarPlus, Car, MapPin, Truck } from "lucide-react";
+import {
+  AdminCarBookingsList,
+  type CarBookingDayGroup,
+  type CarBookingRow,
+} from "@/components/admin/AdminCarBookingsList";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { adminBranchDisplayName, bookingBranchWhere } from "@/lib/admin-access";
 import { requireAdminPage } from "@/lib/admin-page";
 import { addDaysToYmd, NON_BLOCKING_BOOKING_STATUSES } from "@/lib/direct-booking";
 import { prisma } from "@/lib/prisma";
@@ -28,6 +35,43 @@ function formatSectionDate(ymd: string): string {
   });
 }
 
+function branchName(
+  branch: { slug: string; name: string } | null | undefined,
+): string {
+  return branch?.name ?? BRANCH_LABEL[branch?.slug ?? ""] ?? "—";
+}
+
+function StatTile({
+  label,
+  value,
+  hint,
+  icon: Icon,
+  accent,
+}: {
+  label: string;
+  value: string | number;
+  hint?: string;
+  icon: typeof Car;
+  accent: string;
+}) {
+  return (
+    <div className="flex gap-4 rounded-2xl border border-outline-variant/25 bg-white p-5 shadow-[0_4px_24px_-10px_rgba(28,27,27,0.1)]">
+      <div
+        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${accent}`}
+      >
+        <Icon className="h-5 w-5" aria-hidden />
+      </div>
+      <div className="min-w-0">
+        <p className="text-xs font-bold text-on-surface-variant">{label}</p>
+        <p className="mt-1 text-2xl font-extrabold tabular-nums tracking-tight text-[#003749]">
+          {value}
+        </p>
+        {hint ? <p className="mt-0.5 text-[11px] text-on-surface-variant">{hint}</p> : null}
+      </div>
+    </div>
+  );
+}
+
 export default async function AdminCarBookingsPage() {
   const session = await requireAdminPage();
 
@@ -45,157 +89,125 @@ export default async function AdminCarBookingsPage() {
     orderBy: [{ pickupDate: "asc" }, { id: "asc" }],
   });
 
-  const groups = new Map<string, typeof rows>();
-  for (const row of rows) {
-    const key = dateKey(row.pickupDate);
-    const list = groups.get(key) ?? [];
+  const todayYmd = dateKey(new Date());
+  const deliveryCount = rows.filter((r) => r.pickupMode === "DELIVERY").length;
+  const todayCount = rows.filter((r) => dateKey(r.pickupDate) === todayYmd).length;
+
+  const groupsMap = new Map<string, CarBookingRow[]>();
+  for (const b of rows) {
+    const startYmd = dateKey(b.pickupDate);
+    const endYmd = addDaysToYmd(startYmd, b.numberOfDays - 1);
+    const row: CarBookingRow = {
+      id: b.id,
+      fullName: b.fullName,
+      phone: b.phone,
+      carLabel: b.carModel ? `${b.carModel.brand.name} ${b.carModel.name}` : "—",
+      startYmd,
+      endYmd,
+      numberOfDays: b.numberOfDays,
+      pickupBranchName: branchName(b.pickupBranch),
+      returnBranchName: branchName(b.returnBranch),
+      pickupMode: b.pickupMode,
+      deliveryAddress: (b as { deliveryAddress?: string | null }).deliveryAddress ?? null,
+      deliveryLat: b.deliveryLat,
+      deliveryLng: b.deliveryLng,
+      status: b.status,
+      paymentStatus: b.paymentStatus ?? null,
+    };
+    const list = groupsMap.get(startYmd) ?? [];
     list.push(row);
-    groups.set(key, list);
+    groupsMap.set(startYmd, list);
   }
 
-  const sortedKeys = [...groups.keys()].sort();
+  const groups: CarBookingDayGroup[] = [...groupsMap.keys()]
+    .sort()
+    .map((ymd) => ({
+      ymd,
+      sectionTitle: formatSectionDate(ymd),
+      rows: groupsMap.get(ymd)!,
+    }));
+
+  const branchHint = session.isSuperAdmin
+    ? "كل الفروع"
+    : `فرع ${adminBranchDisplayName(session)}`;
 
   return (
     <>
-      <header className="mb-10">
-        <h1 className="text-3xl font-extrabold tracking-tight">حجوزات السيارات</h1>
-        <p className="mt-2 max-w-2xl text-on-surface-variant">
-          الحجوزات المباشرة المرتبطة بموديل سيارة، مرتبة حسب{" "}
-          <span className="font-bold text-on-surface">تاريخ بداية الحجز</span>. الحجوزات الملغاة لا
-          تظهر هنا.
-        </p>
-        <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-on-surface-variant">
-          <Link href="/admin/cancelled-bookings" className="font-bold text-primary hover:underline">
-            الحجوزات الملغاة
+      <AdminPageHeader
+        title="حجوزات السيارات"
+        description={
+          <>
+            الحجوزات المباشرة النشطة مرتبة حسب{" "}
+            <span className="font-bold text-on-surface">تاريخ بداية الحجز</span>. النطاق:{" "}
+            {branchHint}. الحجوزات الملغاة والمكتملة لا تظهر هنا.
+          </>
+        }
+        backHref="/admin"
+        backLabel="لوحة التحكم"
+        actions={
+          <Link
+            href="/admin/direct-booking"
+            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-on-primary shadow-sm transition-opacity hover:opacity-95"
+          >
+            <CalendarPlus className="size-4" aria-hidden />
+            حجز جديد
           </Link>
-          <Link href="/admin" className="font-bold text-primary hover:underline">
-            العودة للوحة التحكم
-          </Link>
-        </p>
-      </header>
+        }
+      />
 
-      {sortedKeys.length === 0 ? (
-        <p className="rounded-2xl border border-outline-variant/30 bg-surface-container-low px-5 py-6 text-sm text-on-surface-variant">
-          لا توجد حجوزات مباشرة نشطة حالياً.
-        </p>
-      ) : (
-        <div className="space-y-10">
-          {sortedKeys.map((ymd) => {
-            const dayRows = groups.get(ymd)!;
-            return (
-              <section
-                key={ymd}
-                className="rounded-2xl border border-outline-variant/30 bg-surface-container-low p-5 md:p-6"
-              >
-                <h2 className="text-lg font-extrabold tracking-tight text-primary">
-                  {formatSectionDate(ymd)}
-                  <span className="ms-2 font-mono text-sm font-bold text-on-surface-variant" dir="ltr">
-                    ({ymd})
-                  </span>
-                </h2>
-                <div className="mt-4 overflow-x-auto">
-                  <table className="w-full min-w-[920px] text-start text-sm">
-                    <thead>
-                      <tr className="border-b border-outline-variant/30 text-on-surface-variant">
-                        <th className="px-3 py-2">السيارة</th>
-                        <th className="px-3 py-2">من — إلى</th>
-                        <th className="px-3 py-2">الأيام</th>
-                        <th className="px-3 py-2">الاسم</th>
-                        <th className="px-3 py-2">الجوال</th>
-                        <th className="px-3 py-2">فرع الاستلام</th>
-                        <th className="px-3 py-2">فرع الإرجاع</th>
-                        <th className="px-3 py-2">طريقة الاستلام</th>
-                        <th className="px-3 py-2">الحالة</th>
-                        <th className="px-3 py-2">عرض</th>
-                        <th className="px-3 py-2">رقم الطلب</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {dayRows.map((b) => {
-                        const startYmd = dateKey(b.pickupDate);
-                        const lastDayYmd = addDaysToYmd(startYmd, b.numberOfDays - 1);
-                        const carLabel = b.carModel
-                          ? `${b.carModel.brand.name} ${b.carModel.name}`
-                          : "—";
-                        return (
-                          <tr key={b.id} className="border-b border-outline-variant/15">
-                            <td className="px-3 py-2 font-medium">{carLabel}</td>
-                            <td className="px-3 py-2 tabular-nums" dir="ltr">
-                              {startYmd} → {lastDayYmd}
-                            </td>
-                            <td className="px-3 py-2 tabular-nums">{b.numberOfDays}</td>
-                            <td className="px-3 py-2">{b.fullName}</td>
-                            <td className="px-3 py-2" dir="ltr">
-                              {b.phone}
-                            </td>
-                            <td className="px-3 py-2">
-                              {b.pickupBranch?.name ??
-                                BRANCH_LABEL[b.pickupBranch?.slug ?? ""] ??
-                                "—"}
-                            </td>
-                            <td className="px-3 py-2">
-                              {b.returnBranch?.name ??
-                                BRANCH_LABEL[b.returnBranch?.slug ?? ""] ??
-                                "—"}
-                            </td>
-                            <td className="px-3 py-2">
-                              {b.pickupMode === "DELIVERY" ? (
-                                <span className="inline-flex max-w-[min(100%,280px)] flex-col gap-1">
-                                  <span className="font-bold text-primary">توصيل</span>
-                                  {b.deliveryAddress?.trim() ? (
-                                    <span className="whitespace-pre-wrap text-xs leading-snug text-on-surface">
-                                      {b.deliveryAddress.trim()}
-                                    </span>
-                                  ) : null}
-                                  {b.deliveryLat != null && b.deliveryLng != null ? (
-                                    <a
-                                      href={`https://www.google.com/maps?q=${b.deliveryLat},${b.deliveryLng}`}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className="text-xs font-bold text-on-surface-variant underline"
-                                      dir="ltr"
-                                    >
-                                      الخريطة
-                                    </a>
-                                  ) : !b.deliveryAddress?.trim() ? (
-                                    <span className="text-xs text-on-surface-variant">بدون عنوان/خريطة</span>
-                                  ) : null}
-                                </span>
-                              ) : (
-                                <span className="text-on-surface-variant">فرع</span>
-                              )}
-                            </td>
-                            <td className="px-3 py-2">{b.status}</td>
-                            <td className="px-3 py-2">
-                              <div className="flex flex-col gap-1">
-                                <Link
-                                  href={`/admin/bookings/${b.id}`}
-                                  className="font-bold text-primary hover:underline"
-                                >
-                                  التفاصيل
-                                </Link>
-                                <Link
-                                  href={`/admin/bookings/${b.id}?edit=1`}
-                                  className="text-xs font-bold text-on-surface-variant hover:text-primary hover:underline"
-                                >
-                                  تعديل
-                                </Link>
-                              </div>
-                            </td>
-                            <td className="px-3 py-2 tabular-nums text-on-surface-variant">
-                              #{b.id}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-            );
-          })}
-        </div>
-      )}
+      <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatTile
+          label="حجوزات نشطة"
+          value={rows.length}
+          hint="حجز مباشر مرتبط بموديل"
+          icon={Car}
+          accent="bg-[#ecfdf5] text-[#047857]"
+        />
+        <StatTile
+          label="تبدأ اليوم"
+          value={todayCount}
+          hint={todayYmd}
+          icon={CalendarDays}
+          accent="bg-[#eff6ff] text-[#1d4ed8]"
+        />
+        <StatTile
+          label="توصيل"
+          value={deliveryCount}
+          hint="استلام من موقع العميل"
+          icon={Truck}
+          accent="bg-[#f5f3ff] text-[#6d28d9]"
+        />
+        <StatTile
+          label="أيام بها حجوزات"
+          value={groups.length}
+          hint="مجموعات حسب تاريخ الاستلام"
+          icon={MapPin}
+          accent="bg-[#fff7ed] text-[#9a3412]"
+        />
+      </div>
+
+      <div className="mb-6 flex flex-wrap gap-3 text-sm">
+        <Link
+          href="/admin/cancelled-bookings"
+          className="inline-flex items-center gap-1.5 rounded-full border border-outline-variant/30 bg-white px-4 py-2 font-bold text-primary shadow-sm transition-colors hover:bg-surface-container-low"
+        >
+          الحجوزات الملغاة
+        </Link>
+        <Link
+          href="/admin/branch-returns"
+          className="inline-flex items-center gap-1.5 rounded-full border border-outline-variant/30 bg-white px-4 py-2 font-bold text-primary shadow-sm transition-colors hover:bg-surface-container-low"
+        >
+          مرتجعات الفرع
+        </Link>
+        <Link
+          href="/admin/fleet-availability"
+          className="inline-flex items-center gap-1.5 rounded-full border border-outline-variant/30 bg-white px-4 py-2 font-bold text-primary shadow-sm transition-colors hover:bg-surface-container-low"
+        >
+          توفر الأسطول
+        </Link>
+      </div>
+
+      <AdminCarBookingsList groups={groups} />
     </>
   );
 }

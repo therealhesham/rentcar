@@ -10,7 +10,6 @@ type NavKey = "home" | "fleet" | "subscriptions" | "about" | "contact";
 const links: { href: string; key: NavKey; label: string }[] = [
   { href: "/", key: "home", label: "الرئيسية" },
   { href: "/fleet", key: "fleet", label: "الاسطول" },
-  { href: "/subscriptions", key: "subscriptions", label: "اشتراك شهري" },
   { href: "/about", key: "about", label: "نبذة عنا" },
   { href: "#contact", key: "contact", label: "تواصل معنا" },
 ];
