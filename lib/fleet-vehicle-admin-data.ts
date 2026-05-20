@@ -1,17 +1,30 @@
 import type { FuelType, Transmission } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
+export type AdminFleetBranchColumn = {
+  id: number;
+  name: string;
+  slug: string;
+};
+
 export type AdminFleetVehicleListRow = {
   id: number;
   brandName: string;
   modelName: string;
   year: number;
   price: number;
+  /** كمية فرع واحد أو المجموع */
   quantity: number;
   image: string | null;
 };
 
-/** مركبات الكتالوج مع كمية الفرع (إن وُجد branchId) أو مجموع الكميات (سوبر أدمن) */
+export type AdminFleetVehicleSuperRow = AdminFleetVehicleListRow & {
+  totalQuantity: number;
+  /** كمية لكل فرع نشط (بالترتيب) */
+  branchQuantities: { branchId: number; quantity: number }[];
+};
+
+/** مركبات الكتالوج مع كمية فرع موظف الفرع */
 export async function listFleetVehiclesForAdmin(
   branchId?: number | null,
 ): Promise<AdminFleetVehicleListRow[]> {
@@ -39,6 +52,50 @@ export async function listFleetVehiclesForAdmin(
       image: r.image?.trim() || null,
     };
   });
+}
+
+/** سوبر أدمن: كل الموديلات + كمية كل فرع */
+export async function listFleetVehiclesForSuperAdmin(): Promise<{
+  branches: AdminFleetBranchColumn[];
+  vehicles: AdminFleetVehicleSuperRow[];
+}> {
+  const branches = await prisma.branch.findMany({
+    where: { isActive: true },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: { id: true, name: true, slug: true },
+  });
+
+  const rows = await prisma.carModel.findMany({
+    orderBy: [{ brand: { name: "asc" } }, { name: "asc" }, { year: "desc" }],
+    include: {
+      brand: true,
+      fleetItems: { select: { branchId: true, quantity: true } },
+    },
+  });
+
+  const qtyByBranchId = (items: { branchId: number; quantity: number }[], branchId: number) =>
+    items.find((f) => f.branchId === branchId)?.quantity ?? 0;
+
+  const vehicles: AdminFleetVehicleSuperRow[] = rows.map((r) => {
+    const branchQuantities = branches.map((b) => ({
+      branchId: b.id,
+      quantity: qtyByBranchId(r.fleetItems, b.id),
+    }));
+    const totalQuantity = branchQuantities.reduce((s, x) => s + x.quantity, 0);
+    return {
+      id: r.id,
+      brandName: r.brand.name.trim(),
+      modelName: r.name.trim(),
+      year: r.year,
+      price: r.price,
+      quantity: totalQuantity,
+      totalQuantity,
+      image: r.image?.trim() || null,
+      branchQuantities,
+    };
+  });
+
+  return { branches, vehicles };
 }
 
 export type AdminFleetVehicleEditPayload = {

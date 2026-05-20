@@ -60,6 +60,7 @@ export async function getBookingForPayment(
   const row = await prisma.bookingRequest.findUnique({
     where: { id },
     include: {
+      returnBranch: { select: { slug: true, address: true, mapUrl: true } },
       carModel: {
         include: { brand: true, category: true },
       },
@@ -74,10 +75,7 @@ export async function getBookingForPayment(
   const { addons, interCityShipping, checkoutOneTimeFees } = parseBookingPricingSnapshot(
     row.addonsJson,
   );
-  const branchRow = await prisma.branch.findFirst({
-    where: { slug: row.branch },
-    select: { address: true, mapUrl: true },
-  });
+  const returnSlug = row.returnBranch?.slug ?? "jeddah";
 
   const shipFee = interCityShipping?.feeExclVatSar ?? 0;
   const checkoutFeesSum = checkoutOneTimeFees.reduce((s, x) => s + x.feeExclVatSar, 0);
@@ -93,9 +91,9 @@ export async function getBookingForPayment(
     id: row.id,
     fullName: row.fullName,
     phone: row.phone,
-    branch: row.branch,
-    branchAddress: branchRow?.address?.trim() || null,
-    branchMapUrl: branchRow?.mapUrl?.trim() || null,
+    branch: returnSlug,
+    branchAddress: row.returnBranch?.address?.trim() || null,
+    branchMapUrl: row.returnBranch?.mapUrl?.trim() || null,
     pickupMode: row.pickupMode,
     deliveryLat: row.deliveryLat,
     deliveryLng: row.deliveryLng,

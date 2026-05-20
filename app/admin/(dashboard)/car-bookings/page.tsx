@@ -39,6 +39,8 @@ export default async function AdminCarBookingsPage() {
     }),
     include: {
       carModel: { include: { brand: true, category: true } },
+      pickupBranch: { select: { slug: true, name: true } },
+      returnBranch: { select: { slug: true, name: true } },
     },
     orderBy: [{ pickupDate: "asc" }, { id: "asc" }],
   });
@@ -97,9 +99,11 @@ export default async function AdminCarBookingsPage() {
                         <th className="px-3 py-2">الأيام</th>
                         <th className="px-3 py-2">الاسم</th>
                         <th className="px-3 py-2">الجوال</th>
-                        <th className="px-3 py-2">الفرع</th>
-                        <th className="px-3 py-2">الاستلام</th>
+                        <th className="px-3 py-2">فرع الاستلام</th>
+                        <th className="px-3 py-2">فرع الإرجاع</th>
+                        <th className="px-3 py-2">طريقة الاستلام</th>
                         <th className="px-3 py-2">الحالة</th>
+                        <th className="px-3 py-2">عرض</th>
                         <th className="px-3 py-2">رقم الطلب</th>
                       </tr>
                     </thead>
@@ -122,7 +126,14 @@ export default async function AdminCarBookingsPage() {
                               {b.phone}
                             </td>
                             <td className="px-3 py-2">
-                              {BRANCH_LABEL[b.branch] ?? b.branch}
+                              {b.pickupBranch?.name ??
+                                BRANCH_LABEL[b.pickupBranch?.slug ?? ""] ??
+                                "—"}
+                            </td>
+                            <td className="px-3 py-2">
+                              {b.returnBranch?.name ??
+                                BRANCH_LABEL[b.returnBranch?.slug ?? ""] ??
+                                "—"}
                             </td>
                             <td className="px-3 py-2">
                               {b.pickupMode === "DELIVERY" ? (
@@ -152,6 +163,14 @@ export default async function AdminCarBookingsPage() {
                               )}
                             </td>
                             <td className="px-3 py-2">{b.status}</td>
+                            <td className="px-3 py-2">
+                              <Link
+                                href={`/admin/bookings/${b.id}`}
+                                className="font-bold text-primary hover:underline"
+                              >
+                                التفاصيل
+                              </Link>
+                            </td>
                             <td className="px-3 py-2 tabular-nums text-on-surface-variant">
                               #{b.id}
                             </td>

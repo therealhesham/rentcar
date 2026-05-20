@@ -3,6 +3,12 @@ import type { InterCityShippingSnap } from "@/lib/inter-city-shipping";
 import { addDaysToYmd } from "@/lib/booking-calendar-ymd";
 import { daysInCalendarMonth } from "@/lib/calendar-month-grid";
 import {
+  bookingBranchRelationsSelect,
+  isInterBranchPickupReturn,
+  resolvePickupBranchSlug,
+  resolveReturnBranchSlug,
+} from "@/lib/booking-branches";
+import {
   bookingReturnYmd,
   computeBookingReturnAt,
 } from "@/lib/booking-return-schedule";
@@ -18,7 +24,10 @@ export type BranchReturnRow = {
   paymentStatus: string;
   pickupMode: string | null;
   deliveryAddress: string | null;
-  branchSlug: string;
+  returnBranchName: string;
+  pickupBranchName: string | null;
+  isInterBranchPickup: boolean;
+  interBranchReturnConfirmedAt: Date | null;
   returnAt: Date;
   returnYmd: string;
   numberOfDays: number;
@@ -43,20 +52,24 @@ function buildPickupSummary(
   row: {
     pickupMode: string | null;
     deliveryAddress: string | null;
-    branch: string;
+    pickupBranch?: { name: string } | null;
+    returnBranch?: { name: string } | null;
   },
-  branchNames: Map<string, string>,
   interCity: InterCityShippingSnap | null,
+  pickupName: string | null,
 ): string {
   if (row.pickupMode === "DELIVERY") {
     const addr = row.deliveryAddress?.trim();
     return addr ? `توصيل — ${addr}` : "توصيل للعميل";
   }
   if (interCity?.labelAr) {
-    return `استلام: ${interCity.labelAr}`;
+    return interCity.labelAr;
   }
-  const returnName = branchNames.get(row.branch) ?? row.branch;
-  return `استلام من فرع (${returnName})`;
+  if (pickupName) {
+    return `فرع ${pickupName}`;
+  }
+  const returnName = row.returnBranch?.name;
+  return returnName ? `فرع ${returnName}` : "—";
 }
 
 const MAX_RENTAL_DAYS = 60;
@@ -71,7 +84,9 @@ function bookingWhereForReturnWindow(
     kind: "DIRECT",
     carModelId: { not: null },
     NOT: { status: { in: [...NON_BLOCKING_BOOKING_STATUSES] } },
-    ...(returnBranchSlug ? { branch: returnBranchSlug } : {}),
+    ...(returnBranchSlug
+      ? { returnBranch: { slug: returnBranchSlug.trim().toLowerCase() } }
+      : {}),
     pickupDate: { gte: new Date(`${earliestPickupYmd}T00:00:00.000Z`) },
   };
 }
@@ -88,7 +103,11 @@ type BookingWithCar = {
   paymentStatus: string;
   pickupMode: string | null;
   deliveryAddress: string | null;
-  branch: string;
+  branchId: number | null;
+  returnBranchId: number | null;
+  interBranchReturnConfirmedAt: Date | null;
+  pickupBranch: { slug: string; name: string } | null;
+  returnBranch: { slug: string; name: string } | null;
   carModel: { brand: { name: string }; name: string } | null;
 };
 
@@ -96,12 +115,6 @@ async function mapRowsToBranchReturns(
   rows: BookingWithCar[],
   filter: (returnYmd: string) => boolean,
 ): Promise<BranchReturnRow[]> {
-  const branches = await prisma.branch.findMany({
-    where: { isActive: true },
-    select: { slug: true, name: true },
-  });
-  const branchNames = new Map(branches.map((b) => [b.slug, b.name]));
-
   const out: BranchReturnRow[] = [];
   for (const row of rows) {
     const returnYmd = bookingReturnYmd(row.pickupDate, row.numberOfDays);
@@ -109,6 +122,11 @@ async function mapRowsToBranchReturns(
 
     const returnAt = computeBookingReturnAt(row.pickupDate, row.numberOfDays);
     const interCity = parseInterCityFromAddons(row.addonsJson);
+    const pickupSlug = resolvePickupBranchSlug(row);
+    const pickupName = pickupSlug
+      ? (row.pickupBranch?.name ?? pickupSlug)
+      : null;
+    const isInterBranchPickup = isInterBranchPickupReturn(row);
     const carLabel = row.carModel
       ? `${row.carModel.brand.name} ${row.carModel.name}`
       : "—";
@@ -122,19 +140,41 @@ async function mapRowsToBranchReturns(
       paymentStatus: row.paymentStatus,
       pickupMode: row.pickupMode,
       deliveryAddress: row.deliveryAddress,
-      branchSlug: row.branch,
+      returnBranchName: row.returnBranch?.name ?? resolveReturnBranchSlug(row) ?? "—",
+      pickupBranchName: pickupName,
+      isInterBranchPickup,
+      interBranchReturnConfirmedAt: row.interBranchReturnConfirmedAt,
       returnAt,
       returnYmd,
       numberOfDays: row.numberOfDays,
       pickupDate: row.pickupDate,
       carLabel,
-      pickupSummary: buildPickupSummary(row, branchNames, interCity),
+      pickupSummary: buildPickupSummary(row, interCity, pickupName),
     });
   }
 
   out.sort((a, b) => a.returnAt.getTime() - b.returnAt.getTime());
   return out;
 }
+
+const returnSelect = {
+  pickupDate: true,
+  numberOfDays: true,
+  addonsJson: true,
+  id: true,
+  fullName: true,
+  phone: true,
+  contactEmail: true,
+  status: true,
+  paymentStatus: true,
+  pickupMode: true,
+  deliveryAddress: true,
+  branchId: true,
+  returnBranchId: true,
+  interBranchReturnConfirmedAt: true,
+  ...bookingBranchRelationsSelect,
+  carModel: { include: { brand: true } },
+} as const;
 
 /** عدد المرتجعات لكل يوم في شهر (مفتاح YYYY-MM-DD). */
 export async function loadBranchReturnCountsForMonth(input: {
@@ -173,7 +213,7 @@ export async function loadBranchReturnsForDay(input: {
       input.viewYmd,
       input.returnBranchSlug,
     ),
-    include: { carModel: { include: { brand: true } } },
+    select: returnSelect,
     orderBy: [{ pickupDate: "asc" }, { id: "asc" }],
   });
   return mapRowsToBranchReturns(rows, (returnYmd) => returnYmd === input.viewYmd);
@@ -193,7 +233,7 @@ export async function loadBranchReturnsForMonth(input: {
       returnEndYmd,
       input.returnBranchSlug,
     ),
-    include: { carModel: { include: { brand: true } } },
+    select: returnSelect,
     orderBy: [{ pickupDate: "asc" }, { id: "asc" }],
   });
   return mapRowsToBranchReturns(

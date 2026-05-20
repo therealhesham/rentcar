@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useId, useMemo, useState } from "react";
@@ -10,7 +11,8 @@ import {
 } from "@/lib/delivery-address";
 import { SarCurrencyGlyph } from "@/components/ui/SarCurrencyGlyph";
 import type { BookableModelOption } from "@/components/admin/ConvertInquiryToDirectForm";
-import { parseBookingPricingSnapshot } from "@/lib/booking-pricing-snapshot";
+import { BookingAddonsSnapshot } from "@/components/admin/BookingAddonsSnapshot";
+import { BookingAttachmentsPanel } from "@/components/admin/BookingAttachmentsPanel";
 import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
 import { formatDeductDaysSummaryAr } from "@/lib/cancellation-deduct";
 
@@ -71,65 +73,6 @@ type Props = {
 function localPhoneFromStored(phone: string): string {
   if (phone.startsWith("+966")) return phone.slice(4);
   return phone.replace(/\D/g, "").replace(/^966/, "");
-}
-
-function AddonsSnapshotDisplay({ raw }: { raw: string }) {
-  try {
-    const { addons, interCityShipping, checkoutOneTimeFees } = parseBookingPricingSnapshot(raw);
-    const rows: { key: string; title: string; amount: number | null }[] = [];
-    addons.forEach((a, i) => {
-      rows.push({
-        key: `addon-${i}`,
-        title: a.titleAr,
-        amount: a.lineTotalExclTax,
-      });
-    });
-    if (interCityShipping && interCityShipping.feeExclVatSar > 0) {
-      rows.push({
-        key: "inter-city",
-        title: interCityShipping.labelAr,
-        amount: interCityShipping.feeExclVatSar,
-      });
-    }
-    for (const f of checkoutOneTimeFees) {
-      rows.push({
-        key: `co-${f.slug}`,
-        title: f.labelAr,
-        amount: f.feeExclVatSar,
-      });
-    }
-    if (rows.length === 0) {
-      return <p className="mt-2 text-xs text-on-surface-variant">لا توجد بنود مسجّلة.</p>;
-    }
-    return (
-      <ul className="mt-2 space-y-2">
-        {rows.map((it) => (
-          <li
-            key={it.key}
-            className="flex justify-between gap-2 border-b border-outline-variant/15 pb-2 text-xs last:border-0"
-          >
-            <span className="font-medium text-on-surface">{it.title}</span>
-            <span dir="ltr" className="shrink-0 tabular-nums font-bold text-on-surface-variant">
-              {it.amount != null ? (
-                <>
-                  {it.amount} <SarCurrencyGlyph />
-                </>
-              ) : (
-                ""
-              )}
-              <span className="ms-1 text-[10px] font-normal">غير شامل الضريبة</span>
-            </span>
-          </li>
-        ))}
-      </ul>
-    );
-  } catch {
-    return (
-      <pre className="mt-2 max-h-40 overflow-auto rounded-lg bg-inverse-surface/5 p-2 text-[10px]" dir="ltr">
-        {raw}
-      </pre>
-    );
-  }
 }
 
 function defaultInquirySlug(carType: string, categories: CategoryOption[]): string {
@@ -222,6 +165,12 @@ function EditBookingModalInner({
             <p className="mt-1 text-xs text-on-surface-variant">
               {request.kind === "DIRECT" ? "حجز مباشر" : "طلب استفسار"}
             </p>
+            <Link
+              href={`/admin/bookings/${request.id}`}
+              className="mt-2 inline-block text-xs font-bold text-primary hover:underline"
+            >
+              عرض التفاصيل والمرفقات
+            </Link>
           </div>
           <button
             type="button"
@@ -336,91 +285,29 @@ function EditBookingModalInner({
               (request.idDocumentKind ||
                 request.idCardImageUrl ||
                 request.licenseNumber ||
-                request.licenseExpiryDate) ? (
+                request.licenseExpiryDate ||
+                request.driverLicenseImageUrl) ? (
                 <div className="sm:col-span-2 rounded-xl border border-outline-variant/40 bg-surface-container-low px-3 py-3 text-sm">
                   <p className="font-bold text-on-surface">مستندات العميل (عند الإتمام)</p>
-                  <dl className="mt-2 space-y-1.5 text-xs">
-                    {request.idDocumentKind ? (
-                      <div className="flex flex-wrap gap-2">
-                        <dt className="font-bold text-on-surface-variant">النوع:</dt>
-                        <dd>
-                          {request.idDocumentKind === "CITIZEN"
-                            ? "مواطن"
-                            : request.idDocumentKind === "RESIDENT"
-                              ? "مقيم"
-                              : request.idDocumentKind === "VISITOR"
-                                ? "زائر"
-                                : request.idDocumentKind === "RESIDENT_VISITOR"
-                                  ? "مقيم / زائر (سجل قديم)"
-                                  : request.idDocumentKind}
-                        </dd>
-                      </div>
-                    ) : null}
-                    {request.nationalIdNumber ? (
-                      <div className="flex flex-wrap gap-2">
-                        <dt className="font-bold text-on-surface-variant">
-                          {request.idDocumentKind === "RESIDENT" ? "الإقامة:" : "الهوية:"}
-                        </dt>
-                        <dd dir="ltr" className="font-mono">
-                          {request.nationalIdNumber}
-                        </dd>
-                      </div>
-                    ) : null}
-                    {request.passportNumber ? (
-                      <div className="flex flex-wrap gap-2">
-                        <dt className="font-bold text-on-surface-variant">الجواز:</dt>
-                        <dd dir="ltr" className="font-mono">
-                          {request.passportNumber}
-                        </dd>
-                      </div>
-                    ) : null}
-                    {request.licenseNumber ? (
-                      <div className="flex flex-wrap gap-2">
-                        <dt className="font-bold text-on-surface-variant">رقم الرخصة:</dt>
-                        <dd dir="ltr" className="font-mono">
-                          {request.licenseNumber}
-                        </dd>
-                      </div>
-                    ) : null}
-                    {request.licenseExpiryDate ? (
-                      <div className="flex flex-wrap gap-2">
-                        <dt className="font-bold text-on-surface-variant">انتهاء الرخصة:</dt>
-                        <dd dir="ltr" className="font-mono">
-                          {request.licenseExpiryDate}
-                        </dd>
-                      </div>
-                    ) : null}
-                    {request.idCardImageUrl ? (
-                      <div>
-                        <a
-                          href={request.idCardImageUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="font-bold text-primary underline"
-                        >
-                          فتح صورة الهوية / الجواز
-                        </a>
-                      </div>
-                    ) : null}
-                    {request.driverLicenseImageUrl ? (
-                      <div>
-                        <a
-                          href={request.driverLicenseImageUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="font-bold text-primary underline"
-                        >
-                          فتح صورة الرخصة
-                        </a>
-                      </div>
-                    ) : null}
-                  </dl>
+                  <div className="mt-2">
+                    <BookingAttachmentsPanel
+                      idDocumentKind={request.idDocumentKind}
+                      nationalIdNumber={request.nationalIdNumber}
+                      passportNumber={request.passportNumber}
+                      licenseNumber={request.licenseNumber}
+                      licenseExpiryDate={request.licenseExpiryDate}
+                      idCardImageUrl={request.idCardImageUrl}
+                      driverLicenseImageUrl={request.driverLicenseImageUrl}
+                    />
+                  </div>
                 </div>
               ) : null}
               {request.kind === "DIRECT" && request.addonsJson ? (
                 <div className="sm:col-span-2 rounded-xl border border-outline-variant/40 bg-surface-container-low px-3 py-3 text-sm">
                   <p className="font-bold text-on-surface">الإضافات المختارة (عند الطلب)</p>
-                  <AddonsSnapshotDisplay raw={request.addonsJson} />
+                  <div className="mt-2">
+                    <BookingAddonsSnapshot raw={request.addonsJson} />
+                  </div>
                 </div>
               ) : null}
               {request.pickupMode === "DELIVERY" &&

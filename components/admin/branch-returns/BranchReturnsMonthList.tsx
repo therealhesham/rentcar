@@ -5,15 +5,13 @@ import { formatReturnDateAr } from "@/lib/booking-return-schedule";
 
 type Props = {
   returns: BranchReturnRow[];
-  showBranchColumn: boolean;
-  branchNames: Record<string, string>;
+  showReturnBranchColumn: boolean;
   branchQuery: string;
 };
 
 export function BranchReturnsMonthList({
   returns,
-  showBranchColumn,
-  branchNames,
+  showReturnBranchColumn,
   branchQuery,
 }: Props) {
   const byDay = new Map<string, BranchReturnRow[]>();
@@ -62,8 +60,7 @@ export function BranchReturnsMonthList({
             </div>
             <BranchReturnsTable
               returns={dayRows}
-              showBranchColumn={showBranchColumn}
-              branchNames={branchNames}
+              showReturnBranchColumn={showReturnBranchColumn}
             />
           </section>
         );

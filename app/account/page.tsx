@@ -91,6 +91,8 @@ export default async function AccountDashboardPage() {
     take: 40,
     include: {
       carModel: { include: { brand: true } },
+      pickupBranch: { select: { slug: true } },
+      returnBranch: { select: { slug: true } },
     },
   });
 
@@ -316,7 +318,9 @@ export default async function AccountDashboardPage() {
                         pickupDateIso: b.pickupDate.toISOString(),
                         numberOfDays: b.numberOfDays,
                         pickupMode: b.pickupMode,
-                        branch: b.branch,
+                        pickupBranchSlug: b.pickupBranch?.slug ?? null,
+                        returnBranchSlug:
+                          b.returnBranch?.slug ?? b.pickupBranch?.slug ?? "jeddah",
                         deliveryLat: b.deliveryLat,
                         deliveryLng: b.deliveryLng,
                         deliveryAddress: b.deliveryAddress,

@@ -68,7 +68,6 @@ export default async function BranchReturnsPage({
       : Promise.resolve(null),
   ]);
 
-  const branchNames = Object.fromEntries(allBranches.map((b) => [b.slug, b.name]));
   const showBranchColumn = session.isSuperAdmin && !branchFilter;
 
   const pageTitle = session.isSuperAdmin
@@ -91,7 +90,8 @@ export default async function BranchReturnsPage({
             </>
           ) : (
             <>
-              التقويم يوضح عدد المركبات المرتجعة كل يوم — اضغط «اليوم» أو اختر تاريخاً من الشبكة.
+              التقويم يوضح عدد المركبات المرتجعة كل يوم. إذا استلم العميل من فرع آخر، يظهر فرع
+              الاستلام وزر «موافق — استلام» لتحديث المخزون.
             </>
           )}
         </p>
@@ -169,15 +169,13 @@ export default async function BranchReturnsPage({
       ) : viewMode === "month" ? (
         <BranchReturnsMonthList
           returns={returns}
-          showBranchColumn={showBranchColumn}
-          branchNames={branchNames}
+          showReturnBranchColumn={showBranchColumn}
           branchQuery={branchQuery}
         />
       ) : (
         <BranchReturnsTable
           returns={returns}
-          showBranchColumn={showBranchColumn}
-          branchNames={branchNames}
+          showReturnBranchColumn={showBranchColumn}
         />
       )}
     </>

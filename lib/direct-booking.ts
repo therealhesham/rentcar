@@ -20,6 +20,10 @@ import {
 } from "@/lib/delivery-address";
 import { formatBranchOutsideHoursError } from "@/lib/direct-booking-user-messages";
 import { validateRentalAddonExclusiveSelection } from "@/lib/rental-addon-exclusive";
+import {
+  branchIdsFromReturnSlug,
+  resolveBranchIdsFromSlugs,
+} from "@/lib/booking-branches";
 import { sumFleetQuantityForModelAtBranch } from "@/lib/fleet-branch-stock";
 import {
   addDaysToYmd,
@@ -57,7 +61,8 @@ export type DirectBookingCommon = {
   fullName: string;
   phone: string;
   ageRange: string;
-  branch: string;
+  /** فرع إرجاع المركبة — في API/النماذج يُرسل كحقل `branch` */
+  returnBranchSlug: string;
   pickupDate: Date;
   numberOfDays: number;
   termsAccepted: boolean;
@@ -311,7 +316,7 @@ async function loadBlockingDirectBookings(
       kind: "DIRECT",
       carModelId,
       NOT: { status: { in: [...NON_BLOCKING_BOOKING_STATUSES] } },
-      ...(branchSlug ? { branch: branchSlug } : {}),
+      ...(branchSlug ? { returnBranch: { slug: branchSlug } } : {}),
       ...(excludeBookingRequestId
         ? { id: { not: excludeBookingRequestId } }
         : {}),
@@ -502,7 +507,7 @@ export function parseCommonBookingFieldsFromFormData(
       fullName,
       phone,
       ageRange,
-      branch: branch.trim().toLowerCase(),
+      returnBranchSlug: branch.trim().toLowerCase(),
       pickupDate,
       numberOfDays: safeBookingDays(days),
       termsAccepted,
@@ -566,7 +571,7 @@ export function parseCommonBookingFieldsFromJson(
       fullName,
       phone,
       ageRange,
-      branch: branch.trim().toLowerCase(),
+      returnBranchSlug: branch.trim().toLowerCase(),
       pickupDate,
       numberOfDays: safeBookingDays(days),
       termsAccepted,
@@ -581,7 +586,7 @@ export function parseCommonBookingFieldsFromJson(
 
 export type CreateDirectBookingInput = DirectBookingCommon & {
   carModelId: number;
-  /** عند الاستلام من فرع — slug فرع الاستلام إن وُجد (وإلا يُفترض نفس `branch`). */
+  /** عند الاستلام من فرع — slug فرع الاستلام إن وُجد (وإلا نفس فرع الإرجاع). */
   pickupBranchSlug?: string | null;
   /** معرفات إضافات نشطة من جدول RentalAddon */
   addonIds?: number[];
@@ -609,7 +614,7 @@ export function parsePickupCitySlugFromJson(
   return s;
 }
 
-/** فرع الاستلام عند الاستلام من الفرع (قد يختلف عن فرع إرجاع المركبة في `branch`). */
+/** فرع الاستلام عند الاستلام من الفرع (قد يختلف عن `returnBranchSlug`). */
 export function parsePickupBranchSlugFromJson(body: JsonBody): string | undefined {
   const raw = body.pickupBranch ?? body.pickupBranchSlug;
   if (typeof raw !== "string") return undefined;
@@ -895,7 +900,7 @@ export async function assertBranchesAndPickupHoursForDirectBooking(
     ...common
   } = input;
 
-  const branchSlug = common.branch.trim().toLowerCase();
+  const branchSlug = common.returnBranchSlug.trim().toLowerCase();
   const returnBranchRow = await prisma.branch.findFirst({
     where: { slug: branchSlug, isActive: true },
     select: { id: true, name: true, openingHoursJson: true },
@@ -1049,12 +1054,12 @@ export async function createDirectBooking(
     return branchAssert;
   }
 
-  const branchSlug = common.branch.trim().toLowerCase();
-  const commonNormalized = { ...common, branch: branchSlug };
+  const returnBranchSlug = common.returnBranchSlug.trim().toLowerCase();
+  const commonNormalized = { ...common, returnBranchSlug };
 
   const shippingSnap = await resolveInterCityShippingSnap({
     originCitySlug: pickupCitySlug,
-    returnBranchSlug: branchSlug,
+    returnBranchSlug,
   });
 
   const days = commonNormalized.numberOfDays;
@@ -1077,7 +1082,7 @@ export async function createDirectBooking(
     prisma.$transaction(
       async (tx) => {
         const fleetUnits = await sumFleetQuantityForModelAtBranch(tx, carModelId, {
-          branchSlug: branchSlug,
+          branchSlug: returnBranchSlug,
         });
         if (fleetUnits <= 0) {
           throw new DirectBookingCapacityError(
@@ -1091,7 +1096,7 @@ export async function createDirectBooking(
           tx,
           carModelId,
           verifiedExcludeBlockingId,
-          branchSlug,
+          returnBranchSlug,
         );
         const overlapping = countOverlapsFromRows(rows, commonNormalized.pickupDate, days);
         if (overlapping >= fleetUnits) {
@@ -1102,6 +1107,25 @@ export async function createDirectBooking(
             overlapping,
           );
         }
+        const pickupSlugForStore =
+          commonNormalized.pickupMode === "BRANCH"
+            ? (pickupBranchSlug?.trim().toLowerCase() || returnBranchSlug)
+            : null;
+        const branchIds = await resolveBranchIdsFromSlugs({
+          pickupSlug: pickupSlugForStore,
+          returnSlug: returnBranchSlug,
+        });
+        if (!branchIds.returnBranchId) {
+          throw Object.assign(new Error("NO_RETURN_BRANCH"), {
+            userMessage: "فرع الإرجاع غير متاح.",
+          });
+        }
+        if (commonNormalized.pickupMode === "BRANCH" && !branchIds.pickupBranchId) {
+          throw Object.assign(new Error("NO_PICKUP_BRANCH"), {
+            userMessage: "فرع الاستلام غير متاح.",
+          });
+        }
+
         const created = await tx.bookingRequest.create({
           data: {
             kind: "DIRECT",
@@ -1122,7 +1146,8 @@ export async function createDirectBooking(
             driverLicenseImageUrl: kyc?.driverLicenseImageUrl ?? null,
             ageRange: commonNormalized.ageRange,
             carType,
-            branch: commonNormalized.branch,
+            branchId: branchIds.pickupBranchId,
+            returnBranchId: branchIds.returnBranchId,
             pickupMode: commonNormalized.pickupMode,
             deliveryLat: commonNormalized.deliveryLat,
             deliveryLng: commonNormalized.deliveryLng,
@@ -1222,7 +1247,7 @@ export async function convertInquiryBookingToDirect(
           select: {
             id: true,
             kind: true,
-            branch: true,
+            returnBranch: { select: { slug: true } },
             pickupDate: true,
             numberOfDays: true,
           },
@@ -1248,7 +1273,12 @@ export async function convertInquiryBookingToDirect(
           });
         }
 
-        const branchSlug = booking.branch.trim().toLowerCase();
+        const branchSlug = booking.returnBranch?.slug?.trim().toLowerCase();
+        if (!branchSlug) {
+          throw Object.assign(new Error("NO_BRANCH"), {
+            userMessage: "فرع الإرجاع غير محدد في الطلب.",
+          });
+        }
         const fleetUnits = await sumFleetQuantityForModelAtBranch(tx, carModelId, {
           branchSlug,
         });
@@ -1345,11 +1375,19 @@ export async function updateBookingRequestByAdmin(
   }
 
   const days = safeBookingDays(input.numberOfDays);
+  const branchIds = await branchIdsFromReturnSlug({
+    returnBranchSlug: input.returnBranchSlug,
+    pickupMode: input.pickupMode,
+  });
+  if (!branchIds.returnBranchId) {
+    return { ok: false, error: "فرع الإرجاع غير متاح." };
+  }
   const commonData = {
     fullName: input.fullName.trim(),
     phone: input.phone,
     ageRange: input.ageRange,
-    branch: input.branch.trim().toLowerCase(),
+    branchId: branchIds.branchId,
+    returnBranchId: branchIds.returnBranchId,
     pickupMode: input.pickupMode,
     deliveryLat: input.deliveryLat,
     deliveryLng: input.deliveryLng,
@@ -1400,7 +1438,12 @@ export async function updateBookingRequestByAdmin(
       async (tx) => {
         const row = await tx.bookingRequest.findUnique({
           where: { id: bookingRequestId },
-          select: { id: true, kind: true, branch: true },
+          select: {
+            id: true,
+            kind: true,
+            branchId: true,
+            returnBranch: { select: { slug: true } },
+          },
         });
         if (!row || row.kind !== "DIRECT") {
           throw Object.assign(new Error("NOT_DIRECT"), {
@@ -1419,9 +1462,20 @@ export async function updateBookingRequestByAdmin(
         }
 
         const carType = model.category.slug || model.category.title;
+        const returnSlug = input.returnBranchSlug.trim().toLowerCase();
+        const updatedBranchIds = await branchIdsFromReturnSlug({
+          returnBranchSlug: returnSlug,
+          pickupMode: input.pickupMode,
+          preservePickupBranchId: row.branchId,
+        });
+        if (!updatedBranchIds.returnBranchId) {
+          throw Object.assign(new Error("NO_RETURN_BRANCH"), {
+            userMessage: "فرع الإرجاع غير متاح.",
+          });
+        }
 
         if (isBlockingBookingStatus(statusTrim)) {
-          const branchSlug = row.branch.trim().toLowerCase();
+          const branchSlug = returnSlug;
           const fleetUnits = await sumFleetQuantityForModelAtBranch(tx, carModelId, {
             branchSlug,
           });
@@ -1454,6 +1508,8 @@ export async function updateBookingRequestByAdmin(
           where: { id: bookingRequestId, kind: "DIRECT" },
           data: {
             ...commonData,
+            branchId: updatedBranchIds.branchId,
+            returnBranchId: updatedBranchIds.returnBranchId,
             carModelId,
             carType,
           },

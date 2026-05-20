@@ -3,6 +3,7 @@ import type { AdminSession } from "@/lib/admin-auth";
 import { getAdminSession } from "@/lib/admin-auth";
 import { ADMIN_NAV_GROUPS, type AdminNavGroup } from "@/lib/admin-nav";
 import { isSuperAdminOnlyPath } from "@/lib/admin-routes";
+import { bookingInBranchScope } from "@/lib/booking-branches";
 import { prisma } from "@/lib/prisma";
 
 export { isSuperAdminOnlyPath, SUPER_ADMIN_ONLY_PREFIXES } from "@/lib/admin-routes";
@@ -36,7 +37,7 @@ export function bookingBranchWhere(
   const base: Prisma.BookingRequestWhereInput =
     session.isSuperAdmin || !session.branchSlug
       ? {}
-      : { branch: session.branchSlug };
+      : bookingInBranchScope(session.branchSlug);
   if (!extra || Object.keys(extra).length === 0) return base;
   return { AND: [base, extra] };
 }
@@ -70,10 +71,18 @@ export async function assertBookingRequestInScope(
   }
   const row = await prisma.bookingRequest.findUnique({
     where: { id: bookingRequestId },
-    select: { branch: true },
+    select: {
+      branchId: true,
+      returnBranchId: true,
+      pickupBranch: { select: { slug: true } },
+      returnBranch: { select: { slug: true } },
+    },
   });
   if (!row) return { ok: false, error: "الطلب غير موجود." };
-  if (row.branch !== session.branchSlug) {
+  const slug = session.branchSlug.trim().toLowerCase();
+  const pickup = row.pickupBranch?.slug?.toLowerCase();
+  const ret = row.returnBranch?.slug?.toLowerCase();
+  if (pickup !== slug && ret !== slug) {
     return { ok: false, error: "لا يمكنك تعديل حجز فرع آخر." };
   }
   return { ok: true };

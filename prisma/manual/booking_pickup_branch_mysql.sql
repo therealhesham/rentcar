@@ -1,0 +1,2 @@
+-- ⚠️ استُبدِل بـ booking_branch_ids_mysql.sql (branchId + returnBranchId)
+-- لا تشغّل هذا الملف إذا نفّذت الهجرة الجديدة.

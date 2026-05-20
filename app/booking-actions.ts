@@ -5,6 +5,7 @@ import {
   createDirectBooking,
   parseCommonBookingFieldsFromFormData,
 } from "@/lib/direct-booking";
+import { branchIdsFromReturnSlug } from "@/lib/booking-branches";
 import { prisma } from "@/lib/prisma";
 
 type BookingActionState = { ok: boolean; error?: string };
@@ -27,6 +28,14 @@ export async function submitBookingRequest(
 
   const { data } = parsed;
 
+  const branchIds = await branchIdsFromReturnSlug({
+    returnBranchSlug: data.returnBranchSlug,
+    pickupMode: "BRANCH",
+  });
+  if (!branchIds.returnBranchId) {
+    return { ok: false, error: "الفرع غير متاح." };
+  }
+
   try {
     await prisma.bookingRequest.create({
       data: {
@@ -35,7 +44,9 @@ export async function submitBookingRequest(
         phone: data.phone,
         ageRange: data.ageRange,
         carType,
-        branch: data.branch,
+        branchId: branchIds.branchId,
+        returnBranchId: branchIds.returnBranchId,
+        pickupMode: "BRANCH",
         pickupDate: data.pickupDate,
         numberOfDays: data.numberOfDays,
         termsAccepted: data.termsAccepted,

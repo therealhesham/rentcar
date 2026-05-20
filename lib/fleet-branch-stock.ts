@@ -95,3 +95,24 @@ export function fleetWhereForBranchSlug(
     branch: { slug: branchSlug.trim().toLowerCase(), isActive: true },
   };
 }
+
+type FleetTxClient = Pick<typeof prisma, "fleet">;
+
+/** تعديل الكمية بعدة وحدات (لا تقل عن صفر). */
+export async function adjustFleetQuantityDelta(
+  client: FleetTxClient,
+  modelId: number,
+  branchId: number,
+  delta: number,
+): Promise<void> {
+  const row = await client.fleet.findUnique({
+    where: { modelId_branchId: { modelId, branchId } },
+    select: { quantity: true },
+  });
+  const next = Math.max(0, (row?.quantity ?? 0) + Math.round(delta));
+  await client.fleet.upsert({
+    where: { modelId_branchId: { modelId, branchId } },
+    create: { modelId, branchId, quantity: next },
+    update: { quantity: next },
+  });
+}

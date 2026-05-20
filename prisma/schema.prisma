@@ -105,6 +105,8 @@ model Branch {
 
   employees AdminEmployee[]
   fleetItems Fleet[]
+  pickupBookings  BookingRequest[] @relation("BookingPickupBranch")
+  returnBookings  BookingRequest[] @relation("BookingReturnBranch")
 
   @@index([cityId])
   @@index([sortOrder])
@@ -276,7 +278,14 @@ model BookingRequest {
   driverLicenseImageUrl    String?   @db.Text
   ageRange      String
   carType       String
-  branch        String
+  /// Pickup branch FK. See docs/booking-request-branch-fields.md (AR: فرع الاستلام).
+  branchId      Int?
+  pickupBranch  Branch?  @relation("BookingPickupBranch", fields: [branchId], references: [id], onDelete: SetNull)
+  /// Return branch FK. See docs/booking-request-branch-fields.md (AR: فرع الإرجاع).
+  returnBranchId Int?
+  returnBranch   Branch?  @relation("BookingReturnBranch", fields: [returnBranchId], references: [id], onDelete: SetNull)
+  /// Inter-branch return confirmed at return branch. See docs/booking-request-branch-fields.md.
+  interBranchReturnConfirmedAt DateTime?
   /// استلام من فرع الشركة أو توصيل للعميل (حجز مباشر من الموقع).
   pickupMode    String?   @db.VarChar(16)
   deliveryLat   Float?
@@ -307,7 +316,8 @@ model BookingRequest {
   updatedAt     DateTime            @updatedAt
 
   @@index([status, createdAt])
-  @@index([branch])
+  @@index([branchId])
+  @@index([returnBranchId])
   @@index([kind, createdAt])
   @@index([carModelId])
   @@index([customerId])

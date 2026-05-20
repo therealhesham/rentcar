@@ -1,11 +1,14 @@
 import type { Prisma } from "@prisma/client";
+import { bookingPickupBranchScope } from "@/lib/booking-branches";
 import { prisma } from "@/lib/prisma";
 
 function bookingScope(
   branchSlug: string | null | undefined,
   extra?: Prisma.BookingRequestWhereInput,
 ): Prisma.BookingRequestWhereInput {
-  const scope: Prisma.BookingRequestWhereInput = branchSlug ? { branch: branchSlug } : {};
+  const scope: Prisma.BookingRequestWhereInput = branchSlug
+    ? bookingPickupBranchScope(branchSlug)
+    : {};
   if (!extra || Object.keys(extra).length === 0) return scope;
   return { AND: [scope, extra] };
 }
@@ -234,8 +237,8 @@ export async function getAdminBookingStats(
         _count: { _all: true },
       }),
       prisma.bookingRequest.groupBy({
-        by: ["branch"],
-        where: scoped({ createdAt: { gte: start } }),
+        by: ["branchId"],
+        where: scoped({ createdAt: { gte: start }, branchId: { not: null } }),
         _count: { _all: true },
       }),
       prisma.bookingRequest.groupBy({
@@ -264,14 +267,27 @@ export async function getAdminBookingStats(
   const modelIds = topModelsRaw
     .map((r) => r.carModelId)
     .filter((id): id is number => id != null);
-  const models =
+  const branchIds = byBranch
+    .map((r) => r.branchId)
+    .filter((id): id is number => id != null);
+  const [models, branches] = await Promise.all([
     modelIds.length > 0
-      ? await prisma.carModel.findMany({
+      ? prisma.carModel.findMany({
           where: { id: { in: modelIds } },
           select: { id: true, name: true, brand: { select: { name: true } } },
         })
-      : [];
+      : Promise.resolve([]),
+    branchIds.length > 0
+      ? prisma.branch.findMany({
+          where: { id: { in: branchIds } },
+          select: { id: true, name: true, slug: true },
+        })
+      : Promise.resolve([]),
+  ]);
   const modelName = new Map(models.map((m) => [m.id, `${m.brand.name} ${m.name}`]));
+  const branchLabel = new Map(
+    branches.map((b) => [b.id, b.name.trim() || b.slug]),
+  );
 
   const pickupLabels: Record<string, string> = {
     BRANCH: "استلام من الفرع",
@@ -300,7 +316,10 @@ export async function getAdminBookingStats(
       })),
     ),
     byBranch: toLabelCounts(
-      byBranch.map((r) => ({ key: r.branch, count: r._count._all })),
+      byBranch.map((r) => ({
+        key: branchLabel.get(r.branchId!) ?? `فرع #${r.branchId}`,
+        count: r._count._all,
+      })),
     ).slice(0, 10),
     byPickupMode: toLabelCounts(
       byPickupMode.map((r) => ({

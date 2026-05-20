@@ -56,6 +56,8 @@ export default async function AdminDashboardPage() {
         take: 25,
         include: {
           carModel: { include: { brand: true } },
+          pickupBranch: { select: { slug: true, name: true } },
+          returnBranch: { select: { slug: true, name: true } },
         },
       })
       .catch(() => []),
@@ -150,6 +152,7 @@ export default async function AdminDashboardPage() {
             <table className="w-full min-w-[1260px] text-start text-sm">
               <thead>
                 <tr className="border-b border-outline-variant/20 bg-surface-container-low/60 text-[11px] font-bold uppercase tracking-wide text-on-surface-variant">
+                  <th className="px-4 py-3">عرض</th>
                   <th className="px-4 py-3">تعديل</th>
                   <th className="px-4 py-3">النوع</th>
                   <th className="px-4 py-3">السيارة</th>
@@ -157,7 +160,7 @@ export default async function AdminDashboardPage() {
                   <th className="px-4 py-3">الجوال</th>
                   <th className="px-4 py-3">العمر</th>
                   <th className="px-4 py-3">الفئة</th>
-                  <th className="px-4 py-3">الفرع</th>
+                  <th className="px-4 py-3">استلام / إرجاع</th>
                   <th className="px-4 py-3">بداية الحجز</th>
                   <th className="px-4 py-3">الأيام</th>
                   <th className="px-4 py-3">الحالة</th>
@@ -174,6 +177,14 @@ export default async function AdminDashboardPage() {
                     }`}
                   >
                     <td className="px-4 py-3 align-top">
+                      <Link
+                        href={`/admin/bookings/${request.id}`}
+                        className="text-sm font-bold text-primary hover:underline"
+                      >
+                        التفاصيل
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 align-top">
                       <EditBookingRequestForm
                         request={{
                           id: request.id,
@@ -182,7 +193,10 @@ export default async function AdminDashboardPage() {
                           phone: request.phone,
                           ageRange: request.ageRange,
                           carType: request.carType,
-                          branch: request.branch,
+                          branch:
+                            request.returnBranch?.slug ??
+                            request.pickupBranch?.slug ??
+                            "jeddah",
                           pickupMode: request.pickupMode,
                           deliveryLat: request.deliveryLat,
                           deliveryLng: request.deliveryLng,
@@ -235,7 +249,14 @@ export default async function AdminDashboardPage() {
                     </td>
                     <td className="px-4 py-3">{request.ageRange}</td>
                     <td className="px-4 py-3">{request.carType}</td>
-                    <td className="px-4 py-3">{request.branch}</td>
+                    <td className="px-4 py-3 text-xs">
+                      <span className="block">
+                        استلام: {request.pickupBranch?.name ?? "—"}
+                      </span>
+                      <span className="mt-0.5 block text-on-surface-variant">
+                        إرجاع: {request.returnBranch?.name ?? "—"}
+                      </span>
+                    </td>
                     <td className="px-4 py-3 tabular-nums">
                       {new Date(request.pickupDate).toLocaleDateString("ar-SA")}
                     </td>

@@ -75,11 +75,41 @@ const seedCities = [
   { slug: "tabuk", name: "تبوك", sortOrder: 30 },
 ] as const;
 
-/** فروع الاستلام — slug يُخزَّن في `BookingRequest.branch` */
+/** Branches — see docs/booking-request-branch-fields.md */
 const seedBranches = [
   { slug: "jeddah", name: "جدة", citySlug: "jeddah", sortOrder: 10, isNew: false },
   { slug: "madinah", name: "المدينة المنورة", citySlug: "madinah", sortOrder: 20, isNew: false },
   { slug: "tabuk", name: "تبوك", citySlug: "tabuk", sortOrder: 30, isNew: true },
+] as const;
+
+const SEED_BOOKING_NAME_PREFIX = "[SEED]";
+
+/** Demo fleet — quantity per branch for each model */
+const seedFleetModels = [
+  {
+    brandName: "Toyota",
+    modelName: "Camry",
+    year: 2024,
+    categorySlug: "sedan",
+    chairs: 5,
+    engine: "2.5L",
+    transmission: "AUTOMATIC" as const,
+    fuel: "GASOLINE" as const,
+    price: 185,
+    quantityPerBranch: 4,
+  },
+  {
+    brandName: "Hyundai",
+    modelName: "Tucson",
+    year: 2023,
+    categorySlug: "suv-4x4",
+    chairs: 5,
+    engine: "2.0L",
+    transmission: "AUTOMATIC" as const,
+    fuel: "GASOLINE" as const,
+    price: 220,
+    quantityPerBranch: 3,
+  },
 ] as const;
 
 /** عملاء الموقع (`User`) — ليسوا موظفي إدارة */
@@ -282,6 +312,193 @@ async function seedCustomerUsers() {
   }
 }
 
+function pickupDateForReturnOn(returnYmd: string, rentalDays: number, hourUtc = 10): Date {
+  const pickupYmd = addDaysYmd(returnYmd, -rentalDays);
+  const [y, m, d] = pickupYmd.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d, hourUtc, 0, 0, 0));
+}
+
+function todayYmdUtc(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function addDaysYmd(ymd: string, delta: number): string {
+  const [y, m, d] = ymd.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d + delta));
+  return dt.toISOString().slice(0, 10);
+}
+
+async function seedDemoFleet(branchIdBySlug: Map<string, number>): Promise<number[]> {
+  const modelIds: number[] = [];
+
+  for (const v of seedFleetModels) {
+    const brand = await prisma.brand.findUnique({ where: { name: v.brandName } });
+    const category = await prisma.fleetCategory.findUnique({ where: { slug: v.categorySlug } });
+    if (!brand || !category) {
+      throw new Error(`Missing brand/category for seed vehicle ${v.brandName} ${v.modelName}`);
+    }
+
+    const model = await prisma.carModel.upsert({
+      where: {
+        brandId_name_year: {
+          brandId: brand.id,
+          name: v.modelName,
+          year: v.year,
+        },
+      },
+      create: {
+        brandId: brand.id,
+        categoryId: category.id,
+        name: v.modelName,
+        year: v.year,
+        chairs: v.chairs,
+        engine: v.engine,
+        transmission: v.transmission,
+        fuel: v.fuel,
+        price: v.price,
+        vatRatePercent: 15,
+        image:
+          "https://images.unsplash.com/photo-1621007947382-bcb3c6b4d1b5?auto=format&fit=crop&w=900&q=80",
+        alt: `${v.brandName} ${v.modelName}`,
+      },
+      update: {
+        price: v.price,
+        categoryId: category.id,
+      },
+    });
+    modelIds.push(model.id);
+
+    for (const branch of seedBranches) {
+      const branchId = branchIdBySlug.get(branch.slug);
+      if (!branchId) continue;
+      await prisma.fleet.upsert({
+        where: { modelId_branchId: { modelId: model.id, branchId } },
+        create: {
+          modelId: model.id,
+          branchId,
+          quantity: v.quantityPerBranch,
+        },
+        update: { quantity: v.quantityPerBranch },
+      });
+    }
+  }
+
+  console.log(`Demo fleet: ${seedFleetModels.length} models × ${seedBranches.length} branches`);
+  return modelIds;
+}
+
+async function seedDemoBookings(
+  branchIdBySlug: Map<string, number>,
+  carModelId: number,
+) {
+  const jeddahId = branchIdBySlug.get("jeddah");
+  const madinahId = branchIdBySlug.get("madinah");
+  const tabukId = branchIdBySlug.get("tabuk");
+  if (!jeddahId || !madinahId || !tabukId) {
+    throw new Error("Branch ids missing for seed bookings");
+  }
+
+  await prisma.bookingRequest.deleteMany({
+    where: { fullName: { startsWith: SEED_BOOKING_NAME_PREFIX } },
+  });
+
+  const today = todayYmdUtc();
+  const tomorrow = addDaysYmd(today, 1);
+  const sedan = await prisma.fleetCategory.findUnique({ where: { slug: "sedan" } });
+
+  const rows: Parameters<typeof prisma.bookingRequest.create>[0]["data"][] = [
+    {
+      kind: "DIRECT",
+      carModelId,
+      fullName: `${SEED_BOOKING_NAME_PREFIX} نفس الفرع (جدة)`,
+      phone: "+966500000001",
+      ageRange: "25-35",
+      carType: sedan?.slug ?? "sedan",
+      branchId: jeddahId,
+      returnBranchId: jeddahId,
+      pickupMode: "BRANCH",
+      pickupDate: pickupDateForReturnOn(tomorrow, 4),
+      numberOfDays: 4,
+      termsAccepted: true,
+      status: "CONFIRMED",
+      paymentStatus: "PAID",
+    },
+    {
+      kind: "DIRECT",
+      carModelId,
+      fullName: `${SEED_BOOKING_NAME_PREFIX} استلام جدة → إرجاع المدينة`,
+      phone: "+966500000002",
+      ageRange: "35-50",
+      carType: sedan?.slug ?? "sedan",
+      branchId: jeddahId,
+      returnBranchId: madinahId,
+      pickupMode: "BRANCH",
+      pickupDate: pickupDateForReturnOn(today, 3),
+      numberOfDays: 3,
+      termsAccepted: true,
+      status: "CONFIRMED",
+      paymentStatus: "PAID",
+    },
+    {
+      kind: "DIRECT",
+      carModelId,
+      fullName: `${SEED_BOOKING_NAME_PREFIX} استلام تبوك → إرجاع جدة`,
+      phone: "+966500000003",
+      ageRange: "25-35",
+      carType: sedan?.slug ?? "sedan",
+      branchId: tabukId,
+      returnBranchId: jeddahId,
+      pickupMode: "BRANCH",
+      pickupDate: pickupDateForReturnOn(today, 2),
+      numberOfDays: 2,
+      termsAccepted: true,
+      status: "CONFIRMED",
+      paymentStatus: "PAID",
+    },
+    {
+      kind: "INQUIRY",
+      fullName: `${SEED_BOOKING_NAME_PREFIX} استفسار — المدينة`,
+      phone: "+966500000004",
+      ageRange: "50+",
+      carType: sedan?.slug ?? "sedan",
+      branchId: madinahId,
+      returnBranchId: madinahId,
+      pickupMode: "BRANCH",
+      pickupDate: pickupDateForReturnOn(addDaysYmd(today, 5), 2),
+      numberOfDays: 2,
+      termsAccepted: true,
+      status: "NEW",
+      paymentStatus: "PENDING",
+    },
+    {
+      kind: "DIRECT",
+      carModelId,
+      fullName: `${SEED_BOOKING_NAME_PREFIX} توصيل — إرجاع جدة`,
+      phone: "+966500000005",
+      ageRange: "25-35",
+      carType: sedan?.slug ?? "sedan",
+      branchId: null,
+      returnBranchId: jeddahId,
+      pickupMode: "DELIVERY",
+      deliveryAddress: "حي الروضة، جدة — عنوان تجريبي",
+      deliveryLat: 21.5433,
+      deliveryLng: 39.1728,
+      pickupDate: pickupDateForReturnOn(tomorrow, 1),
+      numberOfDays: 1,
+      termsAccepted: true,
+      status: "CONFIRMED",
+      paymentStatus: "PAID",
+    },
+  ];
+
+  for (const data of rows) {
+    await prisma.bookingRequest.create({ data });
+  }
+
+  console.log(`Demo bookings: ${rows.length} (prefix ${SEED_BOOKING_NAME_PREFIX})`);
+  console.log(`  • Returns today (${today}): inter-branch rows #2 & #3 — test /admin/branch-returns`);
+}
+
 async function seedSubscriptionPlans() {
   const carModel = await prisma.carModel.findFirst({
     orderBy: { id: "asc" },
@@ -354,9 +571,17 @@ async function main() {
   await seedAdminEmployees(branchIdBySlug);
 
   await seedCustomerUsers();
+
+  const modelIds = await seedDemoFleet(branchIdBySlug);
+  const primaryModelId = modelIds[0];
+  if (primaryModelId) {
+    await seedDemoBookings(branchIdBySlug, primaryModelId);
+  }
+
   await seedSubscriptionPlans();
 
   console.log("—— Seed done ——");
+  console.log("Docs: docs/booking-request-branch-fields.md");
 }
 
 main()

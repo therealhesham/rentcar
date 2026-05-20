@@ -23,7 +23,8 @@ export type AccountBookingCardActionsProps = {
     pickupDateIso: string;
     numberOfDays: number;
     pickupMode: string | null;
-    branch: string;
+    pickupBranchSlug: string | null;
+    returnBranchSlug: string;
     deliveryLat: number | null;
     deliveryLng: number | null;
     deliveryAddress: string | null;
@@ -95,7 +96,8 @@ export function AccountBookingCardActions({
     pickupDate: new Date(b.pickupDateIso),
     numberOfDays: b.numberOfDays,
     pickupMode: b.pickupMode,
-    branch: b.branch,
+    pickupBranchSlug: b.pickupBranchSlug,
+    returnBranchSlug: b.returnBranchSlug,
     deliveryLat: b.deliveryLat,
     deliveryLng: b.deliveryLng,
     deliveryAddress: b.deliveryAddress,

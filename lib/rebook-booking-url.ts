@@ -6,7 +6,8 @@ export type BookingLikeForRebook = {
   pickupDate: Date;
   numberOfDays: number;
   pickupMode: string | null;
-  branch: string;
+  pickupBranchSlug: string | null;
+  returnBranchSlug: string;
   deliveryLat: number | null;
   deliveryLng: number | null;
   deliveryAddress?: string | null;
@@ -84,7 +85,9 @@ export function buildRebookSearchParams(
     : suggestedPickupForFreshRebook(b);
   const dropoff = dropoffFromPickupAndDays(pickup, days);
   const isDelivery = b.pickupMode === "DELIVERY";
-  const branchSlug = b.branch.trim().toLowerCase() || "jeddah";
+  const returnSlug = b.returnBranchSlug.trim().toLowerCase() || "jeddah";
+  const pickupSlug =
+    b.pickupBranchSlug?.trim().toLowerCase() || returnSlug;
 
   const params = new URLSearchParams();
   params.set("pickup", pickup.toISOString());
@@ -94,10 +97,10 @@ export function buildRebookSearchParams(
   params.set("days", String(days));
 
   if (!isDelivery) {
-    params.set("pickupBranch", branchSlug);
-    params.set("returnBranch", branchSlug);
+    params.set("pickupBranch", pickupSlug);
+    params.set("returnBranch", returnSlug);
   } else {
-    params.set("returnBranch", branchSlug);
+    params.set("returnBranch", returnSlug);
     if (b.deliveryLat != null && b.deliveryLng != null) {
       params.set("dlat", String(b.deliveryLat));
       params.set("dlng", String(b.deliveryLng));
