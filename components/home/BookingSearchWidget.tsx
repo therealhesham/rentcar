@@ -5,6 +5,7 @@ import {
   CalendarDays,
   CalendarRange,
   Car,
+  CalendarCheck2,
   CalendarClock,
   Clock,
   Layers,
@@ -15,6 +16,7 @@ import {
   Truck,
   ChevronDown,
 } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { LocationPickerPopover } from "@/components/home/LocationPickerPopover";
 import { DateTimePickerPopover } from "@/components/home/DateTimePickerPopover";
 import Link from "next/link";
@@ -87,7 +89,18 @@ function todayYmdLocalForPack(): string {
   return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
 }
 
+function branchLineAr(cities: BookingCityBranchesOption[], branchSlug: string): string {
+  const s = branchSlug.trim().toLowerCase();
+  for (const c of cities) {
+    const b = c.branches.find((x) => x.slug.toLowerCase() === s);
+    if (b) return `${c.name}، ${b.name}`;
+  }
+  return branchSlug;
+}
+
 export type { BookingBranchOption, BookingCityBranchesOption } from "@/lib/booking-location-options";
+
+export type BookingSearchWidgetVariant = "search" | "checkout";
 
 const GOLD = "#dbb878";
 const GOLD_DARK = "#c9a356";
@@ -98,14 +111,32 @@ export function BookingSearchWidget({
   cities,
   initialFromUrl,
   tabFlags,
+  variant = "search",
+  checkoutModelId,
 }: {
   cities: BookingCityBranchesOption[];
   /** من `/fleet?pickup=…` — يُطبَّق بعد التحميل */
   initialFromUrl?: FleetSearchUrlHydrate | null;
   /** من الإدارة — التبويبات المعطّلة لا تُعرض */
   tabFlags?: BookingWidgetTabFlags | null;
+  variant?: "search" | "checkout";
+  /** مطلوب عند variant=checkout */
+  checkoutModelId?: number;
 }) {
   const router = useRouter();
+  const urlSp = useSearchParams();
+  const isCheckout = variant === "checkout";
+  const prefillBookingRequestIdRaw = isCheckout
+    ? urlSp.get("prefillBookingRequestId")?.trim() ?? ""
+    : "";
+  const excludeBookingRequestIdRaw = isCheckout
+    ? urlSp.get("excludeBookingRequestId")?.trim() ?? ""
+    : "";
+  const isFreshRebookFlow =
+    isCheckout &&
+    urlSp.get("rebook") === "1" &&
+    /^\d+$/.test(prefillBookingRequestIdRaw) &&
+    !/^\d+$/.test(excludeBookingRequestIdRaw);
   const [rental, setRental] = useState<SearchRentalTab>("daily");
   const [mode, setMode] = useState<ModeTab>("pickup");
   const [pickupCity, setPickupCity] = useState("");
@@ -156,10 +187,13 @@ export function BookingSearchWidget({
   const pickupDtRef = useRef<HTMLButtonElement>(null);
   const dropoffDtRef = useRef<HTMLButtonElement>(null);
 
-  const tabFlagsEff = useMemo(
-    () => tabFlags ?? DEFAULT_BOOKING_WIDGET_TAB_FLAGS,
-    [tabFlags],
-  );
+  const tabFlagsEff = useMemo(() => {
+    const base = tabFlags ?? DEFAULT_BOOKING_WIDGET_TAB_FLAGS;
+    if (isCheckout) {
+      return { ...base, rentalCorporate: false };
+    }
+    return base;
+  }, [tabFlags, isCheckout]);
 
   useEffect(() => setMounted(true), []);
 
@@ -365,6 +399,43 @@ export function BookingSearchWidget({
       ? pickupBranchEffective
       : returnBranch || defaultReturnBranchSlug;
 
+  const freshRebookLocationSummaryAr = useMemo(() => {
+    if (!isFreshRebookFlow) return "";
+    if (mode === "delivery") {
+      const addr = deliveryAddressText.trim();
+      const mapOk = deliveryLat != null && deliveryLng != null;
+      const ret = returnBranchEffective
+        ? `إرجاع المركبة: ${branchLineAr(dateCities, returnBranchEffective)}`
+        : "";
+      if (mapOk && addr) {
+        const short = addr.length > 140 ? `${addr.slice(0, 140)}…` : addr;
+        return `توصيل (تم تحديد الموقع على الخريطة). ${short}${ret ? ` — ${ret}` : ""}`;
+      }
+      if (mapOk) return `توصيل (موقع على الخريطة)${ret ? ` — ${ret}` : ""}`;
+      if (addr) {
+        const short = addr.length > 160 ? `${addr.slice(0, 160)}…` : addr;
+        return `توصيل: ${short}${ret ? ` — ${ret}` : ""}`;
+      }
+      return ret || "توصيل";
+    }
+    const pick = pickupBranchEffective
+      ? `الاستلام: ${branchLineAr(dateCities, pickupBranchEffective)}`
+      : "الاستلام من الفرع";
+    const ret = returnBranchEffective
+      ? `الإرجاع: ${branchLineAr(dateCities, returnBranchEffective)}`
+      : "";
+    return ret ? `${pick} — ${ret}` : pick;
+  }, [
+    isFreshRebookFlow,
+    mode,
+    dateCities,
+    deliveryAddressText,
+    deliveryLat,
+    deliveryLng,
+    returnBranchEffective,
+    pickupBranchEffective,
+  ]);
+
   const daysPreview = useMemo(() => {
     if (rental === "corporate") return null;
     if (rental === "monthly_packages") {
@@ -446,6 +517,22 @@ export function BookingSearchWidget({
     } catch {
       /* ignore */
     }
+    if (isCheckout && checkoutModelId != null && checkoutModelId >= 1) {
+      search.set("modelId", String(checkoutModelId));
+      const exId = urlSp.get("excludeBookingRequestId")?.trim();
+      if (exId && /^\d+$/.test(exId)) {
+        search.set("excludeBookingRequestId", exId);
+      }
+      const prefillId = urlSp.get("prefillBookingRequestId")?.trim();
+      if (prefillId && /^\d+$/.test(prefillId)) {
+        search.set("prefillBookingRequestId", prefillId);
+      }
+      if (urlSp.get("rebook") === "1") {
+        search.set("rebook", "1");
+      }
+      router.replace(`/fleet/checkout?${search.toString()}`);
+      return;
+    }
     router.push(`/fleet?${search.toString()}`);
   }
 
@@ -455,6 +542,10 @@ export function BookingSearchWidget({
     setBranchHoursNotice(null);
 
     if (rental === "corporate") {
+      if (isCheckout) {
+        setError("نوع الإيجار غير متاح في صفحة إتمام الحجز.");
+        return;
+      }
       setCorpSuccess(false);
       const fd = new FormData();
       fd.set("companyName", corpCompanyName);
@@ -711,6 +802,7 @@ export function BookingSearchWidget({
         {/* ═══════════════════════════════════════
             SECTION 1: Tab Header
         ═══════════════════════════════════════ */}
+        {!isFreshRebookFlow ? (
         <div className="relative">
           <div className="absolute inset-0 bg-gradient-to-b from-[#fdfbf6] to-white" />
           <div className="relative flex flex-col">
@@ -794,12 +886,129 @@ export function BookingSearchWidget({
             ) : null}
           </div>
         </div>
+        ) : null}
 
         {/* ═══════════════════════════════════════
             SECTION 2: Form Fields
         ═══════════════════════════════════════ */}
         <div className="px-3 py-3 sm:px-5 sm:py-4">
-          {rental === "corporate" ? (
+          {isFreshRebookFlow ? (
+            <div className="space-y-4">
+              {freshRebookLocationSummaryAr ? (
+                <div className="rounded-2xl border border-[#dbb878]/30 bg-gradient-to-br from-[#fffdf9] via-white to-[#fdfbf6] px-4 py-3.5 shadow-sm ring-1 ring-[#dbb878]/10">
+                  <p className="mb-1.5 text-[10px] font-black uppercase tracking-wider text-[#003749]/45">
+                    موقع الاستلام
+                  </p>
+                  <p className="text-[13px] font-bold leading-relaxed text-[#2d4a52]">
+                    {freshRebookLocationSummaryAr}
+                  </p>
+                </div>
+              ) : null}
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="relative min-w-0">
+                  <button
+                    ref={pickupDtRef}
+                    type="button"
+                    aria-expanded={pickupDtOpen}
+                    aria-haspopup="dialog"
+                    onClick={() => {
+                      setPickupDtOpen((v) => !v);
+                      setDropoffDtOpen(false);
+                    }}
+                    className="field-trigger relative flex w-full flex-col gap-1 rounded-xl border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-right focus:outline-none"
+                  >
+                    <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
+                      <CalendarClock className="size-3 text-[#dbb878]" aria-hidden />
+                      تاريخ ووقت الاستلام
+                    </span>
+                    {pickupDateDraft ? (
+                      <span className="text-[13px] font-bold text-[#0f1923]">
+                        {pickupDateDraft}{" "}
+                        <span className="text-[#dbb878]" dir="ltr">
+                          {pickupTimeDraft}
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="text-[13px] font-medium text-[#aaa08e]">
+                        اختر التاريخ والوقت
+                      </span>
+                    )}
+                    <ChevronDown
+                      className={`absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${pickupDtOpen ? "rotate-180" : ""}`}
+                      aria-hidden
+                    />
+                  </button>
+                  <DateTimePickerPopover
+                    isOpen={pickupDtOpen}
+                    onClose={() => setPickupDtOpen(false)}
+                    label="تاريخ الاستلام"
+                    dateDdMmYy={pickupDateDraft}
+                    time={pickupTimeDraft}
+                    onConfirm={(date, time) => {
+                      setPickupDateDraft(date);
+                      setPickupTimeDraft(time);
+                      const parts = date.split("/");
+                      const ymd =
+                        parts.length === 3 ? `${parts[2]}-${parts[1]}-${parts[0]}` : "";
+                      if (ymd) setPickupDt(`${ymd}T${time}`);
+                    }}
+                    anchorRef={pickupDtRef}
+                  />
+                </div>
+                <div className="relative min-w-0">
+                  <button
+                    ref={dropoffDtRef}
+                    type="button"
+                    aria-expanded={dropoffDtOpen}
+                    aria-haspopup="dialog"
+                    onClick={() => {
+                      setDropoffDtOpen((v) => !v);
+                      setPickupDtOpen(false);
+                    }}
+                    className="field-trigger relative flex w-full flex-col gap-1 rounded-xl border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-right focus:outline-none"
+                  >
+                    <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
+                      <Clock className="size-3 text-[#dbb878]" aria-hidden />
+                      تاريخ ووقت التسليم
+                    </span>
+                    {dropoffDateDraft ? (
+                      <span className="text-[13px] font-bold text-[#0f1923]">
+                        {dropoffDateDraft}{" "}
+                        <span className="text-[#dbb878]" dir="ltr">
+                          {dropoffTimeDraft}
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="text-[13px] font-medium text-[#aaa08e]">
+                        اختر التاريخ والوقت
+                      </span>
+                    )}
+                    <ChevronDown
+                      className={`absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${dropoffDtOpen ? "rotate-180" : ""}`}
+                      aria-hidden
+                    />
+                  </button>
+                  <DateTimePickerPopover
+                    isOpen={dropoffDtOpen}
+                    onClose={() => setDropoffDtOpen(false)}
+                    label="تاريخ التسليم"
+                    dateDdMmYy={dropoffDateDraft}
+                    time={dropoffTimeDraft}
+                    minDateYmd={pickupDt ? pickupDt.slice(0, 10) : undefined}
+                    onConfirm={(date, time) => {
+                      setDropoffDateDraft(date);
+                      setDropoffTimeDraft(time);
+                      const parts = date.split("/");
+                      const ymd =
+                        parts.length === 3 ? `${parts[2]}-${parts[1]}-${parts[0]}` : "";
+                      if (ymd) setDropoffDt(`${ymd}T${time}`);
+                    }}
+                    anchorRef={dropoffDtRef}
+                  />
+                </div>
+              </div>
+            </div>
+          ) : rental === "corporate" ? (
             <div
               className="flex flex-col gap-3 rounded-xl border border-[#ebe4d3]/70 bg-[#fdfbf6] p-4"
               role="group"
@@ -1204,8 +1413,14 @@ export function BookingSearchWidget({
                     className="cta-shimmer pointer-events-none absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0"
                     aria-hidden
                   />
-                  <Search className="size-4 shrink-0" aria-hidden />
-                  <span className="text-[14px] font-extrabold tracking-wide">بحث</span>
+                  {isCheckout ? (
+                    <CalendarCheck2 className="size-4 shrink-0" aria-hidden />
+                  ) : (
+                    <Search className="size-4 shrink-0" aria-hidden />
+                  )}
+                  <span className="text-[14px] font-extrabold tracking-wide">
+                    {isCheckout ? "تطبيق التواريخ على الحجز" : "بحث"}
+                  </span>
                 </button>
               </div>
             </div>
@@ -1220,7 +1435,45 @@ export function BookingSearchWidget({
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
             {/* Duration badge + helper text */}
             <div className="flex flex-1 items-center gap-3" aria-live="polite">
-              {rental === "corporate" ? (
+              {isFreshRebookFlow ? (
+                <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  {daysPreview != null ? (
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-[12px] font-bold text-white shadow-[0_2px_8px_-2px_rgba(219,184,120,0.5)]"
+                        style={{
+                          background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)`,
+                        }}
+                      >
+                        <CalendarDays className="size-3" aria-hidden />
+                        <span dir="ltr" className="tabular-nums">
+                          {daysPreview}
+                        </span>
+                        يوم
+                      </span>
+                      <span className="text-[11px] font-medium text-[#6b5a3b]">مدة الحجز</span>
+                    </div>
+                  ) : (
+                    <span className="text-[11px] text-[#aaa08e]">حدّد التواريخ لعرض المدة</span>
+                  )}
+                  <button
+                    type="submit"
+                    className="cta-btn group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-white sm:w-auto"
+                    style={{
+                      background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)`,
+                    }}
+                  >
+                    <span
+                      className="cta-shimmer pointer-events-none absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0"
+                      aria-hidden
+                    />
+                    <CalendarCheck2 className="size-4 shrink-0" aria-hidden />
+                    <span className="text-[14px] font-extrabold tracking-wide">
+                      تطبيق التواريخ على الحجز
+                    </span>
+                  </button>
+                </div>
+              ) : rental === "corporate" ? (
                 <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <span className="text-[11px] font-medium leading-snug text-[#6b5a3b]">
                     لا يُحتسب البحث في الأسطول — طلب تواصل لحجوزات الشركات والعقود.
@@ -1265,7 +1518,9 @@ export function BookingSearchWidget({
             <p className="text-[10px] leading-relaxed text-[#aaa08e]">
               {rental === "corporate"
                 ? "البيانات تُستخدم للتواصل فقط — لا يتم تأكيد حجز آلياً من هذه الخطوة."
-                : "يُعرض المتوفر للحجز المباشر حسب الفترة المحددة"}
+                : isCheckout
+                  ? "يُحدّث السعر والتوفر بعد تطبيق التواريخ على هذا الحجز"
+                  : "يُعرض المتوفر للحجز المباشر حسب الفترة المحددة"}
             </p>
             {rental === "corporate" ? (
               <span className="text-[10.5px] font-bold text-[#6b5a3b]">
@@ -1273,11 +1528,11 @@ export function BookingSearchWidget({
               </span>
             ) : (
               <Link
-                href="/fleet"
+                href="/"
                 className="text-[10.5px] font-bold text-[#003749] underline-offset-4 transition-colors hover:text-[#dbb878] hover:underline"
                 style={{ textDecorationColor: GOLD }}
               >
-                احجز الآن
+                {/* احجز الآن */}
               </Link>
             )}
           </div>

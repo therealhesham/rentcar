@@ -5,6 +5,11 @@ import {
   type BookingWidgetTabFlags,
 } from "@/lib/booking-widget-tabs";
 import {
+  DEFAULT_CHECKOUT_PAYMENT_METHOD_FLAGS,
+  normalizeCheckoutPaymentMethodFlags,
+  type CheckoutPaymentMethodFlags,
+} from "@/lib/checkout-payment-method-flags";
+import {
   parseRentalPriceDisplayMode,
   type RentalPriceDisplayMode,
 } from "@/lib/pricing";
@@ -267,6 +272,29 @@ export async function getBookingWidgetTabFlags(): Promise<BookingWidgetTabFlags>
     return normalizeBookingWidgetTabFlags(parsed);
   } catch {
     return DEFAULT_BOOKING_WIDGET_TAB_FLAGS;
+  }
+}
+
+export const SITE_KEY_CHECKOUT_PAYMENT_METHODS = "checkout_payment_methods_v1";
+
+export async function getCheckoutPaymentMethodFlags(): Promise<CheckoutPaymentMethodFlags> {
+  try {
+    const row = await prisma.siteSetting.findUnique({
+      where: { key: SITE_KEY_CHECKOUT_PAYMENT_METHODS },
+      select: { value: true },
+    });
+    if (!row?.value?.trim()) {
+      return DEFAULT_CHECKOUT_PAYMENT_METHOD_FLAGS;
+    }
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(row.value) as unknown;
+    } catch {
+      return DEFAULT_CHECKOUT_PAYMENT_METHOD_FLAGS;
+    }
+    return normalizeCheckoutPaymentMethodFlags(parsed);
+  } catch {
+    return DEFAULT_CHECKOUT_PAYMENT_METHOD_FLAGS;
   }
 }
 

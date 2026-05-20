@@ -137,12 +137,12 @@ export default async function AccountDashboardPage() {
               </div>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-3 sm:flex-col sm:items-stretch">
-              <Link
+              {/* <Link
                 href="/fleet"
                 className="inline-flex items-center justify-center rounded-xl bg-[#003749] px-5 py-2.5 text-sm font-extrabold text-white shadow-md transition-opacity hover:opacity-95"
               >
                 احجز الآن
-              </Link>
+              </Link> */}
               <Link
                 href="/subscriptions"
                 className="inline-flex items-center justify-center rounded-xl border border-[#163332]/25 bg-[#f0fbfb] px-5 py-2.5 text-sm font-extrabold text-[#003749] shadow-sm transition-colors hover:bg-white"

@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Banknote,
   Check,
   CheckCircle2,
   CreditCard,
@@ -12,15 +13,23 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useActionState, useMemo, useState, type ReactNode } from "react";
+import { useActionState, useEffect, useMemo, useState, type ReactNode } from "react";
 import { confirmMockPayment, type ConfirmPaymentResult } from "@/app/fleet/payment/payment-actions";
 import { SarCurrencyGlyph } from "@/components/ui/SarCurrencyGlyph";
 import { formatSarAmount } from "@/lib/booking-checkout-pricing";
 import type { BookingPaymentSnapshot } from "@/lib/booking-payment-data";
+import {
+  listEnabledCheckoutPaymentMethods,
+  type CheckoutPaymentMethodFlags,
+  type CustomerCheckoutPaymentMethod,
+} from "@/lib/checkout-payment-method-flags";
 
-type Props = { booking: BookingPaymentSnapshot };
+type Props = {
+  booking: BookingPaymentSnapshot;
+  paymentMethodFlags: CheckoutPaymentMethodFlags;
+};
 
-export type CheckoutPaymentMethod = "TABBY" | "TAMARA" | "CARD" | "APPLE_PAY" | "POINTS";
+export type CheckoutPaymentMethod = CustomerCheckoutPaymentMethod;
 
 function paymentMethodLabelAr(code: string | null | undefined): string {
   switch (code) {
@@ -30,6 +39,8 @@ function paymentMethodLabelAr(code: string | null | undefined): string {
       return "تمارا";
     case "CARD":
       return "بطاقة ائتمانية";
+    case "CASH":
+      return "نقدي (كاش)";
     case "APPLE_PAY":
       return "Apple Pay";
     case "POINTS":
@@ -128,6 +139,12 @@ const METHOD_OPTIONS: MethodOption[] = [
     Icon: CreditCard,
   },
   {
+    id: "CASH",
+    title: "نقدي (كاش)",
+    hint: "الدفع نقداً عند استلام السيارة أو في الفرع",
+    Icon: Banknote,
+  },
+  {
     id: "APPLE_PAY",
     title: "Apple Pay",
     hint: "دفع سريع من محفظة آبل — يُفعَّل عند ربط البوابة (مثل Stripe أو مزوّد محلي)",
@@ -141,14 +158,25 @@ const METHOD_OPTIONS: MethodOption[] = [
   },
 ];
 
-export function PaymentClient({ booking }: Props) {
+export function PaymentClient({ booking, paymentMethodFlags }: Props) {
+  const enabledMethods = useMemo(
+    () => listEnabledCheckoutPaymentMethods(paymentMethodFlags),
+    [paymentMethodFlags],
+  );
+  const visibleMethodOptions = useMemo(
+    () => METHOD_OPTIONS.filter((opt) => enabledMethods.includes(opt.id)),
+    [enabledMethods],
+  );
+
   const ps = booking.paymentStatus.trim().toUpperCase();
   const paymentFinalized = ps !== "PENDING";
   const [state, formAction, pending] = useActionState<ConfirmPaymentResult | null, FormData>(
     confirmMockPayment,
     null,
   );
-  const [method, setMethod] = useState<CheckoutPaymentMethod>("TABBY");
+  const [method, setMethod] = useState<CheckoutPaymentMethod>(
+    () => enabledMethods[0] ?? "CARD",
+  );
   const [card, setCard] = useState("");
   const [expiry, setExpiry] = useState("");
   const [cvc, setCvc] = useState("");
@@ -156,7 +184,14 @@ export function PaymentClient({ booking }: Props) {
   const [pointsNote, setPointsNote] = useState("");
   const [clientError, setClientError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (enabledMethods.includes(method)) return;
+    const next = enabledMethods[0];
+    if (next) setMethod(next);
+  }, [enabledMethods, method]);
+
   const paid = paymentFinalized || (state?.ok ?? false);
+  const noPaymentMethods = !paid && visibleMethodOptions.length === 0;
 
   const serverError = state && state.ok === false ? state.error : null;
 
@@ -215,17 +250,23 @@ export function PaymentClient({ booking }: Props) {
         ? "المتابعة عبر تمارا (تجريبي)"
         : method === "POINTS"
           ? "تأكيد استبدال النقاط (تجريبي)"
-          : method === "APPLE_PAY"
+          : method === "CASH"
             ? (
                 <>
-                  ادفع {formatSarAmount(booking.totals.totalInclTax)} <SarCurrencyGlyph /> عبر Apple Pay
+                  تأكيد الدفع نقداً {formatSarAmount(booking.totals.totalInclTax)} <SarCurrencyGlyph />
                 </>
               )
-            : (
-                <>
-                  ادفع {formatSarAmount(booking.totals.totalInclTax)} <SarCurrencyGlyph />
-                </>
-              );
+            : method === "APPLE_PAY"
+              ? (
+                  <>
+                    ادفع {formatSarAmount(booking.totals.totalInclTax)} <SarCurrencyGlyph /> عبر Apple Pay
+                  </>
+                )
+              : (
+                  <>
+                    ادفع {formatSarAmount(booking.totals.totalInclTax)} <SarCurrencyGlyph />
+                  </>
+                );
 
   return (
     <main dir="rtl" className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
@@ -416,6 +457,19 @@ export function PaymentClient({ booking }: Props) {
                 </div>
               </div>
             </div>
+          ) : noPaymentMethods ? (
+            <div className="rounded-3xl border border-amber-200 bg-amber-50 px-6 py-10 text-center">
+              <p className="font-extrabold text-amber-950">لا توجد طرق دفع متاحة حالياً</p>
+              <p className="mt-2 text-sm text-amber-950/80">
+                تواصل مع فريق الحجز لإتمام الدفع، أو حاول لاحقاً بعد تفعيل الطرق من الإدارة.
+              </p>
+              <Link
+                href="/"
+                className="mt-5 inline-flex rounded-xl bg-[#003749] px-5 py-2.5 text-sm font-extrabold text-white hover:opacity-95"
+              >
+                العودة للرئيسية
+              </Link>
+            </div>
           ) : (
             <form
               action={formAction}
@@ -440,7 +494,7 @@ export function PaymentClient({ booking }: Props) {
               </header>
 
               <div className="grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="طريقة الدفع">
-                {METHOD_OPTIONS.map((opt) => {
+                {visibleMethodOptions.map((opt) => {
                   const on = method === opt.id;
                   return (
                     <button
@@ -509,6 +563,16 @@ export function PaymentClient({ booking }: Props) {
                   <p className="mt-1 text-xs leading-relaxed opacity-90">
                     بعد التفعيل، سيتم فتح جلسة تمارا لإتمام التقسيط وفق سياساتهم. يمكن دمجها مع عروض
                     الشركة لاحقاً.
+                  </p>
+                </div>
+              ) : null}
+
+              {method === "CASH" ? (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-950">
+                  <p className="font-bold">الدفع نقداً</p>
+                  <p className="mt-1 text-xs leading-relaxed opacity-90">
+                    سجّل الطلب كمدفوع نقداً. يُستحق المبلغ عند استلام المركبة أو في الفرع حسب ما
+                    اتفقتم عليه. احتفظ برقم الطلب للمراجعة.
                   </p>
                 </div>
               ) : null}

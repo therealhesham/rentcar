@@ -10,6 +10,7 @@ import {
   CalendarPlus,
   Car,
   CornerDownLeft,
+  CreditCard,
   ClipboardList,
   ExternalLink,
   Home,
@@ -66,6 +67,7 @@ const ICONS: Record<AdminNavItem["icon"], LucideIcon> = {
   "user-cog": UserCog,
   "corner-down-left": CornerDownLeft,
   ban: Ban,
+  "credit-card": CreditCard,
 };
 
 type Props = {

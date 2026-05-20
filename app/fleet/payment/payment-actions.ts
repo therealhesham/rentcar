@@ -11,18 +11,18 @@ export type ConfirmPaymentResult =
   | { ok: false; error: string };
 
 import {
-  BOOKING_PAYMENT_METHODS,
-  type BookingPaymentMethod,
-} from "@/lib/booking-payment-methods";
+  CUSTOMER_CHECKOUT_PAYMENT_METHODS,
+  isCheckoutPaymentMethodEnabled,
+  type CustomerCheckoutPaymentMethod,
+} from "@/lib/checkout-payment-method-flags";
+import { getCheckoutPaymentMethodFlags } from "@/lib/site-settings";
 
-const PAYMENT_METHODS = BOOKING_PAYMENT_METHODS;
-
-function parsePaymentMethod(formData: FormData): BookingPaymentMethod | null {
+function parsePaymentMethod(formData: FormData): CustomerCheckoutPaymentMethod | null {
   const raw = String(formData.get("paymentMethod") ?? "CARD")
     .trim()
     .toUpperCase();
-  return PAYMENT_METHODS.includes(raw as BookingPaymentMethod)
-    ? (raw as BookingPaymentMethod)
+  return (CUSTOMER_CHECKOUT_PAYMENT_METHODS as readonly string[]).includes(raw)
+    ? (raw as CustomerCheckoutPaymentMethod)
     : null;
 }
 
@@ -42,6 +42,11 @@ export async function confirmMockPayment(
   const paymentMethod = parsePaymentMethod(formData);
   if (!paymentMethod) {
     return { ok: false, error: "طريقة الدفع غير صالحة." };
+  }
+
+  const methodFlags = await getCheckoutPaymentMethodFlags();
+  if (!isCheckoutPaymentMethodEnabled(methodFlags, paymentMethod)) {
+    return { ok: false, error: "طريقة الدفع غير متاحة حالياً." };
   }
 
   try {

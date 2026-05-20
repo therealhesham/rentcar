@@ -22,7 +22,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { SiteFooter } from "@/components/home/SiteFooter";
 import { SiteNav } from "@/components/shared/SiteNav";
-import { FleetCheckoutBookingPanel } from "@/components/fleet/FleetCheckoutBookingPanel";
+import { BookingWidget } from "@/components/home/BookingWidget";
+import type { FleetSearchUrlHydrate } from "@/lib/fleet-search-url-hydrate";
+import type { BookingWidgetTabFlags } from "@/lib/booking-widget-tabs";
 import { SarCurrencyGlyph } from "@/components/ui/SarCurrencyGlyph";
 import { CarUnavailableModal } from "@/components/fleet/CarUnavailableModal";
 import { BranchOutsideHoursModal } from "@/components/fleet/BranchOutsideHoursModal";
@@ -99,6 +101,8 @@ type Props = {
   rentalPriceDisplayMode: RentalPriceDisplayMode;
   /** بيانات حجز قائم عند «تعديل الحجز» — لملء الحقول بعد التحقق من الخادم */
   editPrefill: FleetCheckoutEditPrefill | null;
+  tabFlags?: BookingWidgetTabFlags | null;
+  fleetUrlHydrate?: FleetSearchUrlHydrate | null;
 };
 
 export function FleetCheckoutClient({
@@ -111,6 +115,8 @@ export function FleetCheckoutClient({
   sessionCustomer,
   rentalPriceDisplayMode,
   editPrefill,
+  tabFlags,
+  fleetUrlHydrate,
 }: Props) {
   const sp = useSearchParams();
   const router = useRouter();
@@ -743,7 +749,13 @@ export function FleetCheckoutClient({
                 لتغيير التواريخ أو الفروع: عدّلوا الحقول أدناه ثم «تطبيق التواريخ على الحجز».
               </p>
             ) : null}
-            <FleetCheckoutBookingPanel modelId={car.modelId} cities={bookingCities} />
+            <BookingWidget
+              cities={bookingCities}
+              variant="checkout"
+              checkoutModelId={car.modelId}
+              tabFlags={tabFlags}
+              initialFromUrl={fleetUrlHydrate}
+            />
           </div>
 
           {/* Core Layout */}

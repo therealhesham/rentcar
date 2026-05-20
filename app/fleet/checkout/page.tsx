@@ -11,6 +11,8 @@ import { getRentalPriceDisplayMode } from "@/lib/site-settings";
 import { getActiveInterCityShippingRules } from "@/lib/inter-city-shipping";
 import { getActiveCheckoutOneTimeFees } from "@/lib/checkout-one-time-fees";
 import { loadFleetCheckoutEditPrefill } from "@/lib/fleet-checkout-edit-prefill";
+import { buildFleetSearchUrlHydrate } from "@/lib/fleet-search-url-hydrate";
+import { getBookingWidgetTabFlags } from "@/lib/site-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +48,7 @@ export default async function FleetCheckoutPage({
     rentalPriceDisplayMode,
     interCityShippingRules,
     checkoutOneTimeFees,
+    tabFlags,
   ] = await Promise.all([
     getCarModelForCheckout(modelId),
     getActiveRentalAddons(),
@@ -55,7 +58,10 @@ export default async function FleetCheckoutPage({
     getRentalPriceDisplayMode(),
     getActiveInterCityShippingRules().catch(() => []),
     getActiveCheckoutOneTimeFees().catch(() => []),
+    getBookingWidgetTabFlags(),
   ]);
+
+  const fleetUrlHydrate = buildFleetSearchUrlHydrate(sp);
 
   if (!car) {
     redirect("/fleet");
@@ -120,6 +126,8 @@ export default async function FleetCheckoutPage({
         sessionCustomer={sessionCustomer}
         rentalPriceDisplayMode={rentalPriceDisplayMode}
         editPrefill={editPrefill}
+        tabFlags={tabFlags}
+        fleetUrlHydrate={fleetUrlHydrate}
       />
     </Suspense>
   );

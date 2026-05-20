@@ -29,7 +29,8 @@ export type AdminNavItem = {
     | "home"
     | "user-cog"
     | "corner-down-left"
-    | "ban";
+    | "ban"
+    | "credit-card";
   external?: boolean;
 };
 
@@ -70,6 +71,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/admin/rental-pricing-display", label: "عرض أسعار التأجير", icon: "badge-dollar" },
       { href: "/admin/booking-otp-delivery", label: "رمز التحقق", icon: "shield-check" },
       { href: "/admin/booking-widget-tabs", label: "تبويبات ويدجت الحجز", icon: "sliders" },
+      { href: "/admin/payment-methods", label: "طرق دفع العميل", icon: "credit-card" },
     ],
   },
   {

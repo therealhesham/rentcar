@@ -5,6 +5,7 @@ export const SUPER_ADMIN_ONLY_PREFIXES = [
   "/admin/rental-pricing-display",
   "/admin/booking-otp-delivery",
   "/admin/booking-widget-tabs",
+  "/admin/payment-methods",
   "/admin/employees",
   "/admin/categories",
   "/admin/rental-addons",
