@@ -1,13 +1,14 @@
-import type { Metadata } from "next";
 import { Suspense } from "react";
 import { FleetCheckoutOtpClient } from "@/components/fleet/FleetCheckoutOtpClient";
+import { buildPageMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "رمز التحقق | Rawaes",
+export const metadata = buildPageMetadata({
+  title: "رمز التحقق",
   description: "أدخل رمز التحقق المرسل إلى جوالك أو بريدك لإتمام الحجز.",
-};
+  noIndex: true,
+});
 
 export default function FleetCheckoutOtpPage() {
   return (

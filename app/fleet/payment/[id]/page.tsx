@@ -1,17 +1,18 @@
-import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { SiteFooter } from "@/components/home/SiteFooter";
 import { PaymentClient } from "@/components/fleet/PaymentClient";
 import { SiteNav } from "@/components/shared/SiteNav";
 import { getBookingForPayment } from "@/lib/booking-payment-data";
 import { getCheckoutPaymentMethodFlags } from "@/lib/site-settings";
+import { buildPageMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "إتمام الدفع | Rawaes",
+export const metadata = buildPageMetadata({
+  title: "إتمام الدفع",
   description: "اختر طريقة الدفع وأكمل حجز السيارة.",
-};
+  noIndex: true,
+});
 
 export default async function FleetPaymentPage({
   params,

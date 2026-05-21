@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Suspense } from "react";
 import { FleetCarGrid, FleetFilters } from "@/components/fleet";
@@ -17,15 +16,18 @@ import {
 } from "@/lib/fleet-data";
 import { fleetDailyPriceFilterLabel } from "@/components/fleet/FleetDailyPriceFilterLabel";
 import { buildFleetSearchUrlHydrate } from "@/lib/fleet-search-url-hydrate";
+import { buildPageMetadata } from "@/lib/seo";
 import { getBookingWidgetTabFlags, getRentalPriceDisplayMode } from "@/lib/site-settings";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "الأسطول | Rawaes",
+export const metadata = buildPageMetadata({
+  title: "الأسطول — تصفح السيارات المتاحة",
   description:
-    "مجموعة مختارة من أرقى السيارات للتأجير اليومي مع فلاتر بحث وتجربة كونسيرج.",
-};
+    "تصفّح أسطول روائس من السيارات الفاخرة للتأجير اليومي والأسبوعي والشهري. فلترة حسب الماركة والسعر وتوفر الفروع.",
+  path: "/fleet",
+  ogImage: "/ourfleet.jpg",
+});
 
 type FleetSearchParams = Record<string, string | string[] | undefined>;
 

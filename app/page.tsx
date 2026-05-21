@@ -9,9 +9,18 @@ import {
   TopNav,
 } from "@/components/home";
 import { getActiveBookingCitiesWithBranches } from "@/lib/branch-data";
+import { buildPageMetadata } from "@/lib/seo";
 import { getBookingWidgetTabFlags, getHomeHeroSettings } from "@/lib/site-settings";
 
 export const dynamic = "force-dynamic";
+
+export const metadata = buildPageMetadata({
+  title: "تأجير سيارات فاخرة في السعودية",
+  description:
+    "احجز سيارتك أونلاين مع روائس — أسطول فاخر، فروع متعددة، تأجير يومي وأسبوعي وباقات اشتراك شهرية.",
+  path: "/",
+  ogImage: "/ourfleet.jpg",
+});
 
 export default async function Home() {
   const [hero, cities, tabFlags] = await Promise.all([

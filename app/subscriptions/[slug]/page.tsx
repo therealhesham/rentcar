@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { buildPageMetadata } from "@/lib/seo";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -26,14 +27,28 @@ export async function generateMetadata(ctx: { params: Params }): Promise<Metadat
     where: { slug: slug.trim().toLowerCase(), isActive: true },
     include: { carModel: { include: { brand: true } } },
   });
-  if (!plan) return { title: "باقات الاشتراك" };
+  if (!plan) {
+    return buildPageMetadata({
+      title: "باقة غير موجودة",
+      path: "/subscriptions",
+      noIndex: true,
+    });
+  }
   const title = plan.marketingTitleAr ?? `${plan.carModel.brand.name} ${plan.carModel.name}`;
-  return {
-    title: `${title} | اشتراك شهري`,
+  const slugNorm = slug.trim().toLowerCase();
+  return buildPageMetadata({
+    title: `${title} — اشتراك شهري`,
     description:
-      plan.descriptionAr?.slice(0, 160) ??
-      `اشترك شهرياً في ${plan.carModel.brand.name} ${plan.carModel.name}`,
-  };
+      plan.descriptionAr?.trim().slice(0, 160) ||
+      `اشترك شهرياً في ${plan.carModel.brand.name} ${plan.carModel.name} مع روائس.`,
+    path: `/subscriptions/${slugNorm}`,
+    keywords: [
+      "اشتراك سيارات",
+      plan.carModel.brand.name,
+      plan.carModel.name,
+      "روائس",
+    ],
+  });
 }
 
 export default async function SubscriptionPlanDetailPage(ctx: {

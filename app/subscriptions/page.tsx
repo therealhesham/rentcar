@@ -10,8 +10,16 @@ import {
   parseDurationOptionsCsv,
 } from "@/lib/subscriptions/duration-options";
 import { subscriptionSubtotalExclVat, vatFromSubtotal } from "@/lib/subscriptions/pricing";
+import { buildPageMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
+
+export const metadata = buildPageMetadata({
+  title: "باقات الاشتراك الشهري",
+  description:
+    "اشترك شهرياً في سيارات فاخرة من روائس — باقات مرنة، أسعار شفافة، وتوصيل من الفروع في المملكة.",
+  path: "/subscriptions",
+});
 
 const PLACEHOLDER =
   "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=1200&q=80";

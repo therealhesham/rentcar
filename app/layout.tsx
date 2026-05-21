@@ -1,5 +1,12 @@
-import type { Metadata } from "next";
+import type { Viewport } from "next";
 import { Cairo } from "next/font/google";
+import { JsonLd } from "@/components/seo/JsonLd";
+import {
+  carRentalJsonLd,
+  organizationJsonLd,
+  rootLayoutMetadata,
+  webSiteJsonLd,
+} from "@/lib/seo";
 import "./globals.css";
 
 const cairo = Cairo({
@@ -8,10 +15,19 @@ const cairo = Cairo({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "Rawaes | تأجير سيارات فاخرة",
-  description:
-    "وجهتك الأولى في المملكة لتأجير السيارات الفاخرة وخدمات السفر والكونسيرج.",
+export const metadata = {
+  ...rootLayoutMetadata,
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#003749",
 };
 
 export default function RootLayout({
@@ -30,6 +46,9 @@ export default function RootLayout({
       <body
         className={`${cairo.className} min-h-full bg-surface text-on-surface antialiased`}
       >
+        <JsonLd
+          data={[organizationJsonLd(), webSiteJsonLd(), carRentalJsonLd()]}
+        />
         {children}
       </body>
     </html>

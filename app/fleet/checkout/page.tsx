@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { FleetCheckoutClient } from "@/components/fleet/FleetCheckoutClient";
@@ -13,13 +12,15 @@ import { getActiveCheckoutOneTimeFees } from "@/lib/checkout-one-time-fees";
 import { loadFleetCheckoutEditPrefill } from "@/lib/fleet-checkout-edit-prefill";
 import { buildFleetSearchUrlHydrate } from "@/lib/fleet-search-url-hydrate";
 import { getBookingWidgetTabFlags } from "@/lib/site-settings";
+import { buildPageMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "إتمام الحجز | Rawaes",
+export const metadata = buildPageMetadata({
+  title: "إتمام الحجز",
   description: "مراجعة السعر والإضافات وإتمام حجز السيارة.",
-};
+  noIndex: true,
+});
 
 function firstSearchParam(
   v: string | string[] | undefined,

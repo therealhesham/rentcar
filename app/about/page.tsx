@@ -1,14 +1,16 @@
-import type { Metadata } from "next";
 import Image from "next/image";
 import { SiteNav } from "@/components/shared/SiteNav";
 import { SiteFooter } from "@/components/home/SiteFooter";
+import { JsonLd } from "@/components/seo/JsonLd";
 import { getActiveBranches } from "@/lib/branch-data";
+import { breadcrumbJsonLd, buildPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "من نحن | روائس لتأجير السيارات",
+export const metadata = buildPageMetadata({
+  title: "من نحن",
   description:
-    "تعرف على رؤية روائس لتأجير السيارات ورسالتها وقيمها وميادين عملها.",
-};
+    "تعرّف على روائس لتأجير السيارات: رؤيتنا ورسالتنا وقيمنا وفروعنا في المملكة.",
+  path: "/about",
+});
 
 const pillars = [
   {
@@ -112,6 +114,12 @@ export default async function AboutPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-surface text-on-surface">
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "الرئيسية", path: "/" },
+          { name: "من نحن", path: "/about" },
+        ])}
+      />
       <SiteNav active="about" />
 
       {/* ─── Hero ─── */}
