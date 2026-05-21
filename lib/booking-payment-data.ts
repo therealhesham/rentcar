@@ -45,6 +45,8 @@ export type BookingPaymentSnapshot = {
   checkoutOneTimeFees: CheckoutOneTimeFeeSnap[];
   /** غرامة تأخير (حجز يومي)، غير شاملة الضريبة. */
   delayPenalty: DelayPenaltySnap | null;
+  /** مدة الحجز اليومي للعرض إن وُجدت في اللقطة. */
+  tripDurationLabelAr: string | null;
   totals: {
     rentalExclTax: number;
     addonsExclTax: number;
@@ -75,7 +77,7 @@ export async function getBookingForPayment(
   const brandName = m.brand.name.trim();
   const modelName = m.name.trim();
 
-  const { addons, interCityShipping, checkoutOneTimeFees, delayPenalty } =
+  const { addons, interCityShipping, checkoutOneTimeFees, delayPenalty, tripDurationLabelAr } =
     parseBookingPricingSnapshot(row.addonsJson);
   const returnSlug = row.returnBranch?.slug ?? "jeddah";
 
@@ -119,6 +121,7 @@ export async function getBookingForPayment(
     interCityShipping,
     checkoutOneTimeFees,
     delayPenalty,
+    tripDurationLabelAr,
     totals,
   };
 }

@@ -42,6 +42,7 @@ import {
 } from "@/lib/booking-checkout-pricing";
 import { computeBookingDays } from "@/lib/booking-days";
 import { computeDelayPenaltySnap } from "@/lib/booking-delay-penalty";
+import { formatDailyBookingDurationFromIso } from "@/lib/booking-duration-display";
 import type { CheckoutCarDTO } from "@/lib/checkout-car-data";
 import { dailyRentalInclTaxSar, type RentalPriceDisplayMode } from "@/lib/pricing";
 import type { StoredFleetSearchContext } from "@/lib/fleet-search-storage";
@@ -410,6 +411,17 @@ export function FleetCheckoutClient({
   ]);
 
   const delayPenaltyExclTax = delayPenalty?.feeExclVatSar ?? 0;
+
+  const rentalDurationLabel = useMemo(() => {
+    if (rentalTab !== "daily" || !trip.pickupIso || !trip.dropoffIso) {
+      const d = trip.days;
+      return d === 1 ? "يوم واحد" : d === 2 ? "يومين" : `${d} أيام`;
+    }
+    return (
+      formatDailyBookingDurationFromIso(trip.pickupIso, trip.dropoffIso) ??
+      `${trip.days} أيام`
+    );
+  }, [rentalTab, trip.pickupIso, trip.dropoffIso, trip.days]);
 
   const totals = computeCheckoutTotals(
     car.pricePerDayExclTax,
@@ -1409,7 +1421,7 @@ export function FleetCheckoutClient({
                     <div className="space-y-3">
                       <div className="flex justify-between text-[13px]">
                         <span className="font-semibold text-[#6b5a3b]">
-                          الإيجار ({trip.days} أيام)
+                          الإيجار ({rentalDurationLabel})
                         </span>
                         <span className="font-bold text-[#003749] tabular-nums" dir="ltr">
                           {formatSarAmount(totals.rentalExclTax)} <SarCurrencyGlyph />
@@ -1419,7 +1431,7 @@ export function FleetCheckoutClient({
                       {selectedRows.length > 0 && (
                         <div className="flex justify-between text-[13px]">
                           <span className="font-semibold text-[#6b5a3b]">
-                            الإضافات ({trip.days} أيام)
+                            الإضافات ({rentalDurationLabel})
                           </span>
                           <span className="font-bold text-[#003749] tabular-nums" dir="ltr">
                             {formatSarAmount(totals.addonsExclTax)} <SarCurrencyGlyph />

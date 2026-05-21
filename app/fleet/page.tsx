@@ -7,6 +7,7 @@ import { SiteFooter } from "@/components/home/SiteFooter";
 import { SiteNav } from "@/components/shared/SiteNav";
 import { getActiveBranches, getActiveBookingCitiesWithBranches } from "@/lib/branch-data";
 import { computeBookingDays } from "@/lib/booking-days";
+import { formatDailyBookingDurationFromIso } from "@/lib/booking-duration-display";
 import { listAvailableCarModelIds } from "@/lib/direct-booking";
 import {
   getFleetBrandsForFilter,
@@ -64,6 +65,11 @@ export default async function FleetPage({
       dropoffDate.getTime() >= pickupDate.getTime()
     ) {
       const days = computeBookingDays(pickupDate, dropoffDate);
+      const rentalRaw = qFirst(params.rental);
+      const durationLabel =
+        rentalRaw === "daily" || rentalRaw == null || rentalRaw === ""
+          ? (formatDailyBookingDurationFromIso(pickupRaw, dropoffRaw) ?? `${days} يوم`)
+          : `${days} يوم/أيام`;
       const returnBranch =
         qFirst(params.returnBranch)?.toLowerCase() ??
         qFirst(params.pickupBranch)?.toLowerCase() ??
@@ -76,7 +82,6 @@ export default async function FleetPage({
       });
 
       const modeLabel = qFirst(params.mode) === "delivery" ? "توصيل" : "استلام من الفرع";
-      const rentalRaw = qFirst(params.rental);
       const rental =
         rentalRaw === "weekly"
           ? "أسبوعي"
@@ -94,11 +99,7 @@ export default async function FleetPage({
             {" · "}
             نوع الإيجار: <span className="font-bold">{rental}</span>
             {" · "}
-            المدة:{" "}
-            <span className="tabular-nums font-bold" dir="ltr">
-              {days}
-            </span>{" "}
-            يوم/أيام
+            المدة: <span className="font-bold tabular-nums">{durationLabel}</span>
             {qFirst(params.returnBranch) ? (
               <>
                 {" · "}

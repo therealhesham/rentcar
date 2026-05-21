@@ -32,8 +32,10 @@ import {
 } from "@/lib/booking-calendar-ymd";
 import {
   computeDelayPenaltySnap,
+  isDailyRentalTab,
   type DelayPenaltySnap,
 } from "@/lib/booking-delay-penalty";
+import { formatDailyBookingDurationFromIso } from "@/lib/booking-duration-display";
 
 export { addDaysToYmd, lastInclusiveBookingDayYmd } from "@/lib/booking-calendar-ymd";
 
@@ -919,7 +921,21 @@ async function buildBookingAddonsJsonSnapshot(
     });
   const hasDelay = delaySnap != null && delaySnap.feeExclVatSar > 0;
 
-  if (items.length === 0 && !hasShip && !hasCheckout && !hasDelay) {
+  let tripDurationLabelAr: string | null = null;
+  if (
+    isDailyRentalTab(rentalTab) &&
+    dropoffDate &&
+    !Number.isNaN(dropoffDate.getTime()) &&
+    !Number.isNaN(pickupDate.getTime())
+  ) {
+    tripDurationLabelAr = formatDailyBookingDurationFromIso(
+      pickupDate.toISOString(),
+      dropoffDate.toISOString(),
+    );
+  }
+  const hasDurationLabel = Boolean(tripDurationLabelAr);
+
+  if (items.length === 0 && !hasShip && !hasCheckout && !hasDelay && !hasDurationLabel) {
     return { ok: true, json: null };
   }
 
@@ -928,6 +944,7 @@ async function buildBookingAddonsJsonSnapshot(
     interCityShipping?: InterCityShippingSnap;
     checkoutOneTimeFees?: typeof coSnap;
     delayPenalty?: DelayPenaltySnap;
+    tripDurationLabelAr?: string;
   } = { items };
   if (hasShip && interCityShipping) {
     payload.interCityShipping = interCityShipping;
@@ -937,6 +954,9 @@ async function buildBookingAddonsJsonSnapshot(
   }
   if (hasDelay && delaySnap) {
     payload.delayPenalty = delaySnap;
+  }
+  if (tripDurationLabelAr) {
+    payload.tripDurationLabelAr = tripDurationLabelAr;
   }
   return { ok: true, json: JSON.stringify(payload) };
 }

@@ -57,8 +57,10 @@ function buildInvoiceHtml(booking: BookingPaymentSnapshot): string {
   const vatPct = booking.car.vatRatePercent;
 
   const rows: string[] = [];
+  const rentalDuration =
+    booking.tripDurationLabelAr ?? `${booking.numberOfDays} يوم`;
   rows.push(
-    `<tr><td style="padding:8px 0;border-bottom:1px solid #eee">الإيجار (${booking.numberOfDays} يوم) — ${escapeHtml(booking.car.fullTitle)}</td><td dir="ltr" style="padding:8px 0;border-bottom:1px solid #eee;text-align:left">${formatSarAmount(t.rentalExclTax)} ر.س</td></tr>`,
+    `<tr><td style="padding:8px 0;border-bottom:1px solid #eee">الإيجار (${escapeHtml(rentalDuration)}) — ${escapeHtml(booking.car.fullTitle)}</td><td dir="ltr" style="padding:8px 0;border-bottom:1px solid #eee;text-align:left">${formatSarAmount(t.rentalExclTax)} ر.س</td></tr>`,
   );
 
   for (const a of booking.addons) {

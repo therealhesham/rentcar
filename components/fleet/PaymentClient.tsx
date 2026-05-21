@@ -769,7 +769,10 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
                 )}
                 <div className="flex justify-between border-t border-neutral-100 pt-3 font-bold">
                   <dt>مدة الإيجار</dt>
-                  <dd dir="ltr">{booking.numberOfDays} يوم</dd>
+                  <dd>
+                    {booking.tripDurationLabelAr ??
+                      `${booking.numberOfDays} ${booking.numberOfDays === 1 ? "يوم" : "أيام"}`}
+                  </dd>
                 </div>
               </dl>
 

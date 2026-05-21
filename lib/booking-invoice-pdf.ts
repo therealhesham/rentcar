@@ -393,11 +393,13 @@ export async function buildBookingInvoicePdfBuffer(
     y += lineStep;
   };
 
+  const rentalDurationAr =
+    booking.tripDurationLabelAr ?? `${booking.numberOfDays} يوم`;
   const rentalDesc = INVOICE_LANG_EN
     ? `Rental (${booking.numberOfDays} ${
         booking.numberOfDays === 1 ? "day" : "days"
       }) — ${booking.car.fullTitle}`
-    : `الإيجار (${booking.numberOfDays} يوم) — ${booking.car.fullTitle}`;
+    : `الإيجار (${rentalDurationAr}) — ${booking.car.fullTitle}`;
 
   /**
    * rows

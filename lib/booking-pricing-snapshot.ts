@@ -25,6 +25,8 @@ export type BookingPricingSnapshotV1 = {
   interCityShipping?: InterCityShippingSnap | null;
   checkoutOneTimeFees?: CheckoutOneTimeFeeSnap[] | null;
   delayPenalty?: DelayPenaltySnap | null;
+  /** مدة الحجز اليومي للعرض (مثل «يومين + 3 ساعات»). */
+  tripDurationLabelAr?: string | null;
 };
 
 function parseDelayPenaltySnap(raw: unknown): DelayPenaltySnap | null {
@@ -63,9 +65,16 @@ export function parseBookingPricingSnapshot(raw: string | null): {
   interCityShipping: InterCityShippingSnap | null;
   checkoutOneTimeFees: CheckoutOneTimeFeeSnap[];
   delayPenalty: DelayPenaltySnap | null;
+  tripDurationLabelAr: string | null;
 } {
   if (!raw) {
-    return { addons: [], interCityShipping: null, checkoutOneTimeFees: [], delayPenalty: null };
+    return {
+      addons: [],
+      interCityShipping: null,
+      checkoutOneTimeFees: [],
+      delayPenalty: null,
+      tripDurationLabelAr: null,
+    };
   }
   try {
     const data = JSON.parse(raw) as BookingPricingSnapshotV1;
@@ -116,9 +125,19 @@ export function parseBookingPricingSnapshot(raw: string | null): {
     }
 
     const delayPenalty = parseDelayPenaltySnap(data.delayPenalty);
+    const tripDurationLabelAr =
+      typeof data.tripDurationLabelAr === "string" && data.tripDurationLabelAr.trim()
+        ? data.tripDurationLabelAr.trim()
+        : null;
 
-    return { addons, interCityShipping, checkoutOneTimeFees, delayPenalty };
+    return { addons, interCityShipping, checkoutOneTimeFees, delayPenalty, tripDurationLabelAr };
   } catch {
-    return { addons: [], interCityShipping: null, checkoutOneTimeFees: [], delayPenalty: null };
+    return {
+      addons: [],
+      interCityShipping: null,
+      checkoutOneTimeFees: [],
+      delayPenalty: null,
+      tripDurationLabelAr: null,
+    };
   }
 }

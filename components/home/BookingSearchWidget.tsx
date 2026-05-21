@@ -39,6 +39,7 @@ import {
   composeDatetimeLocal,
   computeAutoDropoff,
   computeDaysPreview,
+  computeDailyDurationPreview,
   draftFromDatetimeLocal,
   parseDdMmYyToYmd,
   rentalDropoffHint,
@@ -436,14 +437,19 @@ export function BookingSearchWidget({
     pickupBranchEffective,
   ]);
 
-  const daysPreview = useMemo(() => {
+  const durationBadgeLabel = useMemo(() => {
     if (rental === "corporate") return null;
     if (rental === "monthly_packages") {
       const r = fleetDatetimesFromSubscriptionPack(subPackStartYmd, subPackMonths);
       if (!r) return null;
-      return computeDaysPreview(r.pickupDt, r.dropoffDt);
+      const n = computeDaysPreview(r.pickupDt, r.dropoffDt);
+      return n != null ? `${n} يوم` : null;
     }
-    return computeDaysPreview(pickupDt, dropoffDt);
+    if (rental === "daily") {
+      return computeDailyDurationPreview(pickupDt, dropoffDt);
+    }
+    const n = computeDaysPreview(pickupDt, dropoffDt);
+    return n != null ? `${n} يوم` : null;
   }, [rental, subPackStartYmd, subPackMonths, pickupDt, dropoffDt]);
 
   function handleReturnLocationDifferentChange(checked: boolean) {
@@ -1437,7 +1443,7 @@ export function BookingSearchWidget({
             <div className="flex flex-1 items-center gap-3" aria-live="polite">
               {isFreshRebookFlow ? (
                 <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  {daysPreview != null ? (
+                  {durationBadgeLabel != null ? (
                     <div className="flex items-center gap-2">
                       <span
                         className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-[12px] font-bold text-white shadow-[0_2px_8px_-2px_rgba(219,184,120,0.5)]"
@@ -1446,10 +1452,7 @@ export function BookingSearchWidget({
                         }}
                       >
                         <CalendarDays className="size-3" aria-hidden />
-                        <span dir="ltr" className="tabular-nums">
-                          {daysPreview}
-                        </span>
-                        يوم
+                        <span className="tabular-nums">{durationBadgeLabel}</span>
                       </span>
                       <span className="text-[11px] font-medium text-[#6b5a3b]">مدة الحجز</span>
                     </div>
@@ -1491,15 +1494,14 @@ export function BookingSearchWidget({
                     </span>
                   </button>
                 </div>
-              ) : daysPreview != null ? (
+              ) : durationBadgeLabel != null ? (
                 <div className="flex items-center gap-2">
                   <span
                     className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-[12px] font-bold text-white shadow-[0_2px_8px_-2px_rgba(219,184,120,0.5)]"
                     style={{ background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)` }}
                   >
                     <CalendarDays className="size-3" aria-hidden />
-                    <span dir="ltr" className="tabular-nums">{daysPreview}</span>
-                    يوم
+                    <span className="tabular-nums">{durationBadgeLabel}</span>
                   </span>
                   <span className="text-[11px] font-medium text-[#6b5a3b]">مدة الحجز</span>
                 </div>

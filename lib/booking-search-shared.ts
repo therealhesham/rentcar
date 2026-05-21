@@ -1,4 +1,5 @@
 import { computeBookingDays } from "@/lib/booking-days";
+import { formatDailyBookingDurationFromIso } from "@/lib/booking-duration-display";
 
 export type RentalTab = "daily" | "weekly" | "monthly" | "monthly_packages";
 export type ModeTab = "pickup" | "delivery";
@@ -56,6 +57,14 @@ export function computeDaysPreview(pickupDt: string, dropoffDt: string): number 
   const d = new Date(dropoffDt);
   if (Number.isNaN(p.getTime()) || Number.isNaN(d.getTime())) return null;
   return computeBookingDays(p, d);
+}
+
+/** معاينة مدة الحجز اليومي: «3 أيام» أو «3 أيام + 2 ساعات». */
+export function computeDailyDurationPreview(
+  pickupDt: string,
+  dropoffDt: string,
+): string | null {
+  return formatDailyBookingDurationFromIso(pickupDt, dropoffDt);
 }
 
 /** مقطع مساعدة تحت عنوان «تاريخ التسليم» في نماذج البحث */
