@@ -6,7 +6,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { SiteFooter } from "@/components/home/SiteFooter";
 import { SiteNav } from "@/components/shared/SiteNav";
-import { BOOKING_OTP_LENGTH, BOOKING_OTP_REGEX, bookingOtpLengthLabelAr } from "@/lib/booking-otp-constants";
+import { OtpPinInput } from "@/components/ui/OtpPinInput";
+import { BOOKING_OTP_REGEX, bookingOtpLengthLabelAr } from "@/lib/booking-otp-constants";
 import type { BookingOtpChannel } from "@/lib/site-settings";
 import {
   isBranchOutsideHoursBookingError,
@@ -232,29 +233,21 @@ export function FleetCheckoutOtpClient() {
               </p>
             ) : (
               <form onSubmit={handleConfirm} className="space-y-5">
-                <div className="group relative">
-                  <input
-                    type="text"
-                    id="checkout-otp-only"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    maxLength={BOOKING_OTP_LENGTH}
+                <div className="space-y-3">
+                  <p className="text-center text-[13px] font-bold text-[#8a7752]">
+                    {`أدخل الرمز (${bookingOtpLengthLabelAr()})`}
+                  </p>
+                  <OtpPinInput
+                    id="checkout-otp-pin"
                     value={otp}
-                    onChange={(ev) => {
-                      setOtp(ev.target.value.replace(/\D/g, "").slice(0, BOOKING_OTP_LENGTH));
+                    autoFocus
+                    disabled={pending}
+                    aria-label={`رمز التحقق من ${bookingOtpLengthLabelAr()}`}
+                    onChange={(next) => {
+                      setOtp(next);
                       setError(null);
                     }}
-                    className="peer w-full rounded-xl border border-[#ebe4d3] bg-white px-4 pb-3 pt-6 text-[18px] font-extrabold tracking-[0.25em] text-[#003749] outline-none transition-all focus:border-[#dbb878] focus:ring-1 focus:ring-[#dbb878]"
-                    placeholder=" "
-                    dir="ltr"
-                    aria-label={`رمز التحقق من ${bookingOtpLengthLabelAr()}`}
                   />
-                  <label
-                    htmlFor="checkout-otp-only"
-                    className="absolute start-4 top-4 text-[13px] font-bold text-[#aaa08e] transition-all peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-[#dbb878] peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:text-[10px]"
-                  >
-                    {`أدخل الرمز (${bookingOtpLengthLabelAr()})`}
-                  </label>
                 </div>
 
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -289,7 +282,7 @@ export function FleetCheckoutOtpClient() {
 
                 <button
                   type="submit"
-                  disabled={pending}
+                  disabled={pending || otp.length !== 4}
                   className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-[15px] font-extrabold text-white transition-opacity disabled:opacity-50"
                   style={{
                     background: `linear-gradient(135deg, ${GOLD} 0%, #c9a356 100%)`,

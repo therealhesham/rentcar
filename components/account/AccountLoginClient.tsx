@@ -7,6 +7,7 @@ import { Loader2 } from "lucide-react";
 import { loginCustomer, type AuthFormState } from "@/app/account/actions";
 import { SiteFooter } from "@/components/home/SiteFooter";
 import { SiteNav } from "@/components/shared/SiteNav";
+import { OtpPinInput } from "@/components/ui/OtpPinInput";
 import { BOOKING_OTP_LENGTH, BOOKING_OTP_REGEX, bookingOtpLengthLabelAr } from "@/lib/booking-otp-constants";
 import type { BookingOtpChannel } from "@/lib/site-settings";
 
@@ -308,24 +309,19 @@ export function AccountLoginClient() {
                 </div>
               ) : (
                 <form className="space-y-5" onSubmit={handleVerifyOtp}>
-                  <div>
-                    <span className="mb-1.5 block text-[13px] font-extrabold text-[#003749]">
+                  <div className="space-y-3">
+                    <p className="text-center text-[13px] font-extrabold text-[#003749]">
                       {`رمز التحقق (${bookingOtpLengthLabelAr()})`}
-                    </span>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={BOOKING_OTP_LENGTH}
-                      autoComplete="one-time-code"
+                    </p>
+                    <OtpPinInput
                       value={otp}
-                      onChange={(ev) => {
-                        setOtp(ev.target.value.replace(/\D/g, "").slice(0, BOOKING_OTP_LENGTH));
+                      autoFocus
+                      disabled={otpVerifyBusy}
+                      aria-label="رمز التحقق"
+                      onChange={(next) => {
+                        setOtp(next);
                         setOtpError(null);
                       }}
-                      className="w-full rounded-xl border border-[#ebe4d3] bg-white px-4 py-4 text-center text-[22px] font-extrabold tracking-[0.35em] text-[#003749] outline-none transition-shadow focus:border-[#dbb878] focus:ring-2 focus:ring-[#dbb878]/40"
-                      dir="ltr"
-                      placeholder="••••"
-                      aria-label="رمز التحقق"
                     />
                   </div>
                   <button
