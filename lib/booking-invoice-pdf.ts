@@ -427,6 +427,10 @@ export async function buildBookingInvoicePdfBuffer(
     );
   }
 
+  if (booking.delayPenalty && booking.delayPenalty.feeExclVatSar > 0) {
+    row(booking.delayPenalty.labelAr, booking.delayPenalty.feeExclVatSar);
+  }
+
   /**
    * separator
    */

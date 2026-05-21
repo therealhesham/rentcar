@@ -3,7 +3,8 @@ import { parseBookingPricingSnapshot } from "@/lib/booking-pricing-snapshot";
 
 export function BookingAddonsSnapshot({ raw }: { raw: string }) {
   try {
-    const { addons, interCityShipping, checkoutOneTimeFees } = parseBookingPricingSnapshot(raw);
+    const { addons, interCityShipping, checkoutOneTimeFees, delayPenalty } =
+      parseBookingPricingSnapshot(raw);
     const rows: { key: string; title: string; amount: number | null }[] = [];
     addons.forEach((a, i) => {
       rows.push({
@@ -24,6 +25,13 @@ export function BookingAddonsSnapshot({ raw }: { raw: string }) {
         key: `co-${f.slug}`,
         title: f.labelAr,
         amount: f.feeExclVatSar,
+      });
+    }
+    if (delayPenalty && delayPenalty.feeExclVatSar > 0) {
+      rows.push({
+        key: "delay-penalty",
+        title: delayPenalty.labelAr,
+        amount: delayPenalty.feeExclVatSar,
       });
     }
     if (rows.length === 0) {

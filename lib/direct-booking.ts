@@ -30,6 +30,10 @@ import {
   dateOnlyYmd,
   lastInclusiveBookingDayYmd,
 } from "@/lib/booking-calendar-ymd";
+import {
+  computeDelayPenaltySnap,
+  type DelayPenaltySnap,
+} from "@/lib/booking-delay-penalty";
 
 export { addDaysToYmd, lastInclusiveBookingDayYmd } from "@/lib/booking-calendar-ymd";
 
@@ -65,6 +69,10 @@ export type DirectBookingCommon = {
   returnBranchSlug: string;
   pickupDate: Date;
   numberOfDays: number;
+  /** وقت التسليم المختار (إتمام الأسطول) — لغرامة التأخير اليومي */
+  dropoffDate?: Date | null;
+  /** نوع الإيجار من البحث: daily | weekly | … */
+  rentalTab?: string | null;
   termsAccepted: boolean;
   /** استلام من فرع أو توصيل للعنوان */
   pickupMode: "BRANCH" | "DELIVERY";
@@ -77,6 +85,29 @@ export type DirectBookingCommon = {
 const AGE_OPTIONS = new Set(["25-35", "35-50", "50+"]);
 
 const CONTACT_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export function parseRentalTabFromJson(body: JsonBody): string | null {
+  const raw = String(body.rental ?? body.rentalTab ?? "").trim().toLowerCase();
+  if (!raw) return null;
+  if (raw === "daily" || raw === "weekly" || raw === "monthly" || raw === "monthly_packages") {
+    return raw;
+  }
+  return null;
+}
+
+export function parseDropoffDateFromJson(
+  body: JsonBody,
+): { ok: true; dropoffDate: Date | null } | { ok: false; error: string } {
+  const raw = String(body.dropoffDate ?? body.dropoff ?? "").trim();
+  if (!raw) {
+    return { ok: true, dropoffDate: null };
+  }
+  const dropoffDate = new Date(raw);
+  if (Number.isNaN(dropoffDate.getTime())) {
+    return { ok: false, error: "تاريخ التسليم غير صالح." };
+  }
+  return { ok: true, dropoffDate };
+}
 
 export function parseContactEmailFromJson(
   body: Record<string, unknown>,
@@ -818,6 +849,11 @@ async function buildBookingAddonsJsonSnapshot(
   numberOfDays: number,
   interCityShipping: InterCityShippingSnap | null,
   checkoutOneTimeFees: ReadonlyArray<CheckoutOneTimeFeeLine>,
+  delayPenalty: DelayPenaltySnap | null,
+  pricePerDayExclTax: number,
+  pickupDate: Date,
+  dropoffDate: Date | null | undefined,
+  rentalTab: string | null | undefined,
 ): Promise<{ ok: true; json: string | null } | { ok: false; error: string }> {
   const days = safeBookingDays(numberOfDays);
   let items: Array<{
@@ -872,7 +908,18 @@ async function buildBookingAddonsJsonSnapshot(
     }));
   const hasCheckout = coSnap.length > 0;
 
-  if (items.length === 0 && !hasShip && !hasCheckout) {
+  const delaySnap =
+    delayPenalty ??
+    computeDelayPenaltySnap({
+      rentalTab,
+      pricePerDayExclTax,
+      pickupDate,
+      numberOfDays: days,
+      actualDropoffDate: dropoffDate ?? null,
+    });
+  const hasDelay = delaySnap != null && delaySnap.feeExclVatSar > 0;
+
+  if (items.length === 0 && !hasShip && !hasCheckout && !hasDelay) {
     return { ok: true, json: null };
   }
 
@@ -880,12 +927,16 @@ async function buildBookingAddonsJsonSnapshot(
     items: typeof items;
     interCityShipping?: InterCityShippingSnap;
     checkoutOneTimeFees?: typeof coSnap;
+    delayPenalty?: DelayPenaltySnap;
   } = { items };
   if (hasShip && interCityShipping) {
     payload.interCityShipping = interCityShipping;
   }
   if (hasCheckout) {
     payload.checkoutOneTimeFees = coSnap;
+  }
+  if (hasDelay && delaySnap) {
+    payload.delayPenalty = delaySnap;
   }
   return { ok: true, json: JSON.stringify(payload) };
 }
@@ -1079,6 +1130,11 @@ export async function createDirectBooking(
     days,
     shippingSnap,
     checkoutFeeLines,
+    null,
+    model.price,
+    commonNormalized.pickupDate,
+    commonNormalized.dropoffDate,
+    commonNormalized.rentalTab,
   );
   if (!addonsSnap.ok) {
     return { ok: false, error: addonsSnap.error };

@@ -828,6 +828,17 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
                     }
                   />
                 ))}
+                {booking.delayPenalty && booking.delayPenalty.feeExclVatSar > 0 ? (
+                  <Row
+                    label={booking.delayPenalty.labelAr}
+                    value={
+                      <>
+                        {formatSarAmount(booking.delayPenalty.feeExclVatSar)}{" "}
+                        <SarCurrencyGlyph />
+                      </>
+                    }
+                  />
+                ) : null}
                 <Row
                   label={`ضريبة القيمة المضافة ${booking.car.vatRatePercent}%`}
                   value={

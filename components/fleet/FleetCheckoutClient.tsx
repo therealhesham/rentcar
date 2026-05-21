@@ -41,6 +41,7 @@ import {
   formatSarAmount,
 } from "@/lib/booking-checkout-pricing";
 import { computeBookingDays } from "@/lib/booking-days";
+import { computeDelayPenaltySnap } from "@/lib/booking-delay-penalty";
 import type { CheckoutCarDTO } from "@/lib/checkout-car-data";
 import { dailyRentalInclTaxSar, type RentalPriceDisplayMode } from "@/lib/pricing";
 import type { StoredFleetSearchContext } from "@/lib/fleet-search-storage";
@@ -158,6 +159,8 @@ export function FleetCheckoutClient({
       /* ignore */
     }
   }, []);
+
+  const rentalTab = sp.get("rental")?.trim().toLowerCase() || "daily";
 
   const trip = useMemo(() => {
     const pickupUrl = sp.get("pickup")?.trim() || null;
@@ -386,12 +389,37 @@ export function FleetCheckoutClient({
     [checkoutOneTimeFees],
   );
 
+  const delayPenalty = useMemo(() => {
+    if (!trip.pickupIso || !trip.dropoffIso) return null;
+    const pickup = new Date(trip.pickupIso);
+    const dropoff = new Date(trip.dropoffIso);
+    if (Number.isNaN(pickup.getTime()) || Number.isNaN(dropoff.getTime())) return null;
+    return computeDelayPenaltySnap({
+      rentalTab,
+      pricePerDayExclTax: car.pricePerDayExclTax,
+      pickupDate: pickup,
+      numberOfDays: trip.days,
+      actualDropoffDate: dropoff,
+    });
+  }, [
+    rentalTab,
+    car.pricePerDayExclTax,
+    trip.pickupIso,
+    trip.dropoffIso,
+    trip.days,
+  ]);
+
+  const delayPenaltyExclTax = delayPenalty?.feeExclVatSar ?? 0;
+
   const totals = computeCheckoutTotals(
     car.pricePerDayExclTax,
     trip.days,
     car.vatRatePercent,
     selectedRows.map((a) => ({ pricePerDay: a.pricePerDay })),
-    { oneTimeFeesExclTax: interCityShippingFeeSar + checkoutFeesSumExclTax },
+    {
+      oneTimeFeesExclTax:
+        interCityShippingFeeSar + checkoutFeesSumExclTax + delayPenaltyExclTax,
+    },
   );
 
   useEffect(() => {
@@ -610,6 +638,8 @@ export function FleetCheckoutClient({
       branch: trip.branchSlug,
       pickupDate: trip.pickupIso,
       days: trip.days,
+      rental: rentalTab,
+      ...(trip.dropoffIso ? { dropoffDate: trip.dropoffIso } : {}),
       terms,
       pickupMode,
       addonIds: [...selected],
@@ -1418,6 +1448,17 @@ export function FleetCheckoutClient({
                           </span>
                         </div>
                       ))}
+
+                      {delayPenalty && delayPenaltyExclTax > 0 ? (
+                        <div className="flex justify-between text-[13px]">
+                          <span className="max-w-[60%] text-end text-[12px] font-semibold leading-snug text-[#6b5a3b]">
+                            {delayPenalty.labelAr}
+                          </span>
+                          <span className="shrink-0 font-bold text-[#003749] tabular-nums" dir="ltr">
+                            {formatSarAmount(delayPenaltyExclTax)} <SarCurrencyGlyph />
+                          </span>
+                        </div>
+                      ) : null}
 
                       <div className="flex justify-between text-[13px]">
                         <span className="font-semibold text-[#6b5a3b]">ضريبة القيمة المضافة ({car.vatRatePercent}%)</span>

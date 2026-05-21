@@ -1,3 +1,7 @@
+import {
+  DELAY_PENALTY_FREE_HOURS,
+  type DelayPenaltySnap,
+} from "@/lib/booking-delay-penalty";
 import type { InterCityShippingSnap } from "@/lib/inter-city-shipping";
 
 export type AddonSnapItem = {
@@ -20,7 +24,35 @@ export type BookingPricingSnapshotV1 = {
   items: AddonSnapItem[];
   interCityShipping?: InterCityShippingSnap | null;
   checkoutOneTimeFees?: CheckoutOneTimeFeeSnap[] | null;
+  delayPenalty?: DelayPenaltySnap | null;
 };
+
+function parseDelayPenaltySnap(raw: unknown): DelayPenaltySnap | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as DelayPenaltySnap;
+  const fee = Number(o.feeExclVatSar);
+  if (!Number.isFinite(fee) || fee <= 0) return null;
+  const kind = o.kind;
+  if (kind !== "hourly" && kind !== "full_day") return null;
+  const lateHours = Number(o.lateHours);
+  const billableHours = Number(o.billableHours ?? 0);
+  if (!Number.isFinite(lateHours) || lateHours <= DELAY_PENALTY_FREE_HOURS) return null;
+  const labelAr = typeof o.labelAr === "string" ? o.labelAr.trim() : "";
+  if (!labelAr) return null;
+  const scheduledReturnAt =
+    typeof o.scheduledReturnAt === "string" ? o.scheduledReturnAt : "";
+  const actualDropoffAt = typeof o.actualDropoffAt === "string" ? o.actualDropoffAt : "";
+  if (!scheduledReturnAt || !actualDropoffAt) return null;
+  return {
+    kind,
+    lateHours,
+    billableHours: Number.isFinite(billableHours) ? billableHours : 0,
+    feeExclVatSar: Math.round(fee * 100) / 100,
+    labelAr,
+    scheduledReturnAt,
+    actualDropoffAt,
+  };
+}
 
 export function parseBookingPricingSnapshot(raw: string | null): {
   addons: Array<{
@@ -30,9 +62,10 @@ export function parseBookingPricingSnapshot(raw: string | null): {
   }>;
   interCityShipping: InterCityShippingSnap | null;
   checkoutOneTimeFees: CheckoutOneTimeFeeSnap[];
+  delayPenalty: DelayPenaltySnap | null;
 } {
   if (!raw) {
-    return { addons: [], interCityShipping: null, checkoutOneTimeFees: [] };
+    return { addons: [], interCityShipping: null, checkoutOneTimeFees: [], delayPenalty: null };
   }
   try {
     const data = JSON.parse(raw) as BookingPricingSnapshotV1;
@@ -82,8 +115,10 @@ export function parseBookingPricingSnapshot(raw: string | null): {
       }
     }
 
-    return { addons, interCityShipping, checkoutOneTimeFees };
+    const delayPenalty = parseDelayPenaltySnap(data.delayPenalty);
+
+    return { addons, interCityShipping, checkoutOneTimeFees, delayPenalty };
   } catch {
-    return { addons: [], interCityShipping: null, checkoutOneTimeFees: [] };
+    return { addons: [], interCityShipping: null, checkoutOneTimeFees: [], delayPenalty: null };
   }
 }

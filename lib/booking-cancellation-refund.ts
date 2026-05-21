@@ -27,12 +27,12 @@ export function computeCancellationRefundBreakdown(input: {
   const vat = Number(input.vatRatePercent);
   if (!Number.isFinite(price) || price < 0 || !Number.isFinite(vat) || vat < 0) return null;
 
-  const { addons, interCityShipping, checkoutOneTimeFees } = parseBookingPricingSnapshot(
-    input.addonsJson,
-  );
+  const { addons, interCityShipping, checkoutOneTimeFees, delayPenalty } =
+    parseBookingPricingSnapshot(input.addonsJson);
   const shipFee = interCityShipping?.feeExclVatSar ?? 0;
   const checkoutFeesSum = checkoutOneTimeFees.reduce((s, x) => s + x.feeExclVatSar, 0);
-  const oneTimeFeesExclTax = shipFee + checkoutFeesSum;
+  const delayFee = delayPenalty?.feeExclVatSar ?? 0;
+  const oneTimeFeesExclTax = shipFee + checkoutFeesSum + delayFee;
 
   const totals = computeCheckoutTotals(
     price,

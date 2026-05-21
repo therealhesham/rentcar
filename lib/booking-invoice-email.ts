@@ -79,6 +79,12 @@ function buildInvoiceHtml(booking: BookingPaymentSnapshot): string {
     );
   }
 
+  if (booking.delayPenalty && booking.delayPenalty.feeExclVatSar > 0) {
+    rows.push(
+      `<tr><td style="padding:8px 0">${escapeHtml(booking.delayPenalty.labelAr)}</td><td dir="ltr" style="padding:8px 0;text-align:left">${formatSarAmount(booking.delayPenalty.feeExclVatSar)} ر.س</td></tr>`,
+    );
+  }
+
   rows.push(
     `<tr><td style="padding:10px 0;font-weight:700">المجموع غير شامل الضريبة</td><td dir="ltr" style="padding:10px 0;text-align:left;font-weight:700">${formatSarAmount(t.subtotalExclTax)} ر.س</td></tr>`,
   );

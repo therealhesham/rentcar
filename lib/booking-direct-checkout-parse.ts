@@ -4,9 +4,11 @@ import {
   parseCommonBookingFieldsFromJson,
   parseContactEmailFromJson,
   parseDirectBookingKycFromJson,
+  parseDropoffDateFromJson,
   parseExcludeBlockingBookingRequestIdFromJson,
   parsePickupBranchSlugFromJson,
   parsePickupCitySlugFromJson,
+  parseRentalTabFromJson,
 } from "@/lib/direct-booking";
 
 /**
@@ -24,6 +26,17 @@ export function parseCreateDirectBookingInputFromCheckoutJson(
   const parsed = parseCommonBookingFieldsFromJson(obj);
   if (!parsed.ok) {
     return parsed;
+  }
+
+  const dropoffParsed = parseDropoffDateFromJson(obj);
+  if (!dropoffParsed.ok) {
+    return dropoffParsed;
+  }
+  if (
+    dropoffParsed.dropoffDate &&
+    dropoffParsed.dropoffDate.getTime() < parsed.data.pickupDate.getTime()
+  ) {
+    return { ok: false, error: "وقت التسليم يجب أن يكون بعد وقت الاستلام." };
   }
 
   const emailParsed = parseContactEmailFromJson(obj);
@@ -49,11 +62,15 @@ export function parseCreateDirectBookingInputFromCheckoutJson(
       ? sessionUserId
       : undefined;
 
+  const rentalTab = parseRentalTabFromJson(obj);
+
   return {
     ok: true,
     input: {
       carModelId,
       ...parsed.data,
+      ...(dropoffParsed.dropoffDate ? { dropoffDate: dropoffParsed.dropoffDate } : {}),
+      ...(rentalTab ? { rentalTab } : {}),
       addonIds: addonParsed.addonIds,
       customerId: sid,
       ...(pickupCitySlug != null ? { pickupCitySlug } : {}),
