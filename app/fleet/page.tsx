@@ -208,33 +208,39 @@ export default async function FleetPage({
             <div className="mb-3 flex items-center justify-center gap-3 sm:mb-4">
               <span className="h-px w-10 bg-gradient-to-l from-primary/35 to-transparent sm:w-12" />
               <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-on-surface-variant sm:text-[11px]">
-                احجز مركبتك الآن
+                احجز مركبتك وصفِّ النتائج
               </span>
               <span className="h-px w-10 bg-gradient-to-r from-primary/35 to-transparent sm:w-12" />
             </div>
-            <BookingWidget
-              cities={cities}
-              initialFromUrl={fleetUrlHydrate}
-              tabFlags={tabFlags}
-            />
+            <div className="overflow-hidden rounded-2xl bg-white/[0.97] shadow-[0_28px_72px_-20px_rgba(15,61,71,0.18),0_8px_24px_-6px_rgba(15,61,71,0.07)] ring-1 ring-black/[0.03] backdrop-blur-xl">
+              <BookingWidget
+                cities={cities}
+                initialFromUrl={fleetUrlHydrate}
+                tabFlags={tabFlags}
+                combinedPanel
+              />
+              <Suspense
+                fallback={
+                  <div className="border-t border-[#f0ebe4] px-3 py-6 sm:px-5">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                      <div className="h-14 animate-pulse rounded-xl bg-[#f5f0e6]/80" />
+                      <div className="h-14 animate-pulse rounded-xl bg-[#f5f0e6]/80" />
+                      <div className="h-14 animate-pulse rounded-xl bg-[#f5f0e6]/80" />
+                    </div>
+                  </div>
+                }
+              >
+                <FleetFilters
+                  variant="embedded"
+                  categories={categories}
+                  brands={brands}
+                  priceBounds={priceBounds}
+                  dailyPriceLabel={fleetDailyPriceFilterLabel(priceMode)}
+                />
+              </Suspense>
+            </div>
           </div>
         </section>
-        <Suspense
-          fallback={
-            <section className="bg-surface-container-low px-8 py-12">
-              <div className="mx-auto max-w-screen-2xl">
-                <div className="editorial-shadow h-36 animate-pulse rounded-2xl bg-surface-container-lowest/80" />
-              </div>
-            </section>
-          }
-        >
-          <FleetFilters
-            categories={categories}
-            brands={brands}
-            priceBounds={priceBounds}
-            dailyPriceLabel={fleetDailyPriceFilterLabel(priceMode)}
-          />
-        </Suspense>
         <main id="fleet-results" className="mx-auto max-w-screen-2xl px-8 py-24 scroll-mt-24">
           {searchBanner}
           {availabilityModelIds !== undefined && availabilityModelIds.length === 0 ? (

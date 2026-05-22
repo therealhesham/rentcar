@@ -114,6 +114,7 @@ export function BookingSearchWidget({
   tabFlags,
   variant = "search",
   checkoutModelId,
+  combinedPanel = false,
 }: {
   cities: BookingCityBranchesOption[];
   /** من `/fleet?pickup=…` — يُطبَّق بعد التحميل */
@@ -123,6 +124,8 @@ export function BookingSearchWidget({
   variant?: "search" | "checkout";
   /** مطلوب عند variant=checkout */
   checkoutModelId?: number;
+  /** بطاقة `/fleet` الموحّدة مع الفلاتر */
+  combinedPanel?: boolean;
 }) {
   const router = useRouter();
   const urlSp = useSearchParams();
@@ -801,9 +804,11 @@ export function BookingSearchWidget({
         ref={formRef}
         onSubmit={handleSearch}
         dir="rtl"
-        className={`booking-card relative z-0 w-full overflow-visible rounded-2xl bg-white/[0.97] shadow-[0_28px_72px_-20px_rgba(15,61,71,0.18),0_8px_24px_-6px_rgba(15,61,71,0.07)] ring-1 ring-black/[0.03] backdrop-blur-xl ${
-          mounted ? "" : "opacity-0"
-        }`}
+        className={`booking-card relative z-0 w-full overflow-visible bg-white/[0.97] backdrop-blur-xl ${
+          combinedPanel
+            ? "rounded-none shadow-none ring-0"
+            : "rounded-2xl shadow-[0_28px_72px_-20px_rgba(15,61,71,0.18),0_8px_24px_-6px_rgba(15,61,71,0.07)] ring-1 ring-black/[0.03]"
+        } ${mounted ? "" : "opacity-0"}`}
       >
         {/* ═══════════════════════════════════════
             SECTION 1: Tab Header

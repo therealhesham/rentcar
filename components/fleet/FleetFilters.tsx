@@ -26,14 +26,21 @@ type FleetFiltersProps = {
   brands: FleetBrandFilterOption[];
   priceBounds: FleetPriceBounds;
   dailyPriceLabel?: ReactNode;
+  /** standalone = قسم منفصل (قديم) · embedded = داخل بطاقة الحجز الموحّدة */
+  variant?: "standalone" | "embedded";
 };
+
+const EMBEDDED_FIELD_CLASS =
+  "w-full rounded-xl border border-[#ebe4d3]/80 bg-[#fdfbf6] py-3 ps-4 text-[13px] text-[#3d3428] focus:ring-2 focus:ring-[#dbb878]/35 disabled:opacity-60";
 
 export function FleetFilters({
   categories,
   brands,
   priceBounds,
   dailyPriceLabel = DEFAULT_DAILY_PRICE_LABEL,
+  variant = "standalone",
 }: FleetFiltersProps) {
+  const embedded = variant === "embedded";
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -125,21 +132,22 @@ export function FleetFilters({
 
   const atMaxBound = sliderPrice >= priceBounds.max;
 
-  return (
-    <section className="bg-surface-container-low px-8 py-12">
-      <div className="mx-auto max-w-screen-2xl">
-        <div className="editorial-shadow rounded-2xl bg-surface-container-lowest p-8">
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+  const labelClass = embedded
+    ? "ms-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#6b5a3b]"
+    : "ms-1 text-xs font-bold uppercase tracking-widest text-primary";
+
+  const filtersGrid = (
+    <div className={`grid grid-cols-1 ${embedded ? "gap-4 md:gap-5" : "gap-8"} md:grid-cols-3`}>
             <div className="space-y-2">
               <label
                 htmlFor="fleet-filter-category"
-                className="ms-1 text-xs font-bold uppercase tracking-widest text-primary"
+                className={labelClass}
               >
                 التصنيف
               </label>
               <select
                 id="fleet-filter-category"
-                className="w-full rounded-lg border-none bg-surface py-3 ps-4 text-on-surface-variant focus:ring-1 focus:ring-primary-container disabled:opacity-60"
+                className={embedded ? EMBEDDED_FIELD_CLASS : "w-full rounded-lg border-none bg-surface py-3 ps-4 text-on-surface-variant focus:ring-1 focus:ring-primary-container disabled:opacity-60"}
                 value={appliedCategory}
                 disabled={isPending}
                 onChange={(e) => pushFilters({ category: e.target.value })}
@@ -157,13 +165,13 @@ export function FleetFilters({
             <div className="space-y-2">
               <label
                 htmlFor="fleet-filter-brand"
-                className="ms-1 text-xs font-bold uppercase tracking-widest text-primary"
+                className={labelClass}
               >
                 الماركة
               </label>
               <select
                 id="fleet-filter-brand"
-                className="w-full rounded-lg border-none bg-surface py-3 ps-4 text-on-surface-variant focus:ring-1 focus:ring-primary-container disabled:opacity-60"
+                className={embedded ? EMBEDDED_FIELD_CLASS : "w-full rounded-lg border-none bg-surface py-3 ps-4 text-on-surface-variant focus:ring-1 focus:ring-primary-container disabled:opacity-60"}
                 value={appliedBrandId}
                 disabled={isPending}
                 onChange={(e) => pushFilters({ brandId: e.target.value })}
@@ -182,19 +190,39 @@ export function FleetFilters({
               <div className="flex items-center justify-between gap-2">
                 <label
                   htmlFor="fleet-filter-max-price"
-                  className="ms-1 text-xs font-bold uppercase tracking-widest text-primary"
+                  className={labelClass}
                 >
                   {dailyPriceLabel}
                 </label>
                 {isPending ? (
-                  <span className="text-[10px] font-semibold text-on-surface-variant">جاري التحديث…</span>
+                  <span
+                    className={
+                      embedded
+                        ? "text-[10px] font-semibold text-[#aaa08e]"
+                        : "text-[10px] font-semibold text-on-surface-variant"
+                    }
+                  >
+                    جاري التحديث…
+                  </span>
                 ) : null}
               </div>
               <p className="text-center">
-                <span className="text-[10px] font-semibold text-on-surface-variant">حتى</span>{" "}
+                <span
+                  className={
+                    embedded
+                      ? "text-[10px] font-semibold text-[#aaa08e]"
+                      : "text-[10px] font-semibold text-on-surface-variant"
+                  }
+                >
+                  حتى
+                </span>{" "}
                 <SarAmountWithSymbol
                   bold
-                  amountClassName="text-base font-extrabold tabular-nums text-primary"
+                  amountClassName={
+                    embedded
+                      ? "text-base font-extrabold tabular-nums text-[#003749]"
+                      : "text-base font-extrabold tabular-nums text-primary"
+                  }
                 >
                   {atMaxBound ? `${formatPrice(priceBounds.max)}+` : formatPrice(sliderPrice)}
                 </SarAmountWithSymbol>
@@ -208,7 +236,7 @@ export function FleetFilters({
                 </span>
                 <input
                   id="fleet-filter-max-price"
-                  className="accent-primary h-2 min-w-0 flex-1 cursor-pointer"
+                  className={`h-2 min-w-0 flex-1 cursor-pointer ${embedded ? "accent-[#dbb878]" : "accent-primary"}`}
                   type="range"
                   min={priceBounds.min}
                   max={priceBounds.max}
@@ -235,8 +263,24 @@ export function FleetFilters({
                 </span>
               </div>
             </div>
-          </div>
-        </div>
+    </div>
+  );
+
+  if (embedded) {
+    return (
+      <div className="border-t border-[#f0ebe4] bg-gradient-to-b from-[#fdfbf6]/70 to-white px-3 py-4 sm:px-5 sm:py-5">
+        <p className="mb-3 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-[#6b5a3b] sm:mb-4">
+          تصفية النتائج
+        </p>
+        {filtersGrid}
+      </div>
+    );
+  }
+
+  return (
+    <section className="bg-surface-container-low px-8 py-12">
+      <div className="mx-auto max-w-screen-2xl">
+        <div className="editorial-shadow rounded-2xl bg-surface-container-lowest p-8">{filtersGrid}</div>
       </div>
     </section>
   );

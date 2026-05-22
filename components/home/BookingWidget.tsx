@@ -16,6 +16,7 @@ export function BookingWidget({
   tabFlags,
   variant = "search",
   checkoutModelId,
+  combinedPanel = false,
 }: {
   cities: BookingCityBranchesOption[];
   /** من معاملات `/fleet` — تعبئة النموذج عند فتح الصفحة */
@@ -25,6 +26,8 @@ export function BookingWidget({
   /** search = بحث الأسطول (الرئيسية والأسطول) · checkout = تطبيق على حجز سيارة محددة */
   variant?: BookingWidgetVariant;
   checkoutModelId?: number;
+  /** داخل بطاقة موحّدة مع فلاتر الأسطول — بدون ظل/حواف خارجية */
+  combinedPanel?: boolean;
 }) {
   return (
     <BookingSearchWidget
@@ -33,6 +36,7 @@ export function BookingWidget({
       tabFlags={tabFlags}
       variant={variant}
       checkoutModelId={checkoutModelId}
+      combinedPanel={combinedPanel}
     />
   );
 }
