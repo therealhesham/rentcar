@@ -333,7 +333,7 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
         <span className="text-[#003749]">الدفع</span>
       </nav>
 
-      <ol className="mb-8 flex flex-wrap items-center gap-2 sm:gap-3">
+      <ol className="mb-8 flex w-full flex-wrap items-center justify-center gap-2 sm:gap-3">
         {CHECKOUT_STEPS.map((step, i) => {
           const isLast = i === CHECKOUT_STEPS.length - 1;
           const isDone = step.done && !isLast;
@@ -512,63 +512,7 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
                     </dd>
                   </div>
                 </dl>
-                {canResendInvoice ? (
-                  <div className="mt-4 w-full max-w-md space-y-3 border-t border-emerald-200/80 pt-5">
-                    <p className="text-sm font-bold text-emerald-900">فاتورة الحجز</p>
-                    {booking.invoiceEmail ? (
-                      <p className="text-xs leading-relaxed text-emerald-900/80">
-                        تُرسل الفاتورة (HTML + PDF) إلى{" "}
-                        <span dir="ltr" className="font-bold tabular-nums">
-                          {maskEmail(booking.invoiceEmail)}
-                        </span>
-                      </p>
-                    ) : (
-                      <p className="text-xs leading-relaxed text-amber-900/90">
-                        لا يوجد بريد مسجّل لهذا الحجز — أضف بريداً عند الحجز أو من حسابكم لاستلام
-                        الفاتورة.
-                      </p>
-                    )}
-                    {resendState?.ok ? (
-                      <div
-                        className="rounded-xl border border-emerald-300 bg-white/80 px-4 py-3 text-sm font-bold text-emerald-800"
-                        role="status"
-                      >
-                        تم إرسال الفاتورة إلى{" "}
-                        <span dir="ltr" className="tabular-nums">
-                          {maskEmail(resendState.to)}
-                        </span>
-                      </div>
-                    ) : null}
-                    {resendState && !resendState.ok ? (
-                      <div
-                        className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-800"
-                        role="alert"
-                      >
-                        {resendState.error}
-                      </div>
-                    ) : null}
-                    <form action={resendFormAction}>
-                      <input type="hidden" name="bookingRequestId" value={booking.id} />
-                      <button
-                        type="submit"
-                        disabled={resendPending || !booking.invoiceEmail}
-                        className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-700/30 bg-white px-5 py-2.5 text-sm font-extrabold text-emerald-900 transition-colors hover:bg-emerald-100/60 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        {resendPending ? (
-                          <>
-                            <Loader2 className="size-4 animate-spin" aria-hidden />
-                            جاري الإرسال…
-                          </>
-                        ) : (
-                          <>
-                            <Mail className="size-4 shrink-0" aria-hidden />
-                            إعادة إرسال الفاتورة
-                          </>
-                        )}
-                      </button>
-                    </form>
-                  </div>
-                ) : null}
+               
                 <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
                   <Link
                     href="/"
