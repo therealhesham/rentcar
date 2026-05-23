@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { SiteFooter } from "@/components/home/SiteFooter";
 import { PaymentClient } from "@/components/fleet/PaymentClient";
 import { SiteNav } from "@/components/shared/SiteNav";
+import { requireCustomerPaymentPageAccess } from "@/lib/customer-booking-access";
 import { getBookingForPayment } from "@/lib/booking-payment-data";
 import { getCheckoutPaymentMethodFlags } from "@/lib/site-settings";
 import { buildPageMetadata } from "@/lib/seo";
@@ -22,6 +23,8 @@ export default async function FleetPaymentPage({
   const { id: rawId } = await params;
   const id = Number(rawId);
   if (!Number.isInteger(id) || id < 1) notFound();
+
+  await requireCustomerPaymentPageAccess(id);
 
   const [booking, paymentMethodFlags] = await Promise.all([
     getBookingForPayment(id),

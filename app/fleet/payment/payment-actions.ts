@@ -7,6 +7,11 @@ import {
   sendBookingInvoiceEmailAfterPayment,
   type ResendBookingInvoiceResult,
 } from "@/lib/booking-invoice-email";
+import {
+  customerBookingOwnershipWhere,
+  requireCustomerBookingActionAccess,
+} from "@/lib/customer-booking-access";
+import { getCustomerProfile } from "@/lib/customer-auth";
 import { sendBookingCompletionWhatsAppAfterPayment } from "@/lib/evolution-whatsapp";
 import { prisma } from "@/lib/prisma";
 
@@ -53,9 +58,22 @@ export async function confirmMockPayment(
     return { ok: false, error: "طريقة الدفع غير متاحة حالياً." };
   }
 
+  const access = await requireCustomerBookingActionAccess(id);
+  if (!access.ok) return { ok: false, error: access.error };
+
+  const profile = await getCustomerProfile();
+  if (!profile) {
+    return { ok: false, error: "يجب تسجيل الدخول لإتمام هذه العملية." };
+  }
+
   try {
     const updated = await prisma.bookingRequest.updateMany({
-      where: { id, kind: "DIRECT", paymentStatus: "PENDING" },
+      where: {
+        id,
+        kind: "DIRECT",
+        paymentStatus: "PENDING",
+        ...customerBookingOwnershipWhere(profile.id, profile.phone),
+      },
       data: {
         paymentStatus: "PAID",
         paidAt: new Date(),
@@ -63,16 +81,23 @@ export async function confirmMockPayment(
       },
     });
     if (updated.count === 0) {
-      const exists = await prisma.bookingRequest.findUnique({
-        where: { id },
-        select: { paymentStatus: true, kind: true },
+      const exists = await prisma.bookingRequest.findFirst({
+        where: {
+          id,
+          kind: "DIRECT",
+          ...customerBookingOwnershipWhere(profile.id, profile.phone),
+        },
+        select: { paymentStatus: true },
       });
-      if (!exists || exists.kind !== "DIRECT") {
-        return { ok: false, error: "الحجز غير موجود." };
+      if (!exists) {
+        return { ok: false, error: "الحجز غير موجود أو لا يخص حسابك." };
       }
       if (exists.paymentStatus === "PAID") {
-        const paidRow = await prisma.bookingRequest.findUnique({
-          where: { id },
+        const paidRow = await prisma.bookingRequest.findFirst({
+          where: {
+            id,
+            ...customerBookingOwnershipWhere(profile.id, profile.phone),
+          },
           select: { paymentMethod: true },
         });
         return {
@@ -118,13 +143,8 @@ export async function resendBookingInvoice(
     return { ok: false, error: "معرّف الطلب غير صالح." };
   }
 
-  const exists = await prisma.bookingRequest.findUnique({
-    where: { id },
-    select: { kind: true },
-  });
-  if (!exists || exists.kind !== "DIRECT") {
-    return { ok: false, error: "الحجز غير موجود." };
-  }
+  const access = await requireCustomerBookingActionAccess(id);
+  if (!access.ok) return access;
 
   return resendBookingInvoiceEmail(id);
 }

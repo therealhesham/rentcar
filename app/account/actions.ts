@@ -12,6 +12,7 @@ import { saudiLocalNineToE164 } from "@/lib/normalize-saudi-phone";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
 import { cancelBookingWithPolicy } from "@/lib/booking-cancellation-service";
+import { safeCustomerReturnPath } from "@/lib/customer-booking-access";
 
 export type AuthFormState = { error?: string } | null;
 
@@ -135,7 +136,8 @@ export async function loginCustomer(
   }
 
   await setCustomerSessionCookie(user.id);
-  redirect("/account");
+  const next = safeCustomerReturnPath(String(formData.get("next") ?? ""));
+  redirect(next);
 }
 
 export async function logoutCustomer(): Promise<void> {

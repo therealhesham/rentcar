@@ -14,7 +14,12 @@ import type { BookingOtpChannel } from "@/lib/site-settings";
 const TEAL = "#003749";
 const GOLD = "#dbb878";
 
-export function AccountLoginClient() {
+type Props = {
+  /** بعد تسجيل الدخول (مثلاً صفحة دفع حجز). */
+  returnTo?: string;
+};
+
+export function AccountLoginClient({ returnTo = "/account" }: Props) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState(loginCustomer, null as AuthFormState);
 
@@ -149,7 +154,7 @@ export function AccountLoginClient() {
       });
       const data = (await res.json()) as { ok?: boolean; error?: string };
       if (data.ok) {
-        router.push("/account");
+        router.push(returnTo);
         router.refresh();
         return;
       }
@@ -263,13 +268,7 @@ export function AccountLoginClient() {
                         رقم الجوال
                       </span>
                       <div className="flex overflow-hidden rounded-xl border border-[#ebe4d3] transition-shadow focus-within:border-[#dbb878] focus-within:ring-2 focus-within:ring-[#dbb878]/40">
-                        <span
-                          className="flex items-center border-e border-[#ebe4d3] bg-[#fdfbf6] px-3 text-[13px] font-extrabold tabular-nums text-[#003749]"
-                          dir="ltr"
-                        >
-                          +966
-                        </span>
-                        <input
+                      <input
                           type="tel"
                           inputMode="numeric"
                           autoComplete="tel-national"
@@ -283,6 +282,13 @@ export function AccountLoginClient() {
                           className="min-w-0 flex-1 bg-white px-4 py-3.5 text-[15px] font-semibold tabular-nums text-[#003749] outline-none"
                           dir="ltr"
                         />
+                        <span
+                          className="flex items-center border-e border-[#ebe4d3] bg-[#fdfbf6] px-3 text-[13px] font-extrabold tabular-nums text-[#003749]"
+                          dir="ltr"
+                        >
+                          +966
+                        </span>
+                  
                       </div>
                       <span className="mt-1.5 block text-[11px] font-semibold text-[#8a7752]">
                         نفس الرقم المسجّل في حسابك (9 أرقام تبدأ بـ 5).
@@ -370,6 +376,7 @@ export function AccountLoginClient() {
             </div>
           ) : (
             <form action={formAction} className="flex flex-col gap-4">
+              <input type="hidden" name="next" value={returnTo} />
               <label className="text-[13px] font-extrabold text-[#003749]">
                 البريد الإلكتروني
                 <input

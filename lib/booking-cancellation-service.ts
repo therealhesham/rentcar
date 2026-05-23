@@ -14,6 +14,7 @@ import {
   getCustomerCancelMinHoursBeforePickup,
   getCustomerCancellationDeductTiers,
 } from "@/lib/site-settings";
+import { customerOwnsBooking } from "@/lib/customer-booking-access";
 
 export type CancelBookingWithPolicyResult =
   | {
@@ -47,16 +48,6 @@ async function loadBookingForCancel(bookingRequestId: number) {
   });
 }
 
-function assertCustomerOwnership(
-  row: { customerId: number | null; phone: string },
-  customerId: number,
-  customerPhone: string | null,
-): boolean {
-  if (row.customerId === customerId) return true;
-  if (customerPhone && row.phone === customerPhone) return true;
-  return false;
-}
-
 function checkCustomerCancelDeadline(pickupDate: Date, minHours: number): string | null {
   if (minHours <= 0) return null;
   const now = new Date();
@@ -88,7 +79,7 @@ export async function cancelBookingWithPolicy(input: {
       return { ok: false, error: "يجب تسجيل الدخول." };
     }
     if (
-      !assertCustomerOwnership(row, input.customerId, input.customerPhone ?? null)
+      !customerOwnsBooking(row, input.customerId, input.customerPhone ?? null)
     ) {
       return { ok: false, error: "الطلب غير موجود أو لا يخص حسابك." };
     }
