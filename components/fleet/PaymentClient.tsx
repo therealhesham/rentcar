@@ -8,13 +8,19 @@ import {
   Gift,
   Loader2,
   Lock,
+  Mail,
   Shield,
   Wallet,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useActionState, useEffect, useMemo, useState, type ReactNode } from "react";
-import { confirmMockPayment, type ConfirmPaymentResult } from "@/app/fleet/payment/payment-actions";
+import {
+  confirmMockPayment,
+  resendBookingInvoice,
+  type ConfirmPaymentResult,
+} from "@/app/fleet/payment/payment-actions";
+import type { ResendBookingInvoiceResult } from "@/lib/booking-invoice-email";
 import { SarCurrencyGlyph } from "@/components/ui/SarCurrencyGlyph";
 import { formatSarAmount } from "@/lib/booking-checkout-pricing";
 import type { BookingPaymentSnapshot } from "@/lib/booking-payment-data";
@@ -53,6 +59,15 @@ function paymentMethodLabelAr(code: string | null | undefined): string {
 function maskPhone(p: string): string {
   if (p.length <= 4) return p;
   return `${"•".repeat(Math.max(0, p.length - 4))}${p.slice(-4)}`;
+}
+
+function maskEmail(email: string): string {
+  const at = email.indexOf("@");
+  if (at <= 1) return email;
+  const local = email.slice(0, at);
+  const domain = email.slice(at);
+  const visible = local.slice(0, Math.min(2, local.length));
+  return `${visible}${"•".repeat(Math.max(1, local.length - visible.length))}${domain}`;
 }
 
 function fmtWhen(d: Date): { date: string; time: string } {
@@ -174,6 +189,10 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
     confirmMockPayment,
     null,
   );
+  const [resendState, resendFormAction, resendPending] = useActionState<
+    ResendBookingInvoiceResult | null,
+    FormData
+  >(resendBookingInvoice, null);
   const [method, setMethod] = useState<CheckoutPaymentMethod>(
     () => enabledMethods[0] ?? "CARD",
   );
@@ -191,6 +210,7 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
   }, [enabledMethods, method]);
 
   const paid = paymentFinalized || (state?.ok ?? false);
+  const canResendInvoice = ps === "PAID";
   const noPaymentMethods = !paid && visibleMethodOptions.length === 0;
 
   const serverError = state && state.ok === false ? state.error : null;
@@ -441,6 +461,63 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
                     </dd>
                   </div>
                 </dl>
+                {canResendInvoice ? (
+                  <div className="mt-4 w-full max-w-md space-y-3 border-t border-emerald-200/80 pt-5">
+                    <p className="text-sm font-bold text-emerald-900">فاتورة الحجز</p>
+                    {booking.invoiceEmail ? (
+                      <p className="text-xs leading-relaxed text-emerald-900/80">
+                        تُرسل الفاتورة (HTML + PDF) إلى{" "}
+                        <span dir="ltr" className="font-bold tabular-nums">
+                          {maskEmail(booking.invoiceEmail)}
+                        </span>
+                      </p>
+                    ) : (
+                      <p className="text-xs leading-relaxed text-amber-900/90">
+                        لا يوجد بريد مسجّل لهذا الحجز — أضف بريداً عند الحجز أو من حسابكم لاستلام
+                        الفاتورة.
+                      </p>
+                    )}
+                    {resendState?.ok ? (
+                      <div
+                        className="rounded-xl border border-emerald-300 bg-white/80 px-4 py-3 text-sm font-bold text-emerald-800"
+                        role="status"
+                      >
+                        تم إرسال الفاتورة إلى{" "}
+                        <span dir="ltr" className="tabular-nums">
+                          {maskEmail(resendState.to)}
+                        </span>
+                      </div>
+                    ) : null}
+                    {resendState && !resendState.ok ? (
+                      <div
+                        className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-800"
+                        role="alert"
+                      >
+                        {resendState.error}
+                      </div>
+                    ) : null}
+                    <form action={resendFormAction}>
+                      <input type="hidden" name="bookingRequestId" value={booking.id} />
+                      <button
+                        type="submit"
+                        disabled={resendPending || !booking.invoiceEmail}
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-700/30 bg-white px-5 py-2.5 text-sm font-extrabold text-emerald-900 transition-colors hover:bg-emerald-100/60 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {resendPending ? (
+                          <>
+                            <Loader2 className="size-4 animate-spin" aria-hidden />
+                            جاري الإرسال…
+                          </>
+                        ) : (
+                          <>
+                            <Mail className="size-4 shrink-0" aria-hidden />
+                            إعادة إرسال الفاتورة
+                          </>
+                        )}
+                      </button>
+                    </form>
+                  </div>
+                ) : null}
                 <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
                   <Link
                     href="/"

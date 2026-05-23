@@ -1,3 +1,4 @@
+import { resolvePickupBranchDisplayName } from "@/lib/booking-branches";
 import { prisma } from "@/lib/prisma";
 import { parseBookingPricingSnapshot } from "@/lib/booking-pricing-snapshot";
 import { computeCheckoutTotals } from "@/lib/booking-checkout-pricing";
@@ -8,11 +9,30 @@ import type { CheckoutOneTimeFeeSnap } from "@/lib/booking-pricing-snapshot";
 const PLACEHOLDER_IMG =
   "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=1200&q=80";
 
+function resolveInvoiceEmail(
+  contactEmail: string | null | undefined,
+  customerEmail: string | null | undefined,
+): string | null {
+  const fromBooking = contactEmail?.trim().toLowerCase();
+  if (fromBooking && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fromBooking)) {
+    return fromBooking;
+  }
+  const fromUser = customerEmail?.trim().toLowerCase();
+  if (fromUser && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fromUser)) {
+    return fromUser;
+  }
+  return null;
+}
+
 export type BookingPaymentSnapshot = {
   id: number;
   fullName: string;
   phone: string;
+  /** بريد إرسال الفاتورة إن وُجد */
+  invoiceEmail: string | null;
   branch: string;
+  /** اسم فرع الاستلام بالعربية (من Branch.name) */
+  pickupBranchLabelAr: string | null;
   /** من جدول الفروع — لعرض الموقع في إشعارات واتساب وغيرها */
   branchAddress: string | null;
   branchMapUrl: string | null;
@@ -65,7 +85,9 @@ export async function getBookingForPayment(
   const row = await prisma.bookingRequest.findUnique({
     where: { id },
     include: {
-      returnBranch: { select: { slug: true, address: true, mapUrl: true } },
+      pickupBranch: { select: { slug: true, name: true } },
+      returnBranch: { select: { slug: true, name: true, address: true, mapUrl: true } },
+      customer: { select: { email: true } },
       carModel: {
         include: { brand: true, category: true },
       },
@@ -96,7 +118,16 @@ export async function getBookingForPayment(
     id: row.id,
     fullName: row.fullName,
     phone: row.phone,
+    invoiceEmail: resolveInvoiceEmail(row.contactEmail, row.customer?.email),
     branch: returnSlug,
+    pickupBranchLabelAr: resolvePickupBranchDisplayName({
+      branchId: row.branchId,
+      returnBranchId: row.returnBranchId,
+      pickupMode: row.pickupMode,
+      addonsJson: row.addonsJson,
+      pickupBranch: row.pickupBranch,
+      returnBranch: row.returnBranch,
+    }),
     branchAddress: row.returnBranch?.address?.trim() || null,
     branchMapUrl: row.returnBranch?.mapUrl?.trim() || null,
     pickupMode: row.pickupMode,

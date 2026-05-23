@@ -1,7 +1,7 @@
 import nodemailer from "nodemailer";
 import { Resend } from "resend";
 import { buildBookingInvoicePdfBuffer } from "@/lib/booking-invoice-pdf";
-import { formatSarAmount } from "@/lib/booking-checkout-pricing";
+import { formatSarAmountHtml, formatSarAmountPlain, SAUDI_RIYAL_FONT_CSS_URL } from "@/lib/sar-currency";
 import type { BookingPaymentSnapshot } from "@/lib/booking-payment-data";
 import { getBookingForPayment } from "@/lib/booking-payment-data";
 import { prisma } from "@/lib/prisma";
@@ -31,12 +31,6 @@ function paymentMethodLabelAr(code: string | null | undefined): string {
   }
 }
 
-const BRANCH_LABEL_AR: Record<string, string> = {
-  jeddah: "جدة",
-  madinah: "المدينة المنورة",
-  tabuk: "تبوك",
-};
-
 function fmtDateTime(d: Date): string {
   return d.toLocaleString("ar-SA", {
     year: "numeric",
@@ -48,7 +42,7 @@ function fmtDateTime(d: Date): string {
 }
 
 function buildInvoiceHtml(booking: BookingPaymentSnapshot): string {
-  const branchLabel = BRANCH_LABEL_AR[booking.branch] ?? booking.branch;
+  const branchLabel = booking.pickupBranchLabelAr?.trim() || "—";
   const pickup = fmtDateTime(booking.pickupDate);
   const dropoffD = new Date(booking.pickupDate);
   dropoffD.setDate(dropoffD.getDate() + booking.numberOfDays);
@@ -59,79 +53,165 @@ function buildInvoiceHtml(booking: BookingPaymentSnapshot): string {
   const rows: string[] = [];
   const rentalDuration =
     booking.tripDurationLabelAr ?? `${booking.numberOfDays} يوم`;
+
+  const rowStyle =
+    "padding:16px 20px; border-bottom:1px solid #f0f0f0; color:#4b5563; font-size:14px;";
+  const valStyle =
+    "padding:16px 20px; border-bottom:1px solid #f0f0f0; text-align:left; font-weight:600; color:#111827; font-size:15px;";
+
   rows.push(
-    `<tr><td style="padding:8px 0;border-bottom:1px solid #eee">الإيجار (${escapeHtml(rentalDuration)}) — ${escapeHtml(booking.car.fullTitle)}</td><td dir="ltr" style="padding:8px 0;border-bottom:1px solid #eee;text-align:left">${formatSarAmount(t.rentalExclTax)} ر.س</td></tr>`,
+    `<tr><td style="${rowStyle}">الإيجار (${escapeHtml(rentalDuration)}) — ${escapeHtml(booking.car.fullTitle)}</td><td dir="ltr" style="${valStyle}">${formatSarAmountHtml(t.rentalExclTax)}</td></tr>`,
   );
 
   for (const a of booking.addons) {
     rows.push(
-      `<tr><td style="padding:8px 0">${escapeHtml(a.titleAr)}</td><td dir="ltr" style="padding:8px 0;text-align:left">${formatSarAmount(a.lineTotalExclTax)} ر.س</td></tr>`,
+      `<tr><td style="${rowStyle}">${escapeHtml(a.titleAr)}</td><td dir="ltr" style="${valStyle}">${formatSarAmountHtml(a.lineTotalExclTax)}</td></tr>`,
     );
   }
 
   if (booking.interCityShipping && booking.interCityShipping.feeExclVatSar > 0) {
     rows.push(
-      `<tr><td style="padding:8px 0">شحن بين المدن</td><td dir="ltr" style="padding:8px 0;text-align:left">${formatSarAmount(booking.interCityShipping.feeExclVatSar)} ر.س</td></tr>`,
+      `<tr><td style="${rowStyle}">شحن بين المدن</td><td dir="ltr" style="${valStyle}">${formatSarAmountHtml(booking.interCityShipping.feeExclVatSar)}</td></tr>`,
     );
   }
 
   for (const f of booking.checkoutOneTimeFees) {
     rows.push(
-      `<tr><td style="padding:8px 0">${escapeHtml(f.labelAr)}</td><td dir="ltr" style="padding:8px 0;text-align:left">${formatSarAmount(f.feeExclVatSar)} ر.س</td></tr>`,
+      `<tr><td style="${rowStyle}">${escapeHtml(f.labelAr)}</td><td dir="ltr" style="${valStyle}">${formatSarAmountHtml(f.feeExclVatSar)}</td></tr>`,
     );
   }
 
   if (booking.delayPenalty && booking.delayPenalty.feeExclVatSar > 0) {
     rows.push(
-      `<tr><td style="padding:8px 0">${escapeHtml(booking.delayPenalty.labelAr)}</td><td dir="ltr" style="padding:8px 0;text-align:left">${formatSarAmount(booking.delayPenalty.feeExclVatSar)} ر.س</td></tr>`,
+      `<tr><td style="${rowStyle}">${escapeHtml(booking.delayPenalty.labelAr)}</td><td dir="ltr" style="${valStyle}">${formatSarAmountHtml(booking.delayPenalty.feeExclVatSar)}</td></tr>`,
     );
   }
 
   rows.push(
-    `<tr><td style="padding:10px 0;font-weight:700">المجموع غير شامل الضريبة</td><td dir="ltr" style="padding:10px 0;text-align:left;font-weight:700">${formatSarAmount(t.subtotalExclTax)} ر.س</td></tr>`,
+    `<tr><td style="padding:16px 20px; border-bottom:1px solid #f0f0f0; color:#111827; font-weight:700; font-size:15px;">المجموع غير شامل الضريبة</td><td dir="ltr" style="${valStyle}">${formatSarAmountHtml(t.subtotalExclTax)}</td></tr>`,
   );
   rows.push(
-    `<tr><td style="padding:8px 0">ضريبة القيمة المضافة (${vatPct}%)</td><td dir="ltr" style="padding:8px 0;text-align:left">${formatSarAmount(t.vatAmount)} ر.س</td></tr>`,
-  );
-  rows.push(
-    `<tr><td style="padding:12px 0;font-size:18px;font-weight:800;color:#003749">الإجمالي</td><td dir="ltr" style="padding:12px 0;text-align:left;font-size:18px;font-weight:800;color:#003749">${formatSarAmount(t.totalInclTax)} ر.س</td></tr>`,
+    `<tr><td style="${rowStyle}">ضريبة القيمة المضافة (${vatPct}%)</td><td dir="ltr" style="${valStyle}">${formatSarAmountHtml(t.vatAmount)}</td></tr>`,
   );
 
   const deliveryBlock =
     booking.pickupMode === "DELIVERY"
-      ? `<p style="margin:6px 0"><strong>التوصيل:</strong> ${escapeHtml(booking.deliveryAddress?.trim() || "—")}</p>`
-      : `<p style="margin:6px 0"><strong>الفرع:</strong> ${escapeHtml(branchLabel)}</p>`;
+      ? `<div style="background:#f9fafb; padding:16px 20px; border-radius:12px; margin-top:24px; border:1px solid #e5e7eb;">
+           <p style="margin:0; font-size:13px; color:#6b7280; margin-bottom:6px;">موقع التوصيل</p>
+           <p style="margin:0; font-size:15px; color:#111827; font-weight:700;">${escapeHtml(booking.deliveryAddress?.trim() || "—")}</p>
+         </div>`
+      : `<div style="background:#f9fafb; padding:16px 20px; border-radius:12px; margin-top:24px; border:1px solid #e5e7eb;">
+           <p style="margin:0; font-size:13px; color:#6b7280; margin-bottom:6px;">فرع الاستلام</p>
+           <p style="margin:0; font-size:15px; color:#111827; font-weight:700;">${escapeHtml(branchLabel)}</p>
+         </div>`;
 
   return `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
-<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width"/></head>
-<body style="margin:0;padding:24px;background:#f6f4ef;font-family:Tahoma,Arial,sans-serif;color:#1a1a1a">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width"/>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
+    @import url('${SAUDI_RIYAL_FONT_CSS_URL}');
+  </style>
+</head>
+<body style="margin:0;padding:40px 20px;background:#f3f4f6;font-family:'Cairo',Tahoma,Arial,sans-serif;color:#111827;-webkit-font-smoothing:antialiased;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
-    <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(0,55,73,0.08)">
-      <tr><td style="background:#003749;color:#fff;padding:24px 28px">
-        <h1 style="margin:0;font-size:20px">فاتورة — تم الدفع</h1>
-        <p style="margin:8px 0 0;font-size:14px;opacity:0.9">طلب حجز رقم <span dir="ltr">#${booking.id}</span></p>
+    
+    <!-- Main Container -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;background:#ffffff;border-radius:24px;overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,0.08);border:1px solid #e5e7eb;margin:0 auto;">
+      
+      <!-- Header -->
+      <tr><td style="background:linear-gradient(135deg, #003749 0%, #001f29 100%);padding:48px 40px;text-align:center;">
+        <div style="margin-bottom:24px;">
+          <h2 style="margin:0;color:#dfb163;font-size:28px;font-weight:800;letter-spacing:-0.5px;">روائس</h2>
+          <p style="margin:4px 0 0;color:#9ca3af;font-size:14px;">لتأجير السيارات</p>
+        </div>
+        
+        <div style="background:rgba(255,255,255,0.1);display:inline-block;padding:8px 20px;border-radius:100px;margin-bottom:24px;border:1px solid rgba(255,255,255,0.2);">
+          <span style="color:#10b981;font-weight:700;font-size:14px;display:flex;align-items:center;gap:6px;">
+            ✓ تم الدفع بنجاح
+          </span>
+        </div>
+        
+        <h1 style="margin:0 0 12px;font-size:36px;font-weight:800;color:#ffffff;">إيصال الدفع</h1>
+        <p style="margin:0;font-size:16px;color:#cbd5e1;opacity:0.9">رقم المرجع: <span dir="ltr" style="font-family:monospace;background:rgba(0,0,0,0.2);padding:4px 8px;border-radius:6px;font-weight:600;">#${booking.id}</span></p>
       </td></tr>
-      <tr><td style="padding:28px">
-        <p style="margin:0 0 16px">عزيزي/عزيزتي <strong>${escapeHtml(booking.fullName)}</strong>،</p>
-        <p style="margin:0 0 12px;line-height:1.6">شكراً لاختياركم روائس. <strong>مُرفق مع هذه الرسالة ملف PDF</strong> يحتوي على الفاتورة للطباعة أو الأرشفة.</p>
-        <p style="margin:0 0 20px;line-height:1.6">فيما يلي ملخص الفاتورة بعد إتمام الدفع (نفس المحتوى في المرفق).</p>
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;font-size:14px">
-          <tr><td style="padding:6px 0"><strong>الجوال:</strong></td><td dir="ltr" style="padding:6px 0;text-align:left">${escapeHtml(booking.phone)}</td></tr>
-          <tr><td style="padding:6px 0"><strong>المركبة:</strong></td><td style="padding:6px 0">${escapeHtml(booking.car.fullTitle)} — ${escapeHtml(booking.car.categoryTitle)}</td></tr>
-          <tr><td style="padding:6px 0"><strong>الاستلام:</strong></td><td style="padding:6px 0">${escapeHtml(pickup)}</td></tr>
-          <tr><td style="padding:6px 0"><strong>التسليم:</strong></td><td style="padding:6px 0">${escapeHtml(dropoff)}</td></tr>
-          <tr><td style="padding:6px 0"><strong>طريقة الدفع:</strong></td><td style="padding:6px 0">${escapeHtml(paymentMethodLabelAr(booking.paymentMethod))}</td></tr>
-          ${booking.paidAt ? `<tr><td style="padding:6px 0"><strong>تاريخ الدفع:</strong></td><td style="padding:6px 0">${escapeHtml(fmtDateTime(booking.paidAt))}</td></tr>` : ""}
+      
+      <!-- Body -->
+      <tr><td style="padding:48px 40px;">
+        <p style="margin:0 0 12px;font-size:18px;color:#111827;">مرحباً <strong>${escapeHtml(booking.fullName)}</strong>،</p>
+        <p style="margin:0 0 36px;line-height:1.7;color:#6b7280;font-size:15px;">شكراً لثقتكم واختياركم روائس. لقد تم استلام دفعتكم بنجاح وتم تأكيد حجزكم. مرفق مع هذه الرسالة نسخة PDF من الفاتورة الرسمية للطباعة أو الأرشفة.</p>
+        
+        <!-- Info Grid -->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:32px;">
+          <tr>
+            <td width="50%" style="padding-bottom:24px;padding-left:12px;">
+              <p style="margin:0 0 6px;font-size:13px;color:#6b7280;">المركبة</p>
+              <p style="margin:0;font-size:15px;color:#111827;font-weight:700;">${escapeHtml(booking.car.fullTitle)} <span style="color:#9ca3af;font-weight:400;">(${escapeHtml(booking.car.categoryTitle)})</span></p>
+            </td>
+            <td width="50%" style="padding-bottom:24px;padding-right:12px;">
+              <p style="margin:0 0 6px;font-size:13px;color:#6b7280;">طريقة الدفع</p>
+              <p style="margin:0;font-size:15px;color:#111827;font-weight:700;">${escapeHtml(paymentMethodLabelAr(booking.paymentMethod))}</p>
+            </td>
+          </tr>
+          <tr>
+            <td width="50%" style="padding-bottom:24px;padding-left:12px;">
+              <p style="margin:0 0 6px;font-size:13px;color:#6b7280;">تاريخ ووقت الاستلام</p>
+              <p style="margin:0;font-size:15px;color:#111827;font-weight:700;" dir="ltr">${escapeHtml(pickup)}</p>
+            </td>
+            <td width="50%" style="padding-bottom:24px;padding-right:12px;">
+              <p style="margin:0 0 6px;font-size:13px;color:#6b7280;">تاريخ ووقت التسليم</p>
+              <p style="margin:0;font-size:15px;color:#111827;font-weight:700;" dir="ltr">${escapeHtml(dropoff)}</p>
+            </td>
+          </tr>
+          ${
+            booking.paidAt
+              ? `<tr>
+            <td width="50%" style="padding-left:12px;">
+              <p style="margin:0 0 6px;font-size:13px;color:#6b7280;">تاريخ الدفع</p>
+              <p style="margin:0;font-size:15px;color:#111827;font-weight:700;" dir="ltr">${escapeHtml(fmtDateTime(booking.paidAt))}</p>
+            </td>
+            <td width="50%" style="padding-right:12px;">
+              <p style="margin:0 0 6px;font-size:13px;color:#6b7280;">رقم الجوال</p>
+              <p style="margin:0;font-size:15px;color:#111827;font-weight:700;" dir="ltr">${escapeHtml(booking.phone)}</p>
+            </td>
+          </tr>`
+              : ""
+          }
         </table>
+        
         ${deliveryBlock}
-        <h2 style="margin:24px 0 12px;font-size:16px;color:#003749">تفاصيل المبالغ</h2>
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;border-collapse:collapse">
+        
+        <div style="margin:48px 0 20px;border-bottom:2px solid #f3f4f6;padding-bottom:16px;">
+          <h2 style="margin:0;font-size:20px;font-weight:800;color:#003749;">تفاصيل الفاتورة</h2>
+        </div>
+        
+        <!-- Amounts Table -->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
           ${rows.join("")}
+          <tr>
+            <td style="padding:24px 20px; background:#f9fafb; font-size:18px; font-weight:800; color:#003749;">الإجمالي المدفوع</td>
+            <td dir="ltr" style="padding:24px 20px; background:#f9fafb; text-align:left; font-size:22px; font-weight:800; color:#dfb163;">${formatSarAmountHtml(t.totalInclTax)}</td>
+          </tr>
         </table>
-        <p style="margin-top:28px;font-size:12px;color:#666;line-height:1.6">هذه رسالة آلية. للاستفسار يُرجى التواصل مع خدمة العملاء عبر الموقع أو الهاتف.</p>
+        
+        <p style="margin-top:48px;margin-bottom:0;font-size:13px;color:#9ca3af;line-height:1.7;text-align:center;padding-top:24px;border-top:1px solid #f3f4f6;">
+          هذا الإيصال تم إصداره آلياً ولا يتطلب توقيع.<br/>
+          لأي استفسارات، يسعدنا تواصلكم مع خدمة العملاء.
+        </p>
       </td></tr>
+      
+      <!-- Footer -->
+      <tr><td style="background:#f9fafb;padding:24px;text-align:center;border-top:1px solid #e5e7eb;">
+        <p style="margin:0;font-size:13px;color:#6b7280;font-weight:600;">© ${new Date().getFullYear()} روائس لتأجير السيارات. جميع الحقوق محفوظة.</p>
+      </td></tr>
+      
     </table>
+    
+    <!-- Padding Bottom -->
+    <div style="height:40px;"></div>
+    
   </td></tr></table>
 </body>
 </html>`;
@@ -145,7 +225,7 @@ function buildInvoicePlainText(booking: BookingPaymentSnapshot): string {
     `الاسم: ${booking.fullName}`,
     `الجوال: ${booking.phone}`,
     `المركبة: ${booking.car.fullTitle}`,
-    `الإجمالي المدفوع: ${formatSarAmount(t.totalInclTax)} ر.س`,
+    `الإجمالي المدفوع: ${formatSarAmountPlain(t.totalInclTax)}`,
     "",
     "التفاصيل الكاملة في الملف المرفق (PDF).",
     "",
@@ -303,23 +383,15 @@ export async function sendPlainTransactionalEmail(opts: {
   throw new Error("لم يُضبط إرسال البريد (SMTP أو Resend).");
 }
 
-/**
- * بعد تأكيد الدفع: إرسال فاتورة HTML مع مرفق PDF.
- * الأولوية: SMTP (`MAIL_HOST` + `MAIL_USER` + `MAIL_PASS`) ثم Resend (`RESEND_API_KEY`).
- */
-export async function sendBookingInvoiceEmailAfterPayment(bookingRequestId: number): Promise<void> {
+async function deliverBookingInvoiceEmail(bookingRequestId: number): Promise<{ to: string }> {
   const to = await resolveInvoiceRecipientEmail(bookingRequestId);
   if (!to) {
-    console.warn(
-      `[booking-invoice-email] لا يوجد بريد صالح لطلب #${bookingRequestId} — تخطّي الإرسال.`,
-    );
-    return;
+    throw new Error("NO_RECIPIENT");
   }
 
   const snapshot = await getBookingForPayment(bookingRequestId);
   if (!snapshot || snapshot.paymentStatus !== "PAID") {
-    console.warn(`[booking-invoice-email] لقطة الطلب #${bookingRequestId} غير جاهزة.`);
-    return;
+    throw new Error("NOT_READY");
   }
 
   const subject = `فاتورة حجزكم — طلب رقم #${bookingRequestId}`;
@@ -347,33 +419,90 @@ export async function sendBookingInvoiceEmailAfterPayment(bookingRequestId: numb
   if (smtpConfigured()) {
     try {
       await sendInvoiceViaSmtp({ to, subject, html, text, attachments });
-      return;
+      return { to };
     } catch (e) {
       console.error("[booking-invoice-email] فشل SMTP:", e);
-      return;
+      if (!process.env.RESEND_API_KEY?.trim()) {
+        throw e;
+      }
     }
   }
 
   if (process.env.RESEND_API_KEY?.trim()) {
-    try {
-      await sendInvoiceViaResend({
-        to,
-        subject,
-        html,
-        text,
-        attachments: attachments?.map((a) => ({
-          filename: a.filename,
-          content: a.content,
-        })),
-      });
-      return;
-    } catch (e) {
-      console.error("[booking-invoice-email] فشل Resend:", e);
-      return;
-    }
+    await sendInvoiceViaResend({
+      to,
+      subject,
+      html,
+      text,
+      attachments: attachments?.map((a) => ({
+        filename: a.filename,
+        content: a.content,
+      })),
+    });
+    return { to };
   }
 
-  console.warn(
-    "[booking-invoice-email] لم يُضبط إرسال البريد: عيّن MAIL_HOST و MAIL_USER و MAIL_PASS، أو RESEND_API_KEY.",
-  );
+  throw new Error("MAIL_NOT_CONFIGURED");
+}
+
+/**
+ * بعد تأكيد الدفع: إرسال فاتورة HTML مع مرفق PDF.
+ * الأولوية: SMTP (`MAIL_HOST` + `MAIL_USER` + `MAIL_PASS`) ثم Resend (`RESEND_API_KEY`).
+ */
+export async function sendBookingInvoiceEmailAfterPayment(bookingRequestId: number): Promise<void> {
+  try {
+    await deliverBookingInvoiceEmail(bookingRequestId);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg === "NO_RECIPIENT") {
+      console.warn(
+        `[booking-invoice-email] لا يوجد بريد صالح لطلب #${bookingRequestId} — تخطّي الإرسال.`,
+      );
+      return;
+    }
+    if (msg === "NOT_READY") {
+      console.warn(`[booking-invoice-email] لقطة الطلب #${bookingRequestId} غير جاهزة.`);
+      return;
+    }
+    if (msg === "MAIL_NOT_CONFIGURED") {
+      console.warn(
+        "[booking-invoice-email] لم يُضبط إرسال البريد: عيّن MAIL_HOST و MAIL_USER و MAIL_PASS، أو RESEND_API_KEY.",
+      );
+      return;
+    }
+    console.error("[booking-invoice-email] فشل الإرسال:", e);
+  }
+}
+
+export type ResendBookingInvoiceResult =
+  | { ok: true; to: string }
+  | { ok: false; error: string };
+
+/** إعادة إرسال فاتورة الحجز (بعد الدفع) — مع رسائل خطأ للواجهة. */
+export async function resendBookingInvoiceEmail(
+  bookingRequestId: number,
+): Promise<ResendBookingInvoiceResult> {
+  if (!Number.isInteger(bookingRequestId) || bookingRequestId < 1) {
+    return { ok: false, error: "معرّف الطلب غير صالح." };
+  }
+  if (!isOutgoingMailTransportConfigured()) {
+    return { ok: false, error: "إرسال البريد غير مفعّل على الخادم." };
+  }
+  try {
+    const { to } = await deliverBookingInvoiceEmail(bookingRequestId);
+    return { ok: true, to };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg === "NO_RECIPIENT") {
+      return { ok: false, error: "لا يوجد بريد إلكتروني مسجّل لهذا الحجز." };
+    }
+    if (msg === "NOT_READY") {
+      return { ok: false, error: "إعادة الإرسال متاحة بعد إتمام الدفع فقط." };
+    }
+    if (msg === "MAIL_NOT_CONFIGURED") {
+      return { ok: false, error: "إرسال البريد غير مفعّل على الخادم." };
+    }
+    console.error("[booking-invoice-email] فشل إعادة الإرسال:", e);
+    return { ok: false, error: "تعذّر إرسال الفاتورة. حاول مرة أخرى لاحقاً." };
+  }
 }

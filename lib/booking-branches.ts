@@ -23,6 +23,20 @@ export function resolvePickupBranchSlug(row: BookingBranchRow): string | null {
   return null;
 }
 
+/** الاسم العربي لفرع الاستلام (من جدول Branch) */
+export function resolvePickupBranchDisplayName(row: BookingBranchRow): string | null {
+  if (row.pickupMode === "DELIVERY") return null;
+  const fromPickup = row.pickupBranch?.name?.trim();
+  if (fromPickup) return fromPickup;
+  const pickupSlug = resolvePickupBranchSlug(row);
+  const returnSlug = resolveReturnBranchSlug(row);
+  if (pickupSlug && returnSlug && pickupSlug === returnSlug) {
+    const returnName = row.returnBranch?.name?.trim();
+    if (returnName) return returnName;
+  }
+  return null;
+}
+
 /** slug فرع الإرجاع */
 export function resolveReturnBranchSlug(row: BookingBranchRow): string | null {
   const fromRel = row.returnBranch?.slug?.trim().toLowerCase();

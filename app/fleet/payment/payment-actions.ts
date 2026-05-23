@@ -2,7 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
-import { sendBookingInvoiceEmailAfterPayment } from "@/lib/booking-invoice-email";
+import {
+  resendBookingInvoiceEmail,
+  sendBookingInvoiceEmailAfterPayment,
+  type ResendBookingInvoiceResult,
+} from "@/lib/booking-invoice-email";
 import { sendBookingCompletionWhatsAppAfterPayment } from "@/lib/evolution-whatsapp";
 import { prisma } from "@/lib/prisma";
 
@@ -103,4 +107,24 @@ export async function confirmMockPayment(
   revalidatePath("/admin");
   revalidatePath("/admin/car-bookings");
   return { ok: true, paymentMethod };
+}
+
+export async function resendBookingInvoice(
+  _prev: ResendBookingInvoiceResult | null,
+  formData: FormData,
+): Promise<ResendBookingInvoiceResult> {
+  const id = Number(formData.get("bookingRequestId"));
+  if (!Number.isInteger(id) || id < 1) {
+    return { ok: false, error: "معرّف الطلب غير صالح." };
+  }
+
+  const exists = await prisma.bookingRequest.findUnique({
+    where: { id },
+    select: { kind: true },
+  });
+  if (!exists || exists.kind !== "DIRECT") {
+    return { ok: false, error: "الحجز غير موجود." };
+  }
+
+  return resendBookingInvoiceEmail(id);
 }
