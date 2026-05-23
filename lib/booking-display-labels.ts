@@ -2,8 +2,9 @@
 
 export const BOOKING_STATUS_LABELS_AR: Record<string, string> = {
   NEW: "جديد",
+  UNDER_REVIEW: "تحت المراجعة",
   CONTACTED: "تم التواصل",
-  CONFIRMED: "مؤكد",
+  CONFIRMED: "قادم",
   CANCELLED: "ملغى",
   REJECTED: "مرفوض",
   COMPLETED: "مكتمل",

@@ -1,3 +1,8 @@
+import {
+  isCashPaymentMethod,
+  invoiceTotalLabelAr,
+  isInvoiceDeliveryReady,
+} from "@/lib/booking-cash-flow";
 import { formatSarAmount } from "@/lib/booking-checkout-pricing";
 import type { BookingPaymentSnapshot } from "@/lib/booking-payment-data";
 import { getBookingForPayment } from "@/lib/booking-payment-data";
@@ -34,6 +39,8 @@ function paymentMethodLabelAr(code: string | null | undefined): string {
       return "تمارا";
     case "CARD":
       return "بطاقة ائتمانية";
+    case "CASH":
+      return "نقدي (كاش)";
     case "APPLE_PAY":
       return "Apple Pay";
     case "POINTS":
@@ -91,10 +98,16 @@ function buildBookingCompletionMessage(booking: BookingPaymentSnapshot): string 
     branchLocationLines.push(`موقع الفرع على الخرائط: ${booking.branchMapUrl.trim()}`);
   }
 
+  const introLine = isCashPaymentMethod(booking.paymentMethod)
+    ? booking.paymentStatus.trim().toUpperCase() === "PAID"
+      ? "تم تأكيد حجزكم. تم تسجيل استلام المبلغ نقداً."
+      : "تم تأكيد حجزكم. يُستحق المبلغ نقداً عند الاستلام أو في الفرع حسب الاتفاق."
+    : "تم تأكيد حجزكم واستلام الدفع بنجاح.";
+
   return [
     `مرحباً ${booking.fullName.trim()}،`,
     "",
-    "تم تأكيد حجزكم واستلام الدفع بنجاح.",
+    introLine,
     "",
     `رقم الطلب: #${booking.id}`,
     `المركبة: ${booking.car.fullTitle}`,
@@ -103,7 +116,7 @@ function buildBookingCompletionMessage(booking: BookingPaymentSnapshot): string 
     pickupLine,
     ...branchLocationLines,
     `طريقة الدفع: ${paymentMethodLabelAr(booking.paymentMethod)}`,
-    `الإجمالي المدفوع: ${formatSarAmount(t.totalInclTax)} ر.س (شامل الضريبة)`,
+    `${invoiceTotalLabelAr(booking)}: ${formatSarAmount(t.totalInclTax)} ر.س (شامل الضريبة)`,
     "",
     "شكراً لاختياركم روائس لتأجير السيارات. نتمنى لكم رحلة آمنة.",
   ].join("\n");
@@ -146,9 +159,9 @@ export async function sendBookingCompletionWhatsAppAfterPayment(bookingRequestId
   }
 
   const snapshot = await getBookingForPayment(bookingRequestId);
-  if (!snapshot || snapshot.paymentStatus !== "PAID") {
+  if (!snapshot || !isInvoiceDeliveryReady(snapshot)) {
     console.warn(
-      `[evolution-whatsapp] لقطة الطلب #${bookingRequestId} غير جاهزة أو غير مدفوعة — تخطّي واتساب.`,
+      `[evolution-whatsapp] لقطة الطلب #${bookingRequestId} غير جاهزة لإشعار الإتمام — تخطّي واتساب.`,
     );
     return;
   }

@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
+import { BOOKING_STATUS_UNDER_REVIEW } from "@/lib/booking-cash-flow";
+import { sendBookingReceivedNotification } from "@/lib/booking-received-notification";
 import {
   resendBookingInvoiceEmail,
   sendBookingInvoiceEmailAfterPayment,
@@ -16,7 +18,7 @@ import { sendBookingCompletionWhatsAppAfterPayment } from "@/lib/evolution-whats
 import { prisma } from "@/lib/prisma";
 
 export type ConfirmPaymentResult =
-  | { ok: true; paymentMethod: string }
+  | { ok: true; paymentMethod: string; underReview?: boolean }
   | { ok: false; error: string };
 
 import {
@@ -66,6 +68,8 @@ export async function confirmMockPayment(
     return { ok: false, error: "يجب تسجيل الدخول لإتمام هذه العملية." };
   }
 
+  const isCash = paymentMethod === "CASH";
+
   try {
     const updated = await prisma.bookingRequest.updateMany({
       where: {
@@ -74,11 +78,18 @@ export async function confirmMockPayment(
         paymentStatus: "PENDING",
         ...customerBookingOwnershipWhere(profile.id, profile.phone),
       },
-      data: {
-        paymentStatus: "PAID",
-        paidAt: new Date(),
-        paymentMethod,
-      },
+      data: isCash
+        ? {
+            paymentMethod,
+            paymentStatus: "PENDING",
+            paidAt: null,
+            status: BOOKING_STATUS_UNDER_REVIEW,
+          }
+        : {
+            paymentStatus: "PAID",
+            paidAt: new Date(),
+            paymentMethod,
+          },
     });
     if (updated.count === 0) {
       const exists = await prisma.bookingRequest.findFirst({
@@ -103,21 +114,30 @@ export async function confirmMockPayment(
         return {
           ok: true,
           paymentMethod: paidRow?.paymentMethod ?? paymentMethod,
+          underReview: paidRow?.paymentMethod?.trim().toUpperCase() === "CASH",
         };
       }
       return { ok: false, error: "تعذّر تحديث حالة الدفع." };
     }
 
-    try {
-      await sendBookingInvoiceEmailAfterPayment(id);
-    } catch (e) {
-      console.error("[booking-invoice-email] بعد تأكيد الدفع:", e);
-    }
+    if (isCash) {
+      try {
+        await sendBookingReceivedNotification(id);
+      } catch (e) {
+        console.error("[booking-received] بعد تسجيل الكاش:", e);
+      }
+    } else {
+      try {
+        await sendBookingInvoiceEmailAfterPayment(id);
+      } catch (e) {
+        console.error("[booking-invoice-email] بعد تأكيد الدفع:", e);
+      }
 
-    try {
-      await sendBookingCompletionWhatsAppAfterPayment(id);
-    } catch (e) {
-      console.error("[evolution-whatsapp] بعد تأكيد الدفع:", e);
+      try {
+        await sendBookingCompletionWhatsAppAfterPayment(id);
+      } catch (e) {
+        console.error("[evolution-whatsapp] بعد تأكيد الدفع:", e);
+      }
     }
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2025") {
@@ -131,7 +151,7 @@ export async function confirmMockPayment(
   revalidatePath("/account");
   revalidatePath("/admin");
   revalidatePath("/admin/car-bookings");
-  return { ok: true, paymentMethod };
+  return { ok: true, paymentMethod, underReview: isCash };
 }
 
 export async function resendBookingInvoice(

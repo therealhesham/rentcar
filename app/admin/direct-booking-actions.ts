@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { enforceBranchOnFormData, requireAdminForAction } from "@/lib/admin-access";
+import { isCashPaymentMethod } from "@/lib/booking-cash-flow";
 import { sendBookingInvoiceEmailAfterPayment } from "@/lib/booking-invoice-email";
+import { sendBookingReceivedNotification } from "@/lib/booking-received-notification";
 import { sendBookingCompletionWhatsAppAfterPayment } from "@/lib/evolution-whatsapp";
 import { parseAdminOfficePaymentFromFormData } from "@/lib/booking-payment-methods";
 import {
@@ -58,15 +60,23 @@ export async function submitAdminDirectBooking(
   }
 
   if (paymentParsed.recordNow) {
-    try {
-      await sendBookingInvoiceEmailAfterPayment(created.bookingRequestId);
-    } catch (e) {
-      console.error("[booking-invoice-email] بعد حجز المكتب:", e);
-    }
-    try {
-      await sendBookingCompletionWhatsAppAfterPayment(created.bookingRequestId);
-    } catch (e) {
-      console.error("[evolution-whatsapp] بعد حجز المكتب:", e);
+    if (isCashPaymentMethod(paymentParsed.method)) {
+      try {
+        await sendBookingReceivedNotification(created.bookingRequestId);
+      } catch (e) {
+        console.error("[booking-received] بعد حجز المكتب (كاش):", e);
+      }
+    } else {
+      try {
+        await sendBookingInvoiceEmailAfterPayment(created.bookingRequestId);
+      } catch (e) {
+        console.error("[booking-invoice-email] بعد حجز المكتب:", e);
+      }
+      try {
+        await sendBookingCompletionWhatsAppAfterPayment(created.bookingRequestId);
+      } catch (e) {
+        console.error("[evolution-whatsapp] بعد حجز المكتب:", e);
+      }
     }
   }
 

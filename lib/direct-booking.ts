@@ -1115,6 +1115,9 @@ export async function createDirectBooking(
 
   const payNow = officePayment?.recordNow === true;
   const paymentMethodStored = payNow ? officePayment.method.trim().toUpperCase() : null;
+  const cashPayNow =
+    payNow && paymentMethodStored != null && paymentMethodStored === "CASH";
+  const electronicPayNow = payNow && !cashPayNow;
 
   if (!Number.isInteger(carModelId) || carModelId < 1) {
     return { ok: false, error: "معرّف السيارة غير صالح." };
@@ -1240,9 +1243,10 @@ export async function createDirectBooking(
             numberOfDays: days,
             termsAccepted: commonNormalized.termsAccepted,
             addonsJson: addonsSnap.json,
-            paymentStatus: payNow ? "PAID" : "PENDING",
+            status: cashPayNow ? "UNDER_REVIEW" : undefined,
+            paymentStatus: electronicPayNow ? "PAID" : "PENDING",
             paymentMethod: paymentMethodStored,
-            paidAt: payNow ? new Date() : null,
+            paidAt: electronicPayNow ? new Date() : null,
           },
           select: { id: true },
         });

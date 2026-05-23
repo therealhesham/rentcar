@@ -211,8 +211,9 @@ export type AdminBookingStats = {
 
 const STATUS_LABELS: Record<string, string> = {
   NEW: "جديد",
+  UNDER_REVIEW: "تحت المراجعة",
   CONTACTED: "تم التواصل",
-  CONFIRMED: "مؤكد",
+  CONFIRMED: "قادم",
   CANCELLED: "ملغي",
   COMPLETED: "مكتمل",
 };

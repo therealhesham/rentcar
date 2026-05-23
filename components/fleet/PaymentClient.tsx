@@ -23,6 +23,7 @@ import {
 import type { ResendBookingInvoiceResult } from "@/lib/booking-invoice-email";
 import { SarCurrencyGlyph } from "@/components/ui/SarCurrencyGlyph";
 import { formatSarAmount } from "@/lib/booking-checkout-pricing";
+import { isBookingUnderReview, isInvoiceDeliveryReady } from "@/lib/booking-cash-flow";
 import type { BookingPaymentSnapshot } from "@/lib/booking-payment-data";
 import {
   listEnabledCheckoutPaymentMethods,
@@ -209,17 +210,23 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
     if (next) setMethod(next);
   }, [enabledMethods, method]);
 
-  const paid = paymentFinalized || (state?.ok ?? false);
-  const canResendInvoice = ps === "PAID";
-  const noPaymentMethods = !paid && visibleMethodOptions.length === 0;
+  const underReview =
+    isBookingUnderReview(booking.status) ||
+    (state?.ok === true && state.underReview === true);
+  const paid = (paymentFinalized || (state?.ok ?? false)) && !underReview;
+  const checkoutComplete = paid || underReview;
+  const canResendInvoice = isInvoiceDeliveryReady({
+    paymentMethod: booking.paymentMethod,
+    paymentStatus: booking.paymentStatus,
+    status: booking.status,
+  });
+  const noPaymentMethods = !checkoutComplete && visibleMethodOptions.length === 0;
 
   const serverError = state && state.ok === false ? state.error : null;
 
-  const resolvedMethodCode = paymentFinalized
-    ? booking.paymentMethod
-    : state?.ok && state.paymentMethod
-      ? state.paymentMethod
-      : null;
+  const resolvedMethodCode =
+    booking.paymentMethod ??
+    (state?.ok && state.paymentMethod ? state.paymentMethod : null);
 
   const pickup = useMemo(() => fmtWhen(booking.pickupDate), [booking.pickupDate]);
   const dropoff = useMemo(() => {
@@ -229,7 +236,7 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
   }, [booking.pickupDate, booking.numberOfDays]);
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    if (paid) return;
+    if (checkoutComplete) return;
     setClientError(null);
     if (method !== "CARD") return;
 
@@ -273,7 +280,8 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
           : method === "CASH"
             ? (
                 <>
-                  تأكيد الدفع نقداً {formatSarAmount(booking.totals.totalInclTax)} <SarCurrencyGlyph />
+                  تأكيد الحجز (دفع نقداً) {formatSarAmount(booking.totals.totalInclTax)}{" "}
+                  <SarCurrencyGlyph />
                 </>
               )
             : method === "APPLE_PAY"
@@ -347,26 +355,31 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
             #{booking.id}
           </span>
           {" — "}
-          {paid
-            ? ps === "REFUNDED"
-              ? `تم استرداد المبلغ بالكامل عبر ${paymentMethodLabelAr(resolvedMethodCode)}.`
-              : ps === "PARTIAL_REFUND"
-                ? `تم استرداد جزء من المبلغ عبر ${paymentMethodLabelAr(resolvedMethodCode)}.`
-                : ps === "NO_REFUND"
-                  ? "لا يوجد مبلغ مسترد بحسب سياسة الإلغاء."
-                  : resolvedMethodCode
-                    ? `تم الدفع عبر ${paymentMethodLabelAr(resolvedMethodCode)}.`
-                    : "تم الدفع بنجاح."
-            : "اختر طريقة الدفع المناسبة وأكمل الإجراء."}
+          {underReview
+            ? "تم تسجيل طلبك بالدفع نقداً وهو تحت المراجعة — سيتواصل معك فريقنا قريباً لتأكيد الحجز هاتفياً."
+            : checkoutComplete
+              ? ps === "REFUNDED"
+                ? `تم استرداد المبلغ بالكامل عبر ${paymentMethodLabelAr(resolvedMethodCode)}.`
+                : ps === "PARTIAL_REFUND"
+                  ? `تم استرداد جزء من المبلغ عبر ${paymentMethodLabelAr(resolvedMethodCode)}.`
+                  : ps === "NO_REFUND"
+                    ? "لا يوجد مبلغ مسترد بحسب سياسة الإلغاء."
+                    : resolvedMethodCode
+                      ? `تم الدفع عبر ${paymentMethodLabelAr(resolvedMethodCode)}.`
+                      : "تم الدفع بنجاح."
+              : "اختر طريقة الدفع المناسبة وأكمل الإجراء."}
         </p>
       </div>
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] xl:gap-12">
         <section className="order-2 space-y-6 lg:order-1">
-          {paid ? (
+          {checkoutComplete ? (
             <div
               className={`overflow-hidden rounded-3xl border shadow-sm ${
-                ps === "REFUNDED" || ps === "PARTIAL_REFUND" || ps === "NO_REFUND"
+                underReview ||
+                ps === "REFUNDED" ||
+                ps === "PARTIAL_REFUND" ||
+                ps === "NO_REFUND"
                   ? "border-amber-200 bg-amber-50"
                   : "border-emerald-200 bg-emerald-50"
               }`}
@@ -374,7 +387,10 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
               <div className="flex flex-col items-center gap-3 p-8 text-center sm:p-10">
                 <div
                   className={`grid size-16 place-items-center rounded-full ${
-                    ps === "REFUNDED" || ps === "PARTIAL_REFUND" || ps === "NO_REFUND"
+                    underReview ||
+                    ps === "REFUNDED" ||
+                    ps === "PARTIAL_REFUND" ||
+                    ps === "NO_REFUND"
                       ? "bg-amber-100 text-amber-700"
                       : "bg-emerald-100 text-emerald-700"
                   }`}
@@ -383,25 +399,35 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
                 </div>
                 <h2
                   className={`text-lg font-extrabold ${
-                    ps === "REFUNDED" || ps === "PARTIAL_REFUND" || ps === "NO_REFUND"
+                    underReview ||
+                    ps === "REFUNDED" ||
+                    ps === "PARTIAL_REFUND" ||
+                    ps === "NO_REFUND"
                       ? "text-amber-900"
                       : "text-emerald-800"
                   }`}
                 >
-                  {ps === "REFUNDED" || ps === "PARTIAL_REFUND" || ps === "NO_REFUND"
-                    ? "حالة الدفع بعد الإلغاء"
-                    : "تم استلام الدفع"}
+                  {underReview
+                    ? "طلبك تحت المراجعة"
+                    : ps === "REFUNDED" || ps === "PARTIAL_REFUND" || ps === "NO_REFUND"
+                      ? "حالة الدفع بعد الإلغاء"
+                      : "تم استلام الدفع"}
                 </h2>
                 <p
                   className={`max-w-md text-sm leading-relaxed ${
-                    ps === "REFUNDED" || ps === "PARTIAL_REFUND" || ps === "NO_REFUND"
+                    underReview ||
+                    ps === "REFUNDED" ||
+                    ps === "PARTIAL_REFUND" ||
+                    ps === "NO_REFUND"
                       ? "text-amber-950/80"
                       : "text-emerald-900/80"
                   }`}
                 >
-                  {ps === "REFUNDED" || ps === "PARTIAL_REFUND" || ps === "NO_REFUND"
-                    ? "تم تحديث حالة الدفع وفق سياسة الإلغاء. للاستفسار تواصل مع فريق الدعم."
-                    : "شكراً لك! تم تأكيد حجزك وسيتواصل معك فريقنا قريباً لتأكيد التسليم وأي إجراءات إضافية."}
+                  {underReview
+                    ? "شكراً لك! تم تسجيل طلبك بالدفع نقداً."
+                    : ps === "REFUNDED" || ps === "PARTIAL_REFUND" || ps === "NO_REFUND"
+                      ? "تم تحديث حالة الدفع وفق سياسة الإلغاء. للاستفسار تواصل مع فريق الدعم."
+                      : "شكراً لك! تم تأكيد حجزك وسيتواصل معك فريقنا قريباً لتأكيد التسليم وأي إجراءات إضافية."}
                 </p>
                 <p
                   dir="ltr"
@@ -410,7 +436,11 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
                   #{booking.id}
                 </p>
                 {resolvedMethodCode ? (
-                  <p className="text-sm font-bold text-emerald-900">
+                  <p
+                    className={`text-sm font-bold ${
+                      underReview ? "text-amber-900" : "text-emerald-900"
+                    }`}
+                  >
                     طريقة الدفع: {paymentMethodLabelAr(resolvedMethodCode)}
                   </p>
                 ) : null}
@@ -645,11 +675,11 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
               ) : null}
 
               {method === "CASH" ? (
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-950">
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
                   <p className="font-bold">الدفع نقداً</p>
                   <p className="mt-1 text-xs leading-relaxed opacity-90">
-                    سجّل الطلب كمدفوع نقداً. يُستحق المبلغ عند استلام المركبة أو في الفرع حسب ما
-                    اتفقتم عليه. احتفظ برقم الطلب للمراجعة.
+                    بعد التأكيد يُحوَّل طلبك إلى «تحت المراجعة» ويتواصل معك فريقنا هاتفياً. يُستحق
+                    المبلغ عند استلام المركبة أو في الفرع — لا يُرسل إيصال دفع إلكتروني قبل التأكيد.
                   </p>
                 </div>
               ) : null}
@@ -940,7 +970,7 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
             </div>
           </div>
 
-          {!paid ? (
+          {!checkoutComplete ? (
             <p className="rounded-2xl border border-[#ebe4d3] bg-[#fffdf9] px-4 py-3 text-center text-xs leading-relaxed text-[#6b5a3b]">
               المبلغ المعروض شاملاً ضريبة القيمة المضافة. لن يُخصم أي مبلغ حتى تؤكد الدفع.
             </p>

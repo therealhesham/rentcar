@@ -1,5 +1,10 @@
 import nodemailer from "nodemailer";
 import { Resend } from "resend";
+import {
+  invoiceEmailHeaderForBooking,
+  invoiceTotalLabelAr,
+  isInvoiceDeliveryReady,
+} from "@/lib/booking-cash-flow";
 import { buildBookingInvoicePdfBuffer } from "@/lib/booking-invoice-pdf";
 import { formatSarAmountHtml, formatSarAmountPlain, SAUDI_RIYAL_FONT_CSS_URL } from "@/lib/sar-currency";
 import type { BookingPaymentSnapshot } from "@/lib/booking-payment-data";
@@ -22,6 +27,8 @@ function paymentMethodLabelAr(code: string | null | undefined): string {
       return "تمارا";
     case "CARD":
       return "بطاقة ائتمانية";
+    case "CASH":
+      return "نقدي (كاش)";
     case "APPLE_PAY":
       return "Apple Pay";
     case "POINTS":
@@ -42,6 +49,8 @@ function fmtDateTime(d: Date): string {
 }
 
 function buildInvoiceHtml(booking: BookingPaymentSnapshot): string {
+  const header = invoiceEmailHeaderForBooking(booking);
+  const totalLabel = invoiceTotalLabelAr(booking);
   const branchLabel = booking.pickupBranchLabelAr?.trim() || "—";
   const pickup = fmtDateTime(booking.pickupDate);
   const dropoffD = new Date(booking.pickupDate);
@@ -130,18 +139,18 @@ function buildInvoiceHtml(booking: BookingPaymentSnapshot): string {
         
         <div style="background:rgba(255,255,255,0.1);display:inline-block;padding:8px 20px;border-radius:100px;margin-bottom:24px;border:1px solid rgba(255,255,255,0.2);">
           <span style="color:#10b981;font-weight:700;font-size:14px;display:flex;align-items:center;gap:6px;">
-            ✓ تم الدفع بنجاح
+            ${escapeHtml(header.badge)}
           </span>
         </div>
         
-        <h1 style="margin:0 0 12px;font-size:36px;font-weight:800;color:#ffffff;">إيصال الدفع</h1>
+        <h1 style="margin:0 0 12px;font-size:36px;font-weight:800;color:#ffffff;">${escapeHtml(header.title)}</h1>
         <p style="margin:0;font-size:16px;color:#cbd5e1;opacity:0.9">رقم المرجع: <span dir="ltr" style="font-family:monospace;background:rgba(0,0,0,0.2);padding:4px 8px;border-radius:6px;font-weight:600;">#${booking.id}</span></p>
       </td></tr>
       
       <!-- Body -->
       <tr><td style="padding:48px 40px;">
         <p style="margin:0 0 12px;font-size:18px;color:#111827;">مرحباً <strong>${escapeHtml(booking.fullName)}</strong>،</p>
-        <p style="margin:0 0 36px;line-height:1.7;color:#6b7280;font-size:15px;">شكراً لثقتكم واختياركم روائس. لقد تم استلام دفعتكم بنجاح وتم تأكيد حجزكم. مرفق مع هذه الرسالة نسخة PDF من الفاتورة الرسمية للطباعة أو الأرشفة.</p>
+        <p style="margin:0 0 36px;line-height:1.7;color:#6b7280;font-size:15px;">${escapeHtml(header.intro)}</p>
         
         <!-- Info Grid -->
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:32px;">
@@ -191,7 +200,7 @@ function buildInvoiceHtml(booking: BookingPaymentSnapshot): string {
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
           ${rows.join("")}
           <tr>
-            <td style="padding:24px 20px; background:#f9fafb; font-size:18px; font-weight:800; color:#003749;">الإجمالي المدفوع</td>
+            <td style="padding:24px 20px; background:#f9fafb; font-size:18px; font-weight:800; color:#003749;">${escapeHtml(totalLabel)}</td>
             <td dir="ltr" style="padding:24px 20px; background:#f9fafb; text-align:left; font-size:22px; font-weight:800; color:#dfb163;">${formatSarAmountHtml(t.totalInclTax)}</td>
           </tr>
         </table>
@@ -219,13 +228,14 @@ function buildInvoiceHtml(booking: BookingPaymentSnapshot): string {
 
 function buildInvoicePlainText(booking: BookingPaymentSnapshot): string {
   const t = booking.totals;
+  const totalLabel = invoiceTotalLabelAr(booking);
   return [
     `فاتورة حجز — طلب رقم #${booking.id}`,
     "",
     `الاسم: ${booking.fullName}`,
     `الجوال: ${booking.phone}`,
     `المركبة: ${booking.car.fullTitle}`,
-    `الإجمالي المدفوع: ${formatSarAmountPlain(t.totalInclTax)}`,
+    `${totalLabel}: ${formatSarAmountPlain(t.totalInclTax)}`,
     "",
     "التفاصيل الكاملة في الملف المرفق (PDF).",
     "",
@@ -390,7 +400,7 @@ async function deliverBookingInvoiceEmail(bookingRequestId: number): Promise<{ t
   }
 
   const snapshot = await getBookingForPayment(bookingRequestId);
-  if (!snapshot || snapshot.paymentStatus !== "PAID") {
+  if (!snapshot || !isInvoiceDeliveryReady(snapshot)) {
     throw new Error("NOT_READY");
   }
 
@@ -497,7 +507,11 @@ export async function resendBookingInvoiceEmail(
       return { ok: false, error: "لا يوجد بريد إلكتروني مسجّل لهذا الحجز." };
     }
     if (msg === "NOT_READY") {
-      return { ok: false, error: "إعادة الإرسال متاحة بعد إتمام الدفع فقط." };
+      return {
+        ok: false,
+        error:
+          "إعادة الإرسال متاحة بعد إتمام الدفع، أو بعد تأكيد الحجز النقدي من الموظف.",
+      };
     }
     if (msg === "MAIL_NOT_CONFIGURED") {
       return { ok: false, error: "إرسال البريد غير مفعّل على الخادم." };

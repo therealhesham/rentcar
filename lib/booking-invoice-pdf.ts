@@ -4,6 +4,7 @@ import path from "node:path";
 import "jspdf/dist/polyfills.es.js";
 import { jsPDF } from "jspdf";
 
+import { invoiceTotalLabelAr } from "@/lib/booking-cash-flow";
 import { formatSarAmount } from "@/lib/booking-checkout-pricing";
 import type { BookingPaymentSnapshot } from "@/lib/booking-payment-data";
 import { SAR_CURRENCY_SYMBOL } from "@/lib/sar-currency";
@@ -43,6 +44,8 @@ function paymentMethodLabel(code: string | null | undefined): string {
       return "تمارا";
     case "CARD":
       return "بطاقة ائتمانية";
+    case "CASH":
+      return "نقدي (كاش)";
     case "APPLE_PAY":
       return "Apple Pay";
     case "POINTS":
@@ -424,7 +427,7 @@ export async function buildBookingInvoicePdfBuffer(
   doc.setFont(FONT_FAMILY_AR, "normal");
   doc.setFontSize(13);
   doc.setTextColor(255, 255, 255);
-  doc.text(shape("الإجمالي المدفوع"), rightX - 8, y, { align: "right" });
+  doc.text(shape(invoiceTotalLabelAr(booking)), rightX - 8, y, { align: "right" });
 
   doc.setTextColor(223, 177, 99);
   drawSarAmount(AMOUNT_COL_RIGHT, y, t.totalInclTax, { fontSize: 14, color: [223, 177, 99] });

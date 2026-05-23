@@ -62,7 +62,8 @@ function defaultInquirySlug(carType: string, categories: CategoryOption[]): stri
 /** قيم مخزّنة بالإنجليزية في DB — العرض للمستخدم بالعربية فقط */
 const BOOKING_STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: "NEW", label: "جديد" },
-  { value: "CONFIRMED", label: "مؤكّد" },
+  { value: "UNDER_REVIEW", label: "تحت المراجعة" },
+  { value: "CONFIRMED", label: "قادم" },
   { value: "CANCELLED", label: "ملغى" },
   { value: "REJECTED", label: "مرفوض" },
 ];

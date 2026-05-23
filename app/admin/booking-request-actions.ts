@@ -6,12 +6,16 @@ import {
   enforceBranchOnFormData,
   requireAdminForAction,
 } from "@/lib/admin-access";
+import { isCashPaymentMethod } from "@/lib/booking-cash-flow";
+import { sendBookingInvoiceEmailAfterPayment } from "@/lib/booking-invoice-email";
 import {
   convertDirectBookingToInquiry,
   convertInquiryBookingToDirect,
   parseCommonBookingFieldsFromFormData,
   updateBookingRequestByAdmin,
 } from "@/lib/direct-booking";
+import { sendBookingCompletionWhatsAppAfterPayment } from "@/lib/evolution-whatsapp";
+import { prisma } from "@/lib/prisma";
 
 export async function convertInquiryToDirect(
   _prev: { ok: boolean; error?: string } | null,
@@ -95,6 +99,13 @@ export async function updateBookingRequest(
   }
 
   const status = String(scopedForm.get("status") ?? "").trim();
+  const statusUpper = status.toUpperCase();
+
+  const beforeUpdate = await prisma.bookingRequest.findUnique({
+    where: { id: bookingRequestId },
+    select: { status: true, paymentMethod: true, kind: true },
+  });
+
   const inquirySlug = String(scopedForm.get("inquiryCarType") ?? "").trim();
   const rawModel = scopedForm.get("carModelId");
   const directModelId =
@@ -114,9 +125,29 @@ export async function updateBookingRequest(
     return { ok: false, error: result.error };
   }
 
+  const wasNotConfirmed =
+    beforeUpdate?.status.trim().toUpperCase() !== "CONFIRMED";
+  const cashDirect =
+    beforeUpdate?.kind === "DIRECT" &&
+    isCashPaymentMethod(beforeUpdate.paymentMethod);
+
+  if (statusUpper === "CONFIRMED" && wasNotConfirmed && cashDirect) {
+    try {
+      await sendBookingInvoiceEmailAfterPayment(bookingRequestId);
+    } catch (e) {
+      console.error("[booking-invoice-email] بعد تأكيد الموظف (كاش):", e);
+    }
+    try {
+      await sendBookingCompletionWhatsAppAfterPayment(bookingRequestId);
+    } catch (e) {
+      console.error("[evolution-whatsapp] بعد تأكيد الموظف (كاش):", e);
+    }
+  }
+
   revalidatePath("/admin");
   revalidatePath("/fleet");
   revalidatePath("/admin/car-bookings");
   revalidatePath(`/admin/bookings/${bookingRequestId}`);
+  revalidatePath(`/fleet/payment/${bookingRequestId}`);
   return { ok: true };
 }
