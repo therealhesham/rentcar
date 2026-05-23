@@ -1,9 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
 import { SpecIcon } from "@/components/icons";
+import { FleetBookNowButton } from "@/components/fleet/FleetBookNowButton";
 import type { FleetCar } from "@/lib/fleet-types";
 import { SarAmountWithSymbol } from "@/components/ui/SarAmountWithSymbol";
 
@@ -12,31 +10,6 @@ const FALLBACK_BRANCH_OPTIONS: { slug: string; name: string }[] = [
   { slug: "madinah", name: "المدينة المنورة" },
   { slug: "tabuk", name: "تبوك" },
 ];
-
-function CheckoutHref({ modelId }: { modelId: number }) {
-  const sp = useSearchParams();
-  const extra = sp.toString();
-  const href = `/fleet/checkout?modelId=${modelId}${extra ? `&${extra}` : ""}`;
-  return (
-    <Link
-      href={href}
-      className="block w-full rounded-xl bg-primary-fixed py-3.5 text-center text-sm font-extrabold text-on-primary-fixed transition-colors hover:bg-primary-fixed-dim"
-    >
-      احجز الآن
-    </Link>
-  );
-}
-
-function CheckoutHrefFallback({ modelId }: { modelId: number }) {
-  return (
-    <Link
-      href={`/fleet/checkout?modelId=${modelId}`}
-      className="block w-full rounded-xl bg-primary-fixed py-3.5 text-center text-sm font-extrabold text-on-primary-fixed transition-colors hover:bg-primary-fixed-dim"
-    >
-      احجز الآن
-    </Link>
-  );
-}
 
 export function FleetCarCard({
   car,
@@ -118,9 +91,7 @@ export function FleetCarCard({
         </div>
 
         <div className="space-y-2.5">
-          <Suspense fallback={<CheckoutHrefFallback modelId={car.modelId} />}>
-            <CheckoutHref modelId={car.modelId} />
-          </Suspense>
+          <FleetBookNowButton modelId={car.modelId} />
           <p className="text-center text-[11px] font-semibold leading-relaxed text-on-primary-container">
             {car.priceUi.footnoteAr}
           </p>

@@ -111,10 +111,11 @@ export function Hero({
 
       {/* ─── Booking widget ─── */}
       <div
+        id="home-booking"
         className={
           SHOW_HERO_IMAGES
-            ? "relative z-30 -mt-8 border-b border-[#ebe4d3]/70 bg-white/92 shadow-[0_8px_28px_-6px_rgba(15,61,71,0.1)] backdrop-blur-md sm:-mt-12 md:-mt-12 lg:-mt-16"
-            : "relative z-30 -mt-2 border-b border-[#ebe4d3]/70 bg-white/92 shadow-[0_8px_28px_-6px_rgba(15,61,71,0.1)] backdrop-blur-md sm:-mt-3"
+            ? "relative z-30 -mt-8 scroll-mt-24 border-b border-[#ebe4d3]/70 bg-white/92 shadow-[0_8px_28px_-6px_rgba(15,61,71,0.1)] backdrop-blur-md sm:-mt-12 md:-mt-12 lg:-mt-16"
+            : "relative z-30 -mt-2 scroll-mt-24 border-b border-[#ebe4d3]/70 bg-white/92 shadow-[0_8px_28px_-6px_rgba(15,61,71,0.1)] backdrop-blur-md sm:-mt-3"
         }
         dir="rtl"
       >

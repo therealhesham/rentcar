@@ -212,7 +212,10 @@ export default async function FleetPage({
               </span>
               <span className="h-px w-10 bg-gradient-to-r from-primary/35 to-transparent sm:w-12" />
             </div>
-            <div className="overflow-hidden rounded-2xl bg-white/[0.97] shadow-[0_28px_72px_-20px_rgba(15,61,71,0.18),0_8px_24px_-6px_rgba(15,61,71,0.07)] ring-1 ring-black/[0.03] backdrop-blur-xl">
+            <div
+              id="fleet-booking"
+              className="scroll-mt-28 overflow-hidden rounded-2xl bg-white/[0.97] shadow-[0_28px_72px_-20px_rgba(15,61,71,0.18),0_8px_24px_-6px_rgba(15,61,71,0.07)] ring-1 ring-black/[0.03] backdrop-blur-xl"
+            >
               <BookingWidget
                 cities={cities}
                 initialFromUrl={fleetUrlHydrate}
