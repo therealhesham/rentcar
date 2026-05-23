@@ -76,6 +76,7 @@ export async function confirmMockPayment(
         id,
         kind: "DIRECT",
         paymentStatus: "PENDING",
+        ...(isCash ? { paymentMethod: null } : {}),
         ...customerBookingOwnershipWhere(profile.id, profile.phone),
       },
       data: isCash
@@ -98,10 +99,18 @@ export async function confirmMockPayment(
           kind: "DIRECT",
           ...customerBookingOwnershipWhere(profile.id, profile.phone),
         },
-        select: { paymentStatus: true },
+        select: { paymentStatus: true, paymentMethod: true, status: true },
       });
       if (!exists) {
         return { ok: false, error: "الحجز غير موجود أو لا يخص حسابك." };
+      }
+      const existingMethod = exists.paymentMethod?.trim().toUpperCase() ?? "";
+      if (existingMethod === "CASH") {
+        return {
+          ok: true,
+          paymentMethod: "CASH",
+          underReview: exists.status.trim().toUpperCase() === BOOKING_STATUS_UNDER_REVIEW,
+        };
       }
       if (exists.paymentStatus === "PAID") {
         const paidRow = await prisma.bookingRequest.findFirst({
@@ -114,7 +123,6 @@ export async function confirmMockPayment(
         return {
           ok: true,
           paymentMethod: paidRow?.paymentMethod ?? paymentMethod,
-          underReview: paidRow?.paymentMethod?.trim().toUpperCase() === "CASH",
         };
       }
       return { ok: false, error: "تعذّر تحديث حالة الدفع." };

@@ -11,6 +11,17 @@ export function isBookingUnderReview(status: string | null | undefined): boolean
   return status?.trim().toUpperCase() === BOOKING_STATUS_UNDER_REVIEW;
 }
 
+/** العميل اختار الكاش وأكمل خطوة الدفع — لا نعيد عرض طرق الدفع. */
+export function isCashCheckoutSubmitted(booking: {
+  paymentMethod: string | null;
+}): boolean {
+  return isCashPaymentMethod(booking.paymentMethod);
+}
+
+export function isCashBookingConfirmed(status: string | null | undefined): boolean {
+  return status?.trim().toUpperCase() === "CONFIRMED";
+}
+
 /** فاتورة PDF/HTML — إلكتروني بعد الدفع؛ نقدي بعد تأكيد الموظف (قادم). */
 export function isInvoiceDeliveryReady(booking: {
   paymentMethod: string | null;
