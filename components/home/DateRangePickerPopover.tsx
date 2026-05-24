@@ -14,7 +14,11 @@ type Props = {
   endDateDdMmYy: string;
   minDateYmd?: string;
   onRangeChange: (startDdMmYy: string, endDdMmYy: string) => void;
+  /** يُستدعى عند اختيار تاريخ البداية فقط — لتحديث حقل الاستلام قبل اكتمال النطاق */
+  onStartChange?: (startDdMmYy: string) => void;
   anchorRef: React.RefObject<HTMLElement | null>;
+  /** حقول التاريخ الأخرى — لا يُغلق التقويم عند النقر عليها */
+  extraAnchorRefs?: React.RefObject<HTMLElement | null>[];
   startLabel?: string;
   endLabel?: string;
 };
@@ -49,7 +53,9 @@ export function DateRangePickerPopover({
   endDateDdMmYy,
   minDateYmd,
   onRangeChange,
+  onStartChange,
   anchorRef,
+  extraAnchorRefs,
   startLabel = "الاستلام",
   endLabel = "التسليم",
 }: Props) {
@@ -82,15 +88,17 @@ export function DateRangePickerPopover({
     if (!isOpen) return;
     function handler(e: MouseEvent) {
       const panel = panelRef.current;
-      const anchor = anchorRef.current;
       if (!panel) return;
-      if (!panel.contains(e.target as Node) && (!anchor || !anchor.contains(e.target as Node))) {
+      const target = e.target as Node;
+      const anchors = [anchorRef, ...(extraAnchorRefs ?? [])];
+      const insideAnchor = anchors.some((ref) => ref.current?.contains(target));
+      if (!panel.contains(target) && !insideAnchor) {
         onClose();
       }
     }
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [isOpen, onClose, anchorRef]);
+  }, [isOpen, onClose, anchorRef, extraAnchorRefs]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -154,6 +162,8 @@ export function DateRangePickerPopover({
       setRangeStart(ymd);
       setRangeEnd("");
       setHoverYmd(null);
+      const startFmt = formatYmdAsDdMmYy(ymd);
+      if (startFmt) onStartChange?.(startFmt);
       return;
     }
 
