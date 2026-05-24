@@ -51,7 +51,7 @@ export function PromoBannerCarousel({ slides }: { slides: PromoBannerSlide[] }) 
       key={current}
       src={slide.imageUrl}
       alt={`عرض ${current + 1}`}
-      className="mx-auto block h-auto max-h-[min(52vw,240px)] w-full max-w-5xl object-contain sm:max-h-none"
+      className="mx-auto block h-auto max-h-[min(52vw,240px)] w-full max-w-5xl rounded-xl object-contain sm:max-h-[280px]"
       style={{ animation: "promo-fade-in 0.4s ease" }}
     />
   );
@@ -80,14 +80,14 @@ export function PromoBannerCarousel({ slides }: { slides: PromoBannerSlide[] }) 
           <button
             onClick={handlePrev}
             aria-label="السابق"
-            className="absolute top-1/2 right-2 -translate-y-1/2 rounded-full bg-black/30 p-2 text-white backdrop-blur-sm transition hover:bg-black/60"
+            className="absolute top-1/2 right-2 -translate-y-1/2 rounded-full bg-[#003749]/75 p-2.5 text-white shadow-lg backdrop-blur-sm transition hover:bg-[#003749]"
           >
             <ChevronRight />
           </button>
           <button
             onClick={handleNext}
             aria-label="التالي"
-            className="absolute top-1/2 left-2 -translate-y-1/2 rounded-full bg-black/30 p-2 text-white backdrop-blur-sm transition hover:bg-black/60"
+            className="absolute top-1/2 left-2 -translate-y-1/2 rounded-full bg-[#003749]/75 p-2.5 text-white shadow-lg backdrop-blur-sm transition hover:bg-[#003749]"
           >
             <ChevronLeft />
           </button>

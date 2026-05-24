@@ -1,7 +1,9 @@
 import {
   BranchesShowcase,
+  FleetBanner,
   FleetCategories,
   Hero,
+  HomeCtaSection,
   HomeScrollSections,
   PromoBanner,
   ServicesSection,
@@ -47,7 +49,9 @@ export default async function Home() {
           fleetCategories={<FleetCategories />}
           promoBanner={<PromoBanner />}
           services={<ServicesSection />}
+          fleetBanner={<FleetBanner />}
           branches={<BranchesShowcase />}
+          homeCta={<HomeCtaSection />}
         />
       </main>
       <SiteFooter />

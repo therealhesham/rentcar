@@ -41,7 +41,7 @@ export function FleetBanner() {
       />
 
       {/* dark overlay */}
-      <div className="absolute inset-0 " aria-hidden />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#003749]/85 via-[#003749]/45 to-[#003749]/25" aria-hidden />
 
       {/* content */}
       <div className="relative z-10 flex h-full flex-col items-center justify-center gap-4 px-4 text-center">
@@ -50,7 +50,7 @@ export function FleetBanner() {
         </h2>
         <Link
           href="/fleet"
-          className="rounded-full border border-white/70 bg-white/10 px-6 py-2 text-sm font-bold text-white backdrop-blur-sm transition-colors hover:bg-white hover:text-[#003749]"
+          className="rounded-full border-2 border-white/30 bg-white/10 px-8 py-3 text-sm font-extrabold text-white backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:border-white hover:bg-white hover:text-[#003749]"
         >
           انتقل إلى أسطولنا
         </Link>

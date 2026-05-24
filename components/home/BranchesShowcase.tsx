@@ -1,3 +1,4 @@
+import { MapPin } from "lucide-react";
 import { getActiveBranches, getNewBranchesForHome } from "@/lib/branch-data";
 import { Reveal } from "./HomeMotion";
 
@@ -39,21 +40,21 @@ type Branch = {
 
 function BranchCard({ branch }: { branch: Branch }) {
   return (
-    <article className="flex flex-col gap-3 rounded-2xl border border-[#dbb878]/50 bg-[#fdf3e0] p-5 shadow-[0_8px_24px_rgba(119,89,39,0.08)] transition-shadow hover:shadow-[0_14px_36px_rgba(119,89,39,0.14)]">
+    <article className="group flex flex-col gap-3 rounded-2xl border border-[#ebe4d3]/70 bg-white p-5 shadow-[0_8px_24px_-12px_rgba(15,61,71,0.08)] transition-all duration-300 hover:-translate-y-1 hover:border-[#dbb878]/45 hover:shadow-[0_16px_40px_-12px_rgba(15,61,71,0.12)]">
       <header className="text-center">
-        <h3 className="text-sm font-extrabold text-[#003749]">{branch.name}</h3>
-        <p className="mt-1 text-xs leading-relaxed text-[#775927]">
+        <h3 className="text-base font-extrabold text-[#003749]">{branch.name}</h3>
+        <p className="mt-1.5 text-xs leading-relaxed text-[#775927]/80">
           {branch.address?.trim() ||
             branch.tagline?.trim() ||
             "فرع روائس لتأجير السيارات"}
         </p>
       </header>
 
-      <div className="min-w-0 overflow-hidden rounded-xl border border-black/5 bg-white">
+      <div className="min-w-0 overflow-hidden rounded-xl border border-[#ebe4d3]/60 bg-[#fafafa]">
         <iframe
           title={`موقع ${branch.name} على الخريطة`}
           src={resolveBranchEmbedUrl(branch)}
-          className="block h-36 w-full max-w-full"
+          className="block h-40 w-full max-w-full transition-opacity group-hover:opacity-95"
           loading="lazy"
           referrerPolicy="no-referrer-when-downgrade"
           allowFullScreen
@@ -62,10 +63,10 @@ function BranchCard({ branch }: { branch: Branch }) {
 
       <a
         href={branch.phone ? `tel:${branch.phone.trim()}` : undefined}
-        className="mt-1 inline-flex w-full items-center justify-center gap-2 text-sm font-bold text-[#003749] sm:justify-start"
+        className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#fdfbf6] px-3 py-2.5 text-sm font-bold text-[#003749] ring-1 ring-[#ebe4d3]/80 transition-colors hover:bg-[#f5efe3] sm:justify-start"
         dir="ltr"
       >
-        <PhoneIcon className="h-4 w-4 shrink-0 text-[#003749]" />
+        <PhoneIcon className="h-4 w-4 shrink-0 text-[#dbb878]" />
         <span>{branch.phone?.trim() || "—"}</span>
       </a>
 
@@ -73,9 +74,10 @@ function BranchCard({ branch }: { branch: Branch }) {
         href={resolveBranchMapUrl(branch.slug, branch.name, branch.mapUrl)}
         target="_blank"
         rel="noreferrer"
-        className="text-xs font-bold text-[#775927] underline underline-offset-4 transition-opacity hover:opacity-80"
+        className="inline-flex items-center justify-center gap-1.5 text-xs font-bold text-[#775927] transition-colors hover:text-[#003749] sm:justify-start"
       >
-        موقع الفرع
+        <MapPin className="size-3.5 shrink-0 text-[#dbb878]" aria-hidden />
+        <span className="underline underline-offset-4">موقع الفرع على الخريطة</span>
       </a>
     </article>
   );
