@@ -128,25 +128,25 @@ export function SiteNav({ active = "home" }: SiteNavProps) {
           role="dialog"
           aria-modal="true"
           aria-label="قائمة التنقل"
-          className={`fixed inset-y-0 left-0 z-50 flex w-[min(100vw-2.5rem,18rem)] flex-col border-e border-[#c9a55e]/30 bg-[#dbb878] shadow-[4px_0_40px_rgba(22,51,50,0.2)] transition-transform duration-300 ease-out ${
+          className={`fixed inset-y-0 left-0 z-50 flex w-[min(100vw-2.5rem,18rem)] flex-col border-e border-white/10 bg-[#163332] shadow-[4px_0_40px_rgba(0,0,0,0.35)] transition-transform duration-300 ease-out ${
             open ? "translate-x-0" : "-translate-x-full"
           }`}
         >
-          <div className="flex items-center justify-between gap-3 border-b border-[#163332]/10 px-4 py-4">
+          <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-4">
             <Link href="/" onClick={closeMenu} aria-label="الصفحة الرئيسية">
               <Image
                 src="/logo.avif"
                 alt="Rawaes"
                 width={140}
                 height={46}
-                className="h-10 w-auto object-contain"
+                className="h-10 w-auto object-contain brightness-0 invert"
               />
             </Link>
             <button
               type="button"
               onClick={closeMenu}
               aria-label="إغلاق القائمة"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#163332]/10 text-[#163332] transition-colors hover:bg-[#163332]/20 active:bg-[#163332]/25"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 active:bg-white/25"
             >
               <svg
                 viewBox="0 0 24 24"
@@ -172,8 +172,8 @@ export function SiteNav({ active = "home" }: SiteNavProps) {
                   onClick={closeMenu}
                   className={`rounded-xl px-4 py-3.5 text-base font-bold transition-colors ${
                     isActive
-                      ? "bg-[#163332] text-white shadow-sm"
-                      : "text-[#2a2520] hover:bg-[#163332]/10 active:bg-[#163332]/15"
+                      ? "bg-[#dbb878] text-[#2a2520] shadow-[0_4px_16px_rgba(219,184,120,0.35)]"
+                      : "text-white hover:bg-white/10 active:bg-white/15"
                   }`}
                 >
                   {l.label}
@@ -182,8 +182,8 @@ export function SiteNav({ active = "home" }: SiteNavProps) {
             })}
           </nav>
 
-          <div className="border-t border-[#163332]/10 px-4 py-4">
-            <p className="text-center text-xs font-medium text-[#2a2520]/60">
+          <div className="border-t border-white/10 px-4 py-4">
+            <p className="text-center text-xs font-medium text-white/50">
               روائس لتأجير السيارات
             </p>
           </div>
