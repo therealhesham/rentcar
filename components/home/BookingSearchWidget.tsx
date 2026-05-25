@@ -21,7 +21,6 @@ import { LocationPickerPopover } from "@/components/home/LocationPickerPopover";
 import { DatePickerPopover } from "@/components/home/DatePickerPopover";
 import { DateRangePickerPopover } from "@/components/home/DateRangePickerPopover";
 import { TimePickerPopover } from "@/components/home/TimePickerPopover";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
 import { submitCorporateBookingLead } from "@/app/corporate-lead-actions";
@@ -918,99 +917,116 @@ export function BookingSearchWidget({
         ref={formRef}
         onSubmit={handleSearch}
         dir="rtl"
-        className={`booking-card relative z-0 w-full overflow-visible bg-white/[0.97] backdrop-blur-xl ${
+        className={`booking-card w-full overflow-visible ${
+          /* Sticky to viewport on the home search page, EXCEPT in monthly_packages
+             & corporate flows (those expand the form and need full scroll access). */
+          !combinedPanel &&
+          !isCheckout &&
+          rental !== "monthly_packages" &&
+          rental !== "corporate"
+            ? "sticky top-[4.5rem] z-30 sm:top-24"
+            : "relative z-0"
+        } ${
           combinedPanel
-            ? "rounded-none shadow-none ring-0"
-            : "rounded-2xl shadow-[0_28px_72px_-20px_rgba(15,61,71,0.18),0_8px_24px_-6px_rgba(15,61,71,0.07)] ring-1 ring-black/[0.03]"
+            ? ""
+            : "rounded-[1.75rem] bg-gradient-to-br from-[#fdfbf6] via-white to-[#fbf6ea] p-1 shadow-[0_36px_88px_-24px_rgba(0,55,73,0.22),0_12px_28px_-8px_rgba(0,55,73,0.08)] ring-1 ring-[#dbb878]/20 sm:p-2"
         } ${mounted ? "" : "opacity-0"}`}
       >
+        {/* Decorative gold hairline at the very top — adds a luxury accent */}
+        {!combinedPanel ? (
+          <>
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-x-[18%] top-0 h-px bg-gradient-to-r from-transparent via-[#dbb878]/60 to-transparent"
+            />
+            {/* Soft inner glow at the top edge */}
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 top-0 h-12 rounded-t-[1.75rem] bg-gradient-to-b from-white/70 to-transparent"
+            />
+          </>
+        ) : null}
+
         {/* ═══════════════════════════════════════
-            SECTION 1: Tab Header
+            SECTION 1: Quiet options strip (rental type + mode)
+            Subtle text-tabs on the right, compact toggle on the left,
+            so the pill below remains the visual hero.
         ═══════════════════════════════════════ */}
         {!isFreshRebookFlow ? (
-        <div className="relative">
-          <div className="absolute inset-0 bg-gradient-to-b from-[#fdfbf6] to-white" />
-          <div className="relative flex flex-col">
-            <div className="border-b border-[#f0ebe4]">
-              <div
-                className="flex w-full items-center gap-1 overflow-x-auto overscroll-x-contain p-1.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                role="tablist"
-                aria-label="نوع الحجز"
-              >
-                {tabFlagsEff.rentalDaily ? (
-                  <PillTab
-                    active={rental === "daily"}
-                    onClick={() => setRental("daily")}
-                    icon={<Car className="size-3.5 shrink-0" />}
-                    label="يومي"
-                  />
-                ) : null}
-                {tabFlagsEff.rentalWeekly ? (
-                  <PillTab
-                    active={rental === "weekly"}
-                    onClick={() => setRental("weekly")}
-                    icon={<CalendarDays className="size-3.5 shrink-0" />}
-                    label="أسبوعي"
-                  />
-                ) : null}
-                {tabFlagsEff.rentalMonthly ? (
-                  <PillTab
-                    active={rental === "monthly"}
-                    onClick={() => setRental("monthly")}
-                    icon={<CalendarRange className="size-3.5 shrink-0" />}
-                    label="شهري"
-                  />
-                ) : null}
-                {tabFlagsEff.rentalMonthlyPackages ? (
-                  <PillTab
-                    active={rental === "monthly_packages"}
-                    onClick={() => setRental("monthly_packages")}
-                    icon={<Layers className="size-3.5 shrink-0" />}
-                    label="الباقات الشهرية"
-                  />
-                ) : null}
-                {tabFlagsEff.rentalCorporate ? (
-                  <PillTab
-                    active={rental === "corporate"}
-                    onClick={() => setRental("corporate")}
-                    icon={<Building2 className="size-3.5 shrink-0" />}
-                    label="حجز الشركات"
-                  />
-                ) : null}
-              </div>
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-3 pt-3 pb-3 sm:px-5 sm:pt-4 sm:pb-4">
+            <div
+              role="tablist"
+              aria-label="نوع الحجز"
+              className="flex flex-wrap items-center gap-x-1 gap-y-1 sm:gap-x-1.5"
+            >
+              {tabFlagsEff.rentalDaily ? (
+                <QuietTab
+                  active={rental === "daily"}
+                  onClick={() => setRental("daily")}
+                  icon={<Car className="size-3 shrink-0" />}
+                  label="يومي"
+                />
+              ) : null}
+              {tabFlagsEff.rentalWeekly ? (
+                <QuietTab
+                  active={rental === "weekly"}
+                  onClick={() => setRental("weekly")}
+                  icon={<CalendarDays className="size-3 shrink-0" />}
+                  label="أسبوعي"
+                />
+              ) : null}
+              {tabFlagsEff.rentalMonthly ? (
+                <QuietTab
+                  active={rental === "monthly"}
+                  onClick={() => setRental("monthly")}
+                  icon={<CalendarRange className="size-3 shrink-0" />}
+                  label="شهري"
+                />
+              ) : null}
+              {tabFlagsEff.rentalMonthlyPackages ? (
+                <QuietTab
+                  active={rental === "monthly_packages"}
+                  onClick={() => setRental("monthly_packages")}
+                  icon={<Layers className="size-3 shrink-0" />}
+                  label="الباقات الشهرية"
+                />
+              ) : null}
+              {tabFlagsEff.rentalCorporate ? (
+                <QuietTab
+                  active={rental === "corporate"}
+                  onClick={() => setRental("corporate")}
+                  icon={<Building2 className="size-3 shrink-0" />}
+                  label="حجز الشركات"
+                />
+              ) : null}
             </div>
 
             {rental !== "corporate" &&
             (tabFlagsEff.modePickup || tabFlagsEff.modeDelivery) ? (
-              <div className="border-b border-[#f0ebe4] bg-[#fcfaf7]/40">
-                <div
-                  className="flex w-full items-center gap-1 overflow-x-auto overscroll-x-contain p-1.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                  role="tablist"
-                  aria-label="طريقة الاستلام"
-                >
-                  {tabFlagsEff.modePickup ? (
-                    <PillTab
-                      active={mode === "pickup"}
-                      onClick={() => setMode("pickup")}
-                      icon={<PackageCheck className="size-3.5 shrink-0" />}
-                      label="استلام من الفرع"
-                      tone="teal"
-                    />
-                  ) : null}
-                  {tabFlagsEff.modeDelivery ? (
-                    <PillTab
-                      active={mode === "delivery"}
-                      onClick={() => setMode("delivery")}
-                      icon={<Truck className="size-3.5 shrink-0" />}
-                      label="توصيل لموقعي"
-                      tone="teal"
-                    />
-                  ) : null}
-                </div>
+              <div
+                role="tablist"
+                aria-label="طريقة الاستلام"
+                className="flex items-center gap-0.5 rounded-full border border-[#ebe4d3] bg-white/90 p-0.5 shadow-[0_1px_4px_-1px_rgba(0,55,73,0.08)]"
+              >
+                {tabFlagsEff.modePickup ? (
+                  <ModeChip
+                    active={mode === "pickup"}
+                    onClick={() => setMode("pickup")}
+                    icon={<PackageCheck className="size-3 shrink-0" />}
+                    label="استلام"
+                  />
+                ) : null}
+                {tabFlagsEff.modeDelivery ? (
+                  <ModeChip
+                    active={mode === "delivery"}
+                    onClick={() => setMode("delivery")}
+                    icon={<Truck className="size-3 shrink-0" />}
+                    label="توصيل"
+                  />
+                ) : null}
               </div>
             ) : null}
           </div>
-        </div>
         ) : null}
 
         {/* ═══════════════════════════════════════
@@ -1659,8 +1675,14 @@ export function BookingSearchWidget({
 
         {/* ═══════════════════════════════════════
             SECTION 3: CTA + Info Footer
+            Hidden entirely in the default home search case (no badge yet);
+            no cement-tinted background — flows naturally on the form's white.
         ═══════════════════════════════════════ */}
-        <div className="border-t border-[#f0ebe4] bg-gradient-to-b from-[#fdfbf6] to-[#f9f5ee] px-3 py-3 sm:px-5">
+        {isFreshRebookFlow ||
+        rental === "corporate" ||
+        rental === "monthly_packages" ||
+        durationBadgeLabel != null ? (
+        <div className="px-3 py-3 sm:px-5">
           {/* CTA row */}
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
             {/* Duration badge + helper text */}
@@ -1730,40 +1752,31 @@ export function BookingSearchWidget({
                   </span>
                   <span className="text-[11px] font-medium text-[#6b5a3b]">مدة الحجز</span>
                 </div>
-              ) : (
+              ) : rental === "monthly_packages" ? (
                 <span className="flex items-center gap-1.5 text-[11px] text-[#aaa08e]">
-                  {rental === "monthly_packages"
-                    ? "تُشتق مدة البحث من يوم بدء الباقة ومدة الاشتراك أعلاه"
-                    : "حدّد التواريخ لعرض مدة الحجز"}
+                  تُشتق مدة البحث من يوم بدء الباقة ومدة الاشتراك أعلاه
                 </span>
-              )}
+              ) : null}
             </div>
           </div>
 
-          {/* Bottom info row */}
-          <div className="mt-2 flex flex-col gap-2 border-t border-[#ebe4d3]/60 pt-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-            <p className="text-[10px] leading-relaxed text-[#aaa08e]">
-              {rental === "corporate"
-                ? "البيانات تُستخدم للتواصل فقط — لا يتم تأكيد حجز آلياً من هذه الخطوة."
-                : isCheckout
-                  ? "يُحدّث السعر والتوفر بعد تطبيق التواريخ على هذا الحجز"
-                  : "يُعرض المتوفر للحجز المباشر حسب الفترة المحددة"}
-            </p>
-            {rental === "corporate" ? (
-              <span className="text-[10.5px] font-bold text-[#6b5a3b]">
-                فريق المبيعات يتابع الطلبات خلال أوقات العمل
-              </span>
-            ) : (
-              <Link
-                href="/"
-                className="text-[10.5px] font-bold text-[#003749] underline-offset-4 transition-colors hover:text-[#dbb878] hover:underline"
-                style={{ textDecorationColor: GOLD }}
-              >
-                {/* احجز الآن */}
-              </Link>
-            )}
-          </div>
+          {/* Bottom info row — hidden in the default home search case */}
+          {rental === "corporate" || isCheckout ? (
+            <div className="mt-2 flex flex-col gap-2 border-t border-[#ebe4d3]/60 pt-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+              <p className="text-[10px] leading-relaxed text-[#aaa08e]">
+                {rental === "corporate"
+                  ? "البيانات تُستخدم للتواصل فقط — لا يتم تأكيد حجز آلياً من هذه الخطوة."
+                  : "يُحدّث السعر والتوفر بعد تطبيق التواريخ على هذا الحجز"}
+              </p>
+              {rental === "corporate" ? (
+                <span className="text-[10.5px] font-bold text-[#6b5a3b]">
+                  فريق المبيعات يتابع الطلبات خلال أوقات العمل
+                </span>
+              ) : null}
+            </div>
+          ) : null}
         </div>
+        ) : null}
 
         {/* No branches */}
         {dateCities.length === 0 && rental !== "corporate" && (
@@ -1819,46 +1832,79 @@ export function BookingSearchWidget({
    Sub-components
 ───────────────────────────────────────── */
 
-function PillTab({
+/** Sixt-style filled pill tab — solid teal when active, transparent w/ hover otherwise. */
+function QuietTab({
   active,
   onClick,
   icon,
   label,
-  tone = "gold",
 }: {
   active: boolean;
   onClick: () => void;
   icon: React.ReactNode;
   label: string;
-  tone?: "gold" | "teal";
 }) {
-  const isGold = tone === "gold";
-
   return (
     <button
       type="button"
       role="tab"
       aria-selected={active}
       onClick={onClick}
-      className="flex min-h-[40px] shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-[11px] font-bold outline-none transition-all duration-250 focus-visible:ring-2 focus-visible:ring-[#dbb878] focus-visible:ring-offset-1 focus-visible:ring-offset-[#fdfbf6] sm:min-h-0 sm:flex-1 sm:text-[12px]"
+      className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-1.5 text-[12px] font-bold outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-[#dbb878]/40 sm:px-4 sm:py-2 sm:text-[12.5px] ${
+        active ? "" : "hover:bg-[#003749]/[0.05] hover:text-[#003749]"
+      }`}
       style={
         active
           ? {
-              background: isGold
-                ? `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)`
-                : `linear-gradient(135deg, ${TEAL} 0%, #004d63 100%)`,
-              color: "#fff",
-              boxShadow: isGold
-                ? "0 4px 14px -4px rgba(219,184,120,0.5)"
-                : "0 4px 14px -4px rgba(0,55,73,0.4)",
+              background: `linear-gradient(135deg, ${TEAL} 0%, #004d63 100%)`,
+              color: "#ffffff",
+              boxShadow: "0 6px 18px -6px rgba(0,55,73,0.45)",
             }
           : {
               background: "transparent",
-              color: isGold ? "#8a7752" : "#4a7a8a",
+              color: "#5a6b75",
             }
       }
     >
-      {icon}
+      <span aria-hidden>{icon}</span>
+      <span>{label}</span>
+    </button>
+  );
+}
+
+/** Compact rounded-full chip toggle (pickup vs delivery). */
+function ModeChip({
+  active,
+  onClick,
+  icon,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      className="flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-bold outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-[#dbb878]/40"
+      style={
+        active
+          ? {
+              background: `linear-gradient(135deg, ${TEAL} 0%, #004d63 100%)`,
+              color: "#fff",
+              boxShadow: "0 2px 8px -2px rgba(0,55,73,0.35)",
+            }
+          : {
+              background: "transparent",
+              color: "#4a7a8a",
+            }
+      }
+    >
+      <span aria-hidden>{icon}</span>
       <span>{label}</span>
     </button>
   );

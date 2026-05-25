@@ -76,23 +76,13 @@ export function Hero({
         id="home-booking"
         className={
           SHOW_HERO_IMAGES
-            ? "relative z-30 -mt-8 scroll-mt-24 px-3 sm:-mt-12 sm:px-6 md:-mt-12 lg:-mt-16 lg:px-8"
-            : "relative z-30 -mt-1 scroll-mt-24 px-3 pb-6 sm:-mt-2 sm:px-6 sm:pb-8 lg:px-8"
+            ? "-mt-8 scroll-mt-24 px-3 sm:-mt-12 sm:px-6 md:-mt-12 lg:-mt-16 lg:px-8"
+            : "-mt-1 scroll-mt-24 px-3 pb-6 sm:-mt-2 sm:px-6 sm:pb-8 lg:px-8"
         }
         dir="rtl"
       >
         <div className="mx-auto w-full max-w-[72rem]">
-          <div className="rounded-2xl border border-[#ebe4d3]/70 bg-white/95 p-3 shadow-[0_20px_60px_-16px_rgba(15,61,71,0.14)] backdrop-blur-md sm:rounded-[1.35rem] sm:p-4 lg:p-5">
-            <div className="mb-2.5 flex items-center justify-center gap-2 sm:mb-3 sm:gap-3">
-              <span className="hidden h-px w-10 bg-gradient-to-l from-[#dbb878]/50 to-transparent sm:block sm:w-12" />
-              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#003749]/45 sm:text-[11px] sm:tracking-[0.25em]">
-                احجز مركبتك الآن
-              </span>
-              <span className="hidden h-px w-10 bg-gradient-to-r from-[#dbb878]/50 to-transparent sm:block sm:w-12" />
-            </div>
-
-            <BookingWidget cities={cities} tabFlags={tabFlags} />
-          </div>
+          <BookingWidget cities={cities} tabFlags={tabFlags} />
         </div>
       </div>
     </>
