@@ -872,6 +872,46 @@ export function BookingSearchWidget({
             box-shadow: none;
           }
         }
+        /* ─── Sixt-style elegant pill (desktop only) ───
+           Tabs above keep their cream tone; the search bar itself
+           becomes a clean white capsule with hair-line dividers. */
+        @media (min-width: 640px) {
+          .search-pill {
+            background: #ffffff;
+            border-radius: 9999px;
+            border: 1px solid #ece5d4;
+            box-shadow:
+              0 18px 44px -16px rgba(0, 55, 73, 0.22),
+              0 4px 12px -4px rgba(0, 55, 73, 0.08);
+            overflow: hidden;
+          }
+          /* Strip cream backgrounds from segments + buttons inside the pill */
+          .search-pill > div,
+          .search-pill > div > div,
+          .search-pill .field-trigger {
+            background-color: transparent;
+          }
+          /* Refined hover/active states for the pill segments */
+          .search-pill .field-trigger {
+            transition:
+              background-color 0.2s ease,
+              box-shadow 0.2s ease;
+          }
+          .search-pill .field-trigger:hover {
+            background-color: #faf6ec;
+            border-color: #ebe4d3;
+            box-shadow: none;
+          }
+          .search-pill .field-trigger[aria-expanded="true"] {
+            background-color: #fbf7ea;
+            border-color: #ebe4d3;
+            box-shadow: inset 0 -2px 0 0 #dbb878;
+          }
+          /* Slightly more breathing room inside each segment */
+          .search-pill .pill-cell {
+            padding: 18px 22px;
+          }
+        }
       `}</style>
 
       <form
@@ -1308,8 +1348,8 @@ export function BookingSearchWidget({
               </div>
             </SubscriptionPackagesInWidget>
           ) : (
-            /* ═══ KEY.SA-STYLE HORIZONTAL BAR ═══ */
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch sm:gap-0 sm:rounded-2xl sm:border sm:border-[#ebe4d3] sm:overflow-hidden sm:shadow-[0_2px_12px_-4px_rgba(0,55,73,0.08)]">
+            /* ═══ SIXT-STYLE ELEGANT PILL ═══ */
+            <div className="search-pill flex flex-col gap-3 sm:flex-row sm:items-stretch sm:gap-0">
 
               {/* ── 1. موقع الاستلام ── */}
               <div className="relative flex-1 min-w-0">
@@ -1596,7 +1636,7 @@ export function BookingSearchWidget({
                 <button
                   type="submit"
                   disabled={dateCities.length === 0}
-                  className="cta-btn group relative flex min-h-[48px] w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-5 py-3.5 text-white disabled:pointer-events-none disabled:opacity-45 sm:min-h-0 sm:rounded-none sm:rounded-l-2xl sm:py-3"
+                  className="cta-btn group relative flex min-h-[48px] w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-5 py-3.5 text-white disabled:pointer-events-none disabled:opacity-45 sm:min-h-0 sm:rounded-none sm:rounded-l-full sm:px-9 sm:py-4 sm:text-[15px]"
                   style={{ background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)` }}
                 >
                   <span
