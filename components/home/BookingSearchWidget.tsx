@@ -1542,7 +1542,7 @@ export function BookingSearchWidget({
                     <CalendarRange className="size-3 text-[#dbb878]" aria-hidden />
                     تاريخ التسليم
                     {rental !== "daily" ? (
-                      <span className="text-[9px] font-medium text-[#8a7752]/70">(تلقائي)</span>
+                      <span className="text-[9px] font-medium text-[#8a7752]/70"></span>
                     ) : null}
                   </span>
                   {dropoffDateDraft ? (
@@ -1627,7 +1627,7 @@ export function BookingSearchWidget({
                       <span className="text-[9px] font-bold uppercase tracking-wider text-[#003749]/55">
                         وقت التسليم
                         {rental !== "daily" ? (
-                          <span className="font-medium text-[#8a7752]/70"> (تلقائي)</span>
+                          <span className="font-medium text-[#8a7752]/70"> </span>
                         ) : null}
                       </span>
                       <span className="text-[13px] font-bold text-[#0f1923]" dir="ltr">
