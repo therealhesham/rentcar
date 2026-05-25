@@ -807,7 +807,7 @@ export function FleetCheckoutClient({
               {/* Header Title */}
               <div>
                 <h1 className="text-2xl font-extrabold tracking-tight text-[#003749] sm:text-3xl">
-                  مراجعة الحجز 
+                  بيانات الحجز
                 </h1>
                 <p className="mt-2 text-[14px] text-[#6b5a3b]">
                   ارفعوا صورة الرخصة (إلزامي)، وصورة الهوية أو الجواز إن وُجدت. ثم راجعوا الإضافات وبيانات التواصل.
