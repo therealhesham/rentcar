@@ -9,10 +9,32 @@ export async function upsertCustomerFromFleetBooking(opts: {
   email: string;
   phoneE164: string;
   name: string;
+  kyc?: {
+    idDocumentKind: string;
+    nationalIdNumber: string | null;
+    passportNumber: string | null;
+    licenseNumber: string;
+    licenseExpiryDate: Date;
+    idCardImageUrl: string | null;
+    driverLicenseImageUrl: string;
+  } | null;
 }): Promise<{ ok: true; userId: number } | { ok: false; error: string }> {
   const email = opts.email.trim().toLowerCase();
   const phone = opts.phoneE164.trim();
   const name = opts.name.trim();
+  const kyc = opts.kyc ?? null;
+
+  const kycData = kyc
+    ? {
+        idDocumentKind: kyc.idDocumentKind,
+        nationalIdNumber: kyc.nationalIdNumber,
+        passportNumber: kyc.passportNumber,
+        licenseNumber: kyc.licenseNumber,
+        licenseExpiryDate: kyc.licenseExpiryDate,
+        idCardImageUrl: kyc.idCardImageUrl,
+        driverLicenseImageUrl: kyc.driverLicenseImageUrl,
+      }
+    : {};
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
     return { ok: false, error: "البريد الإلكتروني غير صالح لربط الحساب." };
@@ -39,7 +61,7 @@ export async function upsertCustomerFromFleetBooking(opts: {
     try {
       await prisma.user.update({
         where: { id: byEmail.id },
-        data: { name, phone },
+        data: { name, phone, ...kycData } as any,
       });
     } catch (e) {
       if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
@@ -63,7 +85,7 @@ export async function upsertCustomerFromFleetBooking(opts: {
     }
     await prisma.user.update({
       where: { id: byPhone.id },
-      data: { name },
+      data: { name, ...kycData } as any,
     });
     return { ok: true, userId: byPhone.id };
   }
@@ -74,7 +96,8 @@ export async function upsertCustomerFromFleetBooking(opts: {
       phone,
       name,
       passwordHash: null,
-    },
+      ...kycData,
+    } as any,
     select: { id: true },
   });
   return { ok: true, userId: user.id };

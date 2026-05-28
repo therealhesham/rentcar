@@ -23,6 +23,15 @@ model User {
   name         String?  @db.VarChar(255)
   /// موحّد مع الحجز: +9665XXXXXXXX
   phone        String?  @unique @db.VarChar(16)
+  /// مواطن = CITIZEN، مقيم = RESIDENT، زائر = VISITOR
+  idDocumentKind        String?   @db.VarChar(24)
+  nationalIdNumber      String?   @db.VarChar(16)
+  passportNumber        String?   @db.VarChar(32)
+  licenseNumber         String?   @db.VarChar(64)
+  /// تاريخ انتهاء رخصة القيادة المخزّن في حساب العميل.
+  licenseExpiryDate     DateTime? @db.Date
+  idCardImageUrl        String?   @db.Text
+  driverLicenseImageUrl String?   @db.Text
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -269,12 +278,12 @@ model BookingRequest {
   phone         String
   /// بريد لإرسال الفاتورة بعد إتمام الدفع (يُجمع من صفحة الإتمام).
   contactEmail  String?   @db.VarChar(255)
-  /// مواطن = CITIZEN، مقيم = RESIDENT، زائر = VISITOR؛ قد يوجد RESIDENT_VISITOR في سجلات قديمة.
+  /// Legacy fields: نُبقيها للتوافق مع السجلات القديمة؛ البيانات الجديدة تُحفظ في User.
   idDocumentKind           String?   @db.VarChar(24)
   nationalIdNumber         String?   @db.VarChar(16)
   passportNumber           String?   @db.VarChar(32)
   licenseNumber            String?   @db.VarChar(64)
-  /// تاريخ انتهاء رخصة القيادة (يُجمع عند الإتمام).
+  /// Legacy.
   licenseExpiryDate        DateTime? @db.Date
   idCardImageUrl           String?   @db.Text
   driverLicenseImageUrl    String?   @db.Text

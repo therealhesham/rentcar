@@ -21,6 +21,17 @@ export async function createFleetBookingAndLinkCustomerSession(
     email,
     phoneE164: enforced.prepared.phone.trim(),
     name: enforced.prepared.fullName.trim(),
+    kyc: enforced.prepared.kyc
+      ? {
+          idDocumentKind: enforced.prepared.kyc.idDocumentKind,
+          nationalIdNumber: enforced.prepared.kyc.nationalIdNumber,
+          passportNumber: enforced.prepared.kyc.passportNumber,
+          licenseNumber: enforced.prepared.kyc.licenseNumber,
+          licenseExpiryDate: enforced.prepared.kyc.licenseExpiryDate,
+          idCardImageUrl: enforced.prepared.kyc.idCardImageUrl,
+          driverLicenseImageUrl: enforced.prepared.kyc.driverLicenseImageUrl,
+        }
+      : null,
   });
   if (!cust.ok) return cust;
 

@@ -54,7 +54,17 @@ function bookingPhoneToLocalDigits(stored: string): string {
  * يُحمَّل فقط إذا كان الطلب لنفس العميل (حساب أو جوال مسجّل) ولنفس موديل السيارة.
  */
 export async function loadFleetCheckoutEditPrefill(args: {
-  profile: { id: number; phone: string | null };
+  profile: {
+    id: number;
+    phone: string | null;
+    idDocumentKind: string | null;
+    nationalIdNumber: string | null;
+    passportNumber: string | null;
+    licenseNumber: string | null;
+    licenseExpiryDate: Date | null;
+    idCardImageUrl: string | null;
+    driverLicenseImageUrl: string | null;
+  };
   carModelId: number;
   bookingRequestId: number;
 }): Promise<FleetCheckoutEditPrefill | null> {
@@ -75,31 +85,24 @@ export async function loadFleetCheckoutEditPrefill(args: {
       phone: true,
       contactEmail: true,
       ageRange: true,
-      idDocumentKind: true,
-      nationalIdNumber: true,
-      passportNumber: true,
-      licenseNumber: true,
-      licenseExpiryDate: true,
-      idCardImageUrl: true,
-      driverLicenseImageUrl: true,
       addonsJson: true,
     },
   });
   if (!row) return null;
 
   const licenseYmd =
-    row.licenseExpiryDate != null && !Number.isNaN(row.licenseExpiryDate.getTime())
-      ? row.licenseExpiryDate.toISOString().slice(0, 10)
+    profile.licenseExpiryDate != null && !Number.isNaN(profile.licenseExpiryDate.getTime())
+      ? profile.licenseExpiryDate.toISOString().slice(0, 10)
       : null;
 
   const ar = row.ageRange.trim();
   const ageRange = AGE_OPTIONS.has(ar) ? ar : "25-35";
 
-  const kind = row.idDocumentKind?.trim().toUpperCase() ?? "";
+  const kind = profile.idDocumentKind?.trim().toUpperCase() ?? "";
   const isVisitor =
     kind === "VISITOR" || kind === "RESIDENT_VISITOR";
-  const nid = (row.nationalIdNumber ?? "").replace(/\D/g, "").slice(0, 10);
-  const pass = (row.passportNumber ?? "").trim().toUpperCase().slice(0, 24);
+  const nid = (profile.nationalIdNumber ?? "").replace(/\D/g, "").slice(0, 10);
+  const pass = (profile.passportNumber ?? "").trim().toUpperCase().slice(0, 24);
 
   return {
     bookingRequestId: row.id,
@@ -110,10 +113,10 @@ export async function loadFleetCheckoutEditPrefill(args: {
     idDocumentKind: kind || null,
     nationalIdNumber: isVisitor ? "" : nid,
     passportNumber: isVisitor ? pass : "",
-    licenseNumber: (row.licenseNumber ?? "").replace(/\D/g, "").slice(0, 10),
+    licenseNumber: (profile.licenseNumber ?? "").replace(/\D/g, "").slice(0, 10),
     licenseExpiryYmd: licenseYmd,
-    idCardImageUrl: row.idCardImageUrl?.trim() || null,
-    driverLicenseImageUrl: row.driverLicenseImageUrl?.trim() || null,
+    idCardImageUrl: profile.idCardImageUrl?.trim() || null,
+    driverLicenseImageUrl: profile.driverLicenseImageUrl?.trim() || null,
     addonIds: addonIdsFromAddonsJson(row.addonsJson),
   };
 }

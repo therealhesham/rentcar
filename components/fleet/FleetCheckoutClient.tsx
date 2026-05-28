@@ -99,7 +99,20 @@ type Props = {
   bookingCities: BookingCityBranchesOption[];
   interCityShippingRules: Array<{ fromSlug: string; toSlug: string; feeExclVatSar: number }>;
   checkoutOneTimeFees: Array<{ slug: string; labelAr: string; feeExclVatSar: number }>;
-  sessionCustomer: { name: string; phoneLocal: string; email: string } | null;
+  sessionCustomer:
+    | {
+        name: string;
+        phoneLocal: string;
+        email: string;
+        idDocumentKind: string | null;
+        nationalIdNumber: string | null;
+        passportNumber: string | null;
+        licenseNumber: string | null;
+        licenseExpiryYmd: string | null;
+        idCardImageUrl: string | null;
+        driverLicenseImageUrl: string | null;
+      }
+    | null;
   rentalPriceDisplayMode: RentalPriceDisplayMode;
   /** بيانات حجز قائم عند «تعديل الحجز» — لملء الحقول بعد التحقق من الخادم */
   editPrefill: FleetCheckoutEditPrefill | null;
@@ -140,13 +153,32 @@ export function FleetCheckoutClient({
 
   /** واجهة: زرّان فقط (مواطن/مقيم معاً) + زائر؛ القيم المُرسَلة للخادم CITIZEN | RESIDENT تُشتق من أول رقم. */
   type IdDocUiKind = "SAUDI_ID" | "VISITOR";
-  const [idDocKind, setIdDocKind] = useState<IdDocUiKind>("SAUDI_ID");
-  const [nationalId, setNationalId] = useState("");
-  const [passportNumber, setPassportNumber] = useState("");
-  const [licenseNumber, setLicenseNumber] = useState("");
-  const [licenseExpiryDdmmyy, setLicenseExpiryDdmmyy] = useState("");
-  const [idCardUrl, setIdCardUrl] = useState<string | null>(null);
-  const [licenseDocUrl, setLicenseDocUrl] = useState<string | null>(null);
+  const sessionIdDocKind =
+    sessionCustomer?.idDocumentKind === "VISITOR" ||
+    sessionCustomer?.idDocumentKind === "RESIDENT_VISITOR"
+      ? ("VISITOR" as const)
+      : ("SAUDI_ID" as const);
+  const [idDocKind, setIdDocKind] = useState<IdDocUiKind>(sessionIdDocKind);
+  const [nationalId, setNationalId] = useState(
+    sessionIdDocKind === "SAUDI_ID"
+      ? (sessionCustomer?.nationalIdNumber ?? "").replace(/\D/g, "").slice(0, 10)
+      : "",
+  );
+  const [passportNumber, setPassportNumber] = useState(
+    sessionIdDocKind === "VISITOR"
+      ? (sessionCustomer?.passportNumber ?? "").trim().toUpperCase().slice(0, 24)
+      : "",
+  );
+  const [licenseNumber, setLicenseNumber] = useState(
+    (sessionCustomer?.licenseNumber ?? "").replace(/\D/g, "").slice(0, 10),
+  );
+  const [licenseExpiryDdmmyy, setLicenseExpiryDdmmyy] = useState(
+    sessionCustomer?.licenseExpiryYmd ? formatYmdAsDdMmYy(sessionCustomer.licenseExpiryYmd) : "",
+  );
+  const [idCardUrl, setIdCardUrl] = useState<string | null>(sessionCustomer?.idCardImageUrl ?? null);
+  const [licenseDocUrl, setLicenseDocUrl] = useState<string | null>(
+    sessionCustomer?.driverLicenseImageUrl ?? null,
+  );
   const [kycFieldError, setKycFieldError] = useState<string | null>(null);
   const [uploadingKyc, setUploadingKyc] = useState<"id" | "license" | null>(null);
   const prefillBookingIdRef = useRef<number | null>(null);

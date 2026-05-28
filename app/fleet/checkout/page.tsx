@@ -86,6 +86,16 @@ export default async function FleetCheckoutPage({
           name: profileNameTrimmed,
           phoneLocal,
           email: profile.email,
+          idDocumentKind: profile.idDocumentKind,
+          nationalIdNumber: profile.nationalIdNumber,
+          passportNumber: profile.passportNumber,
+          licenseNumber: profile.licenseNumber,
+          licenseExpiryYmd:
+            profile.licenseExpiryDate && !Number.isNaN(profile.licenseExpiryDate.getTime())
+              ? profile.licenseExpiryDate.toISOString().slice(0, 10)
+              : null,
+          idCardImageUrl: profile.idCardImageUrl,
+          driverLicenseImageUrl: profile.driverLicenseImageUrl,
         }
       : null;
 

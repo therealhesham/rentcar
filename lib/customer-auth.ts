@@ -90,12 +90,58 @@ export async function getCustomerProfile(): Promise<{
   email: string;
   name: string | null;
   phone: string | null;
+  idDocumentKind: string | null;
+  nationalIdNumber: string | null;
+  passportNumber: string | null;
+  licenseNumber: string | null;
+  licenseExpiryDate: Date | null;
+  idCardImageUrl: string | null;
+  driverLicenseImageUrl: string | null;
 } | null> {
   const id = await getCustomerSessionUserId();
   if (id == null) return null;
-  const row = await prisma.user.findUnique({
+  const row = (await prisma.user.findUnique({
     where: { id },
-    select: { id: true, email: true, name: true, phone: true },
-  });
-  return row;
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      phone: true,
+      idDocumentKind: true,
+      nationalIdNumber: true,
+      passportNumber: true,
+      licenseNumber: true,
+      licenseExpiryDate: true,
+      idCardImageUrl: true,
+      driverLicenseImageUrl: true,
+    },
+  } as any)) as
+    | {
+        id: number;
+        email: string;
+        name: string | null;
+        phone: string | null;
+        idDocumentKind?: string | null;
+        nationalIdNumber?: string | null;
+        passportNumber?: string | null;
+        licenseNumber?: string | null;
+        licenseExpiryDate?: Date | null;
+        idCardImageUrl?: string | null;
+        driverLicenseImageUrl?: string | null;
+      }
+    | null;
+  if (!row) return null;
+  return {
+    id: row.id,
+    email: row.email,
+    name: row.name,
+    phone: row.phone,
+    idDocumentKind: row.idDocumentKind ?? null,
+    nationalIdNumber: row.nationalIdNumber ?? null,
+    passportNumber: row.passportNumber ?? null,
+    licenseNumber: row.licenseNumber ?? null,
+    licenseExpiryDate: row.licenseExpiryDate ?? null,
+    idCardImageUrl: row.idCardImageUrl ?? null,
+    driverLicenseImageUrl: row.driverLicenseImageUrl ?? null,
+  };
 }

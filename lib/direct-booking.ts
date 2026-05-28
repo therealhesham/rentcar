@@ -1107,7 +1107,7 @@ export async function createDirectBooking(
     pickupCitySlug,
     pickupBranchSlug,
     contactEmail,
-    kyc,
+    kyc: _kyc,
     excludeBlockingBookingRequestId: _excludeIgnored,
     officePayment,
     ...common
@@ -1224,13 +1224,6 @@ export async function createDirectBooking(
               typeof contactEmail === "string" && contactEmail.trim()
                 ? contactEmail.trim().toLowerCase()
                 : null,
-            idDocumentKind: kyc?.idDocumentKind ?? null,
-            nationalIdNumber: kyc?.nationalIdNumber ?? null,
-            passportNumber: kyc?.passportNumber ?? null,
-            licenseNumber: kyc?.licenseNumber ?? null,
-            licenseExpiryDate: kyc?.licenseExpiryDate ?? null,
-            idCardImageUrl: kyc?.idCardImageUrl ?? null,
-            driverLicenseImageUrl: kyc?.driverLicenseImageUrl ?? null,
             ageRange: commonNormalized.ageRange,
             carType,
             branchId: branchIds.pickupBranchId,
