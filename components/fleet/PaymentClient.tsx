@@ -53,7 +53,7 @@ function paymentMethodLabelAr(code: string | null | undefined): string {
     case "CARD":
       return "بطاقة ائتمانية";
     case "CASH":
-      return "نقدي (كاش)";
+      return "الدفع عند الفرع";
     case "APPLE_PAY":
       return "Apple Pay";
     case "POINTS":
@@ -162,8 +162,8 @@ const METHOD_OPTIONS: MethodOption[] = [
   },
   {
     id: "CASH",
-    title: "نقدي (كاش)",
-    hint: "الدفع نقداً عند استلام السيارة أو في الفرع",
+    title: "الدفع عند الفرع",
+    hint: "",
     Icon: Banknote,
   },
   {
@@ -307,7 +307,7 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
           : method === "CASH"
             ? (
                 <>
-                  تأكيد الحجز (دفع نقداً) {formatSarAmount(booking.totals.totalInclTax)}{" "}
+                  تأكيد الحجز (الدفع عند الفرع) {formatSarAmount(booking.totals.totalInclTax)}{" "}
                   <SarCurrencyGlyph />
                 </>
               )
@@ -615,7 +615,9 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
                           </>
                         )}
                       </span>
-                      <span className="text-[11px] leading-snug text-on-surface-variant">{opt.hint}</span>
+                      {opt.hint ? (
+                        <span className="text-[11px] leading-snug text-on-surface-variant">{opt.hint}</span>
+                      ) : null}
                     </button>
                   );
                 })}
@@ -637,16 +639,6 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
                   <p className="mt-1 text-xs leading-relaxed opacity-90">
                     بعد التفعيل، سيتم فتح جلسة تمارا لإتمام التقسيط وفق سياساتهم. يمكن دمجها مع عروض
                     الشركة لاحقاً.
-                  </p>
-                </div>
-              ) : null}
-
-              {method === "CASH" ? (
-                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-                  <p className="font-bold">الدفع نقداً</p>
-                  <p className="mt-1 text-xs leading-relaxed opacity-90">
-                    بعد التأكيد يُحوَّل طلبك إلى «تحت المراجعة» ويتواصل معك فريقنا هاتفياً. يُستحق
-                    المبلغ عند استلام المركبة أو في الفرع — لا يُرسل إيصال دفع إلكتروني قبل التأكيد.
                   </p>
                 </div>
               ) : null}

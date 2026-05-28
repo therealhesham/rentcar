@@ -45,7 +45,7 @@ function paymentMethodLabel(code: string | null | undefined): string {
     case "CARD":
       return "بطاقة ائتمانية";
     case "CASH":
-      return "نقدي (كاش)";
+      return "الدفع عند الفرع";
     case "APPLE_PAY":
       return "Apple Pay";
     case "POINTS":

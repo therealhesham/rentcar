@@ -4,7 +4,7 @@ import {
 } from "@/lib/booking-payment-methods";
 
 const LABELS_AR: Record<BookingPaymentMethod, string> = {
-  CASH: "نقدي (كاش)",
+  CASH: "الدفع عند الفرع",
   CARD: "بطاقة ائتمانية",
   TABBY: "تابي",
   TAMARA: "تمارا",
