@@ -40,6 +40,7 @@ export async function createRentalAddon(
   const slug = normalizeSlug(String(formData.get("slug") ?? ""));
   const titleAr = String(formData.get("titleAr") ?? "").trim();
   const descriptionAr = String(formData.get("descriptionAr") ?? "").trim() || null;
+  const infoAr = String(formData.get("infoAr") ?? "").trim() || null;
   const pricePerDay = Number(formData.get("pricePerDay"));
   const sortOrder = Number(formData.get("sortOrder") ?? 0);
   const iconKey = parseIconKey(String(formData.get("iconKey") ?? ""));
@@ -79,6 +80,7 @@ export async function createRentalAddon(
         slug,
         titleAr: titleAr.slice(0, 255),
         descriptionAr,
+        infoAr,
         pricePerDay: Math.floor(pricePerDay),
         iconKey,
         exclusiveGroup,
@@ -109,6 +111,7 @@ export async function updateRentalAddon(
   const slug = normalizeSlug(String(formData.get("slug") ?? ""));
   const titleAr = String(formData.get("titleAr") ?? "").trim();
   const descriptionAr = String(formData.get("descriptionAr") ?? "").trim() || null;
+  const infoAr = String(formData.get("infoAr") ?? "").trim() || null;
   const pricePerDay = Number(formData.get("pricePerDay"));
   const sortOrder = Number(formData.get("sortOrder") ?? 0);
   const iconKey = parseIconKey(String(formData.get("iconKey") ?? ""));
@@ -152,6 +155,7 @@ export async function updateRentalAddon(
         slug,
         titleAr: titleAr.slice(0, 255),
         descriptionAr,
+        infoAr,
         pricePerDay: Math.floor(pricePerDay),
         iconKey,
         exclusiveGroup,

@@ -223,6 +223,8 @@ model RentalAddon {
   slug           String   @unique @db.VarChar(64)
   titleAr        String   @db.VarChar(255)
   descriptionAr  String?  @db.Text
+  /// نص معلومات الإضافة الظاهر عبر زر (i): تفاصيل وسياسة الإضافة للعميل.
+  infoAr         String?  @db.Text
   /// السعر لكل يوم بالريال (غير شامل الضريبة)
   pricePerDay    Int
   /// مفتاح أيقونة تقريبي للواجهة (مثل key، child، gauge)

@@ -136,6 +136,7 @@ export function FleetCheckoutClient({
   const [postCapacityModal, setPostCapacityModal] = useState(false);
   const [branchHoursOpen, setBranchHoursOpen] = useState(false);
   const [branchHoursMessage, setBranchHoursMessage] = useState("");
+  const [openAddonInfoId, setOpenAddonInfoId] = useState<number | null>(null);
 
   /** واجهة: زرّان فقط (مواطن/مقيم معاً) + زائر؛ القيم المُرسَلة للخادم CITIZEN | RESIDENT تُشتق من أول رقم. */
   type IdDocUiKind = "SAUDI_ID" | "VISITOR";
@@ -1053,10 +1054,13 @@ export function FleetCheckoutClient({
                   ) : (
                     addons.map((a) => {
                       const on = selected.has(a.id);
+                      const infoOpen = openAddonInfoId === a.id;
+                      const infoId = `addon-info-${a.id}`;
+                      const infoText = a.infoAr?.trim() || "";
                       return (
                         <label
                           key={a.id}
-                          className={`group relative flex cursor-pointer flex-col justify-between overflow-hidden rounded-2xl border p-5 transition-all duration-300 hover:shadow-[0_8px_24px_-10px_rgba(219,184,120,0.25)] ${
+                          className={`group relative flex cursor-pointer flex-col justify-between rounded-2xl border p-5 transition-all duration-300 hover:shadow-[0_8px_24px_-10px_rgba(219,184,120,0.25)] ${
                             on
                               ? "border-[#dbb878] bg-[#fefdfb] shadow-[0_0_0_1px_rgba(219,184,120,0.5)]"
                               : "border-[#ebe4d3] bg-white hover:border-[#dbb878]/50"
@@ -1086,14 +1090,40 @@ export function FleetCheckoutClient({
                             </div>
                             <div className="flex items-center gap-1.5">
                               <span className="text-[15px] font-extrabold text-[#003749]">{a.titleAr}</span>
-                              {a.descriptionAr && (
-                                <div className="group/tooltip relative">
-                                  <CircleHelp className="size-4 text-[#aaa08e] hover:text-[#dbb878]" />
-                                  <div className="pointer-events-none absolute bottom-full start-1/2 z-10 mb-2 w-48 -translate-x-1/2 rounded-lg bg-[#003749] p-2 text-center text-[11px] leading-tight text-white opacity-0 transition-opacity duration-200 group-hover/tooltip:opacity-100">
-                                    {a.descriptionAr}
-                                  </div>
-                                </div>
-                              )}
+                              {infoText ? (
+                                <span className="relative inline-flex">
+                                  <button
+                                    type="button"
+                                    aria-expanded={infoOpen}
+                                    aria-controls={infoId}
+                                    aria-label={`شرح ${a.titleAr}`}
+                                    className="inline-flex size-5 items-center justify-center rounded-full border border-[#d9d0bf] text-[#8f8573] transition-colors hover:border-[#dbb878] hover:text-[#dbb878]"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      setOpenAddonInfoId((prev) => (prev === a.id ? null : a.id));
+                                    }}
+                                  >
+                                    <Info className="size-3.5" />
+                                  </button>
+                                  <span
+                                    id={infoId}
+                                    role="tooltip"
+                                    className={`pointer-events-none absolute bottom-full end-0 z-30 mb-1 w-56 rounded-xl border border-[#ebe4d3] bg-white p-3 text-[12px] leading-relaxed text-[#5f5341] shadow-[0_16px_40px_-20px_rgba(0,0,0,0.35)] transition-all duration-150 ${
+                                      infoOpen ? "opacity-100" : "opacity-0"
+                                    }`}
+                                    style={{
+                                      transform: `translateY(${infoOpen ? "0" : "4px"})`,
+                                    }}
+                                  >
+                                    {infoText}
+                                    <span
+                                      aria-hidden
+                                      className="absolute end-2 top-full size-2 -translate-y-1/2 rotate-45 border-b border-r border-[#ebe4d3] bg-white"
+                                    />
+                                  </span>
+                                </span>
+                              ) : null}
                             </div>
                           </div>
 
@@ -1114,6 +1144,11 @@ export function FleetCheckoutClient({
                               {on ? "تم الإختيار" : "إضافة"}
                             </div>
                           </div>
+                          {on ? (
+                            <p className="mt-3 rounded-lg bg-[#f4f0ea] px-3 py-2 text-[11px] font-semibold text-[#5b4c36]">
+                              تمت إضافة {a.titleAr} للحجز ويمكن تعديلها قبل التأكيد النهائي.
+                            </p>
+                          ) : null}
                         </label>
                       );
                     })

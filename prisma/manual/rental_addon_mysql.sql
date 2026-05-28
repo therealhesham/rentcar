@@ -21,6 +21,9 @@ CREATE TABLE IF NOT EXISTS `RentalAddon` (
 ALTER TABLE `BookingRequest`
   ADD COLUMN `addonsJson` TEXT NULL;
 
+ALTER TABLE `RentalAddon`
+  ADD COLUMN `infoAr` TEXT NULL;
+
 INSERT IGNORE INTO `RentalAddon` (`slug`, `titleAr`, `descriptionAr`, `pricePerDay`, `iconKey`, `exclusiveGroup`, `sortOrder`, `isActive`, `updatedAt`)
 VALUES
   ('key-protection', 'أمان المفتاح', NULL, 15, 'key', 'key-protection', 10, true, CURRENT_TIMESTAMP(3)),
