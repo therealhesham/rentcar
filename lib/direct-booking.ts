@@ -744,8 +744,8 @@ export function parseDirectBookingKycFromJson(
   const idCardRaw = String(body.idCardImageUrl ?? "").trim();
   const licenseImgRaw = String(body.driverLicenseImageUrl ?? "").trim();
 
-  if (!licenseNumber || licenseNumber.length < 4 || licenseNumber.length > 64) {
-    return { ok: false, error: "رقم الرخصة مطلوب (4–64 حرفاً)." };
+  if (!/^\d{10}$/.test(licenseNumber)) {
+    return { ok: false, error: "رقم الرخصة يجب أن يتكوّن من 10 أرقام فقط." };
   }
 
   const licenseExpiryRaw = String(body.licenseExpiryDate ?? "").trim();

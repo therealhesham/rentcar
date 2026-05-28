@@ -571,8 +571,8 @@ export function FleetCheckoutClient({
       return;
     }
     const lic = licenseNumber.trim();
-    if (lic.length < 4 || lic.length > 64) {
-      setError("أدخل رقم الرخصة (4–64 حرفاً).");
+    if (!/^\d{10}$/.test(lic)) {
+      setError("رقم الرخصة يجب أن يتكوّن من 10 أرقام فقط.");
       return;
     }
     const expYmd = parseDdMmYyToYmd(licenseExpiryDdmmyy);
@@ -909,8 +909,13 @@ export function FleetCheckoutClient({
                     <div className="group relative sm:col-span-2">
                       <input
                         type="text"
+                        inputMode="numeric"
+                        pattern="\d{10}"
+                        maxLength={10}
                         value={licenseNumber}
-                        onChange={(e) => setLicenseNumber(e.target.value.slice(0, 64))}
+                        onChange={(e) =>
+                          setLicenseNumber(e.target.value.replace(/\D/g, "").slice(0, 10))
+                        }
                         id="checkout-license-no"
                         className="peer w-full rounded-xl border border-[#ebe4d3] bg-transparent px-4 pb-3 pt-6 text-[14px] font-semibold text-[#003749] outline-none transition-all focus:border-[#dbb878] focus:ring-1 focus:ring-[#dbb878]"
                         placeholder=" "

@@ -110,7 +110,7 @@ export async function loadFleetCheckoutEditPrefill(args: {
     idDocumentKind: kind || null,
     nationalIdNumber: isVisitor ? "" : nid,
     passportNumber: isVisitor ? pass : "",
-    licenseNumber: (row.licenseNumber ?? "").trim().slice(0, 64),
+    licenseNumber: (row.licenseNumber ?? "").replace(/\D/g, "").slice(0, 10),
     licenseExpiryYmd: licenseYmd,
     idCardImageUrl: row.idCardImageUrl?.trim() || null,
     driverLicenseImageUrl: row.driverLicenseImageUrl?.trim() || null,

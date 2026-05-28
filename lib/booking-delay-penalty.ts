@@ -3,7 +3,7 @@ import { computeBookingReturnAt } from "@/lib/booking-return-schedule";
 /** ساعات التأخير المسموحة دون رسوم (حجز يومي). */
 export const DELAY_PENALTY_FREE_HOURS = 2;
 
-/** فوق هذه المدة يُحتسب يوم إيجار إضافي كغرامة تأخير. */
+/** فوق هذه المدة يُحتسب يوم إيجار إضافي كساعات تأخير. */
 export const DELAY_PENALTY_FULL_DAY_HOURS = 4;
 
 export type DelayPenaltyKind = "none" | "hourly" | "full_day";
@@ -46,7 +46,7 @@ export function computeLateReturnHours(
 }
 
 /**
- * غرامة تأخير الحجز اليومي:
+ * ساعات تأخير الحجز اليومي:
  * - حتى ساعتين: مجاني
  * - أكثر من ساعتين وحتى 4 ساعات: (ساعات التأخير × سعر اليوم ÷ 24) × 2
  * - أكثر من 4 ساعات: يوم إيجار كامل (سعر اليوم)
@@ -81,9 +81,9 @@ function formatHoursAr(h: number): string {
 
 function buildDelayLabelAr(kind: DelayPenaltyKind, lateHours: number, billableHours: number): string {
   if (kind === "full_day") {
-    return `غرامة تأخير (أكثر من ${DELAY_PENALTY_FULL_DAY_HOURS} ساعات — يوم إضافي)`;
+    return `ساعات تأخير (أكثر من ${DELAY_PENALTY_FULL_DAY_HOURS} ساعات — يوم إضافي)`;
   }
-  return `غرامة تأخير (${formatHoursAr(lateHours)} س — (سعر اليوم ÷ 24) × 2)`;
+  return `ساعات تأخير (${formatHoursAr(lateHours)} س — (سعر اليوم ÷ 24) × 2)`;
 }
 
 export function isDailyRentalTab(rentalTab: string | null | undefined): boolean {

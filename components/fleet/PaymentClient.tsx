@@ -259,6 +259,8 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
     d.setDate(d.getDate() + booking.numberOfDays);
     return fmtWhen(d);
   }, [booking.pickupDate, booking.numberOfDays]);
+  const branchLabelAr =
+    booking.pickupBranchLabelAr?.trim() || BRANCH_LABEL_AR[booking.branch] || booking.branch;
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     if (checkoutComplete) return;
@@ -426,7 +428,7 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
                   }`}
                 >
                   {underReview
-                    ? "طلبك تحت المراجعة"
+                    ? "تم استلام طلبك"
                     : cashConfirmed
                       ? "تم تأكيد حجزك"
                       : cashSubmitted
@@ -506,7 +508,7 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
                           </span>
                         ) : (
                           <span className="font-bold">
-                            {BRANCH_LABEL_AR[booking.branch] ?? booking.branch}
+                            {branchLabelAr}
                           </span>
                         )}
                     </dd>
@@ -835,7 +837,7 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
                   <div>
                     <dt className="font-bold text-[#003749]">الفرع</dt>
                     <dd className="text-on-surface">
-                      {BRANCH_LABEL_AR[booking.branch] ?? booking.branch}
+                      {branchLabelAr}
                     </dd>
                   </div>
                 )}
