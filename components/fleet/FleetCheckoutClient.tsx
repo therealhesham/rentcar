@@ -1144,11 +1144,6 @@ export function FleetCheckoutClient({
                               {on ? "تم الإختيار" : "إضافة"}
                             </div>
                           </div>
-                          {on ? (
-                            <p className="mt-3 rounded-lg bg-[#f4f0ea] px-3 py-2 text-[11px] font-semibold text-[#5b4c36]">
-                              تمت إضافة {a.titleAr} للحجز ويمكن تعديلها قبل التأكيد النهائي.
-                            </p>
-                          ) : null}
                         </label>
                       );
                     })
