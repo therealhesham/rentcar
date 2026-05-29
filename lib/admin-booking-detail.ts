@@ -1,4 +1,5 @@
 import { bookingBranchRelationsSelect } from "@/lib/booking-branches";
+import { customerKycSelect } from "@/lib/booking-kyc-display";
 import { prisma } from "@/lib/prisma";
 
 export async function loadAdminBookingDetail(id: number) {
@@ -8,7 +9,15 @@ export async function loadAdminBookingDetail(id: number) {
     where: { id },
     include: {
       carModel: { include: { brand: true, category: true } },
-      customer: { select: { id: true, name: true, email: true, phone: true } },
+      customer: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          ...customerKycSelect,
+        },
+      },
       ...bookingBranchRelationsSelect,
     },
   });

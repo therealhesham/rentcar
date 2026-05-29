@@ -6,6 +6,8 @@ import { SiteNav } from "@/components/shared/SiteNav";
 import { AccountBookingCardActions } from "@/components/account/AccountBookingCardActions";
 import { getCustomerProfile } from "@/lib/customer-auth";
 import { prisma } from "@/lib/prisma";
+import { isCashPaymentMethod } from "@/lib/booking-cash-flow";
+import { bookingStatusLabelAr } from "@/lib/booking-display-labels";
 import { computeCancellationRefundBreakdown } from "@/lib/booking-cancellation-refund";
 import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
 import {
@@ -30,20 +32,6 @@ function profileInitials(name: string | null | undefined): string {
   return trimmed.slice(0, 2);
 }
 
-function bookingStatusLabel(status: string): string {
-  const map: Record<string, string> = {
-    NEW: "جديد",
-    PENDING: "قيد المراجعة",
-    CONFIRMED: "مؤكد",
-    APPROVED: "مؤكد",
-    COMPLETED: "مكتمل",
-    CANCELLED: "ملغى",
-    REJECTED: "مرفوض",
-  };
-  const key = status.trim().toUpperCase();
-  return map[key] ?? status;
-}
-
 function bookingPaymentPillClass(paymentStatus: string): string {
   const k = paymentStatus.trim().toUpperCase();
   if (k === "PAID") return "border-emerald-200 bg-emerald-50 text-emerald-950";
@@ -53,12 +41,16 @@ function bookingPaymentPillClass(paymentStatus: string): string {
   return "border-orange-200 bg-orange-50 text-orange-900";
 }
 
-function bookingPaymentPillLabel(paymentStatus: string): string {
+function bookingPaymentPillLabel(
+  paymentStatus: string,
+  paymentMethod: string | null | undefined,
+): string {
   const k = paymentStatus.trim().toUpperCase();
   if (k === "PAID") return "مدفوع";
   if (k === "REFUNDED") return "مسترد بالكامل";
   if (k === "PARTIAL_REFUND") return "استرداد جزئي";
   if (k === "NO_REFUND") return "بدون استرداد";
+  if (isCashPaymentMethod(paymentMethod)) return "الدفع عند الفرع";
   return "بانتظار الدفع";
 }
 
@@ -269,13 +261,13 @@ export default async function AccountDashboardPage() {
                         <span
                           className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${bookingStatusStyles(b.status)}`}
                         >
-                          {bookingStatusLabel(b.status)}
+                          {bookingStatusLabelAr(b.status)}
                         </span>
                         {b.kind === "DIRECT" ? (
                           <span
                             className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${bookingPaymentPillClass(b.paymentStatus)}`}
                           >
-                            {bookingPaymentPillLabel(b.paymentStatus)}
+                            {bookingPaymentPillLabel(b.paymentStatus, b.paymentMethod)}
                           </span>
                         ) : null}
                       </div>

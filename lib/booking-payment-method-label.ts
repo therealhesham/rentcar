@@ -6,6 +6,8 @@ import {
 const LABELS_AR: Record<BookingPaymentMethod, string> = {
   CASH: "الدفع عند الفرع",
   CARD: "بطاقة ائتمانية",
+  MADA: "مدى",
+  AMKAN: "إمكان",
   TABBY: "تابي",
   TAMARA: "تمارا",
   APPLE_PAY: "Apple Pay",

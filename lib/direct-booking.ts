@@ -45,7 +45,12 @@ export { addDaysToYmd, lastInclusiveBookingDayYmd } from "@/lib/booking-calendar
  * يُحسب التداخل بتقاطع [تاريخ البداية، تاريخ البداية + عدد الأيام) بتقويم UTC.
  */
 
-export const NON_BLOCKING_BOOKING_STATUSES = ["CANCELLED", "REJECTED"] as const;
+export const NON_BLOCKING_BOOKING_STATUSES = [
+  "CANCELLED",
+  "REJECTED",
+  "RETURNED",
+  "COMPLETED",
+] as const;
 
 function normalizeDirectBookingFullNameForCompare(name: string): string {
   return name.trim().replace(/\s+/g, " ");

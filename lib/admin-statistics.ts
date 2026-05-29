@@ -214,6 +214,8 @@ const STATUS_LABELS: Record<string, string> = {
   UNDER_REVIEW: "تحت المراجعة",
   CONTACTED: "تم التواصل",
   CONFIRMED: "قادم",
+  PICKED_UP: "استلام من الفرع",
+  RETURNED: "إرجاع إلى الفرع",
   CANCELLED: "ملغي",
   COMPLETED: "مكتمل",
 };

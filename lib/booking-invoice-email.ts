@@ -9,6 +9,7 @@ import { buildBookingInvoicePdfBuffer } from "@/lib/booking-invoice-pdf";
 import { formatSarAmountHtml, formatSarAmountPlain, SAUDI_RIYAL_FONT_CSS_URL } from "@/lib/sar-currency";
 import type { BookingPaymentSnapshot } from "@/lib/booking-payment-data";
 import { getBookingForPayment } from "@/lib/booking-payment-data";
+import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
 import { prisma } from "@/lib/prisma";
 
 function escapeHtml(s: string): string {
@@ -17,25 +18,6 @@ function escapeHtml(s: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
-}
-
-function paymentMethodLabelAr(code: string | null | undefined): string {
-  switch (code) {
-    case "TABBY":
-      return "تابي";
-    case "TAMARA":
-      return "تمارا";
-    case "CARD":
-      return "بطاقة ائتمانية";
-    case "CASH":
-      return "الدفع عند الفرع";
-    case "APPLE_PAY":
-      return "Apple Pay";
-    case "POINTS":
-      return "استبدال نقاط";
-    default:
-      return code?.trim() || "—";
-  }
 }
 
 function fmtDateTime(d: Date): string {
@@ -161,7 +143,7 @@ function buildInvoiceHtml(booking: BookingPaymentSnapshot): string {
             </td>
             <td width="50%" style="padding-bottom:24px;padding-right:12px;">
               <p style="margin:0 0 6px;font-size:13px;color:#6b7280;">طريقة الدفع</p>
-              <p style="margin:0;font-size:15px;color:#111827;font-weight:700;">${escapeHtml(paymentMethodLabelAr(booking.paymentMethod))}</p>
+              <p style="margin:0;font-size:15px;color:#111827;font-weight:700;">${escapeHtml(bookingPaymentMethodLabelAr(booking.paymentMethod))}</p>
             </td>
           </tr>
           <tr>
@@ -510,7 +492,7 @@ export async function resendBookingInvoiceEmail(
       return {
         ok: false,
         error:
-          "إعادة الإرسال متاحة بعد إتمام الدفع، أو بعد تأكيد الحجز النقدي من الموظف.",
+          "إعادة الإرسال متاحة بعد إتمام الدفع، أو بعد تسجيل إرجاع السيارة إلى الفرع (للدفع عند الفرع).",
       };
     }
     if (msg === "MAIL_NOT_CONFIGURED") {

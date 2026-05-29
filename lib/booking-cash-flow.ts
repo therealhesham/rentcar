@@ -1,4 +1,5 @@
 import type { BookingPaymentSnapshot } from "@/lib/booking-payment-data";
+import { isBookingReturned } from "@/lib/booking-lifecycle";
 
 /** حالة الحجز: نقدي — بانتظار تأكيد الموظف هاتفياً. */
 export const BOOKING_STATUS_UNDER_REVIEW = "UNDER_REVIEW";
@@ -18,18 +19,30 @@ export function isCashCheckoutSubmitted(booking: {
   return isCashPaymentMethod(booking.paymentMethod);
 }
 
+/** رابط «إتمام الدفع» في حساب العميل — لا يُعرض عند الدفع عند الفرع (يُدفع في الفرع). */
+export function shouldShowCompletePaymentLink(booking: {
+  kind: string;
+  paymentStatus: string;
+  paymentMethod?: string | null;
+}): boolean {
+  if (booking.kind !== "DIRECT") return false;
+  if (booking.paymentStatus.trim().toUpperCase() !== "PENDING") return false;
+  if (isCashPaymentMethod(booking.paymentMethod)) return false;
+  return true;
+}
+
 export function isCashBookingConfirmed(status: string | null | undefined): boolean {
   return status?.trim().toUpperCase() === "CONFIRMED";
 }
 
-/** فاتورة PDF/HTML — إلكتروني بعد الدفع؛ نقدي بعد تأكيد الموظف (قادم). */
+/** فاتورة PDF/HTML — إلكتروني بعد الدفع؛ نقدي بعد إرجاع السيارة إلى الفرع. */
 export function isInvoiceDeliveryReady(booking: {
   paymentMethod: string | null;
   paymentStatus: string;
   status: string;
 }): boolean {
   if (isCashPaymentMethod(booking.paymentMethod)) {
-    return booking.status.trim().toUpperCase() === "CONFIRMED";
+    return isBookingReturned(booking.status);
   }
   return booking.paymentStatus.trim().toUpperCase() === "PAID";
 }
@@ -50,13 +63,21 @@ export function invoiceEmailHeaderForBooking(booking: BookingPaymentSnapshot): {
   intro: string;
 } {
   if (isCashPaymentMethod(booking.paymentMethod)) {
+    if (isBookingReturned(booking.status)) {
+      return {
+        badge: "✓ تم إرجاع المركبة والدفع",
+        title: "فاتورة الحجز",
+        intro:
+          "شكراً لثقتكم واختياركم روائس. تم تسجيل إرجاع المركبة وتأكيد الدفع عند الفرع. مرفق مع هذه الرسالة نسخة PDF من الفاتورة للطباعة أو الأرشفة.",
+      };
+    }
     const confirmed = booking.status.trim().toUpperCase() === "CONFIRMED";
     if (confirmed) {
       return {
         badge: "✓ تم تأكيد حجزكم",
-        title: "فاتورة الحجز",
+        title: "ملخص الحجز",
         intro:
-          "شكراً لثقتكم واختياركم روائس. تم تأكيد حجزكم هاتفياً. مرفق مع هذه الرسالة نسخة PDF من الفاتورة للطباعة أو الأرشفة.",
+          "شكراً لثقتكم واختياركم روائس. تم تأكيد حجزكم. ستُرسل الفاتورة إلى بريدكم بعد إرجاع المركبة إلى الفرع.",
       };
     }
     return {

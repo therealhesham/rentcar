@@ -5,6 +5,8 @@ const STATUS_STYLES: Record<string, string> = {
   UNDER_REVIEW: "bg-[#fef3c7] text-[#b45309] ring-[#fcd34d]/50",
   CONTACTED: "bg-[#eff6ff] text-[#1d4ed8] ring-[#93c5fd]/40",
   CONFIRMED: "bg-[#ecfdf5] text-[#047857] ring-[#6ee7b7]/40",
+  PICKED_UP: "bg-[#e0f2fe] text-[#0369a1] ring-[#7dd3fc]/50",
+  RETURNED: "bg-[#f0fdf4] text-[#15803d] ring-[#86efac]/50",
   CANCELLED: "bg-[#fef2f2] text-[#b91c1c] ring-[#fecaca]/40",
   REJECTED: "bg-surface-container-high text-on-surface-variant ring-outline-variant/35",
   COMPLETED: "bg-surface-container-low text-on-surface-variant ring-outline-variant/30",

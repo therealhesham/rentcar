@@ -20,11 +20,13 @@ import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { BookingAddonsSnapshot } from "@/components/admin/BookingAddonsSnapshot";
 import { BookingAttachmentsPanel } from "@/components/admin/BookingAttachmentsPanel";
 import { BookingCancelPanel } from "@/components/admin/BookingCancelPanel";
+import { BookingLifecyclePanel } from "@/components/admin/BookingLifecyclePanel";
 import { BookingDetailSection } from "@/components/admin/BookingDetailSection";
 import type { AdminBookingCancellationContext } from "@/lib/admin-booking-cancellation";
 import type { AdminBookingDetail } from "@/lib/admin-booking-detail";
 import { isInterBranchPickupReturn } from "@/lib/booking-branches";
 import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
+import { resolveBookingKycForDisplay } from "@/lib/booking-kyc-display";
 import { formatReturnDateAr } from "@/lib/booking-return-schedule";
 import { addDaysToYmd } from "@/lib/direct-booking";
 
@@ -121,6 +123,8 @@ type Props = {
 };
 
 export function BookingDetailView({ booking, editActions, cancellation }: Props) {
+  const kycAttachments = resolveBookingKycForDisplay(booking, booking.customer);
+
   const pickupYmd = booking.pickupDate.toISOString().slice(0, 10);
   const returnYmd = addDaysToYmd(pickupYmd, booking.numberOfDays);
   const carLabel = booking.carModel
@@ -273,20 +277,7 @@ export function BookingDetailView({ booking, editActions, cancellation }: Props)
               title="المرفقات"
               description="صور الهوية / الجواز ورخصة القيادة المرفوعة عند الإتمام"
             >
-              <BookingAttachmentsPanel
-                largePreview
-                idDocumentKind={booking.idDocumentKind}
-                nationalIdNumber={booking.nationalIdNumber}
-                passportNumber={booking.passportNumber}
-                licenseNumber={booking.licenseNumber}
-                licenseExpiryDate={
-                  booking.licenseExpiryDate
-                    ? booking.licenseExpiryDate.toISOString().slice(0, 10)
-                    : null
-                }
-                idCardImageUrl={booking.idCardImageUrl}
-                driverLicenseImageUrl={booking.driverLicenseImageUrl}
-              />
+              <BookingAttachmentsPanel largePreview {...kycAttachments} />
             </BookingDetailSection>
           ) : null}
 
@@ -378,6 +369,28 @@ export function BookingDetailView({ booking, editActions, cancellation }: Props)
               ) : null}
             </dl>
           </BookingDetailSection>
+
+          {booking.kind === "DIRECT" ? (
+            <BookingDetailSection
+              icon={Car}
+              title="مراحل التشغيل"
+              description="استلام المركبة من الفرع ثم إرجاعها — للكاش تُرسل الفاتورة عند الإرجاع"
+            >
+              <BookingLifecyclePanel
+                bookingRequestId={booking.id}
+                kind={booking.kind}
+                status={booking.status}
+                paymentStatus={booking.paymentStatus}
+                paymentMethod={booking.paymentMethod}
+                vehiclePickedUpAt={
+                  (booking as { vehiclePickedUpAt?: Date | null }).vehiclePickedUpAt ?? null
+                }
+                vehicleReturnedAt={
+                  (booking as { vehicleReturnedAt?: Date | null }).vehicleReturnedAt ?? null
+                }
+              />
+            </BookingDetailSection>
+          ) : null}
 
           {booking.kind === "DIRECT" ? (
             <BookingDetailSection icon={CreditCard} title="الدفع">

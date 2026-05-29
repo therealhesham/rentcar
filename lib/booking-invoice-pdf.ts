@@ -29,6 +29,10 @@ function paymentMethodLabel(code: string | null | undefined): string {
         return "Tamara";
       case "CARD":
         return "Credit card";
+      case "MADA":
+        return "Mada";
+      case "AMKAN":
+        return "Amkan";
       case "APPLE_PAY":
         return "Apple Pay";
       case "POINTS":
@@ -44,6 +48,10 @@ function paymentMethodLabel(code: string | null | undefined): string {
       return "تمارا";
     case "CARD":
       return "بطاقة ائتمانية";
+    case "MADA":
+      return "مدى";
+    case "AMKAN":
+      return "إمكان";
     case "CASH":
       return "الدفع عند الفرع";
     case "APPLE_PAY":

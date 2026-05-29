@@ -297,6 +297,10 @@ model BookingRequest {
   returnBranch   Branch?  @relation("BookingReturnBranch", fields: [returnBranchId], references: [id], onDelete: SetNull)
   /// Inter-branch return confirmed at return branch. See docs/booking-request-branch-fields.md.
   interBranchReturnConfirmedAt DateTime?
+  /// وقت تسجيل استلام العميل للسيارة من الفرع (حالة PICKED_UP).
+  vehiclePickedUpAt DateTime?
+  /// وقت تسجيل إرجاع السيارة إلى الفرع (حالة RETURNED).
+  vehicleReturnedAt DateTime?
   /// استلام من فرع الشركة أو توصيل للعميل (حجز مباشر من الموقع).
   pickupMode    String?   @db.VarChar(16)
   deliveryLat   Float?

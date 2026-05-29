@@ -64,6 +64,8 @@ const BOOKING_STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: "NEW", label: "جديد" },
   { value: "UNDER_REVIEW", label: "تحت المراجعة" },
   { value: "CONFIRMED", label: "قادم" },
+  { value: "PICKED_UP", label: "استلام السيارة من الفرع" },
+  { value: "RETURNED", label: "تسليم السيارة إلى الفرع" },
   { value: "CANCELLED", label: "ملغى" },
   { value: "REJECTED", label: "مرفوض" },
 ];

@@ -1,7 +1,10 @@
 import type { AdminBookingDetail } from "@/lib/admin-booking-detail";
 import type { EditableBookingRow } from "@/lib/admin-booking-edit-types";
+import { resolveBookingKycForDisplay } from "@/lib/booking-kyc-display";
 
 export function toEditableBookingRow(booking: AdminBookingDetail): EditableBookingRow {
+  const kyc = resolveBookingKycForDisplay(booking, booking.customer);
+
   return {
     id: booking.id,
     kind: booking.kind,
@@ -27,15 +30,13 @@ export function toEditableBookingRow(booking: AdminBookingDetail): EditableBooki
     paymentStatus: booking.paymentStatus,
     paidAt: booking.paidAt ? booking.paidAt.toISOString() : null,
     paymentMethod: booking.paymentMethod,
-    idDocumentKind: booking.idDocumentKind,
-    nationalIdNumber: booking.nationalIdNumber,
-    passportNumber: booking.passportNumber,
-    licenseNumber: booking.licenseNumber,
-    licenseExpiryDate: booking.licenseExpiryDate
-      ? booking.licenseExpiryDate.toISOString().slice(0, 10)
-      : null,
-    idCardImageUrl: booking.idCardImageUrl,
-    driverLicenseImageUrl: booking.driverLicenseImageUrl,
+    idDocumentKind: kyc.idDocumentKind,
+    nationalIdNumber: kyc.nationalIdNumber,
+    passportNumber: kyc.passportNumber,
+    licenseNumber: kyc.licenseNumber,
+    licenseExpiryDate: kyc.licenseExpiryDate,
+    idCardImageUrl: kyc.idCardImageUrl,
+    driverLicenseImageUrl: kyc.driverLicenseImageUrl,
     cancelledAt: booking.cancelledAt ? booking.cancelledAt.toISOString() : null,
     cancellationDeductedDays: booking.cancellationDeductedDays,
     cancellationRefundAmountSar: booking.cancellationRefundAmountSar,

@@ -5,6 +5,8 @@ export const BOOKING_STATUS_LABELS_AR: Record<string, string> = {
   UNDER_REVIEW: "تحت المراجعة",
   CONTACTED: "تم التواصل",
   CONFIRMED: "قادم",
+  PICKED_UP: "استلام السيارة من الفرع",
+  RETURNED: "تسليم السيارة إلى الفرع",
   CANCELLED: "ملغى",
   REJECTED: "مرفوض",
   COMPLETED: "مكتمل",

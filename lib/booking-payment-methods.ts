@@ -3,6 +3,8 @@
 export const BOOKING_PAYMENT_METHODS = [
   "CASH",
   "CARD",
+  "MADA",
+  "AMKAN",
   "TABBY",
   "TAMARA",
   "APPLE_PAY",
@@ -15,6 +17,8 @@ export type BookingPaymentMethod = (typeof BOOKING_PAYMENT_METHODS)[number];
 export const ADMIN_OFFICE_PAYMENT_METHODS: BookingPaymentMethod[] = [
   "CASH",
   "CARD",
+  "MADA",
+  "AMKAN",
   "TABBY",
   "TAMARA",
   "APPLE_PAY",

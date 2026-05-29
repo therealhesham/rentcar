@@ -13,6 +13,7 @@ import {
   formatDeductDaysSummaryAr,
   hoursBeforePickup,
 } from "@/lib/cancellation-deduct";
+import { shouldShowCompletePaymentLink } from "@/lib/booking-cash-flow";
 import { hrefFreshRebookCheckoutFromBooking, hrefRebookFromBooking } from "@/lib/rebook-booking-url";
 
 export type AccountBookingCardActionsProps = {
@@ -108,6 +109,7 @@ export function AccountBookingCardActions({
   const rebookCheckoutHref = hrefFreshRebookCheckoutFromBooking(rebookLike);
 
   const showDirectLinks = b.kind === "DIRECT" && b.carModelId != null && b.carModelId >= 1;
+  const showCompletePayment = shouldShowCompletePaymentLink(b);
 
   const cancelPastDeadline = isSelfCancelPastDeadline(
     b.pickupDateIso,
@@ -243,7 +245,7 @@ export function AccountBookingCardActions({
         </div>
       ) : (
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-          {b.paymentStatus === "PENDING" && b.kind === "DIRECT" ? (
+          {showCompletePayment ? (
             <Link
               href={`/fleet/payment/${b.id}`}
               className="inline-flex w-full items-center justify-center rounded-xl bg-[#ea580c] px-4 py-2.5 text-center text-sm font-extrabold text-white shadow-sm transition-opacity hover:opacity-95 sm:w-auto sm:flex-1"

@@ -7,6 +7,7 @@ import { formatSarAmount } from "@/lib/booking-checkout-pricing";
 import type { BookingPaymentSnapshot } from "@/lib/booking-payment-data";
 import { getBookingForPayment } from "@/lib/booking-payment-data";
 import { e164ToLocalNine } from "@/lib/normalize-saudi-phone";
+import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
 
 /**
  * إرسال إشعار واتساب بعد الدفع عبر Evolution API.
@@ -30,25 +31,6 @@ const BRANCH_LABEL_AR: Record<string, string> = {
   madinah: "المدينة المنورة",
   tabuk: "تبوك",
 };
-
-function paymentMethodLabelAr(code: string | null | undefined): string {
-  switch (code) {
-    case "TABBY":
-      return "تابي";
-    case "TAMARA":
-      return "تمارا";
-    case "CARD":
-      return "بطاقة ائتمانية";
-    case "CASH":
-      return "الدفع عند الفرع";
-    case "APPLE_PAY":
-      return "Apple Pay";
-    case "POINTS":
-      return "استبدال نقاط";
-    default:
-      return code?.trim() || "—";
-  }
-}
 
 function fmtDateTime(d: Date): string {
   return d.toLocaleString("ar-SA", {
@@ -115,7 +97,7 @@ function buildBookingCompletionMessage(booking: BookingPaymentSnapshot): string 
     `التسليم: ${dropoff}`,
     pickupLine,
     ...branchLocationLines,
-    `طريقة الدفع: ${paymentMethodLabelAr(booking.paymentMethod)}`,
+    `طريقة الدفع: ${bookingPaymentMethodLabelAr(booking.paymentMethod)}`,
     `${invoiceTotalLabelAr(booking)}: ${formatSarAmount(t.totalInclTax)} ر.س (شامل الضريبة)`,
     "",
     "شكراً لاختياركم روائس لتأجير السيارات. نتمنى لكم رحلة آمنة.",

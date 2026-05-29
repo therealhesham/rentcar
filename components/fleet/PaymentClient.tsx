@@ -36,6 +36,7 @@ import {
   type CheckoutPaymentMethodFlags,
   type CustomerCheckoutPaymentMethod,
 } from "@/lib/checkout-payment-method-flags";
+import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
 
 type Props = {
   booking: BookingPaymentSnapshot;
@@ -44,23 +45,8 @@ type Props = {
 
 export type CheckoutPaymentMethod = CustomerCheckoutPaymentMethod;
 
-function paymentMethodLabelAr(code: string | null | undefined): string {
-  switch (code) {
-    case "TABBY":
-      return "تابي";
-    case "TAMARA":
-      return "تمارا";
-    case "CARD":
-      return "بطاقة ائتمانية";
-    case "CASH":
-      return "الدفع عند الفرع";
-    case "APPLE_PAY":
-      return "Apple Pay";
-    case "POINTS":
-      return "استبدال نقاط";
-    default:
-      return code ?? "—";
-  }
+function usesCardEntryForm(method: CheckoutPaymentMethod): boolean {
+  return method === "CARD" || method === "MADA";
 }
 
 function maskPhone(p: string): string {
@@ -157,8 +143,20 @@ const METHOD_OPTIONS: MethodOption[] = [
   {
     id: "CARD",
     title: "بطاقة ائتمانية",
-    hint: "مدى، فيزا، ماستركارد — بوابة الدفع بالبطاقة",
+    hint: "فيزا، ماستركارد — بوابة الدفع بالبطاقة",
     Icon: CreditCard,
+  },
+  {
+    id: "MADA",
+    title: "مدى",
+    hint: "الدفع ببطاقة مدى",
+    Icon: CreditCard,
+  },
+  {
+    id: "AMKAN",
+    title: "إمكان",
+    hint: "خدمة إمكان للدفع",
+    Icon: Wallet,
   },
   {
     id: "CASH",
@@ -265,7 +263,7 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     if (checkoutComplete) return;
     setClientError(null);
-    if (method !== "CARD") return;
+    if (!usesCardEntryForm(method)) return;
 
     const cardClean = card.replace(/\s+/g, "");
     if (!luhnOk(cardClean)) {
@@ -302,26 +300,34 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
       ? "المتابعة عبر تابي (تجريبي)"
       : method === "TAMARA"
         ? "المتابعة عبر تمارا (تجريبي)"
-        : method === "POINTS"
-          ? "تأكيد استبدال النقاط (تجريبي)"
-          : method === "CASH"
-            ? (
-                <>
-                  تأكيد الحجز (الدفع عند الفرع) {formatSarAmount(booking.totals.totalInclTax)}{" "}
-                  <SarCurrencyGlyph />
-                </>
-              )
-            : method === "APPLE_PAY"
+        : method === "AMKAN"
+          ? "المتابعة عبر إمكان (تجريبي)"
+          : method === "POINTS"
+            ? "تأكيد استبدال النقاط (تجريبي)"
+            : method === "CASH"
               ? (
                   <>
-                    ادفع {formatSarAmount(booking.totals.totalInclTax)} <SarCurrencyGlyph /> عبر Apple Pay
+                    تأكيد الحجز (الدفع عند الفرع) {formatSarAmount(booking.totals.totalInclTax)}{" "}
+                    <SarCurrencyGlyph />
                   </>
                 )
-              : (
-                  <>
-                    ادفع {formatSarAmount(booking.totals.totalInclTax)} <SarCurrencyGlyph />
-                  </>
-                );
+              : method === "APPLE_PAY"
+                ? (
+                    <>
+                      ادفع {formatSarAmount(booking.totals.totalInclTax)} <SarCurrencyGlyph /> عبر Apple Pay
+                    </>
+                  )
+                : method === "MADA"
+                  ? (
+                      <>
+                        ادفع {formatSarAmount(booking.totals.totalInclTax)} <SarCurrencyGlyph /> عبر مدى
+                      </>
+                    )
+                  : (
+                      <>
+                        ادفع {formatSarAmount(booking.totals.totalInclTax)} <SarCurrencyGlyph />
+                      </>
+                    );
 
   return (
     <main dir="rtl" className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
@@ -390,13 +396,13 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
                 ? "تم تسجيل طلبك بالدفع نقداً — سيتابعك فريقنا لإتمام الإجراءات."
                 : checkoutComplete
                   ? ps === "REFUNDED"
-                    ? `تم استرداد المبلغ بالكامل عبر ${paymentMethodLabelAr(resolvedMethodCode)}.`
+                    ? `تم استرداد المبلغ بالكامل عبر ${bookingPaymentMethodLabelAr(resolvedMethodCode)}.`
                     : ps === "PARTIAL_REFUND"
-                      ? `تم استرداد جزء من المبلغ عبر ${paymentMethodLabelAr(resolvedMethodCode)}.`
+                      ? `تم استرداد جزء من المبلغ عبر ${bookingPaymentMethodLabelAr(resolvedMethodCode)}.`
                       : ps === "NO_REFUND"
                         ? "لا يوجد مبلغ مسترد بحسب سياسة الإلغاء."
                         : resolvedMethodCode
-                          ? `تم الدفع عبر ${paymentMethodLabelAr(resolvedMethodCode)}.`
+                          ? `تم الدفع عبر ${bookingPaymentMethodLabelAr(resolvedMethodCode)}.`
                           : "تم الدفع بنجاح."
                   : "اختر طريقة الدفع المناسبة وأكمل الإجراء."}
         </p>
@@ -464,7 +470,7 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
                       showAmberSuccessPanel ? "text-amber-900" : "text-emerald-900"
                     }`}
                   >
-                    طريقة الدفع: {paymentMethodLabelAr(resolvedMethodCode)}
+                    طريقة الدفع: {bookingPaymentMethodLabelAr(resolvedMethodCode)}
                   </p>
                 ) : null}
                 <dl className="mt-3 grid w-full max-w-md gap-3 text-start text-xs sm:text-sm">
@@ -674,11 +680,13 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
                 </div>
               ) : null}
 
-              {method === "CARD" ? (
+              {usesCardEntryForm(method) ? (
                 <div className="space-y-4 border-t border-neutral-100 pt-5">
                   <div className="flex items-center gap-2">
                     <CreditCard className="size-5 text-[#003749]" aria-hidden />
-                    <h3 className="font-extrabold text-[#003749]">بيانات البطاقة</h3>
+                    <h3 className="font-extrabold text-[#003749]">
+                      {method === "MADA" ? "بيانات بطاقة مدى" : "بيانات البطاقة"}
+                    </h3>
                   </div>
 
                   <label className="flex flex-col gap-1.5">
@@ -686,7 +694,7 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
                     <input
                       value={holder}
                       onChange={(e) => setHolder(e.target.value)}
-                      required={method === "CARD"}
+                      required={usesCardEntryForm(method)}
                       minLength={3}
                       className="rounded-lg border border-neutral-200 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#dbb878]/50"
                       dir="rtl"
@@ -702,7 +710,7 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
                       inputMode="numeric"
                       autoComplete="cc-number"
                       placeholder="4242 4242 4242 4242"
-                      required={method === "CARD"}
+                      required={usesCardEntryForm(method)}
                       className="rounded-lg border border-neutral-200 px-3 py-2.5 text-sm tabular-nums outline-none focus:ring-2 focus:ring-[#dbb878]/50"
                       dir="ltr"
                     />
@@ -717,7 +725,7 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
                         inputMode="numeric"
                         autoComplete="cc-exp"
                         placeholder="12/29"
-                        required={method === "CARD"}
+                        required={usesCardEntryForm(method)}
                         className="rounded-lg border border-neutral-200 px-3 py-2.5 text-sm tabular-nums outline-none focus:ring-2 focus:ring-[#dbb878]/50"
                         dir="ltr"
                       />
@@ -730,7 +738,7 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
                         inputMode="numeric"
                         autoComplete="cc-csc"
                         placeholder="123"
-                        required={method === "CARD"}
+                        required={usesCardEntryForm(method)}
                         className="rounded-lg border border-neutral-200 px-3 py-2.5 text-sm tabular-nums outline-none focus:ring-2 focus:ring-[#dbb878]/50"
                         dir="ltr"
                       />

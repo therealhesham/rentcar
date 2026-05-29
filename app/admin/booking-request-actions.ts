@@ -7,7 +7,7 @@ import {
   requireAdminForAction,
 } from "@/lib/admin-access";
 import { isCashPaymentMethod } from "@/lib/booking-cash-flow";
-import { sendBookingInvoiceEmailAfterPayment } from "@/lib/booking-invoice-email";
+import { syncLifecycleFromAdminStatusChange } from "@/lib/booking-lifecycle-service";
 import {
   convertDirectBookingToInquiry,
   convertInquiryBookingToDirect,
@@ -133,15 +133,21 @@ export async function updateBookingRequest(
 
   if (statusUpper === "CONFIRMED" && wasNotConfirmed && cashDirect) {
     try {
-      await sendBookingInvoiceEmailAfterPayment(bookingRequestId);
-    } catch (e) {
-      console.error("[booking-invoice-email] بعد تأكيد الموظف (كاش):", e);
-    }
-    try {
       await sendBookingCompletionWhatsAppAfterPayment(bookingRequestId);
     } catch (e) {
       console.error("[evolution-whatsapp] بعد تأكيد الموظف (كاش):", e);
     }
+  }
+
+  try {
+    await syncLifecycleFromAdminStatusChange(
+      bookingRequestId,
+      beforeUpdate?.status ?? "",
+      status,
+      beforeUpdate?.paymentMethod ?? null,
+    );
+  } catch (e) {
+    console.error("[booking-lifecycle] بعد تحديث الحالة:", e);
   }
 
   revalidatePath("/admin");
