@@ -94,50 +94,44 @@ export default async function FleetPage({
               : "يومي";
 
       searchBanner = (
-        <div className="mx-auto mb-10 max-w-screen-2xl rounded-2xl border border-[#f97316]/25 bg-[#fff7ed] px-6 py-4 text-start shadow-sm">
-          <p className="text-sm font-extrabold text-[#c2410c]">نتائج البحث من الصفحة الرئيسية</p>
-          <p className="mt-1 text-sm text-on-surface">
-            <span className="font-bold">{modeLabel}</span>
-            {" · "}
-            نوع الإيجار: <span className="font-bold">{rental}</span>
-            {" · "}
-            المدة: <span className="font-bold tabular-nums">{durationLabel}</span>
-            {qFirst(params.returnBranch) ? (
-              <>
-                {" · "}
-                فرع الإرجاع:{" "}
-                <span className="font-bold" dir="ltr">
-                  {qFirst(params.returnBranch)}
-                </span>
-              </>
-            ) : null}
-            {qFirst(params.mode) === "delivery" &&
-            qFirst(params.dlat) &&
-            qFirst(params.dlng) &&
-            !Number.isNaN(Number(qFirst(params.dlat))) &&
-            !Number.isNaN(Number(qFirst(params.dlng))) ? (
-              <>
-                {" · "}
-                موقع التوصيل:{" "}
-                <span className="tabular-nums font-mono text-xs" dir="ltr">
-                  {Number(qFirst(params.dlat)).toFixed(5)}, {Number(qFirst(params.dlng)).toFixed(5)}
-                </span>
-              </>
-            ) : null}
-            {qFirst(params.mode) === "delivery" && qFirst(params.daddr) ? (
-              <>
-                {" · "}
-                عنوان التوصيل:{" "}
-                <span className="max-w-[16rem] truncate font-bold align-bottom" dir="rtl" title={qFirst(params.daddr)}>
-                  {qFirst(params.daddr)}
-                </span>
-              </>
-            ) : null}
-          </p>
-          <p className="mt-2 text-xs text-on-surface-variant">
-            تُعرض المركبات المتاحة للحجز المباشر في هذه الفترة فقط. اضغط «احجز الآن» لمراجعة السعر والإضافات وإتمام
-            الطلب.
-          </p>
+        <div className="mb-8 overflow-hidden rounded-2xl border border-[#003749]/15 bg-gradient-to-l from-[#003749]/5 via-white to-[#003749]/5 shadow-sm" dir="rtl">
+          <div className="flex items-start gap-4 px-5 py-4 sm:px-6 sm:py-5">
+            <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#003749]/10 text-[#003749]">
+              <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" aria-hidden>
+                <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-extrabold text-[#003749]">نتائج البحث</p>
+              <div className="mt-1.5 flex flex-wrap gap-2">
+                {[
+                  { label: "النوع", value: rental },
+                  { label: "المدة", value: durationLabel },
+                  { label: "الاستلام", value: modeLabel },
+                  qFirst(params.returnBranch) ? { label: "الفرع", value: qFirst(params.returnBranch)! } : null,
+                  qFirst(params.mode) === "delivery" && qFirst(params.daddr)
+                    ? { label: "عنوان التوصيل", value: qFirst(params.daddr)! }
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .map((item) => (
+                    <span
+                      key={item!.label}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-[#003749]/15 bg-white px-3 py-1 text-xs font-bold text-[#1a3a44] shadow-sm"
+                    >
+                      <span className="text-[#775927]">{item!.label}</span>
+                      <span className="text-[#003749]/40">·</span>
+                      <span dir={item!.label === "الفرع" || item!.label === "عنوان التوصيل" ? "rtl" : undefined}>
+                        {item!.value}
+                      </span>
+                    </span>
+                  ))}
+              </div>
+              <p className="mt-2 text-[11px] text-neutral-500">
+                تُعرض المركبات المتاحة للحجز المباشر في هذه الفترة · اضغط «احجز الآن» لإتمام الطلب
+              </p>
+            </div>
+          </div>
         </div>
       );
     }
@@ -251,22 +245,62 @@ export default async function FleetPage({
             </div>
           </div>
         </section>
-        <main id="fleet-results" className="mx-auto max-w-screen-2xl px-8 py-24 scroll-mt-24">
+        <main id="fleet-results" className="mx-auto max-w-screen-2xl scroll-mt-24 px-4 py-12 sm:px-6 sm:py-16 lg:px-8" dir="rtl">
           {searchBanner}
+
+          {/* رأس قسم النتائج */}
+          {cars.length > 0 ? (
+            <div className="mb-8 flex flex-wrap items-end justify-between gap-4 border-b border-neutral-200/70 pb-6">
+              <div>
+                <h2 className="text-2xl font-extrabold tracking-tight text-[#003749]">
+                  {availabilityModelIds !== undefined ? "المركبات المتاحة" : "أسطولنا"}
+                </h2>
+                <p className="mt-1 text-sm text-neutral-500">
+                  {cars.length === 1
+                    ? "مركبة واحدة متاحة"
+                    : `${cars.length} مركبات`}
+                  {availabilityModelIds !== undefined ? " للحجز المباشر في الفترة المحددة" : " في الأسطول"}
+                </p>
+              </div>
+              <span className="inline-flex items-center gap-2 rounded-full bg-[#003749]/8 px-4 py-2 text-[13px] font-bold text-[#003749]">
+                <span className="relative flex h-2.5 w-2.5">
+                  {availabilityModelIds !== undefined ? (
+                    <>
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+                      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                    </>
+                  ) : (
+                    <span className="inline-flex h-2.5 w-2.5 rounded-full bg-[#dbb878]" />
+                  )}
+                </span>
+                {availabilityModelIds !== undefined ? "متاح للحجز الآن" : "تصفح الأسطول"}
+              </span>
+            </div>
+          ) : null}
+
           {availabilityModelIds !== undefined && availabilityModelIds.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-outline-variant/50 bg-surface-container-low/50 px-8 py-16 text-center">
-              <p className="text-lg font-bold text-on-surface">
-                لا توجد مركبات متاحة للحجز المباشر في الفترة التي اخترتها.
-              </p>
-              <p className="mt-2 text-on-surface-variant">
+            <div className="mx-auto max-w-lg rounded-3xl border border-dashed border-neutral-300 bg-white px-8 py-16 text-center shadow-sm">
+              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#003749]/8 text-[#003749]/50">
+                <svg viewBox="0 0 24 24" fill="none" className="h-8 w-8" aria-hidden>
+                  <path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2m-10 0h12M7 7a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V9a2 2 0 00-2-2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                  <path d="M12 12v4M12 12l-2-2M12 12l2-2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+              </div>
+              <p className="text-lg font-extrabold text-[#003749]">لا توجد مركبات متاحة</p>
+              <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-neutral-500">
                 جرّب تغيير التواريخ أو تصفح الأسطول كاملاً بدون فلترة التوفر.
               </p>
             </div>
           ) : cars.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-outline-variant/50 bg-surface-container-low/50 px-8 py-16 text-center">
-              <p className="text-lg font-bold text-on-surface">لا توجد مركبات تطابق الفلاتر المحددة.</p>
-              <p className="mt-2 text-on-surface-variant">
-                غيّر التصنيف أو الماركة أو نطاق السعر لتصفية النتائج تلقائياً.
+            <div className="mx-auto max-w-lg rounded-3xl border border-dashed border-neutral-300 bg-white px-8 py-16 text-center shadow-sm">
+              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#dbb878]/15 text-[#775927]">
+                <svg viewBox="0 0 24 24" fill="none" className="h-8 w-8" aria-hidden>
+                  <path d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <p className="text-lg font-extrabold text-[#003749]">لا توجد مركبات بهذه الفلاتر</p>
+              <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-neutral-500">
+                غيّر التصنيف أو الماركة أو نطاق السعر وستُحدَّث النتائج تلقائياً.
               </p>
             </div>
           ) : (

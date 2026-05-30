@@ -39,9 +39,12 @@ function FleetBookNowButtonInner({ modelId }: { modelId: number }) {
       <Link
         href={href}
         onClick={onBookClick}
-        className="block w-full rounded-xl bg-primary-fixed py-3.5 text-center text-sm font-extrabold text-on-primary-fixed transition-colors hover:bg-primary-fixed-dim"
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-l from-[#003749] to-[#004d63] py-3.5 text-center text-sm font-extrabold text-white shadow-md transition-all duration-200 hover:from-[#004d63] hover:to-[#005f7a] hover:shadow-lg active:scale-[0.98]"
       >
         احجز الآن
+        <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4 shrink-0" aria-hidden>
+          <path d="M19 12H5M12 5l-7 7 7 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
       </Link>
       <FleetBookNowHintModal
         open={modalOpen}
@@ -66,9 +69,12 @@ function FleetBookNowButtonFallback({ modelId }: { modelId: number }) {
       <Link
         href={`/fleet/checkout?modelId=${modelId}`}
         onClick={onBookClick}
-        className="block w-full rounded-xl bg-primary-fixed py-3.5 text-center text-sm font-extrabold text-on-primary-fixed transition-colors hover:bg-primary-fixed-dim"
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-l from-[#003749] to-[#004d63] py-3.5 text-center text-sm font-extrabold text-white shadow-md transition-all duration-200 hover:from-[#004d63] hover:to-[#005f7a] hover:shadow-lg active:scale-[0.98]"
       >
         احجز الآن
+        <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4 shrink-0" aria-hidden>
+          <path d="M19 12H5M12 5l-7 7 7 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
       </Link>
       <FleetBookNowHintModal
         open={modalOpen}
