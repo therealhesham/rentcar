@@ -870,6 +870,52 @@ export function BookingSearchWidget({
           .cta-btn {
             box-shadow: none;
           }
+          .search-pill .field-trigger,
+          .search-pill .field-trigger:active {
+            transform: none !important;
+          }
+        }
+        /* Swipeable rental tabs on mobile — hide the scrollbar */
+        .tabs-scroll {
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+          -webkit-overflow-scrolling: touch;
+        }
+        .tabs-scroll::-webkit-scrollbar {
+          display: none;
+        }
+        /* ─── Mobile (<640px): elegant grouped field cards ─── */
+        @media (max-width: 639.98px) {
+          .search-pill .field-trigger {
+            background-color: #ffffff;
+            border: 1px solid #efe7d6;
+            border-radius: 1rem;
+            box-shadow:
+              0 1px 2px rgba(0, 55, 73, 0.04),
+              0 6px 16px -10px rgba(0, 55, 73, 0.14);
+            transition:
+              transform 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.22s ease,
+              border-color 0.2s ease,
+              background-color 0.2s ease;
+            -webkit-tap-highlight-color: transparent;
+          }
+          .search-pill .field-trigger:active {
+            transform: scale(0.98);
+            box-shadow: 0 1px 2px rgba(0, 55, 73, 0.05);
+            background-color: #fffdf8;
+          }
+          .search-pill .field-trigger[aria-expanded="true"] {
+            border-color: #dbb878;
+            box-shadow:
+              0 0 0 3px rgba(219, 184, 120, 0.16),
+              0 10px 24px -12px rgba(219, 184, 120, 0.45);
+            background-color: #fffef9;
+          }
+          .search-pill .field-trigger:disabled {
+            box-shadow: none;
+            opacity: 0.6;
+          }
         }
         /* ─── Sixt-style elegant pill (desktop only) ───
            Tabs above keep their cream tone; the search bar itself
@@ -953,11 +999,11 @@ export function BookingSearchWidget({
             so the pill below remains the visual hero.
         ═══════════════════════════════════════ */}
         {!isFreshRebookFlow ? (
-          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-3 pt-3 pb-3 sm:px-5 sm:pt-4 sm:pb-4">
+          <div className="flex flex-col gap-2.5 px-3 pt-3 pb-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-4 sm:gap-y-2 sm:px-5 sm:pt-4 sm:pb-4">
             <div
               role="tablist"
               aria-label="نوع الحجز"
-              className="flex flex-wrap items-center gap-x-1 gap-y-1 sm:gap-x-1.5"
+              className="tabs-scroll -mx-3 flex items-center gap-x-1 overflow-x-auto px-3 sm:mx-0 sm:flex-wrap sm:gap-x-1.5 sm:gap-y-1 sm:overflow-visible sm:px-0"
             >
               {tabFlagsEff.rentalDaily ? (
                 <QuietTab
@@ -1006,7 +1052,7 @@ export function BookingSearchWidget({
               <div
                 role="tablist"
                 aria-label="طريقة الاستلام"
-                className="flex items-center gap-0.5 rounded-full border border-[#ebe4d3] bg-white/90 p-0.5 shadow-[0_1px_4px_-1px_rgba(0,55,73,0.08)]"
+                className="flex items-center gap-0.5 self-start rounded-full border border-[#ebe4d3] bg-white/90 p-0.5 shadow-[0_1px_4px_-1px_rgba(0,55,73,0.08)] sm:self-auto"
               >
                 {tabFlagsEff.modePickup ? (
                   <ModeChip
@@ -1045,7 +1091,7 @@ export function BookingSearchWidget({
                   </p>
                 </div>
               ) : null}
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-2 sm:gap-3">
                 <div className="relative min-w-0">
                   <button
                     ref={pickupDateRef}
@@ -1464,7 +1510,7 @@ export function BookingSearchWidget({
 
               {/* pickup mode: show "return different" toggle inside the bar */}
               {mode === "pickup" && !returnLocationDifferent && (
-                <div className="flex w-full items-center border border-[#ebe4d3]/80 bg-[#fdfbf6] px-3 py-1 rounded-xl sm:w-auto sm:rounded-none sm:border-0 sm:border-l sm:border-[#ebe4d3] sm:py-0">
+                <div className="flex w-full items-center rounded-2xl border border-[#efe7d6] bg-white px-3 py-1.5 shadow-[0_1px_2px_rgba(0,55,73,0.04),0_6px_16px_-10px_rgba(0,55,73,0.14)] sm:w-auto sm:rounded-none sm:border-0 sm:border-l sm:border-[#ebe4d3] sm:bg-transparent sm:py-0 sm:shadow-none">
                   <label className="flex cursor-pointer items-center gap-2 py-2 text-[11px] font-semibold text-[#6b5a3b]">
                     <input
                       type="checkbox"
@@ -1477,6 +1523,8 @@ export function BookingSearchWidget({
                 </div>
               )}
 
+              {/* ── 3+4. التاريخ والوقت — يقترنان في صف واحد على الجوال ── */}
+              <div className="grid grid-cols-2 gap-2.5 sm:contents">
               {/* ── 3. تاريخ الاستلام ── */}
               <div className="relative flex-1 min-w-0">
                 <button
@@ -1562,7 +1610,10 @@ export function BookingSearchWidget({
                   anchorRef={pickupTimeRef}
                 />
               </div>
+              </div>
 
+              {/* ── 5+6. التاريخ والوقت — يقترنان في صف واحد على الجوال ── */}
+              <div className="grid grid-cols-2 gap-2.5 sm:contents">
               {/* ── 5. تاريخ التسليم ── */}
               <div className="relative flex-1 min-w-0">
                 <button
@@ -1650,13 +1701,14 @@ export function BookingSearchWidget({
                   anchorRef={dropoffTimeRef}
                 />
               </div>
+              </div>
 
               {/* ── 7. زر البحث ── */}
               <div className="flex items-stretch">
                 <button
                   type="submit"
                   disabled={dateCities.length === 0}
-                  className="cta-btn group relative flex min-h-[48px] w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-5 py-3.5 text-white disabled:pointer-events-none disabled:opacity-45 sm:min-h-0 sm:rounded-none sm:rounded-l-full sm:px-9 sm:py-4 sm:text-[15px]"
+                  className="cta-btn group relative mt-1 flex min-h-[52px] w-full items-center justify-center gap-2 overflow-hidden rounded-2xl px-5 py-4 text-white disabled:pointer-events-none disabled:opacity-45 sm:mt-0 sm:min-h-0 sm:rounded-none sm:rounded-l-full sm:px-9 sm:py-4 sm:text-[15px]"
                   style={{ background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)` }}
                 >
                   <span
