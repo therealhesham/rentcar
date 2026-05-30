@@ -259,7 +259,7 @@ export function DeliveryMapDialog({ open, onClose, initial, onConfirm }: Props) 
         dir="rtl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant/25 bg-gradient-to-l from-[#f8faf9] to-white px-4 py-3.5 sm:px-5">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-outline-variant/25 bg-gradient-to-l from-[#f8faf9] to-white px-4 py-3.5 sm:px-5">
           <div className="min-w-0">
             <h2 id="delivery-map-title" className="text-lg font-extrabold tracking-tight text-[#003749]">
               موقع التوصيل
@@ -300,7 +300,7 @@ export function DeliveryMapDialog({ open, onClose, initial, onConfirm }: Props) 
               </div>
             ) : (
               <span className="rounded-lg bg-surface-container-low px-2 py-1 text-[10px] font-bold text-on-surface-variant ring-1 ring-outline-variant/20">
-                خريطة مجانية (OSM)
+                {/* خريطة مجانية (OSM) */}
               </span>
             )}
             <button
@@ -314,43 +314,50 @@ export function DeliveryMapDialog({ open, onClose, initial, onConfirm }: Props) 
           </div>
         </div>
 
-        <p
-          id={instructionsId}
-          className="border-b border-outline-variant/15 bg-surface-container-low/30 px-4 py-2.5 text-xs leading-relaxed text-on-surface-variant sm:px-5"
-        >
-          انقر على الخريطة أو اسحب الدبوس لتحديد عنوان التوصيل. يمكنك أيضاً ضبط الإحداثيات يدوياً أدناه ثم الضغط على
-          «تأكيد الموقع».
-        </p>
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
+          <p
+            id={instructionsId}
+            className="border-b border-outline-variant/15 bg-surface-container-low/30 px-4 py-2.5 text-xs leading-relaxed text-on-surface-variant sm:px-5"
+          >
+            انقر على الخريطة أو اسحب الدبوس لتحديد عنوان التوصيل. يمكنك أيضاً ضبط الإحداثيات يدوياً أدناه ثم الضغط على
+            «تأكيد الموقع».
+          </p>
 
-        <div className="relative shrink-0">
-          <div
-            key={mapEngine}
-            ref={mapElRef}
-            className="z-0 h-[min(52vh,400px)] w-full bg-surface-container sm:h-[min(55vh,420px)] [&_.leaflet-container]:z-0 [&_.leaflet-container]:h-full [&_.leaflet-container]:w-full"
-            aria-hidden={!mapReady}
-          />
-          {!mapReady ? (
+          <div className="relative shrink-0">
             <div
-              className="absolute inset-0 z-[1] flex flex-col items-center justify-center gap-2 bg-white/85 text-on-surface-variant"
-              aria-live="polite"
-              aria-busy="true"
-            >
-              <span
-                className="h-9 w-9 animate-spin rounded-full border-2 border-[#003749]/20 border-t-[#003749]"
-                aria-hidden
-              />
-              <span className="text-sm font-bold text-[#003749]">جاري تحميل الخريطة…</span>
-            </div>
-          ) : null}
+              key={mapEngine}
+              ref={mapElRef}
+              className="z-0 h-[min(42vh,360px)] w-full bg-surface-container sm:h-[min(55vh,420px)] [&_.leaflet-container]:z-0 [&_.leaflet-container]:h-full [&_.leaflet-container]:w-full"
+              aria-hidden={!mapReady}
+            />
+            {!mapReady ? (
+              <div
+                className="absolute inset-0 z-[1] flex flex-col items-center justify-center gap-2 bg-white/85 text-on-surface-variant"
+                aria-live="polite"
+                aria-busy="true"
+              >
+                <span
+                  className="h-9 w-9 animate-spin rounded-full border-2 border-[#003749]/20 border-t-[#003749]"
+                  aria-hidden
+                />
+                <span className="text-sm font-bold text-[#003749]">جاري تحميل الخريطة…</span>
+              </div>
+            ) : null}
+          </div>
+
+          <ManualLatLng value={internal} onChange={setInternal} coordsValid={coordsValid} compact />
         </div>
 
-        <ManualLatLng
-          value={internal}
-          onChange={setInternal}
-          onConfirm={() => onConfirm(internal.lat, internal.lng)}
-          coordsValid={coordsValid}
-          compact
-        />
+        <div className="shrink-0 border-t border-outline-variant/25 bg-white px-4 py-3 sm:px-5">
+          <button
+            type="button"
+            disabled={!coordsValid}
+            onClick={() => onConfirm(internal.lat, internal.lng)}
+            className="w-full rounded-xl bg-[#163332] py-3.5 text-sm font-extrabold text-white shadow-[0_8px_24px_-8px_rgba(22,51,50,0.45)] transition enabled:hover:bg-[#1a4543] enabled:active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-outline-variant/40 disabled:text-on-surface-variant disabled:shadow-none"
+          >
+            تأكيد الموقع
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -362,13 +369,11 @@ export function DeliveryMapDialog({ open, onClose, initial, onConfirm }: Props) 
 function ManualLatLng({
   value,
   onChange,
-  onConfirm,
   coordsValid,
   compact,
 }: {
   value: LatLng;
   onChange: (v: LatLng) => void;
-  onConfirm: () => void;
   coordsValid: boolean;
   compact?: boolean;
 }) {
@@ -412,16 +417,6 @@ function ManualLatLng({
           ? "خط العرض بين −90 و 90، وخط الطول بين −180 و 180."
           : "الإحداثيات غير صالحة — راجع القيم قبل التأكيد."}
       </p>
-      <div className={compact ? "sm:col-span-2" : ""}>
-        <button
-          type="button"
-          disabled={!coordsValid}
-          onClick={onConfirm}
-          className="w-full rounded-xl bg-[#163332] py-3.5 text-sm font-extrabold text-white shadow-[0_8px_24px_-8px_rgba(22,51,50,0.45)] transition enabled:hover:bg-[#1a4543] enabled:active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-outline-variant/40 disabled:text-on-surface-variant disabled:shadow-none"
-        >
-          تأكيد الموقع
-        </button>
-      </div>
     </div>
   );
 }
