@@ -33,6 +33,35 @@ function profileInitials(name: string | null | undefined): string {
   return trimmed.slice(0, 2);
 }
 
+function formatBookingDate(date: Date): string {
+  return date.toLocaleDateString("ar-SA", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function formatBookingTime(date: Date): string {
+  return date.toLocaleTimeString("ar-SA", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function addDays(date: Date, days: number): Date {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+function pickupModeLabel(mode: string | null | undefined): string | null {
+  const k = mode?.trim().toLowerCase();
+  if (!k) return null;
+  if (k === "delivery") return "توصيل للعميل";
+  if (k === "branch" || k === "pickup") return "استلام من الفرع";
+  return null;
+}
+
 function bookingPaymentPillClass(paymentStatus: string): string {
   const k = paymentStatus.trim().toUpperCase();
   if (k === "PAID") return "border-emerald-200 bg-emerald-50 text-emerald-950";
@@ -96,63 +125,247 @@ export default async function AccountDashboardPage() {
       getCustomerCancellationDeductTiers(),
     ]);
 
+  type BookingRow = (typeof bookings)[number];
+
+  const isPastOrTerminal = (b: BookingRow): boolean => {
+    const k = b.status.trim().toUpperCase();
+    return k === "CANCELLED" || k === "REJECTED" || k === "COMPLETED";
+  };
+
+  const upcomingBookings = bookings.filter((b) => !isPastOrTerminal(b));
+  const pastBookings = bookings.filter((b) => isPastOrTerminal(b));
+
+  const renderBookingCard = (b: BookingRow) => {
+    const bookingSt = b.status.trim().toUpperCase();
+    let cancellationFinancePreview: {
+      paidInclTax: number;
+      refundInclTax: number;
+      methodLabel: string;
+    } | null = null;
+    if (
+      b.kind === "DIRECT" &&
+      b.paymentStatus.trim().toUpperCase() === "PAID" &&
+      b.carModel &&
+      bookingSt !== "CANCELLED" &&
+      bookingSt !== "REJECTED"
+    ) {
+      const h = hoursBeforePickup(b.pickupDate, new Date());
+      const deduct = computeCancellationDeductedDays(
+        h,
+        cancellationDeductTiers,
+        b.numberOfDays,
+      );
+      const br = computeCancellationRefundBreakdown({
+        numberOfDays: b.numberOfDays,
+        deductDays: deduct,
+        pricePerDayExclTax: resolveBookingRentalPricePerDayExclTax(
+          b.carModel.price,
+          b.addonsJson,
+        ),
+        vatRatePercent: b.carModel.vatRatePercent,
+        addonsJson: b.addonsJson,
+      });
+      if (br) {
+        cancellationFinancePreview = {
+          paidInclTax: br.paidTotalInclTax,
+          refundInclTax: br.refundInclTax,
+          methodLabel: bookingPaymentMethodLabelAr(b.paymentMethod),
+        };
+      }
+    }
+
+    const rowRefund = b as typeof b & {
+      cancellationRefundAmountSar?: number | null;
+      cancellationRefundExternalRef?: string | null;
+    };
+
+    const returnDate = addDays(b.pickupDate, b.numberOfDays);
+    const modeLabel = pickupModeLabel(b.pickupMode);
+
+    return (
+      <li key={b.id}>
+        <article className="group flex h-full flex-col rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-[#003749]/20 hover:shadow-lg editorial-shadow">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-lg font-extrabold leading-snug text-[#003749]">
+                {b.kind === "DIRECT" && b.carModel
+                  ? `${b.carModel.brand.name} ${b.carModel.name}`
+                  : b.carType}
+              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <span className="inline-flex rounded-lg bg-neutral-100 px-2 py-0.5 text-[11px] font-bold text-on-surface-variant">
+                  {b.kind === "DIRECT" ? "حجز مباشر" : "طلب حجز"}
+                </span>
+                {modeLabel ? (
+                  <span className="inline-flex items-center gap-1 rounded-lg bg-[#f0fbfb] px-2 py-0.5 text-[11px] font-bold text-[#003749]">
+                    <svg viewBox="0 0 24 24" fill="none" className="h-3 w-3" aria-hidden>
+                      <path
+                        d="M12 21s-6-5.2-6-10a6 6 0 1112 0c0 4.8-6 10-6 10z"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <circle cx="12" cy="11" r="2" stroke="currentColor" strokeWidth="2" />
+                    </svg>
+                    {modeLabel}
+                  </span>
+                ) : null}
+                <span className="text-xs tabular-nums text-on-surface-variant" dir="ltr">
+                  #{b.id}
+                </span>
+              </div>
+            </div>
+            <div className="flex shrink-0 flex-col items-end gap-2">
+              <span
+                className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${bookingStatusStyles(b.status)}`}
+              >
+                {bookingStatusLabelAr(b.status)}
+              </span>
+              {b.kind === "DIRECT" ? (
+                <span
+                  className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${bookingPaymentPillClass(b.paymentStatus)}`}
+                >
+                  {bookingPaymentPillLabel(b.paymentStatus, b.paymentMethod)}
+                </span>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-3 border-t border-neutral-100 pt-4">
+            <div className="rounded-xl bg-neutral-50 p-3">
+              <p className="flex items-center gap-1.5 text-[11px] font-bold text-on-surface-variant">
+                <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5 shrink-0 text-[#775927]" aria-hidden>
+                  <path
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                الاستلام
+              </p>
+              <p className="mt-1 text-sm font-bold text-on-surface">{formatBookingDate(b.pickupDate)}</p>
+              <p className="text-[11px] tabular-nums text-on-surface-variant" dir="ltr">
+                {formatBookingTime(b.pickupDate)}
+              </p>
+            </div>
+            <div className="rounded-xl bg-neutral-50 p-3">
+              <p className="flex items-center gap-1.5 text-[11px] font-bold text-on-surface-variant">
+                <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5 shrink-0 text-[#775927]" aria-hidden>
+                  <path
+                    d="M9 11l3 3 8-8m-3 5v6a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2h9"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                الإرجاع
+              </p>
+              <p className="mt-1 text-sm font-bold text-on-surface">{formatBookingDate(returnDate)}</p>
+              <p className="text-[11px] font-semibold text-[#775927]">{b.numberOfDays} يوم</p>
+            </div>
+          </div>
+
+          <AccountBookingCardActions
+            cancellationPolicyAr={cancellationPolicyAr}
+            cancelMinHoursBeforePickup={cancelMinHoursBeforePickup}
+            cancellationDeductTiers={cancellationDeductTiers}
+            cancellationFinancePreview={cancellationFinancePreview}
+            booking={{
+              id: b.id,
+              kind: b.kind,
+              carModelId: b.carModelId,
+              pickupDateIso: b.pickupDate.toISOString(),
+              numberOfDays: b.numberOfDays,
+              pickupMode: b.pickupMode,
+              pickupBranchSlug: b.pickupBranch?.slug ?? null,
+              returnBranchSlug:
+                b.returnBranch?.slug ?? b.pickupBranch?.slug ?? "jeddah",
+              deliveryLat: b.deliveryLat,
+              deliveryLng: b.deliveryLng,
+              deliveryAddress: b.deliveryAddress,
+              paymentStatus: b.paymentStatus,
+              paymentMethod: b.paymentMethod,
+              status: b.status,
+              cancellationDeductedDays: b.cancellationDeductedDays ?? null,
+              cancellationRefundAmountSar: rowRefund.cancellationRefundAmountSar ?? null,
+              cancellationRefundExternalRef: rowRefund.cancellationRefundExternalRef ?? null,
+            }}
+          />
+        </article>
+      </li>
+    );
+  };
+
   return (
     <div className="flex min-h-screen flex-col bg-[#f4f4f5] text-on-surface">
       <SiteNav active="home" />
       <main className="mx-auto w-full max-w-screen-xl flex-1 px-4 pb-16 pt-28 sm:px-6">
-        <header className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-lg sm:p-8 editorial-shadow">
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+        <header className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#003749] via-[#013040] to-[#163332] p-6 shadow-xl sm:p-8">
+          <div
+            className="pointer-events-none absolute -left-16 -top-16 h-56 w-56 rounded-full bg-[#dbb878]/20 blur-3xl"
+            aria-hidden
+          />
+          <div
+            className="pointer-events-none absolute -bottom-20 right-10 h-48 w-48 rounded-full bg-[#dbb878]/10 blur-3xl"
+            aria-hidden
+          />
+          <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center">
               <div
-                className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#003749] to-[#163332] text-2xl font-black text-white shadow-inner ring-4 ring-[#dbb878]/35"
+                className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#e6be82] to-[#dbb878] text-2xl font-black text-[#003749] shadow-lg ring-4 ring-white/15"
                 aria-hidden
               >
                 {profileInitials(profile.name)}
               </div>
               <div className="text-center sm:text-start">
-                <p className="text-xs font-bold uppercase tracking-wide text-[#775927]">
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#e6be82]">
                   حساب العميل
                 </p>
-                <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-[#003749] sm:text-3xl">
-                  حسابي
+                <h1 className="mt-1.5 text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
+                  مرحباً، {profile.name ?? "عميلنا العزيز"}
                 </h1>
-                <p className="mt-2 text-base font-semibold text-on-surface">
-                  {profile.name ?? "—"}
-                </p>
-                <p className="mt-1 text-sm tabular-nums text-on-surface-variant" dir="ltr">
-                  {profile.email}
-                </p>
-                {profile.phone ? (
-                  <p className="mt-1 text-sm font-bold tabular-nums text-[#003749]" dir="ltr">
-                    {profile.phone}
-                  </p>
-                ) : null}
+                <div className="mt-2 flex flex-col items-center gap-1 text-sm text-white/70 sm:flex-row sm:items-center sm:gap-4">
+                  <span className="tabular-nums" dir="ltr">
+                    {profile.email}
+                  </span>
+                  {profile.phone ? (
+                    <span className="font-bold tabular-nums text-white" dir="ltr">
+                      {profile.phone}
+                    </span>
+                  ) : null}
+                </div>
               </div>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-3 sm:flex-col sm:items-stretch">
-              {/* <Link
-                href="/fleet"
-                className="inline-flex items-center justify-center rounded-xl bg-[#003749] px-5 py-2.5 text-sm font-extrabold text-white shadow-md transition-opacity hover:opacity-95"
-              >
-                احجز الآن
-              </Link> */}
               <Link
                 href="/subscriptions"
-                className="inline-flex items-center justify-center rounded-xl border border-[#163332]/25 bg-[#f0fbfb] px-5 py-2.5 text-sm font-extrabold text-[#003749] shadow-sm transition-colors hover:bg-white"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#e6be82] px-5 py-2.5 text-sm font-extrabold text-[#003749] shadow-md transition-transform hover:scale-[1.02]"
               >
                 الاشتراك الشهري
               </Link>
               <Link
                 href="/account/subscription"
-                className="inline-flex items-center justify-center rounded-xl border border-neutral-300 bg-white px-5 py-2.5 text-sm font-bold text-on-surface shadow-sm transition-colors hover:bg-neutral-50"
+                className="inline-flex items-center justify-center rounded-xl border border-white/25 bg-white/10 px-5 py-2.5 text-sm font-bold text-white backdrop-blur-sm transition-colors hover:bg-white/20"
               >
                 اشتراكي
               </Link>
               <form action={logoutCustomer} className="w-full sm:w-auto">
                 <button
                   type="submit"
-                  className="w-full rounded-xl border border-neutral-300 bg-white px-5 py-2.5 text-sm font-bold text-on-surface shadow-sm transition-colors hover:bg-neutral-50"
+                  className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-white/20 bg-transparent px-5 py-2.5 text-sm font-bold text-white/80 transition-colors hover:bg-white/10 hover:text-white"
                 >
+                  <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden>
+                    <path
+                      d="M16 17l5-5-5-5M21 12H9M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
                   خروج
                 </button>
               </form>
@@ -168,9 +381,15 @@ export default async function AccountDashboardPage() {
                 تظهر الطلبات المرتبطة بحسابك أو بنفس رقم الجوال المسجّل.
               </p>
             </div>
-            <span className="rounded-full border border-neutral-200 bg-white px-3 py-1 text-xs font-bold tabular-nums text-on-surface-variant shadow-sm">
-              {bookings.length} طلب
-            </span>
+            <Link
+              href="/fleet"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#003749] px-4 py-2.5 text-sm font-extrabold text-white shadow-sm transition-opacity hover:opacity-95"
+            >
+              <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden>
+                <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+              حجز جديد
+            </Link>
           </div>
 
           {bookings.length === 0 ? (
@@ -197,142 +416,37 @@ export default async function AccountDashboardPage() {
               </Link>
             </div>
           ) : (
-            <ul className="mt-6 grid gap-4 sm:grid-cols-1 lg:grid-cols-2">
-              {bookings.map((b) => {
-                const bookingSt = b.status.trim().toUpperCase();
-                let cancellationFinancePreview: {
-                  paidInclTax: number;
-                  refundInclTax: number;
-                  methodLabel: string;
-                } | null = null;
-                if (
-                  b.kind === "DIRECT" &&
-                  b.paymentStatus.trim().toUpperCase() === "PAID" &&
-                  b.carModel &&
-                  bookingSt !== "CANCELLED" &&
-                  bookingSt !== "REJECTED"
-                ) {
-                  const h = hoursBeforePickup(b.pickupDate, new Date());
-                  const deduct = computeCancellationDeductedDays(
-                    h,
-                    cancellationDeductTiers,
-                    b.numberOfDays,
-                  );
-                  const br = computeCancellationRefundBreakdown({
-                    numberOfDays: b.numberOfDays,
-                    deductDays: deduct,
-                    pricePerDayExclTax: resolveBookingRentalPricePerDayExclTax(
-                      b.carModel.price,
-                      b.addonsJson,
-                    ),
-                    vatRatePercent: b.carModel.vatRatePercent,
-                    addonsJson: b.addonsJson,
-                  });
-                  if (br) {
-                    cancellationFinancePreview = {
-                      paidInclTax: br.paidTotalInclTax,
-                      refundInclTax: br.refundInclTax,
-                      methodLabel: bookingPaymentMethodLabelAr(b.paymentMethod),
-                    };
-                  }
-                }
+            <div className="mt-6 space-y-10">
+              {upcomingBookings.length > 0 ? (
+                <div>
+                  <div className="mb-4 flex items-center gap-2">
+                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" aria-hidden />
+                    <h3 className="text-sm font-extrabold text-[#003749]">الحجوزات النشطة والقادمة</h3>
+                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold tabular-nums text-emerald-700">
+                      {upcomingBookings.length}
+                    </span>
+                  </div>
+                  <ul className="grid gap-4 sm:grid-cols-1 lg:grid-cols-2">
+                    {upcomingBookings.map(renderBookingCard)}
+                  </ul>
+                </div>
+              ) : null}
 
-                const rowRefund = b as typeof b & {
-                  cancellationRefundAmountSar?: number | null;
-                  cancellationRefundExternalRef?: string | null;
-                };
-
-                return (
-                <li key={b.id}>
-                  <article className="group flex h-full flex-col rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition-shadow duration-300 hover:shadow-md editorial-shadow">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-lg font-extrabold leading-snug text-[#003749]">
-                          {b.kind === "DIRECT" && b.carModel
-                            ? `${b.carModel.brand.name} ${b.carModel.name}`
-                            : b.carType}
-                        </p>
-                        <div className="mt-2 flex flex-wrap items-center gap-2">
-                          <span className="inline-flex rounded-lg bg-neutral-100 px-2 py-0.5 text-[11px] font-bold text-on-surface-variant">
-                            {b.kind === "DIRECT" ? "حجز مباشر" : "طلب حجز"}
-                          </span>
-                          <span className="text-xs tabular-nums text-on-surface-variant" dir="ltr">
-                            #{b.id}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex shrink-0 flex-col items-end gap-2">
-                        <span
-                          className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${bookingStatusStyles(b.status)}`}
-                        >
-                          {bookingStatusLabelAr(b.status)}
-                        </span>
-                        {b.kind === "DIRECT" ? (
-                          <span
-                            className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${bookingPaymentPillClass(b.paymentStatus)}`}
-                          >
-                            {bookingPaymentPillLabel(b.paymentStatus, b.paymentMethod)}
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
-
-                    <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 border-t border-neutral-100 pt-4 text-xs tabular-nums text-on-surface-variant">
-                      <span dir="ltr" className="inline-flex items-center gap-1.5">
-                        <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4 shrink-0 text-[#775927]" aria-hidden>
-                          <path
-                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                          />
-                        </svg>
-                        الاستلام: {b.pickupDate.toLocaleString("ar-SA")}
-                      </span>
-                      <span className="inline-flex items-center gap-1.5 font-semibold text-on-surface">
-                        <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4 shrink-0 text-[#775927]" aria-hidden>
-                          <path
-                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                          />
-                        </svg>
-                        {b.numberOfDays} يوم
-                      </span>
-                    </div>
-
-                    <AccountBookingCardActions
-                      cancellationPolicyAr={cancellationPolicyAr}
-                      cancelMinHoursBeforePickup={cancelMinHoursBeforePickup}
-                      cancellationDeductTiers={cancellationDeductTiers}
-                      cancellationFinancePreview={cancellationFinancePreview}
-                      booking={{
-                        id: b.id,
-                        kind: b.kind,
-                        carModelId: b.carModelId,
-                        pickupDateIso: b.pickupDate.toISOString(),
-                        numberOfDays: b.numberOfDays,
-                        pickupMode: b.pickupMode,
-                        pickupBranchSlug: b.pickupBranch?.slug ?? null,
-                        returnBranchSlug:
-                          b.returnBranch?.slug ?? b.pickupBranch?.slug ?? "jeddah",
-                        deliveryLat: b.deliveryLat,
-                        deliveryLng: b.deliveryLng,
-                        deliveryAddress: b.deliveryAddress,
-                        paymentStatus: b.paymentStatus,
-                        paymentMethod: b.paymentMethod,
-                        status: b.status,
-                        cancellationDeductedDays: b.cancellationDeductedDays ?? null,
-                        cancellationRefundAmountSar: rowRefund.cancellationRefundAmountSar ?? null,
-                        cancellationRefundExternalRef: rowRefund.cancellationRefundExternalRef ?? null,
-                      }}
-                    />
-                  </article>
-                </li>
-                );
-              })}
-            </ul>
+              {pastBookings.length > 0 ? (
+                <div>
+                  <div className="mb-4 flex items-center gap-2">
+                    <span className="h-2.5 w-2.5 rounded-full bg-neutral-400" aria-hidden />
+                    <h3 className="text-sm font-extrabold text-[#003749]">حجوزات سابقة</h3>
+                    <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-bold tabular-nums text-on-surface-variant">
+                      {pastBookings.length}
+                    </span>
+                  </div>
+                  <ul className="grid gap-4 sm:grid-cols-1 lg:grid-cols-2">
+                    {pastBookings.map(renderBookingCard)}
+                  </ul>
+                </div>
+              ) : null}
+            </div>
           )}
         </section>
       </main>

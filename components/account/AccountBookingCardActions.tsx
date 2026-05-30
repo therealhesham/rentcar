@@ -111,6 +111,13 @@ export function AccountBookingCardActions({
   const showDirectLinks = b.kind === "DIRECT" && b.carModelId != null && b.carModelId >= 1;
   const showCompletePayment = shouldShowCompletePaymentLink(b);
 
+  // إعادة الحجز تظهر فقط بعد انتهاء مدة الإيجار (مرّ موعد الإرجاع) أو إن كان الحجز
+  // ملغى/مرفوض — لا تظهر طالما الحجز ما زال قائماً وميعاد الإرجاع لم يحن بعد.
+  const rentalEndMs =
+    new Date(b.pickupDateIso).getTime() + b.numberOfDays * 24 * 60 * 60 * 1000;
+  const rentalEnded = Date.now() >= rentalEndMs;
+  const showRebook = isTerminal || rentalEnded;
+
   const cancelPastDeadline = isSelfCancelPastDeadline(
     b.pickupDateIso,
     cancelMinHoursBeforePickup,
@@ -262,12 +269,14 @@ export function AccountBookingCardActions({
               >
                 تعديل الحجز
               </Link>
-              <Link
-                href={rebookCheckoutHref}
-                className="inline-flex w-full items-center justify-center rounded-xl bg-[#003749] px-4 py-2.5 text-center text-sm font-extrabold text-white shadow-sm transition-opacity hover:opacity-95 sm:w-auto sm:flex-1"
-              >
-                إعادة الحجز
-              </Link>
+              {showRebook ? (
+                <Link
+                  href={rebookCheckoutHref}
+                  className="inline-flex w-full items-center justify-center rounded-xl bg-[#003749] px-4 py-2.5 text-center text-sm font-extrabold text-white shadow-sm transition-opacity hover:opacity-95 sm:w-auto sm:flex-1"
+                >
+                  إعادة الحجز
+                </Link>
+              ) : null}
             </>
           ) : b.kind === "INQUIRY" ? (
             <Link
@@ -278,18 +287,20 @@ export function AccountBookingCardActions({
             </Link>
           ) : null}
 
-          <button
-            type="button"
-            disabled={cancelPastDeadline || isTerminal}
-            title={cancelDeadlineTitle}
-            onClick={() => {
-              setCancelError(null);
-              setCancelOpen(true);
-            }}
-            className="inline-flex w-full items-center justify-center rounded-xl border border-red-300 bg-white px-4 py-2.5 text-sm font-extrabold text-red-800 shadow-sm transition-colors hover:bg-red-50 enabled:cursor-pointer disabled:cursor-not-allowed disabled:opacity-55 sm:w-auto sm:flex-1"
-          >
-            الغاء الحجز
-          </button>
+          {rentalEnded ? null : (
+            <button
+              type="button"
+              disabled={cancelPastDeadline || isTerminal}
+              title={cancelDeadlineTitle}
+              onClick={() => {
+                setCancelError(null);
+                setCancelOpen(true);
+              }}
+              className="inline-flex w-full items-center justify-center rounded-xl border border-red-300 bg-white px-4 py-2.5 text-sm font-extrabold text-red-800 shadow-sm transition-colors hover:bg-red-50 enabled:cursor-pointer disabled:cursor-not-allowed disabled:opacity-55 sm:w-auto sm:flex-1"
+            >
+              الغاء الحجز
+            </button>
+          )}
         </div>
       )}
     </div>
