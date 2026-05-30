@@ -10,6 +10,7 @@ import {
   type CancellationDeductTier,
 } from "@/lib/cancellation-deduct";
 import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
+import { resolveBookingRentalPricePerDayExclTax } from "@/lib/booking-pricing-snapshot";
 import {
   getCustomerCancelMinHoursBeforePickup,
   getCustomerCancellationDeductTiers,
@@ -131,7 +132,10 @@ export async function cancelBookingWithPolicy(input: {
     const br = computeCancellationRefundBreakdown({
       numberOfDays: row.numberOfDays,
       deductDays,
-      pricePerDayExclTax: row.carModel.price,
+      pricePerDayExclTax: resolveBookingRentalPricePerDayExclTax(
+        row.carModel.price,
+        row.addonsJson,
+      ),
       vatRatePercent: row.carModel.vatRatePercent,
       addonsJson: row.addonsJson,
     });

@@ -65,6 +65,18 @@ export function FleetCarCard({
             ))}
           </div>
           <div className="flex shrink-0 flex-col items-end gap-0.5 text-end">
+            {car.priceUi.discountLabelAr ? (
+              <span className="rounded-md bg-[#c2410c]/10 px-2 py-0.5 text-[10px] font-extrabold text-[#c2410c]">
+                {car.priceUi.discountLabelAr}
+              </span>
+            ) : null}
+            {car.priceUi.originalPrimaryAmount ? (
+              <SarAmountWithSymbol
+                amountClassName="text-sm font-bold text-on-surface-variant line-through opacity-70"
+              >
+                {car.priceUi.originalPrimaryAmount}
+              </SarAmountWithSymbol>
+            ) : null}
             <SarAmountWithSymbol
               bold
               amountClassName="text-2xl font-extrabold tracking-tight text-on-surface"

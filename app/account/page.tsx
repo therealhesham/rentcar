@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { isCashPaymentMethod } from "@/lib/booking-cash-flow";
 import { bookingStatusLabelAr } from "@/lib/booking-display-labels";
 import { computeCancellationRefundBreakdown } from "@/lib/booking-cancellation-refund";
+import { resolveBookingRentalPricePerDayExclTax } from "@/lib/booking-pricing-snapshot";
 import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
 import {
   computeCancellationDeductedDays,
@@ -220,7 +221,10 @@ export default async function AccountDashboardPage() {
                   const br = computeCancellationRefundBreakdown({
                     numberOfDays: b.numberOfDays,
                     deductDays: deduct,
-                    pricePerDayExclTax: b.carModel.price,
+                    pricePerDayExclTax: resolveBookingRentalPricePerDayExclTax(
+                      b.carModel.price,
+                      b.addonsJson,
+                    ),
                     vatRatePercent: b.carModel.vatRatePercent,
                     addonsJson: b.addonsJson,
                   });

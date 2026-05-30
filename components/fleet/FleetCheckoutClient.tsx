@@ -1418,9 +1418,27 @@ export function FleetCheckoutClient({
                   <p className="mt-1 text-[12px] font-semibold text-[#8a7752]">أو مركبة مشابهة من نفس الفئة</p>
 
                   <div className="mt-3 rounded-xl border border-[#ebe4d3] bg-[#fdfbf6] px-3 py-2.5 text-[11px] font-semibold leading-relaxed text-[#5c4d38]">
+                    {car.discountLabelAr ? (
+                      <p className="mb-2 text-end">
+                        <span className="rounded-md bg-[#c2410c]/10 px-2 py-0.5 text-[10px] font-extrabold text-[#c2410c]">
+                          {car.discountLabelAr}
+                        </span>
+                      </p>
+                    ) : null}
                     {rentalPriceDisplayMode === "INCLUSIVE" ? (
                       <p dir="ltr" className="text-end">
-                        السعر اليومي المرجعي:{" "}
+                        السعر اليومي:{" "}
+                        {car.originalPricePerDayExclTax > car.pricePerDayExclTax ? (
+                          <span className="me-2 font-bold text-[#8a7752] line-through opacity-70">
+                            {formatSarAmount(
+                              dailyRentalInclTaxSar(
+                                car.originalPricePerDayExclTax,
+                                car.vatRatePercent,
+                              ),
+                            )}{" "}
+                            <SarCurrencyGlyph />
+                          </span>
+                        ) : null}
                         <span className="font-extrabold text-[#003749]">
                           {formatSarAmount(
                             dailyRentalInclTaxSar(car.pricePerDayExclTax, car.vatRatePercent),
@@ -1433,6 +1451,11 @@ export function FleetCheckoutClient({
                       <div className="space-y-1.5" dir="ltr">
                         <p className="text-end">
                           قبل الضريبة:{" "}
+                          {car.originalPricePerDayExclTax > car.pricePerDayExclTax ? (
+                            <span className="me-2 font-bold text-[#8a7752] line-through opacity-70">
+                              {formatSarAmount(car.originalPricePerDayExclTax)} <SarCurrencyGlyph />
+                            </span>
+                          ) : null}
                           <span className="font-extrabold text-[#003749]">
                             {formatSarAmount(car.pricePerDayExclTax)} <SarCurrencyGlyph />
                           </span>
@@ -1449,7 +1472,12 @@ export function FleetCheckoutClient({
                       </div>
                     ) : (
                       <p dir="ltr" className="text-end">
-                        السعر اليومي المرجعي:{" "}
+                        السعر اليومي:{" "}
+                        {car.originalPricePerDayExclTax > car.pricePerDayExclTax ? (
+                          <span className="me-2 font-bold text-[#8a7752] line-through opacity-70">
+                            {formatSarAmount(car.originalPricePerDayExclTax)} <SarCurrencyGlyph />
+                          </span>
+                        ) : null}
                         <span className="font-extrabold text-[#003749]">
                           {formatSarAmount(car.pricePerDayExclTax)} <SarCurrencyGlyph />
                         </span>{" "}

@@ -36,6 +36,11 @@ import {
   type DelayPenaltySnap,
 } from "@/lib/booking-delay-penalty";
 import { formatDailyBookingDurationFromIso } from "@/lib/booking-duration-display";
+import {
+  rentalDiscountSnapFromResolved,
+  resolveRentalDiscountForModel,
+  type RentalDiscountPriceSnap,
+} from "@/lib/rental-discount";
 
 export { addDaysToYmd, lastInclusiveBookingDayYmd } from "@/lib/booking-calendar-ymd";
 
@@ -861,6 +866,7 @@ async function buildBookingAddonsJsonSnapshot(
   pickupDate: Date,
   dropoffDate: Date | null | undefined,
   rentalTab: string | null | undefined,
+  rentalDiscount?: RentalDiscountPriceSnap | null,
 ): Promise<{ ok: true; json: string | null } | { ok: false; error: string }> {
   const days = safeBookingDays(numberOfDays);
   let items: Array<{
@@ -939,8 +945,17 @@ async function buildBookingAddonsJsonSnapshot(
     );
   }
   const hasDurationLabel = Boolean(tripDurationLabelAr);
+  const hasDiscount =
+    rentalDiscount != null && rentalDiscount.discountPerDayExclTax > 0;
 
-  if (items.length === 0 && !hasShip && !hasCheckout && !hasDelay && !hasDurationLabel) {
+  if (
+    items.length === 0 &&
+    !hasShip &&
+    !hasCheckout &&
+    !hasDelay &&
+    !hasDurationLabel &&
+    !hasDiscount
+  ) {
     return { ok: true, json: null };
   }
 
@@ -950,6 +965,7 @@ async function buildBookingAddonsJsonSnapshot(
     checkoutOneTimeFees?: typeof coSnap;
     delayPenalty?: DelayPenaltySnap;
     tripDurationLabelAr?: string;
+    rentalDiscount?: RentalDiscountPriceSnap;
   } = { items };
   if (hasShip && interCityShipping) {
     payload.interCityShipping = interCityShipping;
@@ -962,6 +978,9 @@ async function buildBookingAddonsJsonSnapshot(
   }
   if (tripDurationLabelAr) {
     payload.tripDurationLabelAr = tripDurationLabelAr;
+  }
+  if (hasDiscount && rentalDiscount) {
+    payload.rentalDiscount = rentalDiscount;
   }
   return { ok: true, json: JSON.stringify(payload) };
 }
@@ -1153,16 +1172,34 @@ export async function createDirectBooking(
 
   const checkoutFeeLines = await getActiveCheckoutOneTimeFees();
 
+  const returnBranchRow = await prisma.branch.findFirst({
+    where: { slug: returnBranchSlug, isActive: true },
+    select: { id: true },
+  });
+
+  const rentalDiscountResolved = await resolveRentalDiscountForModel(model.price, {
+    brandId: model.brandId,
+    carModelId: model.id,
+    branchId: returnBranchRow?.id ?? null,
+    referenceDate: commonNormalized.pickupDate,
+  });
+  const effectivePricePerDay =
+    rentalDiscountResolved?.discountedPricePerDayExclTax ?? model.price;
+  const rentalDiscountSnap = rentalDiscountResolved
+    ? rentalDiscountSnapFromResolved(rentalDiscountResolved)
+    : null;
+
   const addonsSnap = await buildBookingAddonsJsonSnapshot(
     addonIds,
     days,
     shippingSnap,
     checkoutFeeLines,
     null,
-    model.price,
+    effectivePricePerDay,
     commonNormalized.pickupDate,
     commonNormalized.dropoffDate,
     commonNormalized.rentalTab,
+    rentalDiscountSnap,
   );
   if (!addonsSnap.ok) {
     return { ok: false, error: addonsSnap.error };

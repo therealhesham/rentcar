@@ -40,6 +40,18 @@ export default async function FleetCheckoutPage({
     redirect("/fleet");
   }
 
+  const checkoutBranchSlug =
+    firstSearchParam(sp.returnBranch)?.toLowerCase() ??
+    firstSearchParam(sp.pickupBranch)?.toLowerCase() ??
+    firstSearchParam(sp.branch)?.toLowerCase() ??
+    null;
+  const checkoutPickupRaw = firstSearchParam(sp.pickup);
+  let checkoutPickupDate: Date | null = null;
+  if (checkoutPickupRaw) {
+    const d = new Date(checkoutPickupRaw);
+    if (!Number.isNaN(d.getTime())) checkoutPickupDate = d;
+  }
+
   const [
     car,
     addons,
@@ -51,7 +63,10 @@ export default async function FleetCheckoutPage({
     checkoutOneTimeFees,
     tabFlags,
   ] = await Promise.all([
-    getCarModelForCheckout(modelId),
+    getCarModelForCheckout(modelId, {
+      branchSlug: checkoutBranchSlug,
+      pickupDate: checkoutPickupDate,
+    }),
     getActiveRentalAddons(),
     getActiveBranches().catch(() => []),
     getActiveBookingCitiesWithBranches().catch(() => []),

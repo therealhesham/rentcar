@@ -3,6 +3,7 @@ import {
   type DelayPenaltySnap,
 } from "@/lib/booking-delay-penalty";
 import type { InterCityShippingSnap } from "@/lib/inter-city-shipping";
+import type { RentalDiscountPriceSnap } from "@/lib/rental-discount";
 
 export type AddonSnapItem = {
   id: number;
@@ -27,6 +28,8 @@ export type BookingPricingSnapshotV1 = {
   delayPenalty?: DelayPenaltySnap | null;
   /** مدة الحجز اليومي للعرض (مثل «يومين + 3 ساعات»). */
   tripDurationLabelAr?: string | null;
+  /** لقطة سعر الإيجار بعد الخصم (بدون تفاصيل شرط الخصم). */
+  rentalDiscount?: RentalDiscountPriceSnap | null;
 };
 
 function parseDelayPenaltySnap(raw: unknown): DelayPenaltySnap | null {
@@ -66,6 +69,7 @@ export function parseBookingPricingSnapshot(raw: string | null): {
   checkoutOneTimeFees: CheckoutOneTimeFeeSnap[];
   delayPenalty: DelayPenaltySnap | null;
   tripDurationLabelAr: string | null;
+  rentalDiscount: RentalDiscountPriceSnap | null;
 } {
   if (!raw) {
     return {
@@ -74,6 +78,7 @@ export function parseBookingPricingSnapshot(raw: string | null): {
       checkoutOneTimeFees: [],
       delayPenalty: null,
       tripDurationLabelAr: null,
+      rentalDiscount: null,
     };
   }
   try {
@@ -130,7 +135,28 @@ export function parseBookingPricingSnapshot(raw: string | null): {
         ? data.tripDurationLabelAr.trim()
         : null;
 
-    return { addons, interCityShipping, checkoutOneTimeFees, delayPenalty, tripDurationLabelAr };
+    let rentalDiscount: RentalDiscountPriceSnap | null = null;
+    const rd = data.rentalDiscount;
+    if (
+      rd &&
+      typeof rd === "object" &&
+      typeof (rd as RentalDiscountPriceSnap).originalPricePerDayExclTax === "number" &&
+      typeof (rd as RentalDiscountPriceSnap).discountedPricePerDayExclTax === "number" &&
+      typeof (rd as RentalDiscountPriceSnap).discountPerDayExclTax === "number" &&
+      (rd as RentalDiscountPriceSnap).discountPerDayExclTax > 0
+    ) {
+      rentalDiscount = {
+        originalPricePerDayExclTax: Math.round(
+          (rd as RentalDiscountPriceSnap).originalPricePerDayExclTax,
+        ),
+        discountedPricePerDayExclTax: Math.round(
+          (rd as RentalDiscountPriceSnap).discountedPricePerDayExclTax,
+        ),
+        discountPerDayExclTax: Math.round((rd as RentalDiscountPriceSnap).discountPerDayExclTax),
+      };
+    }
+
+    return { addons, interCityShipping, checkoutOneTimeFees, delayPenalty, tripDurationLabelAr, rentalDiscount };
   } catch {
     return {
       addons: [],
@@ -138,6 +164,23 @@ export function parseBookingPricingSnapshot(raw: string | null): {
       checkoutOneTimeFees: [],
       delayPenalty: null,
       tripDurationLabelAr: null,
+      rentalDiscount: null,
     };
   }
+}
+
+/** سعر الإيجار اليومي الفعلي المحفوظ في لقطة الحجز (بعد الخصم إن وُجد). */
+export function resolveBookingRentalPricePerDayExclTax(
+  modelPricePerDayExclTax: number,
+  addonsJson: string | null,
+): number {
+  const { rentalDiscount } = parseBookingPricingSnapshot(addonsJson);
+  if (
+    rentalDiscount &&
+    Number.isFinite(rentalDiscount.discountedPricePerDayExclTax) &&
+    rentalDiscount.discountedPricePerDayExclTax >= 0
+  ) {
+    return rentalDiscount.discountedPricePerDayExclTax;
+  }
+  return modelPricePerDayExclTax;
 }

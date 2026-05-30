@@ -14,6 +14,7 @@ export type AdminNavItem = {
     | "sliders"
     | "tags"
     | "puzzle"
+    | "percent"
     | "map-pin"
     | "truck"
     | "receipt"
@@ -81,6 +82,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/admin/vehicles", label: "المركبات", icon: "car" },
       { href: "/admin/categories", label: "فئات الأسطول", icon: "tags" },
       { href: "/admin/rental-addons", label: "إضافات التأجير", icon: "puzzle" },
+      { href: "/admin/rental-discounts", label: "خصومات التأجير", icon: "percent" },
       { href: "/admin/cities", label: "المدن", icon: "map-pin" },
       { href: "/admin/branches", label: "الفروع", icon: "building-2" },
       { href: "/admin/employees", label: "موظفو الفروع", icon: "user-cog" },

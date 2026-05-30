@@ -116,6 +116,7 @@ model Branch {
   fleetItems Fleet[]
   pickupBookings  BookingRequest[] @relation("BookingPickupBranch")
   returnBookings  BookingRequest[] @relation("BookingReturnBranch")
+  rentalDiscounts RentalDiscount[]
 
   @@index([cityId])
   @@index([sortOrder])
@@ -170,6 +171,7 @@ model Brand {
   id        Int        @id @default(autoincrement())
   name      String     @unique
   models    CarModel[]
+  rentalDiscounts RentalDiscount[]
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 }
@@ -201,6 +203,7 @@ model CarModel {
   fleetItems         Fleet[]
   bookingRequests    BookingRequest[]
   subscriptionPlans  SubscriptionPlan[]
+  rentalDiscounts    RentalDiscount[]
 
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
@@ -246,6 +249,41 @@ model RentalAddon {
   updatedAt      DateTime @updatedAt
 
   @@index([isActive, sortOrder])
+}
+
+/// خصومات تأجير يومي — تُدار من الإدارة؛ العميل يرى المبلغ المخصوم فقط دون تفاصيل الشرط.
+model RentalDiscount {
+  id          Int                  @id @default(autoincrement())
+  /// اسم داخلي للإدارة فقط (لا يُعرض للعميل).
+  labelAr     String               @db.VarChar(255)
+  kind        RentalDiscountKind
+  /// PERCENT: 1–100؛ FIXED_DAILY: مبلغ يومي بالريال (دون ضريبة).
+  value       Int
+  /// بداية الفترة (null = بدون بداية).
+  startsAt    DateTime?
+  /// نهاية الفترة (null = بدون نهاية).
+  endsAt      DateTime?
+  brandId     Int?
+  brand       Brand?               @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  carModelId  Int?
+  carModel    CarModel?            @relation(fields: [carModelId], references: [id], onDelete: Cascade)
+  branchId    Int?
+  branch      Branch?              @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  isActive    Boolean              @default(true)
+  sortOrder   Int                  @default(0)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  @@index([isActive, sortOrder])
+  @@index([brandId])
+  @@index([carModelId])
+  @@index([branchId])
+  @@index([startsAt, endsAt])
+}
+
+enum RentalDiscountKind {
+  PERCENT
+  FIXED_DAILY
 }
 
 /// طلب تواصل لحجز شركات (من الصفحة الرئيسية) — يتابعه المشرف يدوياً.

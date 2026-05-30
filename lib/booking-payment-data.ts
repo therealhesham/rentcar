@@ -1,6 +1,6 @@
 import { resolvePickupBranchDisplayName } from "@/lib/booking-branches";
 import { prisma } from "@/lib/prisma";
-import { parseBookingPricingSnapshot } from "@/lib/booking-pricing-snapshot";
+import { parseBookingPricingSnapshot, resolveBookingRentalPricePerDayExclTax } from "@/lib/booking-pricing-snapshot";
 import { computeCheckoutTotals } from "@/lib/booking-checkout-pricing";
 import type { InterCityShippingSnap } from "@/lib/inter-city-shipping";
 import type { DelayPenaltySnap } from "@/lib/booking-delay-penalty";
@@ -102,12 +102,13 @@ export async function getBookingForPayment(
   const { addons, interCityShipping, checkoutOneTimeFees, delayPenalty, tripDurationLabelAr } =
     parseBookingPricingSnapshot(row.addonsJson);
   const returnSlug = row.returnBranch?.slug ?? "jeddah";
+  const effectiveRentalPrice = resolveBookingRentalPricePerDayExclTax(m.price, row.addonsJson);
 
   const shipFee = interCityShipping?.feeExclVatSar ?? 0;
   const checkoutFeesSum = checkoutOneTimeFees.reduce((s, x) => s + x.feeExclVatSar, 0);
   const delayFee = delayPenalty?.feeExclVatSar ?? 0;
   const totals = computeCheckoutTotals(
-    m.price,
+    effectiveRentalPrice,
     row.numberOfDays,
     m.vatRatePercent,
     addons.map((a) => ({ pricePerDay: a.pricePerDayExclTax })),
@@ -143,7 +144,7 @@ export async function getBookingForPayment(
     car: {
       fullTitle: `${brandName} ${modelName}`.trim(),
       categoryTitle: m.category.title.trim(),
-      pricePerDayExclTax: m.price,
+      pricePerDayExclTax: effectiveRentalPrice,
       vatRatePercent: m.vatRatePercent,
       image: m.image?.trim() || PLACEHOLDER_IMG,
       alt: m.alt?.trim() || `${brandName} ${modelName}`,

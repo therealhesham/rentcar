@@ -173,12 +173,19 @@ export default async function FleetPage({
     qFirst(params.branch)?.toLowerCase() ??
     null;
 
+  let fleetPickupDate: Date | null = null;
+  if (pickupRaw) {
+    const d = new Date(pickupRaw);
+    if (!Number.isNaN(d.getTime())) fleetPickupDate = d;
+  }
+
   const cars = await getFleetCarsForDisplay({
     categorySlug,
     brandId,
     maxPriceExclTax,
     modelIds: availabilityModelIds,
     branchSlug: displayBranchSlug,
+    pickupDate: fleetPickupDate,
     priceDisplayMode: priceMode,
   });
 

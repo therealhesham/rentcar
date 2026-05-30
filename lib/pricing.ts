@@ -50,6 +50,10 @@ export type FleetCardPriceParts = {
   secondaryAmount: string | null;
   secondaryLabelAr: string | null;
   footnoteAr: string;
+  /** السعر قبل الخصم (منسّق) — للعرض مشطوباً عند وجود خصم */
+  originalPrimaryAmount?: string | null;
+  /** عبارة مختصرة للعميل: «خصم ١٠٪» أو «وفّرت ٥٠ ر.س» */
+  discountLabelAr?: string | null;
 };
 
 /** أجزاء عرض السعر في بطاقة الأسطول (المبالغ منسّقة بـ en-US). */
@@ -57,6 +61,10 @@ export function buildFleetCardPriceParts(
   priceExclTaxSar: number,
   vatRatePercent: number,
   mode: RentalPriceDisplayMode,
+  opts?: {
+    originalPriceExclTaxSar?: number;
+    discountLabelAr?: string | null;
+  },
 ): FleetCardPriceParts {
   const ex = Math.max(0, Math.round(priceExclTaxSar));
   const exFmt = ex.toLocaleString("en-US");
@@ -66,6 +74,20 @@ export function buildFleetCardPriceParts(
     maximumFractionDigits: 2,
   });
 
+  const originalEx = opts?.originalPriceExclTaxSar;
+  const hasDiscount =
+    originalEx != null && Math.round(originalEx) > ex;
+  const originalPrimaryAmount = hasDiscount
+    ? mode === "INCLUSIVE"
+      ? dailyRentalInclTaxSar(originalEx, vatRatePercent).toLocaleString("en-US", {
+          minimumFractionDigits: incl % 1 === 0 ? 0 : 2,
+          maximumFractionDigits: 2,
+        })
+      : Math.round(originalEx).toLocaleString("en-US")
+    : null;
+
+  const discountLabelAr = hasDiscount ? (opts?.discountLabelAr ?? null) : null;
+
   if (mode === "INCLUSIVE") {
     return {
       primaryAmount: inclFmt,
@@ -73,6 +95,8 @@ export function buildFleetCardPriceParts(
       secondaryAmount: null,
       secondaryLabelAr: null,
       footnoteAr: `شامل ضريبة القيمة المضافة (${vatRatePercent}٪)`,
+      originalPrimaryAmount,
+      discountLabelAr,
     };
   }
 
@@ -83,6 +107,10 @@ export function buildFleetCardPriceParts(
       secondaryAmount: inclFmt,
       secondaryLabelAr: `بعد الضريبة (${vatRatePercent}٪)`,
       footnoteAr: "السعر قبل وبعد ضريبة القيمة المضافة",
+      originalPrimaryAmount: hasDiscount
+        ? Math.round(originalEx!).toLocaleString("en-US")
+        : null,
+      discountLabelAr,
     };
   }
 
@@ -92,5 +120,7 @@ export function buildFleetCardPriceParts(
     secondaryAmount: null,
     secondaryLabelAr: null,
     footnoteAr: FLEET_CARD_TAX_LINE_AR,
+    originalPrimaryAmount,
+    discountLabelAr,
   };
 }

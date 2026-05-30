@@ -4,6 +4,11 @@ import type { FleetCar } from "@/lib/fleet-types";
 import { buildFleetCardPriceParts, type RentalPriceDisplayMode } from "@/lib/pricing";
 import { fleetWhereForBranchSlug } from "@/lib/fleet-branch-stock";
 import { getRentalPriceDisplayMode } from "@/lib/site-settings";
+import {
+  getActiveRentalDiscounts,
+  resolveBestRentalDiscount,
+  type RentalDiscountRule,
+} from "@/lib/rental-discount";
 
 const FUEL_AR: Record<FuelType, string> = {
   GASOLINE: "بنزين",
@@ -35,13 +40,30 @@ type FleetRowWithModel = Awaited<
 function mapFleetRowToFleetCar(
   row: FleetRowWithModel,
   priceMode: RentalPriceDisplayMode,
+  discountRules: ReadonlyArray<RentalDiscountRule>,
+  referenceDate?: Date | null,
 ): FleetCar {
   const m = row.model;
   const brandName = m.brand.name.trim();
   const modelName = m.name.trim();
   const fullTitle = `${brandName} ${modelName}`.trim();
   const subtitle = `${m.year} • ${FUEL_AR[m.fuel]} • ${TRANS_AR[m.transmission]}`;
-  const priceUi = buildFleetCardPriceParts(m.price, m.vatRatePercent, priceMode);
+
+  const resolved = resolveBestRentalDiscount(
+    discountRules,
+    {
+      brandId: m.brandId,
+      carModelId: m.id,
+      branchId: row.branchId,
+      referenceDate,
+    },
+    m.price,
+  );
+  const effectivePrice = resolved?.discountedPricePerDayExclTax ?? m.price;
+  const priceUi = buildFleetCardPriceParts(effectivePrice, m.vatRatePercent, priceMode, {
+    originalPriceExclTaxSar: resolved?.originalPricePerDayExclTax,
+    discountLabelAr: resolved?.displayLabelAr,
+  });
   /** غير مخزّن في قاعدة البيانات — تقدير بسيط للعرض حسب حجم المركبة */
   const displayDoors = m.chairs >= 7 ? 5 : 4;
   const displayLuggage = m.chairs >= 7 ? 4 : m.chairs >= 6 ? 3 : 2;
@@ -70,17 +92,22 @@ function mapFleetRowToFleetCar(
 export async function getFleetCarMapByModelIds(
   modelIds: number[],
   priceDisplayMode?: RentalPriceDisplayMode,
+  opts?: { branchId?: number | null; referenceDate?: Date | null },
 ): Promise<Map<number, FleetCar>> {
   const map = new Map<number, FleetCar>();
   const unique = [...new Set(modelIds.filter((id) => Number.isFinite(id)))];
   if (unique.length === 0) return map;
 
-  const priceMode = priceDisplayMode ?? (await getRentalPriceDisplayMode());
+  const [priceMode, discountRules] = await Promise.all([
+    priceDisplayMode ?? getRentalPriceDisplayMode(),
+    getActiveRentalDiscounts(),
+  ]);
 
   const rows = await prisma.fleet.findMany({
     where: {
       quantity: { gt: 0 },
       modelId: { in: unique },
+      ...(opts?.branchId != null ? { branchId: opts.branchId } : {}),
     },
     include: fleetModelInclude,
     orderBy: { id: "desc" },
@@ -88,7 +115,10 @@ export async function getFleetCarMapByModelIds(
 
   for (const row of rows) {
     if (map.has(row.modelId)) continue;
-    map.set(row.modelId, mapFleetRowToFleetCar(row, priceMode));
+    map.set(
+      row.modelId,
+      mapFleetRowToFleetCar(row, priceMode, discountRules, opts?.referenceDate),
+    );
   }
 
   return map;
@@ -103,6 +133,8 @@ export type FleetDisplayFilters = {
   modelIds?: number[] | null;
   /** فرع الإرجاع — عرض مركبات لها مخزون في هذا الفرع فقط */
   branchSlug?: string | null;
+  /** تاريخ الاستلام لتطبيق خصومات الفترة */
+  pickupDate?: Date | null;
   priceDisplayMode?: RentalPriceDisplayMode;
 };
 
@@ -115,10 +147,14 @@ export async function getFleetCarsForDisplay(
     maxPriceExclTax,
     modelIds,
     branchSlug,
+    pickupDate,
     priceDisplayMode: priceDisplayModeIn,
   } = filters;
 
-  const priceMode = priceDisplayModeIn ?? (await getRentalPriceDisplayMode());
+  const [priceMode, discountRules] = await Promise.all([
+    priceDisplayModeIn ?? getRentalPriceDisplayMode(),
+    getActiveRentalDiscounts(),
+  ]);
 
   const modelWhere =
     categorySlug || brandId != null || maxPriceExclTax != null
@@ -152,7 +188,7 @@ export async function getFleetCarsForDisplay(
   for (const row of rows) {
     if (seenModelIds.has(row.modelId)) continue;
     seenModelIds.add(row.modelId);
-    cars.push(mapFleetRowToFleetCar(row, priceMode));
+    cars.push(mapFleetRowToFleetCar(row, priceMode, discountRules, pickupDate));
   }
   return cars;
 }

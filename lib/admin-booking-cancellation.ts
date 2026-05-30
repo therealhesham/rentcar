@@ -1,5 +1,6 @@
 import type { AdminBookingDetail } from "@/lib/admin-booking-detail";
 import { buildCancellationFinancePreview } from "@/lib/booking-cancellation-service";
+import { resolveBookingRentalPricePerDayExclTax } from "@/lib/booking-pricing-snapshot";
 import {
   getCustomerCancelMinHoursBeforePickup,
   getCustomerCancellationDeductTiers,
@@ -21,7 +22,13 @@ export async function loadAdminBookingCancellationContext(booking: AdminBookingD
     paymentMethod: booking.paymentMethod,
     numberOfDays: booking.numberOfDays,
     pickupDate: booking.pickupDate,
-    pricePerDayExclTax: booking.carModel?.price ?? null,
+    pricePerDayExclTax:
+      booking.carModel != null
+        ? resolveBookingRentalPricePerDayExclTax(
+            booking.carModel.price,
+            booking.addonsJson,
+          )
+        : null,
     vatRatePercent: booking.carModel?.vatRatePercent ?? null,
     addonsJson: booking.addonsJson,
     tiers: cancellationDeductTiers,

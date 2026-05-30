@@ -9,6 +9,7 @@ export const SUPER_ADMIN_ONLY_PREFIXES = [
   "/admin/employees",
   "/admin/categories",
   "/admin/rental-addons",
+  "/admin/rental-discounts",
   "/admin/cities",
   "/admin/branches",
   "/admin/inter-city-shipping",
