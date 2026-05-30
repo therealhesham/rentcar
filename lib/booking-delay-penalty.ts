@@ -66,11 +66,14 @@ export function computeDelayPenaltyExclTax(
       billableHours: 0,
     };
   }
-  const raw = ((lateHours * price) / 24) * 2;
+  // لا تُحتسب الكسور: تُجبَر ساعات التأخير لأعلى لأقرب ساعة كاملة (2.3 → 3، 1.1 → 2)،
+  // ويُحسب المبلغ على أساس الساعات المجبورة.
+  const billableHours = Math.ceil(lateHours);
+  const raw = ((billableHours * price) / 24) * 2;
   return {
     feeExclVatSar: Math.round(raw * 100) / 100,
     kind: "hourly",
-    billableHours: lateHours,
+    billableHours,
   };
 }
 
@@ -79,11 +82,11 @@ function formatHoursAr(h: number): string {
   return h.toLocaleString("ar-SA", { maximumFractionDigits: 1 });
 }
 
-function buildDelayLabelAr(kind: DelayPenaltyKind, lateHours: number, billableHours: number): string {
+function buildDelayLabelAr(kind: DelayPenaltyKind, billableHours: number): string {
   if (kind === "full_day") {
     return `ساعات تأخير (أكثر من ${DELAY_PENALTY_FULL_DAY_HOURS} ساعات — يوم إضافي)`;
   }
-  return `ساعات تأخير (${formatHoursAr(lateHours)} س — (سعر اليوم ÷ 24) × 2)`;
+  return `ساعات تأخير (${formatHoursAr(billableHours)} س — (سعر اليوم ÷ 24) × 2)`;
 }
 
 export function isDailyRentalTab(rentalTab: string | null | undefined): boolean {
@@ -117,7 +120,7 @@ export function computeDelayPenaltySnap(
     lateHours,
     billableHours,
     feeExclVatSar,
-    labelAr: buildDelayLabelAr(kind, lateHours, billableHours),
+    labelAr: buildDelayLabelAr(kind, billableHours),
     scheduledReturnAt,
     actualDropoffAt: dropoff.toISOString(),
   };
