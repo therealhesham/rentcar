@@ -1732,3 +1732,139 @@ export async function convertDirectBookingToInquiry(
 
   return { ok: true };
 }
+
+/**
+ * تعديل تواريخ حجز مباشر من حساب العميل (تاريخ الاستلام/عدد الأيام) مع التحقق من الملكية
+ * وإعادة فحص السعة داخل معاملة Serializable (مع استثناء الطلب نفسه من التداخل).
+ * يحدّث أيضاً لقطة الإضافات (addonsJson) لتعكس عدد الأيام الجديد.
+ */
+export async function updateDirectBookingDates(input: {
+  bookingRequestId: number;
+  customerId: number | null;
+  customerPhone: string | null;
+  pickupDate: Date;
+  numberOfDays: number;
+  addonsJson: string | null;
+  /** مبلغ مستحق يُحصَّل عند الفرع بعد التعديل (فرق السعر). null = لا يُغيَّر. */
+  balanceDueAtBranchSar?: number | null;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { bookingRequestId } = input;
+  const days = safeBookingDays(input.numberOfDays);
+  const ownerOr = [
+    ...(input.customerId != null && input.customerId >= 1
+      ? [{ customerId: input.customerId }]
+      : []),
+    ...(input.customerPhone ? [{ phone: input.customerPhone }] : []),
+  ];
+  if (ownerOr.length === 0) {
+    return { ok: false, error: "تعذّر التحقق من ملكية الطلب." };
+  }
+
+  const runOnce = () =>
+    prisma.$transaction(
+      async (tx) => {
+        const row = await tx.bookingRequest.findFirst({
+          where: { id: bookingRequestId, kind: "DIRECT", OR: ownerOr },
+          select: {
+            id: true,
+            carModelId: true,
+            status: true,
+            returnBranch: { select: { slug: true } },
+          },
+        });
+        if (!row) {
+          throw Object.assign(new Error("NOT_FOUND"), {
+            userMessage: "الطلب غير موجود أو لا يخص حسابك.",
+          });
+        }
+        if (row.carModelId == null) {
+          throw Object.assign(new Error("NO_MODEL"), {
+            userMessage: "موديل السيارة غير محدد في الطلب.",
+          });
+        }
+        const statusKey = row.status.trim().toUpperCase();
+        if (
+          statusKey === "CANCELLED" ||
+          statusKey === "REJECTED" ||
+          statusKey === "COMPLETED"
+        ) {
+          throw Object.assign(new Error("TERMINAL"), {
+            userMessage: "لا يمكن تعديل حجز منتهٍ أو ملغى.",
+          });
+        }
+        const branchSlug = row.returnBranch?.slug?.trim().toLowerCase();
+        if (!branchSlug) {
+          throw Object.assign(new Error("NO_BRANCH"), {
+            userMessage: "فرع الإرجاع غير محدد في الطلب.",
+          });
+        }
+
+        if (isBlockingBookingStatus(row.status)) {
+          const fleetUnits = await sumFleetQuantityForModelAtBranch(tx, row.carModelId, {
+            branchSlug,
+          });
+          if (fleetUnits <= 0) {
+            throw new DirectBookingCapacityError(
+              "NO_FLEET",
+              "لا توجد وحدات لهذا الموديل في فرع الإرجاع.",
+              0,
+              0,
+            );
+          }
+          const rows = await loadBlockingDirectBookings(
+            tx,
+            row.carModelId,
+            bookingRequestId,
+            branchSlug,
+          );
+          const overlapping = countOverlapsFromRows(rows, input.pickupDate, days);
+          if (overlapping >= fleetUnits) {
+            throw new DirectBookingCapacityError(
+              "SLOT_FULL",
+              "الفترة ممتلئة بالنسبة لعدد العربيات في الأسطول.",
+              fleetUnits,
+              overlapping,
+            );
+          }
+        }
+
+        const updated = await tx.bookingRequest.updateMany({
+          where: { id: bookingRequestId, kind: "DIRECT", OR: ownerOr },
+          data: {
+            pickupDate: input.pickupDate,
+            numberOfDays: days,
+            addonsJson: input.addonsJson,
+            ...(input.balanceDueAtBranchSar !== undefined
+              ? { balanceDueAtBranchSar: input.balanceDueAtBranchSar }
+              : {}),
+          },
+        });
+        if (updated.count === 0) {
+          throw Object.assign(new Error("RACE"), {
+            userMessage: "تعذّر التحديث. حدّث الصفحة.",
+          });
+        }
+      },
+      {
+        maxWait: 8000,
+        timeout: 15000,
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      },
+    );
+
+  try {
+    await runOnce();
+  } catch (e) {
+    if (isSerializationConflict(e)) {
+      try {
+        await runOnce();
+      } catch (e2) {
+        return mapConvertInquiryError(e2);
+      }
+    } else {
+      return mapConvertInquiryError(e);
+    }
+  }
+
+  return { ok: true };
+}

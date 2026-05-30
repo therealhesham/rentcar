@@ -365,6 +365,8 @@ model BookingRequest {
   cancellationRefundAmountSar Float?
   /// مرجع من بوابة الاسترداد (أو محاكاة MOCK-… حتى ربط البوابات).
   cancellationRefundExternalRef String? @db.VarChar(128)
+  /// مبلغ مستحق يُحصَّل عند الفرع بعد تعديل/تمديد العميل لحجز مدفوع (فرق السعر). يطالب به الموظف عند تسليم/إرجاع السيارة.
+  balanceDueAtBranchSar Float?
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
 

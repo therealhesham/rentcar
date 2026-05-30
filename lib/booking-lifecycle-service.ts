@@ -73,6 +73,7 @@ export async function recordBookingReturnToBranch(
     data: {
       status: BOOKING_STATUS_RETURNED,
       vehicleReturnedAt: now,
+      balanceDueAtBranchSar: null,
       ...(cash
         ? {
             paymentStatus: "PAID",

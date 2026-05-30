@@ -17,6 +17,8 @@ import {
 import type { ReactNode } from "react";
 import { AdminKindBadge, AdminStatusBadge } from "@/components/admin/AdminStatusBadge";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { SarAmountWithSymbol } from "@/components/ui/SarAmountWithSymbol";
+import { formatSarAmount } from "@/lib/booking-checkout-pricing";
 import { BookingAddonsSnapshot } from "@/components/admin/BookingAddonsSnapshot";
 import { BookingAttachmentsPanel } from "@/components/admin/BookingAttachmentsPanel";
 import { BookingCancelPanel } from "@/components/admin/BookingCancelPanel";
@@ -134,6 +136,13 @@ export function BookingDetailView({ booking, editActions, cancellation }: Props)
   const pickupName =
     booking.pickupBranch?.name ?? (booking.pickupMode === "DELIVERY" ? "توصيل للعميل" : "—");
   const returnName = booking.returnBranch?.name ?? "—";
+  const statusKeyUpper = booking.status.trim().toUpperCase();
+  const isTerminalStatus =
+    statusKeyUpper === "CANCELLED" || statusKeyUpper === "REJECTED";
+  const balanceDueAtBranch =
+    !isTerminalStatus && typeof booking.balanceDueAtBranchSar === "number"
+      ? booking.balanceDueAtBranchSar
+      : 0;
   const interBranch =
     booking.kind === "DIRECT" &&
     isInterBranchPickupReturn({
@@ -412,7 +421,35 @@ export function BookingDetailView({ booking, editActions, cancellation }: Props)
                     <span className="text-xs">{booking.paidAt.toLocaleString("ar-SA")}</span>
                   </DetailRow>
                 ) : null}
+                {balanceDueAtBranch > 0 ? (
+                  <DetailRow label="مستحق عند الإرجاع">
+                    <SarAmountWithSymbol
+                      bold
+                      amountClassName="font-extrabold text-amber-700"
+                      glyphClassName="text-amber-700"
+                    >
+                      {formatSarAmount(balanceDueAtBranch)}
+                    </SarAmountWithSymbol>
+                  </DetailRow>
+                ) : null}
               </dl>
+              {balanceDueAtBranch > 0 ? (
+                <div className="mt-4 flex items-start gap-2 rounded-xl border border-amber-300/70 bg-amber-50 px-3.5 py-3 text-xs font-bold leading-relaxed text-amber-950">
+                  <CreditCard className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                  <span>
+                    مدّد العميل مدة الحجز — فرق قدره{" "}
+                    <SarAmountWithSymbol
+                      amountClassName="font-extrabold"
+                      glyphClassName="text-amber-900"
+                    >
+                      {formatSarAmount(balanceDueAtBranch)}
+                    </SarAmountWithSymbol>{" "}
+                    {booking.paymentStatus.trim().toUpperCase() === "PAID"
+                      ? "يُطالَب به نقداً عند تسليم/إرجاع السيارة في الفرع (تمديد بعد الدفع)."
+                      : "يُحصَّل ضمن إجمالي الحجز عند الاستلام/الإرجاع في الفرع."}
+                  </span>
+                </div>
+              ) : null}
             </BookingDetailSection>
           ) : null}
 

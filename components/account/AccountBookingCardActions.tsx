@@ -14,7 +14,11 @@ import {
   hoursBeforePickup,
 } from "@/lib/cancellation-deduct";
 import { shouldShowCompletePaymentLink } from "@/lib/booking-cash-flow";
-import { hrefFreshRebookCheckoutFromBooking, hrefRebookFromBooking } from "@/lib/rebook-booking-url";
+import { hrefFreshRebookCheckoutFromBooking } from "@/lib/rebook-booking-url";
+import {
+  BookingEditModal,
+  type BookingEditModalData,
+} from "@/components/account/BookingEditModal";
 
 export type AccountBookingCardActionsProps = {
   booking: {
@@ -49,6 +53,8 @@ export type AccountBookingCardActionsProps = {
     refundInclTax: number;
     methodLabel: string;
   } | null;
+  /** بيانات تعديل الحجز (تُمرَّر للحجوزات المباشرة القابلة للتعديل) — يفتح مودال التعديل. */
+  editData?: BookingEditModalData | null;
 };
 
 function isSelfCancelPastDeadline(pickupIso: string, minHours: number): boolean {
@@ -75,11 +81,13 @@ export function AccountBookingCardActions({
   cancelMinHoursBeforePickup = 0,
   cancellationDeductTiers = [],
   cancellationFinancePreview = null,
+  editData = null,
 }: AccountBookingCardActionsProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
 
   const statusKey = b.status.trim().toUpperCase();
   const isTerminal = statusKey === "CANCELLED" || statusKey === "REJECTED";
@@ -105,7 +113,6 @@ export function AccountBookingCardActions({
     excludeBookingRequestId: b.id,
   };
 
-  const editCheckoutHref = hrefRebookFromBooking(rebookLike);
   const rebookCheckoutHref = hrefFreshRebookCheckoutFromBooking(rebookLike);
 
   const showDirectLinks = b.kind === "DIRECT" && b.carModelId != null && b.carModelId >= 1;
@@ -263,12 +270,15 @@ export function AccountBookingCardActions({
 
           {showDirectLinks ? (
             <>
-              <Link
-                href={editCheckoutHref}
-                className="inline-flex w-full items-center justify-center rounded-xl border-2 border-[#003749] bg-white px-4 py-2.5 text-center text-sm font-extrabold text-[#003749] shadow-sm transition-colors hover:bg-[#003749]/5 sm:w-auto sm:flex-1"
-              >
-                تعديل الحجز
-              </Link>
+              {!rentalEnded && !isTerminal && editData ? (
+                <button
+                  type="button"
+                  onClick={() => setEditOpen(true)}
+                  className="inline-flex w-full items-center justify-center rounded-xl border-2 border-[#003749] bg-white px-4 py-2.5 text-center text-sm font-extrabold text-[#003749] shadow-sm transition-colors hover:bg-[#003749]/5 sm:w-auto sm:flex-1"
+                >
+                  تعديل الحجز
+                </button>
+              ) : null}
               {showRebook ? (
                 <Link
                   href={rebookCheckoutHref}
@@ -303,6 +313,14 @@ export function AccountBookingCardActions({
           )}
         </div>
       )}
+
+      {editData ? (
+        <BookingEditModal
+          open={editOpen}
+          onClose={() => setEditOpen(false)}
+          {...editData}
+        />
+      ) : null}
     </div>
   );
 }

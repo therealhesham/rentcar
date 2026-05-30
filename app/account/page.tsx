@@ -10,6 +10,11 @@ import { isCashPaymentMethod } from "@/lib/booking-cash-flow";
 import { bookingStatusLabelAr } from "@/lib/booking-display-labels";
 import { computeCancellationRefundBreakdown } from "@/lib/booking-cancellation-refund";
 import { resolveBookingRentalPricePerDayExclTax } from "@/lib/booking-pricing-snapshot";
+import {
+  bookingDaysPriceInputFromSnapshot,
+  bookingTotalInclTaxForDays,
+} from "@/lib/booking-edit";
+import type { BookingEditModalData } from "@/components/account/BookingEditModal";
 import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
 import {
   computeCancellationDeductedDays,
@@ -112,9 +117,9 @@ export default async function AccountDashboardPage() {
     orderBy: { createdAt: "desc" },
     take: 40,
     include: {
-      carModel: { include: { brand: true } },
-      pickupBranch: { select: { slug: true } },
-      returnBranch: { select: { slug: true } },
+      carModel: { include: { brand: true, category: true } },
+      pickupBranch: { select: { slug: true, name: true } },
+      returnBranch: { select: { slug: true, name: true } },
     },
   });
 
@@ -181,6 +186,39 @@ export default async function AccountDashboardPage() {
 
     const returnDate = addDays(b.pickupDate, b.numberOfDays);
     const modeLabel = pickupModeLabel(b.pickupMode);
+
+    let editData: BookingEditModalData | null = null;
+    const nowMs = Date.now();
+    const bookingEndMs = b.pickupDate.getTime() + b.numberOfDays * 24 * 60 * 60 * 1000;
+    if (
+      b.kind === "DIRECT" &&
+      b.carModel &&
+      bookingSt !== "CANCELLED" &&
+      bookingSt !== "REJECTED" &&
+      bookingSt !== "COMPLETED" &&
+      nowMs < bookingEndMs
+    ) {
+      const priceInput = bookingDaysPriceInputFromSnapshot(
+        b.carModel.price,
+        b.carModel.vatRatePercent,
+        b.addonsJson,
+      );
+      editData = {
+        bookingId: b.id,
+        carName: `${b.carModel.brand.name} ${b.carModel.name}`.trim(),
+        carImage: b.carModel.image ?? null,
+        carAlt: b.carModel.alt ?? `${b.carModel.brand.name} ${b.carModel.name}`.trim(),
+        categoryTitle: b.carModel.category?.title ?? null,
+        branchName: b.returnBranch?.name ?? b.pickupBranch?.name ?? null,
+        paymentStatus: b.paymentStatus,
+        paymentMethod: b.paymentMethod,
+        started: b.pickupDate.getTime() <= nowMs,
+        pickupIso: b.pickupDate.toISOString(),
+        numberOfDays: b.numberOfDays,
+        priceInput,
+        oldTotalInclTax: bookingTotalInclTaxForDays(priceInput, b.numberOfDays),
+      };
+    }
 
     return (
       <li key={b.id}>
@@ -301,6 +339,7 @@ export default async function AccountDashboardPage() {
             cancelMinHoursBeforePickup={cancelMinHoursBeforePickup}
             cancellationDeductTiers={cancellationDeductTiers}
             cancellationFinancePreview={cancellationFinancePreview}
+            editData={editData}
             booking={{
               id: b.id,
               kind: b.kind,

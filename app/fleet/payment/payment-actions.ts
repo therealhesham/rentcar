@@ -90,6 +90,7 @@ export async function confirmMockPayment(
             paymentStatus: "PAID",
             paidAt: new Date(),
             paymentMethod,
+            balanceDueAtBranchSar: null,
           },
     });
     if (updated.count === 0) {
