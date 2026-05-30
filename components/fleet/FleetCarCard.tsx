@@ -21,127 +21,113 @@ export function FleetCarCard({
   void _branchOptions;
 
   return (
-    <article className="group relative flex flex-col overflow-hidden rounded-2xl bg-white shadow-[0_2px_14px_-4px_rgba(0,55,73,0.10)] ring-1 ring-neutral-200/70 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_14px_42px_-12px_rgba(0,55,73,0.16)] hover:ring-[#dbb878]/40">
+    <article className="group flex flex-col overflow-hidden rounded-xl bg-white shadow-[0_4px_20px_rgba(0,52,58,0.10)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_32px_rgba(0,52,58,0.16)]">
 
-      {/* ────── صورة السيارة + المعلومات فوقها ────── */}
-      <div className="relative aspect-[16/10] overflow-hidden bg-gradient-to-br from-[#e8f4f5] to-[#cfe5e7]">
+      {/* ────── صورة السيارة ────── */}
+      <div className="relative h-60 overflow-hidden">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={car.image}
           alt={car.alt}
-          className="h-full w-full object-cover object-center transition-transform duration-700 group-hover:scale-[1.05]"
+          className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
         />
 
-        {/* تدرّج داكن أسفل الصورة لإبراز النص */}
-        <div
-          className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent"
-          aria-hidden
-        />
-
-        {/* شارة التصنيف / الباج */}
-        {car.badge ? (
-          <div className="absolute start-3 top-3 rounded-lg bg-white/95 px-2.5 py-1 text-[10px] font-extrabold text-[#003749] shadow-sm backdrop-blur-sm">
-            {car.badge}
-          </div>
-        ) : null}
-
-        {/* شارة الخصم */}
-        {car.priceUi.discountLabelAr ? (
-          <div className="absolute end-3 top-3 rounded-lg bg-[#c2410c] px-2 py-1 text-[10px] font-extrabold text-white shadow-sm">
-            {car.priceUi.discountLabelAr}
-          </div>
-        ) : null}
-
-        {/* الماركة + الاسم + السنة فوق الصورة */}
-        <div className="absolute inset-x-0 bottom-0 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#e6be82]">
-            {car.brand}
-          </p>
-          <div className="mt-0.5 flex items-end justify-between gap-2">
-            <h3 className="min-w-0 text-lg font-extrabold leading-tight tracking-tight text-white drop-shadow-sm">
-              {car.name}
-            </h3>
-            {car.year ? (
-              <span
-                className="shrink-0 text-xs font-bold tabular-nums text-white/75"
-                dir="ltr"
-              >
-                {car.year}
-              </span>
-            ) : null}
-          </div>
+        {/* الشارات أعلى اليمين (start في RTL) */}
+        <div className="absolute start-4 top-4 flex flex-col items-start gap-2">
+          {car.year ? (
+            <span
+              className="rounded-full bg-[#003749]/90 px-3 py-1 text-[11px] font-bold tabular-nums text-white shadow-sm backdrop-blur-sm"
+              dir="ltr"
+            >
+              {car.year}
+            </span>
+          ) : null}
+          {car.badge ? (
+            <span className="rounded-full bg-[#dbb878] px-3 py-1 text-[11px] font-extrabold uppercase tracking-wide text-[#003749] shadow-sm">
+              {car.badge}
+            </span>
+          ) : null}
+          {car.priceUi.discountLabelAr ? (
+            <span className="rounded-full bg-[#c2410c] px-3 py-1 text-[11px] font-extrabold text-white shadow-sm">
+              {car.priceUi.discountLabelAr}
+            </span>
+          ) : null}
         </div>
       </div>
 
       {/* ────── جسم البطاقة ────── */}
-      <div className="flex flex-1 flex-col gap-3.5 p-4">
+      <div className="flex flex-1 flex-col p-6">
 
-        {/* المواصفات */}
-        {car.specs.length > 0 ? (
-          <div className="flex items-center gap-3.5 border-b border-neutral-100 pb-3">
-            {car.specs.map((s, i) => (
-              <div
-                key={`${car.id}-spec-${i}`}
-                className="flex flex-col items-center gap-1.5 text-center"
-              >
-                <span className="text-[#003749]/60" aria-hidden>
-                  <SpecIcon name={s.icon} className="size-5 shrink-0" />
-                </span>
-                <span className="text-[11px] font-extrabold tabular-nums text-[#1a2e35]">
-                  {s.value}
-                </span>
-              </div>
-            ))}
-          </div>
-        ) : null}
-
-        {/* السعر */}
-        <div className="flex items-end justify-between gap-2">
+        {/* الماركة + الاسم + المواصفات */}
+        <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            {car.priceUi.originalPrimaryAmount ? (
-              <p className="text-xs tabular-nums text-neutral-400 line-through">
-                {car.priceUi.originalPrimaryAmount}{" "}
-                <SarCurrencyGlyph className="inline h-[0.8em] w-[0.8em]" />
-              </p>
-            ) : null}
-            <p className="flex items-baseline gap-1.5 tabular-nums">
-              <span className="text-[1.7rem] font-black leading-none tracking-tight text-[#003749]">
-                {car.priceUi.primaryAmount}
-              </span>
-              <SarCurrencyGlyph className="mb-0.5 h-4 w-4 shrink-0 text-[#003749]/70" />
-            </p>
-            {car.priceUi.primaryLabelAr ? (
-              <p className="mt-0.5 text-[10px] font-semibold text-neutral-500">
-                {car.priceUi.primaryLabelAr}
-              </p>
-            ) : null}
+            <span className="text-[12px] font-bold uppercase tracking-[0.2em] text-neutral-400">
+              {car.brand}
+            </span>
+            <h3 className="mt-0.5 truncate text-2xl font-extrabold leading-tight text-[#003749]">
+              {car.name}
+            </h3>
           </div>
 
-          {car.priceUi.secondaryAmount ? (
-            <div className="shrink-0 rounded-xl border border-neutral-200 bg-neutral-50 px-2.5 py-1.5 text-end">
-              <p className="flex items-baseline justify-end gap-1 tabular-nums">
-                <span className="text-base font-extrabold text-[#003749]">
-                  {car.priceUi.secondaryAmount}
-                </span>
-                <SarCurrencyGlyph className="mb-0.5 h-3 w-3 shrink-0 text-[#003749]/60" />
-              </p>
-              {car.priceUi.secondaryLabelAr ? (
-                  <p className="text-[9px] font-bold text-neutral-500">
-                  {car.priceUi.secondaryLabelAr}
-                </p>
-              ) : null}
+          {car.specs.length > 0 ? (
+            <div className="flex shrink-0 gap-4">
+              {car.specs.map((s, i) => (
+                <div
+                  key={`${car.id}-spec-${i}`}
+                  className="flex flex-col items-center gap-0.5"
+                >
+                  <span className="text-neutral-400" aria-hidden>
+                    <SpecIcon name={s.icon} className="size-6 shrink-0" />
+                  </span>
+                  <span className="text-[10px] font-bold tabular-nums text-neutral-500">
+                    {s.value}
+                  </span>
+                </div>
+              ))}
             </div>
           ) : null}
         </div>
 
-        {/* زر الحجز + الحاشية */}
-        <div className="mt-auto space-y-2">
+        {/* السعر + الزر */}
+        <div className="mt-auto border-t border-neutral-100 pt-6">
+          <div className="mb-6 flex items-end justify-between gap-3">
+            <div className="flex min-w-0 flex-col">
+              {car.priceUi.originalPrimaryAmount ? (
+                <span className="flex items-baseline gap-1 text-xs tabular-nums text-neutral-400 line-through">
+                  {car.priceUi.originalPrimaryAmount}
+                  <SarCurrencyGlyph className="h-[0.75em] w-[0.75em]" />
+                </span>
+              ) : null}
+              <div className="flex items-baseline gap-1.5 tabular-nums">
+                <span className="text-[28px] font-extrabold leading-none tracking-tight text-[#003749]">
+                  {car.priceUi.primaryAmount}
+                </span>
+                <SarCurrencyGlyph className="h-4 w-4 shrink-0 text-[#003749]" />
+              </div>
+              {car.priceUi.primaryLabelAr ? (
+                <span className="mt-1 text-xs text-neutral-500">
+                  {car.priceUi.primaryLabelAr}
+                </span>
+              ) : null}
+              {car.priceUi.secondaryAmount ? (
+                <span className="mt-1 flex items-baseline gap-1 text-[11px] font-semibold tabular-nums text-neutral-500">
+                  {car.priceUi.secondaryAmount}
+                  <SarCurrencyGlyph className="h-[0.7em] w-[0.7em]" />
+                  {car.priceUi.secondaryLabelAr ? (
+                    <span className="font-normal">· {car.priceUi.secondaryLabelAr}</span>
+                  ) : null}
+                </span>
+              ) : null}
+            </div>
+
+            {car.priceUi.footnoteAr ? (
+              <span className="max-w-[8rem] text-end text-[10px] italic leading-relaxed text-neutral-400">
+                {car.priceUi.footnoteAr}
+              </span>
+            ) : null}
+          </div>
+
           <FleetBookNowButton modelId={car.modelId} />
-          {car.priceUi.footnoteAr ? (
-            <p className="text-center text-[10px] leading-relaxed text-neutral-500">
-              {car.priceUi.footnoteAr}
-            </p>
-          ) : null}
         </div>
       </div>
     </article>

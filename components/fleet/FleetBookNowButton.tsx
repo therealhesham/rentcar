@@ -39,10 +39,10 @@ function FleetBookNowButtonInner({ modelId }: { modelId: number }) {
       <Link
         href={href}
         onClick={onBookClick}
-        className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-l from-[#003749] to-[#004d63] py-3.5 text-center text-sm font-extrabold text-white shadow-md transition-all duration-200 hover:from-[#004d63] hover:to-[#005f7a] hover:shadow-lg active:scale-[0.98]"
+        className="group/btn flex w-full items-center justify-center gap-2 rounded-lg bg-[#003749] py-4 text-center text-sm font-bold text-white transition-colors duration-200 hover:bg-[#0d4c54] active:scale-[0.98]"
       >
         احجز الآن
-        <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4 shrink-0" aria-hidden>
+        <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4 shrink-0 transition-transform duration-200 group-hover/btn:-translate-x-1" aria-hidden>
           <path d="M19 12H5M12 5l-7 7 7 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </Link>
@@ -69,10 +69,10 @@ function FleetBookNowButtonFallback({ modelId }: { modelId: number }) {
       <Link
         href={`/fleet/checkout?modelId=${modelId}`}
         onClick={onBookClick}
-        className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-l from-[#003749] to-[#004d63] py-3.5 text-center text-sm font-extrabold text-white shadow-md transition-all duration-200 hover:from-[#004d63] hover:to-[#005f7a] hover:shadow-lg active:scale-[0.98]"
+        className="group/btn flex w-full items-center justify-center gap-2 rounded-lg bg-[#003749] py-4 text-center text-sm font-bold text-white transition-colors duration-200 hover:bg-[#0d4c54] active:scale-[0.98]"
       >
         احجز الآن
-        <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4 shrink-0" aria-hidden>
+        <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4 shrink-0 transition-transform duration-200 group-hover/btn:-translate-x-1" aria-hidden>
           <path d="M19 12H5M12 5l-7 7 7 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </Link>
