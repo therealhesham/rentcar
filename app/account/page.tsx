@@ -184,20 +184,40 @@ export default async function AccountDashboardPage() {
 
     return (
       <li key={b.id}>
-        <article className="group flex h-full flex-col rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-[#003749]/20 hover:shadow-lg editorial-shadow">
-          <div className="flex flex-wrap items-start justify-between gap-3">
+        <article className="group relative flex h-full flex-col overflow-hidden rounded-3xl border border-neutral-200/80 bg-white p-5 shadow-sm ring-1 ring-transparent transition-all duration-300 hover:-translate-y-1 hover:border-[#003749]/15 hover:shadow-xl hover:ring-[#dbb878]/20 editorial-shadow">
+          <span
+            className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-l from-[#003749] via-[#dbb878] to-[#003749] opacity-80"
+            aria-hidden
+          />
+          <div className="flex items-start gap-3">
+            <div
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#f0fbfb] to-[#e6f4f4] text-[#003749] ring-1 ring-[#003749]/10"
+              aria-hidden
+            >
+              <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6" aria-hidden>
+                <path
+                  d="M5 16v2m14-2v2M4.5 11l1.2-3.6A2 2 0 017.6 6h8.8a2 2 0 011.9 1.4L19.5 11M5 16h14a1 1 0 001-1v-2.5a1.5 1.5 0 00-1.5-1.5h-13A1.5 1.5 0 004 12.5V15a1 1 0 001 1z"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <circle cx="7.5" cy="14" r="0.5" fill="currentColor" stroke="currentColor" />
+                <circle cx="16.5" cy="14" r="0.5" fill="currentColor" stroke="currentColor" />
+              </svg>
+            </div>
             <div className="min-w-0 flex-1">
-              <p className="text-lg font-extrabold leading-snug text-[#003749]">
+              <p className="truncate text-lg font-extrabold leading-snug text-[#003749]">
                 {b.kind === "DIRECT" && b.carModel
                   ? `${b.carModel.brand.name} ${b.carModel.name}`
                   : b.carType}
               </p>
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <span className="inline-flex rounded-lg bg-neutral-100 px-2 py-0.5 text-[11px] font-bold text-on-surface-variant">
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                <span className="inline-flex rounded-md bg-neutral-100 px-2 py-0.5 text-[11px] font-bold text-on-surface-variant">
                   {b.kind === "DIRECT" ? "حجز مباشر" : "طلب حجز"}
                 </span>
                 {modeLabel ? (
-                  <span className="inline-flex items-center gap-1 rounded-lg bg-[#f0fbfb] px-2 py-0.5 text-[11px] font-bold text-[#003749]">
+                  <span className="inline-flex items-center gap-1 rounded-md bg-[#f0fbfb] px-2 py-0.5 text-[11px] font-bold text-[#003749]">
                     <svg viewBox="0 0 24 24" fill="none" className="h-3 w-3" aria-hidden>
                       <path
                         d="M12 21s-6-5.2-6-10a6 6 0 1112 0c0 4.8-6 10-6 10z"
@@ -211,12 +231,12 @@ export default async function AccountDashboardPage() {
                     {modeLabel}
                   </span>
                 ) : null}
-                <span className="text-xs tabular-nums text-on-surface-variant" dir="ltr">
+                <span className="text-[11px] tabular-nums text-on-surface-variant/80" dir="ltr">
                   #{b.id}
                 </span>
               </div>
             </div>
-            <div className="flex shrink-0 flex-col items-end gap-2">
+            <div className="flex shrink-0 flex-col items-end gap-1.5">
               <span
                 className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${bookingStatusStyles(b.status)}`}
               >
@@ -232,39 +252,47 @@ export default async function AccountDashboardPage() {
             </div>
           </div>
 
-          <div className="mt-4 grid grid-cols-2 gap-3 border-t border-neutral-100 pt-4">
-            <div className="rounded-xl bg-neutral-50 p-3">
-              <p className="flex items-center gap-1.5 text-[11px] font-bold text-on-surface-variant">
-                <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5 shrink-0 text-[#775927]" aria-hidden>
-                  <path
-                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  />
-                </svg>
-                الاستلام
-              </p>
-              <p className="mt-1 text-sm font-bold text-on-surface">{formatBookingDate(b.pickupDate)}</p>
-              <p className="text-[11px] tabular-nums text-on-surface-variant" dir="ltr">
-                {formatBookingTime(b.pickupDate)}
-              </p>
-            </div>
-            <div className="rounded-xl bg-neutral-50 p-3">
-              <p className="flex items-center gap-1.5 text-[11px] font-bold text-on-surface-variant">
-                <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5 shrink-0 text-[#775927]" aria-hidden>
-                  <path
-                    d="M9 11l3 3 8-8m-3 5v6a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2h9"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                الإرجاع
-              </p>
-              <p className="mt-1 text-sm font-bold text-on-surface">{formatBookingDate(returnDate)}</p>
-              <p className="text-[11px] font-semibold text-[#775927]">{b.numberOfDays} يوم</p>
+          <div className="mt-4 rounded-2xl border border-neutral-100 bg-gradient-to-br from-neutral-50/80 to-white p-4">
+            <div className="flex items-center gap-3">
+              <div className="min-w-0 text-start">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">
+                  الاستلام
+                </p>
+                <p className="mt-1 truncate text-sm font-extrabold text-on-surface">
+                  {formatBookingDate(b.pickupDate)}
+                </p>
+                <p className="text-[11px] tabular-nums text-on-surface-variant" dir="ltr">
+                  {formatBookingTime(b.pickupDate)}
+                </p>
+              </div>
+              <div className="relative flex flex-1 items-center justify-center px-1">
+                <span
+                  className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 border-t border-dashed border-neutral-300"
+                  aria-hidden
+                />
+                <span className="relative inline-flex items-center gap-1 rounded-full bg-[#003749] px-2.5 py-0.5 text-[10px] font-bold text-white shadow-sm">
+                  <svg viewBox="0 0 24 24" fill="none" className="h-3 w-3" aria-hidden>
+                    <path
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  {b.numberOfDays} يوم
+                </span>
+              </div>
+              <div className="min-w-0 text-end">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">
+                  الإرجاع
+                </p>
+                <p className="mt-1 truncate text-sm font-extrabold text-on-surface">
+                  {formatBookingDate(returnDate)}
+                </p>
+                <p className="text-[11px] tabular-nums text-on-surface-variant" dir="ltr">
+                  {formatBookingTime(returnDate)}
+                </p>
+              </div>
             </div>
           </div>
 
