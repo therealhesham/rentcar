@@ -206,13 +206,7 @@ export default async function FleetPage({
           dir="rtl"
         >
           <div className="mx-auto max-w-screen-2xl px-4 py-4 sm:px-6 sm:py-5 lg:px-8">
-            <div className="mb-3 flex items-center justify-center gap-3 sm:mb-4">
-              <span className="h-px w-10 bg-gradient-to-l from-primary/35 to-transparent sm:w-12" />
-              <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-on-surface-variant sm:text-[11px]">
-                احجز مركبتك وصفِّ النتائج
-              </span>
-              <span className="h-px w-10 bg-gradient-to-r from-primary/35 to-transparent sm:w-12" />
-            </div>
+            
             <div
               id="fleet-booking"
               className="scroll-mt-28 overflow-hidden rounded-2xl bg-white/[0.97] shadow-[0_28px_72px_-20px_rgba(15,61,71,0.18),0_8px_24px_-6px_rgba(15,61,71,0.07)] ring-1 ring-black/[0.03] backdrop-blur-xl"
