@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { applyBranchOpeningHoursFromSheet } from "../lib/branch-opening-hours-seed";
 import { hashPassword } from "../lib/password";
 import { saudiLocalNineToE164 } from "../lib/normalize-saudi-phone";
 
@@ -613,6 +614,8 @@ async function main() {
   await seedGalleryFolders();
 
   const branchIdBySlug = await seedCitiesAndBranches();
+  const hoursResult = await applyBranchOpeningHoursFromSheet(prisma);
+  console.log(`Branch opening hours (sheet): ${hoursResult.updated} updated`);
   await seedAdminEmployees(branchIdBySlug);
 
   await seedCustomerUsers();
