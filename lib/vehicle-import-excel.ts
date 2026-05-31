@@ -32,12 +32,36 @@ export function sanitizeExcelRows(rows: Record<string, unknown>[]): ImportRow[] 
   });
 }
 
+/** read-excel-file v9: الافتراضي يُرجع Sheet[]؛ readSheet يُرجع SheetData (صفوف × أعمدة). */
+function coerceSheetMatrix(raw: unknown): unknown[][] {
+  if (!Array.isArray(raw) || raw.length === 0) {
+    throw new Error("الملف فارغ.");
+  }
+  const first = raw[0];
+  if (
+    first &&
+    typeof first === "object" &&
+    "data" in first &&
+    Array.isArray((first as { data: unknown }).data)
+  ) {
+    return (first as { data: unknown[][] }).data;
+  }
+  if (Array.isArray(first)) {
+    return raw as unknown[][];
+  }
+  throw new Error("تنسيق الملف غير متوقع.");
+}
+
+function asRowArray(row: unknown): unknown[] {
+  return Array.isArray(row) ? row : [];
+}
+
 function matrixToImportRows(matrix: unknown[][]): { headers: string[]; rows: ImportRow[] } {
   if (matrix.length === 0) {
     throw new Error("الملف فارغ.");
   }
 
-  const headerRow = matrix[0] ?? [];
+  const headerRow = asRowArray(matrix[0]);
   const headers = headerRow.map((cell, i) => {
     const label = cellToPlainString(cell);
     return label || `عمود_${i + 1}`;
@@ -49,7 +73,7 @@ function matrixToImportRows(matrix: unknown[][]): { headers: string[]; rows: Imp
 
   const rows: ImportRow[] = [];
   for (let r = 1; r < matrix.length; r++) {
-    const line = matrix[r] ?? [];
+    const line = asRowArray(matrix[r]);
     const empty = line.every((c) => cellToPlainString(c) === "");
     if (empty) continue;
 
@@ -104,9 +128,9 @@ async function parseCsvFile(file: File): Promise<{ headers: string[]; rows: Impo
 }
 
 async function parseXlsxFile(file: File): Promise<{ headers: string[]; rows: ImportRow[] }> {
-  const readXlsxFile = (await import("read-excel-file/browser")).default;
-  const matrix = await readXlsxFile(file);
-  return matrixToImportRows(matrix);
+  const { readSheet } = await import("read-excel-file/browser");
+  const raw = await readSheet(file);
+  return matrixToImportRows(coerceSheetMatrix(raw));
 }
 
 /** قراءة .xlsx أو .csv في المتصفح (بدون مكتبة SheetJS/xlsx). */
