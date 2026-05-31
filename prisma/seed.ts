@@ -84,7 +84,10 @@ const seedBranches = [
 
 const SEED_BOOKING_NAME_PREFIX = "[SEED]";
 
-/** Demo fleet — quantity per branch for each model */
+/** كمية كل موديل في كل فرع عند تشغيل الـ seed */
+const FLEET_QUANTITY_PER_BRANCH = 2;
+
+/** Demo fleet models (الكميات تُضبط لاحقاً لكل الفروع) */
 const seedFleetModels = [
   {
     brandName: "Toyota",
@@ -96,7 +99,6 @@ const seedFleetModels = [
     transmission: "AUTOMATIC" as const,
     fuel: "GASOLINE" as const,
     price: 185,
-    quantityPerBranch: 4,
   },
   {
     brandName: "Hyundai",
@@ -108,7 +110,6 @@ const seedFleetModels = [
     transmission: "AUTOMATIC" as const,
     fuel: "GASOLINE" as const,
     price: 220,
-    quantityPerBranch: 3,
   },
 ] as const;
 
@@ -376,15 +377,59 @@ async function seedDemoFleet(branchIdBySlug: Map<string, number>): Promise<numbe
         create: {
           modelId: model.id,
           branchId,
-          quantity: v.quantityPerBranch,
+          quantity: FLEET_QUANTITY_PER_BRANCH,
         },
-        update: { quantity: v.quantityPerBranch },
+        update: { quantity: FLEET_QUANTITY_PER_BRANCH },
       });
     }
   }
 
-  console.log(`Demo fleet: ${seedFleetModels.length} models × ${seedBranches.length} branches`);
+  console.log(
+    `Demo fleet: ${seedFleetModels.length} models × ${seedBranches.length} branches (${FLEET_QUANTITY_PER_BRANCH} each)`,
+  );
   return modelIds;
+}
+
+/** كل موديل في الكتالوج → نفس الكمية في كل فرع نشط (يشمل المستورد من Excel). */
+async function seedFleetQuantitiesAllBranches(quantity = FLEET_QUANTITY_PER_BRANCH) {
+  const [models, branches] = await Promise.all([
+    prisma.carModel.findMany({ select: { id: true } }),
+    prisma.branch.findMany({
+      where: { isActive: true },
+      select: { id: true },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    }),
+  ]);
+
+  if (models.length === 0 || branches.length === 0) {
+    console.log("Fleet quantities: skipped (no models or branches)");
+    return;
+  }
+
+  const pairs: { modelId: number; branchId: number }[] = [];
+  for (const model of models) {
+    for (const branch of branches) {
+      pairs.push({ modelId: model.id, branchId: branch.id });
+    }
+  }
+
+  const CHUNK = 80;
+  for (let i = 0; i < pairs.length; i += CHUNK) {
+    const chunk = pairs.slice(i, i + CHUNK);
+    await prisma.$transaction(
+      chunk.map(({ modelId, branchId }) =>
+        prisma.fleet.upsert({
+          where: { modelId_branchId: { modelId, branchId } },
+          create: { modelId, branchId, quantity },
+          update: { quantity },
+        }),
+      ),
+    );
+  }
+
+  console.log(
+    `Fleet quantities: ${models.length} models × ${branches.length} branches = ${quantity} per branch (${pairs.length} rows)`,
+  );
 }
 
 async function seedDemoBookings(
@@ -573,6 +618,8 @@ async function main() {
   await seedCustomerUsers();
 
   const modelIds = await seedDemoFleet(branchIdBySlug);
+  await seedFleetQuantitiesAllBranches();
+
   const primaryModelId = modelIds[0];
   if (primaryModelId) {
     await seedDemoBookings(branchIdBySlug, primaryModelId);

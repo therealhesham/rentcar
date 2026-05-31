@@ -52,7 +52,7 @@ export default async function VehicleImportPage() {
         backLabel="المركبات والأسطول"
         description={
           <>
-            ارفع ملف <span className="font-bold text-on-surface">xlsx / xls / csv</span> ثم حدد
+            ارفع ملف <span className="font-bold text-on-surface">xlsx / csv</span> ثم حدد
             أي عمود يقابل كل حقل. فئة الأسطول والفرع اختياريان — الافتراضي لا يغيّر الفئة ولا
             يسجّل كميات. الماركة تُنشأ تلقائياً، والموديل المكرر يُحدَّث دون تكرار.
           </>

@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useTransition } from "react";
 import Link from "next/link";
 import type { ImportResult, FieldMapping } from "@/app/admin/vehicle-import-actions";
 import { importVehiclesFromExcel } from "@/app/admin/vehicle-import-actions";
-import { sanitizeExcelRows, type ImportRow } from "@/lib/vehicle-import-excel";
+import { parseSpreadsheetFile, type ImportRow } from "@/lib/vehicle-import-excel";
 
 export type CategoryOption = { id: number; title: string };
 export type BranchOption = { id: number; name: string };
@@ -87,20 +87,7 @@ function UploadZone({
       setError(null);
       setLoading(true);
       try {
-        const XLSX = await import("xlsx");
-        const buf = await file.arrayBuffer();
-        const wb = XLSX.read(buf, { type: "array" });
-        const wsName = wb.SheetNames[0];
-        if (!wsName) throw new Error("الملف لا يحتوي على أي ورقة (sheet).");
-        const ws = wb.Sheets[wsName];
-        const jsonRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, {
-          defval: "",
-          raw: false,
-        });
-        if (jsonRows.length === 0) throw new Error("الورقة الأولى فارغة.");
-        const rows = sanitizeExcelRows(jsonRows);
-        const headers = Object.keys(rows[0] ?? {});
-        if (headers.length === 0) throw new Error("لا توجد أعمدة في الملف.");
+        const { headers, rows } = await parseSpreadsheetFile(file);
         onParsed({
           fileName: file.name,
           headers,
@@ -126,7 +113,7 @@ function UploadZone({
       <input
         ref={ref}
         type="file"
-        accept=".xlsx,.xls,.csv"
+        accept=".xlsx,.csv"
         className="hidden"
         onChange={(e) => { const f = e.target.files?.[0]; if (f) parse(f); }}
       />
@@ -149,7 +136,7 @@ function UploadZone({
           {loading ? "جاري تحليل الملف…" : "ارفع ملف Excel"}
         </p>
         <p className="mt-1 text-sm text-on-surface-variant">
-          اسحب وأفلت أو انقر للاختيار · xlsx / xls / csv
+          اسحب وأفلت أو انقر للاختيار · xlsx / csv
         </p>
       </div>
 
