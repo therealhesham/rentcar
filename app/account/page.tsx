@@ -191,7 +191,7 @@ export default async function AccountDashboardPage() {
     const carName =
       b.kind === "DIRECT" && b.carModel
         ? `${b.carModel.brand.name} ${b.carModel.name}`.trim()
-        : (b.carType ?? "مركبة");
+        : (b.carType ?? "سيارة");
     const categoryTitle = b.carModel?.category?.title ?? null;
     const pickupBranchName = b.pickupBranch?.name ?? null;
     const returnBranchName = b.returnBranch?.name ?? null;
@@ -541,7 +541,7 @@ export default async function AccountDashboardPage() {
               </div>
               <p className="text-base font-bold text-on-surface">لا توجد حجوزات بعد</p>
               <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-on-surface-variant">
-                ابدأ بتصفّح المركبات المتاحة واحجز ما يناسبك في خطوات بسيطة.
+                ابدأ بتصفّح السيارات المتاحة واحجز ما يناسبك في خطوات بسيطة.
               </p>
               <Link
                 href="/fleet"

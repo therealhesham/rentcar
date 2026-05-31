@@ -22,7 +22,7 @@ export function AdminEditCarForm({ vehicle }: AdminEditCarFormProps) {
       <input type="hidden" name="modelId" value={vehicle.id} />
 
       <h2 className="md:col-span-2 text-lg font-extrabold tracking-tight">
-        تعديل مركبة في الأسطول
+        تعديل سيارة في الأسطول
       </h2>
 
       <div className="md:col-span-2 rounded-xl border border-outline-variant/40 bg-surface-container-lowest px-4 py-3 text-start">

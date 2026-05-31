@@ -29,7 +29,7 @@ export async function submitAdminDirectBooking(
   const scopedForm = enforceBranchOnFormData(auth.session, formData);
   const carModelId = Number(scopedForm.get("carModelId"));
   if (!Number.isInteger(carModelId) || carModelId < 1) {
-    return { ok: false, error: "اختر المركبة." };
+    return { ok: false, error: "اختر السيارة." };
   }
 
   const parsed = parseCommonBookingFieldsFromFormData(scopedForm);

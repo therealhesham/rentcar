@@ -119,7 +119,7 @@ export async function createSubscriptionPlan(data: FormData) {
   parseDurationOptionsCsv(durationOptionsCsv);
 
   if (!slug || !/^[-a-z0-9]+$/.test(slug)) return fail("slug بالإنجليزية وفواصل بدون مسافات.");
-  if (!Number.isInteger(carModelId) || carModelId < 1) return fail("اختر موديل المركبة.");
+  if (!Number.isInteger(carModelId) || carModelId < 1) return fail("اختر موديل السيارة.");
   if (!Number.isFinite(monthlyPriceSar) || monthlyPriceSar <= 0) return fail("سعر شهر غير صالح.");
   if (!Number.isFinite(mileageKmPerMonth) || mileageKmPerMonth < 500) return fail("البدلات الكيلومترية ضعيفة.");
 

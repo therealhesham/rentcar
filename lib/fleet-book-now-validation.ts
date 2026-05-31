@@ -46,7 +46,7 @@ export function validateFleetBookNowSearchParams(
     if (!sp.get("returnBranch")?.trim()) {
       return {
         ok: false,
-        message: "يرجى اختيار فرع التسليم (إرجاع المركبة) في النموذج أعلاه.",
+        message: "يرجى اختيار فرع التسليم (إرجاع السيارة) في النموذج أعلاه.",
       };
     }
     return { ok: true };

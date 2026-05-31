@@ -74,11 +74,11 @@ export function AdminAddCarForm({ categories, brands, branches }: AdminAddCarFor
       className="grid gap-4 rounded-2xl border border-outline-variant/30 bg-surface-container-low p-6 md:grid-cols-2"
     >
       <h2 className="md:col-span-2 text-lg font-extrabold tracking-tight">
-        إضافة مركبة للأسطول
+        إضافة سيارة للأسطول
       </h2>
 
       <label className="text-sm font-medium md:col-span-2">
-        فئة الأسطول
+        فئة السيارة
         <select
           name="categoryId"
           required

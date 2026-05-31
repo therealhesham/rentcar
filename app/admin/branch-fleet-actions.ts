@@ -16,7 +16,7 @@ export async function updateBranchFleetQuantity(
   const quantity = Number(formData.get("quantity"));
 
   if (!Number.isInteger(modelId) || modelId < 1) {
-    return { ok: false, error: "معرّف المركبة غير صالح." };
+    return { ok: false, error: "معرّف السيارة غير صالح." };
   }
   if (!Number.isFinite(quantity) || quantity < 0 || quantity > 500) {
     return { ok: false, error: "الكمية يجب أن تكون بين 0 و 500." };
@@ -39,7 +39,7 @@ export async function updateBranchFleetQuantity(
     select: { id: true },
   });
   if (!model) {
-    return { ok: false, error: "المركبة غير موجودة." };
+    return { ok: false, error: "السيارة غير موجودة." };
   }
 
   await upsertBranchFleetQuantity({

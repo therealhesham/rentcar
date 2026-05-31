@@ -23,7 +23,7 @@ export default async function AdminVehiclesPage() {
     return (
       <>
         <AdminPageHeader
-          title="المركبات والأسطول"
+          title="السيارات والأسطول"
           description={
             <>
               كل صف = موديل سيارة. الأعمدة تعرض{" "}
@@ -33,12 +33,20 @@ export default async function AdminVehiclesPage() {
             </>
           }
           actions={
-            <Link
-              href="/admin/vehicles/new"
-              className="gradient-cta rounded-xl px-6 py-3 text-sm font-extrabold text-white shadow-[0_8px_20px_-8px_rgba(119,89,39,0.45)]"
-            >
-              إضافة مركبة
-            </Link>
+            <>
+              <Link
+                href="/admin/vehicles/import"
+                className="rounded-xl border border-outline-variant px-5 py-3 text-sm font-extrabold text-primary transition-colors hover:bg-surface-container"
+              >
+                استيراد من Excel
+              </Link>
+              <Link
+                href="/admin/vehicles/new"
+                className="gradient-cta rounded-xl px-6 py-3 text-sm font-extrabold text-white shadow-[0_8px_20px_-8px_rgba(119,89,39,0.45)]"
+              >
+                إضافة مركبة
+              </Link>
+            </>
           }
         />
 

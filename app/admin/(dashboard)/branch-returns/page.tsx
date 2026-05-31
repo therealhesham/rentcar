@@ -71,7 +71,7 @@ export default async function BranchReturnsPage({
   const showBranchColumn = session.isSuperAdmin && !branchFilter;
 
   const pageTitle = session.isSuperAdmin
-    ? "مرتجعات المركبات"
+    ? "مرتجعات السيارات"
     : `مرتجعات فرع ${adminBranchDisplayName(session)}`;
 
   const listTitle =
@@ -90,7 +90,7 @@ export default async function BranchReturnsPage({
             </>
           ) : (
             <>
-              التقويم يوضح عدد المركبات المرتجعة كل يوم. إذا استلم العميل من فرع آخر، يظهر فرع
+              التقويم يوضح عدد السيارات المرتجعة كل يوم. إذا استلم العميل من فرع آخر، يظهر فرع
               الاستلام وزر «موافق — استلام» لتحديث المخزون.
             </>
           )}

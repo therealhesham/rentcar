@@ -241,7 +241,7 @@ export async function updateFleetVehicle(
 
   const modelId = Number(formData.get("modelId"));
   if (!Number.isFinite(modelId) || modelId < 1) {
-    return { ok: false, error: "معرّف المركبة غير صالح." };
+    return { ok: false, error: "معرّف السيارة غير صالح." };
   }
 
   const existing = await prisma.carModel.findUnique({
@@ -249,7 +249,7 @@ export async function updateFleetVehicle(
     include: { fleetItems: true },
   });
   if (!existing) {
-    return { ok: false, error: "المركبة غير موجودة." };
+    return { ok: false, error: "السيارة غير موجودة." };
   }
 
   const modelName = String(formData.get("modelName") ?? "").trim();
