@@ -185,16 +185,72 @@ export async function listImagesInFolder(
   };
 }
 
-export async function uploadImageToSpaces(
-  file: File,
-  folderSlug: string,
+export const SPACES_MAX_IMAGE_BYTES = MAX_BYTES;
+
+function mimeForExtension(ext: string): string {
+  if (ext === "jpg") return "image/jpeg";
+  return `image/${ext}`;
+}
+
+function extensionFromMime(mime: string): string | null {
+  const m = mime.toLowerCase().split(";")[0]?.trim() ?? "";
+  return MIME_TO_EXT[m] ?? null;
+}
+
+/**
+ * رفع Buffer (من سكربت أو مصدر خارجي) إلى Spaces.
+ */
+export async function uploadBufferToSpaces(
+  buffer: Buffer,
+  opts: {
+    folderSlug: string;
+    mime: string;
+    /** اسم ملف اختياري دون مسار (يُضاف بادئة المجلد والطابع الزمني إن لم يُمرَّر). */
+    fileBaseName?: string;
+  },
 ): Promise<string> {
   if (!isSpacesConfigured()) {
     throw new Error(
       "لم يُضبط تخزين Spaces: SPACES_REGION، SPACES_ACCESS_KEY_ID، SPACES_SECRET_ACCESS_KEY، SPACES_BUCKET",
     );
   }
+  if (!buffer.length) {
+    throw new Error("ملف الصورة فارغ.");
+  }
+  if (buffer.length > MAX_BYTES) {
+    throw new Error("حجم الصورة يتجاوز 5 ميجابايت.");
+  }
 
+  const ext = extensionFromMime(opts.mime);
+  if (!ext) {
+    throw new Error(`نوع الصورة غير مدعوم: ${opts.mime}`);
+  }
+
+  const safeBase =
+    opts.fileBaseName?.replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") ||
+    `${Date.now()}-${randomBytes(8).toString("hex")}`;
+  const key = `${folderPrefix(opts.folderSlug)}${safeBase}.${ext}`;
+
+  const bucket = process.env.SPACES_BUCKET!;
+  const client = getS3Client();
+
+  await client.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: buffer,
+      ContentType: opts.mime,
+      ACL: "public-read",
+    }),
+  );
+
+  return publicUrlForSpacesObjectKey(key);
+}
+
+export async function uploadImageToSpaces(
+  file: File,
+  folderSlug: string,
+): Promise<string> {
   if (!(file instanceof File) || file.size === 0) {
     throw new Error("ملف الصورة غير صالح.");
   }
@@ -211,25 +267,8 @@ export async function uploadImageToSpaces(
   const mime =
     mimeFromType && MIME_TO_EXT[mimeFromType]
       ? mimeFromType
-      : ext === "jpg"
-        ? "image/jpeg"
-        : `image/${ext}`;
+      : mimeForExtension(ext);
 
-  const key = `${folderPrefix(folderSlug)}${Date.now()}-${randomBytes(8).toString("hex")}.${ext}`;
   const buffer = Buffer.from(await file.arrayBuffer());
-
-  const bucket = process.env.SPACES_BUCKET!;
-  const client = getS3Client();
-
-  await client.send(
-    new PutObjectCommand({
-      Bucket: bucket,
-      Key: key,
-      Body: buffer,
-      ContentType: mime,
-      ACL: "public-read",
-    }),
-  );
-
-  return publicUrlForSpacesObjectKey(key);
+  return uploadBufferToSpaces(buffer, { folderSlug, mime });
 }

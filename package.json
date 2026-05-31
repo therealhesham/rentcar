@@ -12,6 +12,7 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "db:seed": "prisma db seed",
+    "vehicles:upload-images": "tsx prisma/scripts/upload-vehicle-images.ts",
     "postinstall": "prisma generate"
   },
   "prisma": {
