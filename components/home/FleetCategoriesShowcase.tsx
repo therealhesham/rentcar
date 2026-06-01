@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { FleetCarCard } from "@/components/fleet/FleetCarCard";
 import type { FleetCar } from "@/lib/fleet-types";
+import type { BookingCityBranchesOption } from "@/lib/booking-location-options";
 
 const TEAL = "#003749";
 
@@ -13,9 +14,9 @@ export type FleetCategoryTab = {
   cars: FleetCar[];
 };
 
-type Props = { tabs: FleetCategoryTab[] };
+type Props = { tabs: FleetCategoryTab[]; cities?: BookingCityBranchesOption[] };
 
-export function FleetCategoriesShowcase({ tabs }: Props) {
+export function FleetCategoriesShowcase({ tabs, cities }: Props) {
   const firstWithCars = tabs.findIndex((t) => t.cars.length > 0);
   const [active, setActive] = useState(() => (firstWithCars >= 0 ? firstWithCars : 0));
 
@@ -96,7 +97,7 @@ export function FleetCategoriesShowcase({ tabs }: Props) {
           className="grid grid-cols-1 gap-6 sm:gap-8 md:grid-cols-2 lg:grid-cols-3"
         >
           {cars.map((car) => (
-            <FleetCarCard key={`${current.slug}-${car.modelId}`} car={car} />
+            <FleetCarCard key={`${current.slug}-${car.modelId}`} car={car} cities={cities} />
           ))}
         </div>
       ) : (

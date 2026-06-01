@@ -1,3 +1,4 @@
+import { getActiveBookingCitiesWithBranches } from "@/lib/branch-data";
 import { getFleetCategoriesForHome } from "@/lib/fleet-category-data";
 import { getFleetCarMapByModelIds } from "@/lib/fleet-data";
 import { getRentalPriceDisplayMode } from "@/lib/site-settings";
@@ -16,7 +17,10 @@ export async function FleetCategories() {
 
   const allModelIds = categories.flatMap((c) => c.models.map((m) => m.id));
   const priceMode = await getRentalPriceDisplayMode();
-  const carByModel = await getFleetCarMapByModelIds(allModelIds, priceMode);
+  const [carByModel, cities] = await Promise.all([
+    getFleetCarMapByModelIds(allModelIds, priceMode),
+    getActiveBookingCitiesWithBranches().catch(() => []),
+  ]);
 
   const tabs: FleetCategoryTab[] = categories.map((cat) => ({
     slug: cat.slug,
@@ -45,7 +49,7 @@ export async function FleetCategories() {
       <div className="pointer-events-none absolute -end-[16rem] bottom-0 h-[32rem] w-[32rem] rounded-full bg-gradient-to-bl from-[#003749]/10 to-transparent blur-3xl" />
 
       <Reveal className="relative z-[1]">
-        <FleetCategoriesShowcase tabs={tabs} />
+        <FleetCategoriesShowcase tabs={tabs} cities={cities} />
       </Reveal>
     </section>
   );

@@ -3,13 +3,8 @@
 import { SpecIcon } from "@/components/icons";
 import { FleetBookNowButton } from "@/components/fleet/FleetBookNowButton";
 import type { FleetCar } from "@/lib/fleet-types";
+import type { BookingCityBranchesOption } from "@/lib/booking-location-options";
 import { SarCurrencyGlyph } from "@/components/ui/SarCurrencyGlyph";
-
-const FALLBACK_BRANCH_OPTIONS: { slug: string; name: string }[] = [
-  { slug: "jeddah", name: "جدة" },
-  { slug: "madinah", name: "المدينة المنورة" },
-  { slug: "tabuk", name: "تبوك" },
-];
 
 /** تسمية عربية مختصرة لكل مواصفة حسب اسم الأيقونة */
 const SPEC_LABEL_AR: Record<string, string> = {
@@ -29,10 +24,10 @@ function metaFromSubtitle(subtitle: string): string[] {
 
 export function FleetCarCard({
   car,
-  branchOptions: _branchOptions = FALLBACK_BRANCH_OPTIONS,
+  cities,
 }: {
   car: FleetCar;
-  branchOptions?: { slug: string; name: string }[];
+  cities?: BookingCityBranchesOption[];
 }) {
   const meta = metaFromSubtitle(car.subtitle);
 
@@ -158,7 +153,7 @@ export function FleetCarCard({
             ) : null}
           </div>
 
-          <FleetBookNowButton modelId={car.modelId} branchOptions={_branchOptions} />
+          <FleetBookNowButton modelId={car.modelId} cities={cities} />
         </div>
       </div>
     </article>

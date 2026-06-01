@@ -1,8 +1,17 @@
 "use client";
 
-import { CalendarClock, MapPin, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { CalendarClock, CalendarRange, Clock, MapPin, ChevronDown, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { DateRangePickerPopover } from "@/components/home/DateRangePickerPopover";
+import { LocationPickerPopover } from "@/components/home/LocationPickerPopover";
+import { TimePickerPopover } from "@/components/home/TimePickerPopover";
+import type { BookingCityBranchesOption } from "@/lib/booking-location-options";
+import {
+  composeDatetimeLocal,
+  draftFromDatetimeLocal,
+  parseDdMmYyToYmd,
+} from "@/lib/booking-search-shared";
 import { OVERLAY_BACKDROP_Z } from "@/lib/overlay-z-index";
 
 const GOLD = "#dbb878";
@@ -11,7 +20,7 @@ const TEAL = "#003749";
 
 type Props = {
   open: boolean;
-  branchOptions: { slug: string; name: string }[];
+  cities: BookingCityBranchesOption[];
   initialBranch: string;
   initialPickup: string;
   initialDropoff: string;
@@ -31,32 +40,66 @@ function localNowPlusHours(hours: number): string {
 
 export function FleetBookNowHintModal({
   open,
-  branchOptions,
+  cities,
   initialBranch,
   initialPickup,
   initialDropoff,
   onConfirm,
   onClose,
 }: Props) {
-  const fallbackBranch = branchOptions[0]?.slug ?? "";
-  const [branch, setBranch] = useState(fallbackBranch);
-  const [pickup, setPickup] = useState(localNowPlusHours(2));
-  const [dropoff, setDropoff] = useState(localNowPlusHours(26));
-  const [error, setError] = useState<string | null>(null);
-
-  const hasBranches = branchOptions.length > 0;
-  const branchValue = useMemo(
-    () => (branch || initialBranch || fallbackBranch).trim(),
-    [branch, initialBranch, fallbackBranch],
+  const dateCities = useMemo(
+    () => cities.filter((c) => c.branches.length > 0),
+    [cities],
   );
+  const defaultBranchSlug = dateCities[0]?.branches[0]?.slug ?? "";
+  const hasBranches = dateCities.length > 0;
+
+  const [branch, setBranch] = useState(defaultBranchSlug);
+  const [pickupDateDraft, setPickupDateDraft] = useState("");
+  const [pickupTimeDraft, setPickupTimeDraft] = useState("09:00");
+  const [dropoffDateDraft, setDropoffDateDraft] = useState("");
+  const [dropoffTimeDraft, setDropoffTimeDraft] = useState("09:00");
+  const [pickupLocOpen, setPickupLocOpen] = useState(false);
+  const [dateRangeOpen, setDateRangeOpen] = useState(false);
+  const [dateRangeAnchor, setDateRangeAnchor] = useState<"pickup" | "dropoff">("pickup");
+  const [pickupTimeOpen, setPickupTimeOpen] = useState(false);
+  const [dropoffTimeOpen, setDropoffTimeOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const pickupLocRef = useRef<HTMLButtonElement>(null);
+  const pickupDateRef = useRef<HTMLButtonElement>(null);
+  const dropoffDateRef = useRef<HTMLButtonElement>(null);
+  const pickupTimeRef = useRef<HTMLButtonElement>(null);
+  const dropoffTimeRef = useRef<HTMLButtonElement>(null);
+
+  const branchValue = useMemo(
+    () => (branch || initialBranch || defaultBranchSlug).trim(),
+    [branch, initialBranch, defaultBranchSlug],
+  );
+  const dateRangeActiveRef = dateRangeAnchor === "pickup" ? pickupDateRef : dropoffDateRef;
+
+  function branchLabel(slug: string): string {
+    for (const city of dateCities) {
+      const found = city.branches.find((b) => b.slug === slug);
+      if (found) return `${city.name}، ${found.name}`;
+    }
+    return "";
+  }
 
   useEffect(() => {
     if (!open) return;
-    setBranch((initialBranch || fallbackBranch).trim());
-    setPickup((initialPickup || localNowPlusHours(2)).trim());
-    setDropoff((initialDropoff || localNowPlusHours(26)).trim());
+    setBranch((initialBranch || defaultBranchSlug).trim());
+    const pickupDraft = draftFromDatetimeLocal((initialPickup || localNowPlusHours(2)).trim());
+    const dropoffDraft = draftFromDatetimeLocal((initialDropoff || localNowPlusHours(26)).trim());
+    setPickupDateDraft(pickupDraft.dateDdMmYy);
+    setPickupTimeDraft(pickupDraft.hm || "09:00");
+    setDropoffDateDraft(dropoffDraft.dateDdMmYy);
+    setDropoffTimeDraft(dropoffDraft.hm || "09:00");
+    setPickupLocOpen(false);
+    setDateRangeOpen(false);
+    setPickupTimeOpen(false);
+    setDropoffTimeOpen(false);
     setError(null);
-  }, [open, initialBranch, initialPickup, initialDropoff, fallbackBranch]);
+  }, [open, initialBranch, initialPickup, initialDropoff, defaultBranchSlug]);
 
   useEffect(() => {
     if (!open) return;
@@ -76,6 +119,40 @@ export function FleetBookNowHintModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
+  function applyDateRange(startDdMmYy: string, endDdMmYy: string) {
+    setPickupDateDraft(startDdMmYy);
+    setDropoffDateDraft(endDdMmYy);
+  }
+
+  function applyPickupDateOnly(dateDdMmYy: string) {
+    setPickupDateDraft(dateDdMmYy);
+    const startYmd = parseDdMmYyToYmd(dateDdMmYy);
+    const endYmd = parseDdMmYyToYmd(dropoffDateDraft);
+    if (startYmd && endYmd && endYmd < startYmd) {
+      setDropoffDateDraft("");
+    }
+  }
+
+  function toggleDateRange(anchor: "pickup" | "dropoff") {
+    setPickupLocOpen(false);
+    setPickupTimeOpen(false);
+    setDropoffTimeOpen(false);
+    if (dateRangeOpen && dateRangeAnchor === anchor) {
+      setDateRangeOpen(false);
+      return;
+    }
+    setDateRangeAnchor(anchor);
+    setDateRangeOpen(true);
+  }
+
+  function applyPickupTime(hm: string) {
+    setPickupTimeDraft(hm);
+  }
+
+  function applyDropoffTime(hm: string) {
+    setDropoffTimeDraft(hm);
+  }
+
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
@@ -85,8 +162,17 @@ export function FleetBookNowHintModal({
       return;
     }
 
-    if (!pickup.trim() || !dropoff.trim()) {
+    if (!pickupDateDraft.trim() || !dropoffDateDraft.trim()) {
       setError("يرجى تحديد تاريخ ووقت الاستلام والتسليم.");
+      return;
+    }
+
+    const pickupYmd = parseDdMmYyToYmd(pickupDateDraft);
+    const dropoffYmd = parseDdMmYyToYmd(dropoffDateDraft);
+    const pickup = pickupYmd ? composeDatetimeLocal(pickupYmd, pickupTimeDraft) : null;
+    const dropoff = dropoffYmd ? composeDatetimeLocal(dropoffYmd, dropoffTimeDraft) : null;
+    if (!pickup || !dropoff) {
+      setError("صيغة التاريخ/الوقت غير صالحة.");
       return;
     }
 
@@ -106,6 +192,9 @@ export function FleetBookNowHintModal({
 
   if (!open || typeof document === "undefined") return null;
 
+  const fieldTriggerBase =
+    "field-trigger relative flex w-full flex-col gap-1 rounded-xl border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-right outline-none transition-[border-color,box-shadow,background-color] hover:border-[#dbb878]/55 hover:bg-[#fffdf8] focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25";
+
   const modal = (
     <div
       className="fixed inset-0 flex items-center justify-center p-4 sm:p-6"
@@ -122,17 +211,17 @@ export function FleetBookNowHintModal({
         onClick={onClose}
       />
 
-      <div className="relative w-full max-w-[480px] overflow-hidden rounded-3xl bg-white shadow-[0_32px_80px_-24px_rgba(15,61,71,0.35)] ring-1 ring-black/[0.06]">
+      <div className="relative max-h-[calc(100dvh-2rem)] w-full max-w-[480px] overflow-y-auto rounded-3xl bg-white shadow-[0_32px_80px_-24px_rgba(15,61,71,0.35)] ring-1 ring-black/[0.06]">
         <button
           type="button"
           onClick={onClose}
-          className="absolute end-4 top-4 rounded-full p-1.5 text-[#aaa08e] transition-colors hover:bg-[#fdfbf6] hover:text-[#003749]"
+          className="absolute end-4 top-4 z-10 rounded-full bg-white/80 p-1.5 text-[#aaa08e] backdrop-blur-sm transition-colors hover:bg-[#fdfbf6] hover:text-[#003749]"
           aria-label="إغلاق"
         >
           <X className="size-5" aria-hidden />
         </button>
 
-        <div className="px-6 pb-6 pt-8 sm:px-8 sm:pb-8 sm:pt-10" dir="rtl">
+        <div className="px-5 pb-6 pt-8 sm:px-8 sm:pb-8 sm:pt-10" dir="rtl">
           <div
             className="mx-auto mb-4 flex size-[4rem] items-center justify-center rounded-2xl shadow-inner"
             style={{
@@ -145,60 +234,199 @@ export function FleetBookNowHintModal({
 
           <h2
             id="fleet-book-hint-title"
-            className="text-[1.35rem] font-extrabold tracking-tight text-[#003749] sm:text-2xl"
+            className="text-center text-[1.35rem] font-extrabold tracking-tight text-[#003749] sm:text-2xl"
           >
             أكمل بيانات الحجز
           </h2>
-          <p id="fleet-book-hint-desc" className="mt-2 text-[14px] font-medium leading-relaxed text-[#4b5563]">
-            حدّد الفرع ووقت الاستلام والتسليم وسنكمل مباشرة إلى صفحة إتمام الحجز.
+          <p
+            id="fleet-book-hint-desc"
+            className="mt-2 text-center text-[14px] font-medium leading-relaxed text-[#4b5563]"
+          >
+            حدّد موقع الاستلام ووقت الاستلام والتسليم وسنكمل مباشرة إلى صفحة إتمام الحجز.
           </p>
 
-          <form className="mt-5 space-y-3 text-start" onSubmit={handleSubmit}>
-            <label className="block">
-              <span className="mb-1.5 flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[#003749]/75">
-                <MapPin className="size-3.5 text-[#dbb878]" aria-hidden />
-                فرع الاستلام
-              </span>
-              <select
-                value={branchValue}
-                onChange={(e) => setBranch(e.target.value)}
-                className="w-full rounded-xl border border-[#e8dfcb] bg-white px-3 py-2.5 text-[14px] font-semibold text-[#0f1923] outline-none transition focus:border-[#dbb878] focus:ring-2 focus:ring-[#dbb878]/25"
+          <form className="mt-5 space-y-2.5 text-start" onSubmit={handleSubmit}>
+            {/* ── موقع الاستلام (نفس منتقي الـ widget) ── */}
+            <div className="relative min-w-0">
+              <button
+                ref={pickupLocRef}
+                type="button"
+                aria-expanded={pickupLocOpen}
+                aria-haspopup="dialog"
+                onClick={() => {
+                  setPickupLocOpen((v) => !v);
+                  setDateRangeOpen(false);
+                  setPickupTimeOpen(false);
+                  setDropoffTimeOpen(false);
+                }}
+                className={`${fieldTriggerBase} ${pickupLocOpen ? "border-[#dbb878] ring-2 ring-[#dbb878]/30" : ""}`}
               >
-                {branchOptions.map((b) => (
-                  <option key={b.slug} value={b.slug}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="block">
-              <span className="mb-1.5 flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[#003749]/75">
-                <CalendarClock className="size-3.5 text-[#dbb878]" aria-hidden />
-                الاستلام
-              </span>
-              <input
-                type="datetime-local"
-                value={pickup}
-                onChange={(e) => setPickup(e.target.value)}
-                className="w-full rounded-xl border border-[#e8dfcb] bg-white px-3 py-2.5 text-[14px] font-semibold text-[#0f1923] outline-none transition focus:border-[#dbb878] focus:ring-2 focus:ring-[#dbb878]/25"
-                dir="ltr"
+                <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
+                  <MapPin className="size-3 text-[#dbb878]" aria-hidden />
+                  موقع الاستلام
+                </span>
+                <span className="truncate text-[13px] font-bold text-[#0f1923]">
+                  {branchLabel(branchValue) || (
+                    <span className="font-medium text-[#aaa08e]">
+                      {hasBranches ? "اختر الفرع" : "لا توجد فروع"}
+                    </span>
+                  )}
+                </span>
+                <ChevronDown
+                  className={`absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${pickupLocOpen ? "rotate-180" : ""}`}
+                  aria-hidden
+                />
+              </button>
+              <LocationPickerPopover
+                isOpen={pickupLocOpen}
+                onClose={() => setPickupLocOpen(false)}
+                dateCities={dateCities}
+                selectedBranchSlug={branchValue}
+                defaultBranchSlug={defaultBranchSlug}
+                onBranchSelect={(slug) => {
+                  setBranch(slug);
+                }}
+                anchorRef={pickupLocRef}
+                label="موقع الاستلام"
               />
-            </label>
+            </div>
 
-            <label className="block">
-              <span className="mb-1.5 flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[#003749]/75">
-                <CalendarClock className="size-3.5 text-[#dbb878]" aria-hidden />
-                التسليم
-              </span>
-              <input
-                type="datetime-local"
-                value={dropoff}
-                onChange={(e) => setDropoff(e.target.value)}
-                className="w-full rounded-xl border border-[#e8dfcb] bg-white px-3 py-2.5 text-[14px] font-semibold text-[#0f1923] outline-none transition focus:border-[#dbb878] focus:ring-2 focus:ring-[#dbb878]/25"
-                dir="ltr"
+            {/* ── التاريخ والوقت (نفس منتقيات الـ widget) ── */}
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="relative min-w-0">
+                <button
+                  ref={pickupDateRef}
+                  type="button"
+                  aria-expanded={dateRangeOpen && dateRangeAnchor === "pickup"}
+                  aria-haspopup="dialog"
+                  onClick={() => toggleDateRange("pickup")}
+                  className={`${fieldTriggerBase} ${dateRangeOpen && dateRangeAnchor === "pickup" ? "border-[#dbb878] ring-2 ring-[#dbb878]/30" : ""}`}
+                >
+                  <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
+                    <CalendarClock className="size-3 text-[#dbb878]" aria-hidden />
+                    تاريخ الاستلام
+                  </span>
+                  {pickupDateDraft ? (
+                    <span className="text-[13px] font-bold text-[#0f1923]">{pickupDateDraft}</span>
+                  ) : (
+                    <span className="text-[13px] font-medium text-[#aaa08e]">اختر التاريخ</span>
+                  )}
+                  <ChevronDown
+                    className={`absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${dateRangeOpen && dateRangeAnchor === "pickup" ? "rotate-180" : ""}`}
+                    aria-hidden
+                  />
+                </button>
+              </div>
+
+              <div className="relative min-w-0">
+                <button
+                  ref={pickupTimeRef}
+                  type="button"
+                  aria-expanded={pickupTimeOpen}
+                  aria-haspopup="dialog"
+                  onClick={() => {
+                    setPickupTimeOpen((v) => !v);
+                    setPickupLocOpen(false);
+                    setDateRangeOpen(false);
+                    setDropoffTimeOpen(false);
+                  }}
+                  className={`${fieldTriggerBase} ${pickupTimeOpen ? "border-[#dbb878] ring-2 ring-[#dbb878]/30" : ""}`}
+                >
+                  <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
+                    <Clock className="size-3 text-[#dbb878]" aria-hidden />
+                    وقت الاستلام
+                  </span>
+                  <span className="text-[13px] font-bold text-[#0f1923]" dir="ltr">
+                    {pickupTimeDraft}
+                  </span>
+                  <ChevronDown
+                    className={`absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${pickupTimeOpen ? "rotate-180" : ""}`}
+                    aria-hidden
+                  />
+                </button>
+                <TimePickerPopover
+                  isOpen={pickupTimeOpen}
+                  onClose={() => setPickupTimeOpen(false)}
+                  label="وقت الاستلام"
+                  time={pickupTimeDraft}
+                  onConfirm={applyPickupTime}
+                  anchorRef={pickupTimeRef}
+                />
+              </div>
+
+              <div className="relative min-w-0">
+                <button
+                  ref={dropoffDateRef}
+                  type="button"
+                  aria-expanded={dateRangeOpen && dateRangeAnchor === "dropoff"}
+                  aria-haspopup="dialog"
+                  onClick={() => toggleDateRange("dropoff")}
+                  className={`${fieldTriggerBase} ${dateRangeOpen && dateRangeAnchor === "dropoff" ? "border-[#dbb878] ring-2 ring-[#dbb878]/30" : ""}`}
+                >
+                  <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
+                    <CalendarRange className="size-3 text-[#dbb878]" aria-hidden />
+                    تاريخ التسليم
+                  </span>
+                  {dropoffDateDraft ? (
+                    <span className="text-[13px] font-bold text-[#0f1923]">{dropoffDateDraft}</span>
+                  ) : (
+                    <span className="text-[13px] font-medium text-[#aaa08e]">اختر التاريخ</span>
+                  )}
+                  <ChevronDown
+                    className={`absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${dateRangeOpen && dateRangeAnchor === "dropoff" ? "rotate-180" : ""}`}
+                    aria-hidden
+                  />
+                </button>
+              </div>
+
+              <DateRangePickerPopover
+                key={dateRangeAnchor}
+                isOpen={dateRangeOpen}
+                onClose={() => setDateRangeOpen(false)}
+                startDateDdMmYy={pickupDateDraft}
+                endDateDdMmYy={dropoffDateDraft}
+                onStartChange={applyPickupDateOnly}
+                onRangeChange={applyDateRange}
+                anchorRef={dateRangeActiveRef}
+                extraAnchorRefs={[pickupDateRef, dropoffDateRef]}
               />
-            </label>
+
+              <div className="relative min-w-0">
+                <button
+                  ref={dropoffTimeRef}
+                  type="button"
+                  aria-expanded={dropoffTimeOpen}
+                  aria-haspopup="dialog"
+                  onClick={() => {
+                    setDropoffTimeOpen((v) => !v);
+                    setPickupLocOpen(false);
+                    setDateRangeOpen(false);
+                    setPickupTimeOpen(false);
+                  }}
+                  className={`${fieldTriggerBase} ${dropoffTimeOpen ? "border-[#dbb878] ring-2 ring-[#dbb878]/30" : ""}`}
+                >
+                  <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
+                    <Clock className="size-3 text-[#dbb878]" aria-hidden />
+                    وقت التسليم
+                  </span>
+                  <span className="text-[13px] font-bold text-[#0f1923]" dir="ltr">
+                    {dropoffTimeDraft}
+                  </span>
+                  <ChevronDown
+                    className={`absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${dropoffTimeOpen ? "rotate-180" : ""}`}
+                    aria-hidden
+                  />
+                </button>
+                <TimePickerPopover
+                  isOpen={dropoffTimeOpen}
+                  onClose={() => setDropoffTimeOpen(false)}
+                  label="وقت التسليم"
+                  time={dropoffTimeDraft}
+                  onConfirm={applyDropoffTime}
+                  anchorRef={dropoffTimeRef}
+                />
+              </div>
+            </div>
 
             {error ? (
               <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[12px] font-semibold text-red-700">

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { FleetBookNowHintModal } from "@/components/fleet/FleetBookNowHintModal";
+import type { BookingCityBranchesOption } from "@/lib/booking-location-options";
 import {
   validateFleetBookNowSearchParams,
 } from "@/lib/fleet-book-now-validation";
@@ -69,10 +70,9 @@ function BookNowLink({
   );
 }
 
-type BranchOption = { slug: string; name: string };
 type FleetBookNowButtonProps = {
   modelId: number;
-  branchOptions?: BranchOption[];
+  cities?: BookingCityBranchesOption[];
 };
 
 function formatAsDatetimeLocal(raw: string | null): string {
@@ -87,19 +87,32 @@ function formatAsDatetimeLocal(raw: string | null): string {
   return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
 }
 
-const FALLBACK_BRANCH_OPTIONS: BranchOption[] = [
-  { slug: "jeddah", name: "جدة" },
-  { slug: "madinah", name: "المدينة المنورة" },
-  { slug: "tabuk", name: "تبوك" },
+const FALLBACK_CITIES: BookingCityBranchesOption[] = [
+  {
+    slug: "default",
+    name: "الفروع",
+    branches: [
+      { slug: "jeddah", name: "جدة", openingHours: null },
+      { slug: "madinah", name: "المدينة المنورة", openingHours: null },
+      { slug: "tabuk", name: "تبوك", openingHours: null },
+    ],
+  },
 ];
 
-function FleetBookNowButtonInner({ modelId, branchOptions = FALLBACK_BRANCH_OPTIONS }: FleetBookNowButtonProps) {
+function firstBranchSlug(cities: BookingCityBranchesOption[]): string {
+  for (const c of cities) {
+    if (c.branches.length > 0) return c.branches[0]!.slug;
+  }
+  return "";
+}
+
+function FleetBookNowButtonInner({ modelId, cities = FALLBACK_CITIES }: FleetBookNowButtonProps) {
   const router = useRouter();
   const sp = useSearchParams();
   const extra = sp.toString();
   const href = `/fleet/checkout?modelId=${modelId}${extra ? `&${extra}` : ""}`;
   const [modalOpen, setModalOpen] = useState(false);
-  const [draftBranch, setDraftBranch] = useState(branchOptions[0]?.slug ?? "");
+  const [draftBranch, setDraftBranch] = useState(() => firstBranchSlug(cities));
   const [draftPickup, setDraftPickup] = useState("");
   const [draftDropoff, setDraftDropoff] = useState("");
 
@@ -114,12 +127,12 @@ function FleetBookNowButtonInner({ modelId, branchOptions = FALLBACK_BRANCH_OPTI
       spObj.get("pickupBranch")?.trim() ||
       spObj.get("returnBranch")?.trim() ||
       spObj.get("branch")?.trim() ||
-      branchOptions[0]?.slug ||
+      firstBranchSlug(cities) ||
       "";
     setDraftBranch(branch);
     setDraftPickup(formatAsDatetimeLocal(spObj.get("pickup")));
     setDraftDropoff(formatAsDatetimeLocal(spObj.get("dropoff")));
-  }, [sp, branchOptions]);
+  }, [sp, cities]);
 
   function onBookClick(e: React.MouseEvent<HTMLAnchorElement>) {
     const check = validateFleetBookNowSearchParams(new URLSearchParams(sp.toString()));
@@ -152,7 +165,7 @@ function FleetBookNowButtonInner({ modelId, branchOptions = FALLBACK_BRANCH_OPTI
       <BookNowLink href={href} onClick={onBookClick} />
       <FleetBookNowHintModal
         open={modalOpen}
-        branchOptions={branchOptions}
+        cities={cities}
         initialBranch={draftBranch}
         initialPickup={draftPickup}
         initialDropoff={draftDropoff}
@@ -165,17 +178,17 @@ function FleetBookNowButtonInner({ modelId, branchOptions = FALLBACK_BRANCH_OPTI
 
 function FleetBookNowButtonFallback({
   modelId,
-  branchOptions = FALLBACK_BRANCH_OPTIONS,
+  cities = FALLBACK_CITIES,
 }: FleetBookNowButtonProps) {
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
-  const [draftBranch, setDraftBranch] = useState(branchOptions[0]?.slug ?? "");
+  const [draftBranch, setDraftBranch] = useState(() => firstBranchSlug(cities));
   const [draftPickup, setDraftPickup] = useState("");
   const [draftDropoff, setDraftDropoff] = useState("");
 
   useEffect(() => {
-    setDraftBranch(branchOptions[0]?.slug ?? "");
-  }, [branchOptions]);
+    setDraftBranch(firstBranchSlug(cities));
+  }, [cities]);
 
   function onBookClick(e: React.MouseEvent<HTMLAnchorElement>) {
     e.preventDefault();
@@ -203,7 +216,7 @@ function FleetBookNowButtonFallback({
       />
       <FleetBookNowHintModal
         open={modalOpen}
-        branchOptions={branchOptions}
+        cities={cities}
         initialBranch={draftBranch}
         initialPickup={draftPickup}
         initialDropoff={draftDropoff}
@@ -214,10 +227,10 @@ function FleetBookNowButtonFallback({
   );
 }
 
-export function FleetBookNowButton({ modelId, branchOptions = FALLBACK_BRANCH_OPTIONS }: FleetBookNowButtonProps) {
+export function FleetBookNowButton({ modelId, cities = FALLBACK_CITIES }: FleetBookNowButtonProps) {
   return (
-    <Suspense fallback={<FleetBookNowButtonFallback modelId={modelId} branchOptions={branchOptions} />}>
-      <FleetBookNowButtonInner modelId={modelId} branchOptions={branchOptions} />
+    <Suspense fallback={<FleetBookNowButtonFallback modelId={modelId} cities={cities} />}>
+      <FleetBookNowButtonInner modelId={modelId} cities={cities} />
     </Suspense>
   );
 }

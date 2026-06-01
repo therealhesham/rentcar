@@ -4,7 +4,7 @@ import { FleetCarGrid, FleetFilters } from "@/components/fleet";
 import { BookingWidget } from "@/components/home";
 import { SiteFooter } from "@/components/home/SiteFooter";
 import { SiteNav } from "@/components/shared/SiteNav";
-import { getActiveBranches, getActiveBookingCitiesWithBranches } from "@/lib/branch-data";
+import { getActiveBookingCitiesWithBranches } from "@/lib/branch-data";
 import { computeBookingDays } from "@/lib/booking-days";
 import { formatDailyBookingDurationFromIso } from "@/lib/booking-duration-display";
 import { listAvailableCarModelIds } from "@/lib/direct-booking";
@@ -183,19 +183,10 @@ export default async function FleetPage({
     priceDisplayMode: priceMode,
   });
 
-  const [branchRows, cities, tabFlags] = await Promise.all([
-    getActiveBranches().catch(() => []),
+  const [cities, tabFlags] = await Promise.all([
     getActiveBookingCitiesWithBranches().catch(() => []),
     getBookingWidgetTabFlags(),
   ]);
-  const branchOptions =
-    branchRows.length > 0
-      ? branchRows.map((b) => ({ slug: b.slug, name: b.name }))
-      : [
-          { slug: "jeddah", name: "جدة" },
-          { slug: "madinah", name: "المدينة المنورة" },
-          { slug: "tabuk", name: "تبوك" },
-        ];
 
   return (
     <div className="flex min-h-screen flex-col bg-surface text-on-surface">
@@ -298,7 +289,7 @@ export default async function FleetPage({
               </p>
             </div>
           ) : (
-            <FleetCarGrid cars={cars} branchOptions={branchOptions} />
+            <FleetCarGrid cars={cars} cities={cities} />
           )}
         </main>
       </div>
