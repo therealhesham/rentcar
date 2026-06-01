@@ -34,8 +34,6 @@ export function FleetCarCard({
   car: FleetCar;
   branchOptions?: { slug: string; name: string }[];
 }) {
-  void _branchOptions;
-
   const meta = metaFromSubtitle(car.subtitle);
 
   return (
@@ -160,7 +158,7 @@ export function FleetCarCard({
             ) : null}
           </div>
 
-          <FleetBookNowButton modelId={car.modelId} />
+          <FleetBookNowButton modelId={car.modelId} branchOptions={_branchOptions} />
         </div>
       </div>
     </article>

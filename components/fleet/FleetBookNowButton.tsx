@@ -1,16 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { FleetBookNowHintModal } from "@/components/fleet/FleetBookNowHintModal";
 import {
-  scrollToBookingSearchForm,
   validateFleetBookNowSearchParams,
 } from "@/lib/fleet-book-now-validation";
-
-const DEFAULT_HINT =
-  "يرجى تحديد الموقع والتواريخ من نموذج البحث أعلاه، ثم اضغط «ابحث عن السيارات» قبل «احجز الآن».";
 
 const BTN_CLASS =
   "group/btn relative flex w-full items-center justify-center gap-2.5 overflow-hidden rounded-xl px-5 py-3.5 text-[15px] font-extrabold text-white shadow-[0_4px_16px_-4px_rgba(0,55,73,0.55)] transition-all duration-200 active:scale-[0.975] active:shadow-none";
@@ -73,26 +69,82 @@ function BookNowLink({
   );
 }
 
-function FleetBookNowButtonInner({ modelId }: { modelId: number }) {
+type BranchOption = { slug: string; name: string };
+type FleetBookNowButtonProps = {
+  modelId: number;
+  branchOptions?: BranchOption[];
+};
+
+function formatAsDatetimeLocal(raw: string | null): string {
+  if (!raw) return "";
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return "";
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mi = String(d.getMinutes()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+}
+
+const FALLBACK_BRANCH_OPTIONS: BranchOption[] = [
+  { slug: "jeddah", name: "جدة" },
+  { slug: "madinah", name: "المدينة المنورة" },
+  { slug: "tabuk", name: "تبوك" },
+];
+
+function FleetBookNowButtonInner({ modelId, branchOptions = FALLBACK_BRANCH_OPTIONS }: FleetBookNowButtonProps) {
+  const router = useRouter();
   const sp = useSearchParams();
   const extra = sp.toString();
   const href = `/fleet/checkout?modelId=${modelId}${extra ? `&${extra}` : ""}`;
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalMessage, setModalMessage] = useState(DEFAULT_HINT);
+  const [draftBranch, setDraftBranch] = useState(branchOptions[0]?.slug ?? "");
+  const [draftPickup, setDraftPickup] = useState("");
+  const [draftDropoff, setDraftDropoff] = useState("");
 
   useEffect(() => {
     setModalOpen(false);
   }, [extra]);
 
+  useEffect(() => {
+    const spRaw = sp.toString();
+    const spObj = new URLSearchParams(spRaw);
+    const branch =
+      spObj.get("pickupBranch")?.trim() ||
+      spObj.get("returnBranch")?.trim() ||
+      spObj.get("branch")?.trim() ||
+      branchOptions[0]?.slug ||
+      "";
+    setDraftBranch(branch);
+    setDraftPickup(formatAsDatetimeLocal(spObj.get("pickup")));
+    setDraftDropoff(formatAsDatetimeLocal(spObj.get("dropoff")));
+  }, [sp, branchOptions]);
+
   function onBookClick(e: React.MouseEvent<HTMLAnchorElement>) {
     const check = validateFleetBookNowSearchParams(new URLSearchParams(sp.toString()));
     if (!check.ok) {
       e.preventDefault();
-      setModalMessage(check.message);
       setModalOpen(true);
       return;
     }
     setModalOpen(false);
+  }
+
+  function handleConfirmModal(draft: { branch: string; pickup: string; dropoff: string }) {
+    const next = new URLSearchParams(sp.toString());
+    next.set("mode", "pickup");
+    next.set("rental", next.get("rental")?.trim() || "daily");
+    next.delete("dlat");
+    next.delete("dlng");
+    next.delete("daddr");
+    next.set("pickup", draft.pickup);
+    next.set("dropoff", draft.dropoff);
+    next.set("pickupBranch", draft.branch);
+    next.set("returnBranch", draft.branch);
+    next.set("branch", draft.branch);
+    setModalOpen(false);
+    router.push(`/fleet/checkout?modelId=${modelId}&${next.toString()}`);
   }
 
   return (
@@ -100,20 +152,47 @@ function FleetBookNowButtonInner({ modelId }: { modelId: number }) {
       <BookNowLink href={href} onClick={onBookClick} />
       <FleetBookNowHintModal
         open={modalOpen}
-        message={modalMessage}
+        branchOptions={branchOptions}
+        initialBranch={draftBranch}
+        initialPickup={draftPickup}
+        initialDropoff={draftDropoff}
+        onConfirm={handleConfirmModal}
         onClose={() => setModalOpen(false)}
-        onGoToSearch={scrollToBookingSearchForm}
       />
     </>
   );
 }
 
-function FleetBookNowButtonFallback({ modelId }: { modelId: number }) {
+function FleetBookNowButtonFallback({
+  modelId,
+  branchOptions = FALLBACK_BRANCH_OPTIONS,
+}: FleetBookNowButtonProps) {
+  const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
+  const [draftBranch, setDraftBranch] = useState(branchOptions[0]?.slug ?? "");
+  const [draftPickup, setDraftPickup] = useState("");
+  const [draftDropoff, setDraftDropoff] = useState("");
+
+  useEffect(() => {
+    setDraftBranch(branchOptions[0]?.slug ?? "");
+  }, [branchOptions]);
 
   function onBookClick(e: React.MouseEvent<HTMLAnchorElement>) {
     e.preventDefault();
     setModalOpen(true);
+  }
+
+  function handleConfirmModal(draft: { branch: string; pickup: string; dropoff: string }) {
+    const next = new URLSearchParams();
+    next.set("mode", "pickup");
+    next.set("rental", "daily");
+    next.set("pickup", draft.pickup);
+    next.set("dropoff", draft.dropoff);
+    next.set("pickupBranch", draft.branch);
+    next.set("returnBranch", draft.branch);
+    next.set("branch", draft.branch);
+    setModalOpen(false);
+    router.push(`/fleet/checkout?modelId=${modelId}&${next.toString()}`);
   }
 
   return (
@@ -124,18 +203,21 @@ function FleetBookNowButtonFallback({ modelId }: { modelId: number }) {
       />
       <FleetBookNowHintModal
         open={modalOpen}
-        message={DEFAULT_HINT}
+        branchOptions={branchOptions}
+        initialBranch={draftBranch}
+        initialPickup={draftPickup}
+        initialDropoff={draftDropoff}
+        onConfirm={handleConfirmModal}
         onClose={() => setModalOpen(false)}
-        onGoToSearch={scrollToBookingSearchForm}
       />
     </>
   );
 }
 
-export function FleetBookNowButton({ modelId }: { modelId: number }) {
+export function FleetBookNowButton({ modelId, branchOptions = FALLBACK_BRANCH_OPTIONS }: FleetBookNowButtonProps) {
   return (
-    <Suspense fallback={<FleetBookNowButtonFallback modelId={modelId} />}>
-      <FleetBookNowButtonInner modelId={modelId} />
+    <Suspense fallback={<FleetBookNowButtonFallback modelId={modelId} branchOptions={branchOptions} />}>
+      <FleetBookNowButtonInner modelId={modelId} branchOptions={branchOptions} />
     </Suspense>
   );
 }
