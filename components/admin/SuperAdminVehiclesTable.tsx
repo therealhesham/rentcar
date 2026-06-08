@@ -50,10 +50,20 @@ export function SuperAdminVehiclesTable({ branches, vehicles }: Props) {
                   )}
                 </div>
               </td>
-              <td className="px-4 py-3 font-bold text-on-surface">
-                {v.brandName}
-                <span className="mx-1 text-on-surface-variant">|</span>
-                {v.modelName}
+              <td className="px-4 py-3">
+                <Link
+                  href={`/admin/vehicles/${v.id}/edit`}
+                  className="group inline-flex flex-col"
+                >
+                  <span className="font-bold text-on-surface transition-colors group-hover:text-primary">
+                    {v.brandName}
+                    <span className="mx-1 text-on-surface-variant">|</span>
+                    {v.modelName}
+                  </span>
+                  <span className="mt-0.5 text-[11px] font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
+                    تعديل ←
+                  </span>
+                </Link>
               </td>
               <td className="px-4 py-3 tabular-nums text-on-surface">{v.year}</td>
               <td className="px-4 py-3 font-bold text-primary">
