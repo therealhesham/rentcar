@@ -19,7 +19,7 @@ export function InlineCategoryEditForm({ modelId, defaultValue, categories }: Pr
   };
 
   return (
-    <form ref={formRef} action={formAction} className="relative inline-block w-full max-w-[7rem]">
+    <form ref={formRef} action={formAction} className="relative inline-block w-32">
       <input type="hidden" name="modelId" value={modelId} />
       <input type="hidden" name="field" value="categoryId" />
       <select
@@ -27,7 +27,7 @@ export function InlineCategoryEditForm({ modelId, defaultValue, categories }: Pr
         defaultValue={defaultValue}
         onChange={handleChange}
         disabled={pending}
-        className="w-full appearance-none rounded-full border border-transparent bg-surface-container px-2.5 py-0.5 text-center text-[11px] font-bold text-on-surface-variant outline-none transition-colors hover:border-outline-variant/50 focus:border-primary focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary disabled:opacity-50"
+        className="w-full cursor-pointer appearance-none rounded-lg border border-outline-variant/30 bg-surface-container-low px-3 py-1 text-center text-xs font-bold text-on-surface outline-none transition-colors hover:border-outline-variant/60 hover:bg-surface-container focus:border-primary focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary disabled:opacity-50"
       >
         {categories.map((c) => (
           <option key={c.id} value={c.id}>

@@ -36,7 +36,7 @@ export function InlineVehicleEditForm({ modelId, field, defaultValue }: Props) {
   };
 
   return (
-    <form ref={formRef} action={formAction} className="relative inline-block w-full max-w-[5rem]">
+    <form ref={formRef} action={formAction} className="relative inline-block w-20">
       <input type="hidden" name="modelId" value={modelId} />
       <input type="hidden" name="field" value={field} />
       <input
@@ -46,7 +46,7 @@ export function InlineVehicleEditForm({ modelId, field, defaultValue }: Props) {
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         disabled={pending}
-        className="w-full rounded-md border border-transparent bg-transparent px-1.5 py-1 text-center font-bold tabular-nums text-on-surface transition-colors hover:border-outline-variant/50 hover:bg-surface-container focus:border-primary focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary disabled:opacity-50"
+        className="w-full rounded-lg border border-outline-variant/30 bg-surface-container-low px-1.5 py-1 text-center font-bold tabular-nums text-on-surface transition-colors hover:border-outline-variant/60 hover:bg-surface-container focus:border-primary focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary disabled:opacity-50"
         dir="ltr"
       />
       {state?.error && (
