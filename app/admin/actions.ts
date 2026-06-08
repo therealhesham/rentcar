@@ -367,3 +367,46 @@ export async function updateFleetVehicle(
   revalidatePath(`/admin/vehicles/${existing.id}/edit`);
   return { ok: true };
 }
+
+export async function updateVehicleField(
+  _prev: { ok: boolean; error?: string } | null,
+  formData: FormData,
+): Promise<{ ok: boolean; error?: string }> {
+  const auth = await requireSuperAdminForAction();
+  if (!auth.ok) return { ok: false, error: auth.error };
+
+  const modelId = Number(formData.get("modelId"));
+  const field = formData.get("field") as string;
+  const value = formData.get("value") as string;
+
+  if (!Number.isFinite(modelId) || modelId < 1 || !field || !value) {
+    return { ok: false, error: "?????? ??? ?????." };
+  }
+
+  let data: any = {};
+  if (field === "chairs" || field === "year" || field === "price" || field === "categoryId") {
+    const num = Number(value);
+    if (!Number.isFinite(num) || num < 1) {
+      return { ok: false, error: "قيمة غير صالحة." };
+    }
+    data[field] = num;
+  } else {
+    return { ok: false, error: "????? ??? ?????." };
+  }
+
+  try {
+    await prisma.carModel.update({
+      where: { id: modelId },
+      data,
+    });
+  } catch (e) {
+    console.error(e);
+    return { ok: false, error: "????? ?????." };
+  }
+
+  revalidatePath("/fleet");
+  revalidatePath("/");
+  revalidatePath("/admin");
+  revalidatePath("/admin/vehicles");
+  return { ok: true };
+}

@@ -121,7 +121,7 @@ async function postSendText(opts: { number: string; text: string }): Promise<voi
       },
       body: JSON.stringify({
         number: opts.number,
-        textMessage: { text: opts.text },
+        text: opts.text,
         options: { linkPreview: false },
       }),
       signal: controller.signal,

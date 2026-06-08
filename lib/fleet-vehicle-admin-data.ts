@@ -11,8 +11,13 @@ export type AdminFleetVehicleListRow = {
   id: number;
   brandName: string;
   modelName: string;
+  categoryId: number;
+  categoryTitle: string;
   year: number;
+  chairs: number;
   price: number;
+  fuel: FuelType;
+  transmission: Transmission;
   /** كمية فرع واحد أو المجموع */
   quantity: number;
   image: string | null;
@@ -27,18 +32,19 @@ export type AdminFleetVehicleSuperRow = AdminFleetVehicleListRow & {
 /** مركبات الكتالوج مع كمية فرع موظف الفرع */
 export async function listFleetVehiclesForAdmin(
   branchId?: number | null,
-): Promise<AdminFleetVehicleListRow[]> {
+): Promise<{ categories: { id: number; title: string }[]; vehicles: AdminFleetVehicleListRow[] }> {
   const rows = await prisma.carModel.findMany({
     orderBy: [{ brand: { name: "asc" } }, { name: "asc" }, { year: "desc" }],
     include: {
       brand: true,
+      category: { select: { id: true, title: true } },
       fleetItems: branchId
         ? { where: { branchId }, take: 1 }
         : { orderBy: { quantity: "desc" } },
     },
   });
 
-  return rows.map((r) => {
+  const mapped = rows.map((r) => {
     const qty = branchId
       ? (r.fleetItems[0]?.quantity ?? 0)
       : r.fleetItems.reduce((s, f) => s + f.quantity, 0);
@@ -46,17 +52,30 @@ export async function listFleetVehiclesForAdmin(
       id: r.id,
       brandName: r.brand.name.trim(),
       modelName: r.name.trim(),
+      categoryId: r.category.id,
+      categoryTitle: r.category.title.trim(),
       year: r.year,
+      chairs: r.chairs,
       price: r.price,
+      fuel: r.fuel,
+      transmission: r.transmission,
       quantity: qty,
       image: r.image?.trim() || null,
     };
   });
+
+  const categories = await prisma.fleetCategory.findMany({
+    orderBy: { title: "asc" },
+    select: { id: true, title: true },
+  });
+
+  return { categories, vehicles: mapped };
 }
 
 /** سوبر أدمن: كل الموديلات + كمية كل فرع */
 export async function listFleetVehiclesForSuperAdmin(): Promise<{
   branches: AdminFleetBranchColumn[];
+  categories: { id: number; title: string }[];
   vehicles: AdminFleetVehicleSuperRow[];
 }> {
   const branches = await prisma.branch.findMany({
@@ -69,6 +88,7 @@ export async function listFleetVehiclesForSuperAdmin(): Promise<{
     orderBy: [{ brand: { name: "asc" } }, { name: "asc" }, { year: "desc" }],
     include: {
       brand: true,
+      category: { select: { id: true, title: true } },
       fleetItems: { select: { branchId: true, quantity: true } },
     },
   });
@@ -86,8 +106,13 @@ export async function listFleetVehiclesForSuperAdmin(): Promise<{
       id: r.id,
       brandName: r.brand.name.trim(),
       modelName: r.name.trim(),
+      categoryId: r.category.id,
+      categoryTitle: r.category.title.trim(),
       year: r.year,
+      chairs: r.chairs,
       price: r.price,
+      fuel: r.fuel,
+      transmission: r.transmission,
       quantity: totalQuantity,
       totalQuantity,
       image: r.image?.trim() || null,
@@ -95,7 +120,12 @@ export async function listFleetVehiclesForSuperAdmin(): Promise<{
     };
   });
 
-  return { branches, vehicles };
+  const categories = await prisma.fleetCategory.findMany({
+    orderBy: { title: "asc" },
+    select: { id: true, title: true },
+  });
+
+  return { branches, categories, vehicles };
 }
 
 export type AdminFleetVehicleEditPayload = {
