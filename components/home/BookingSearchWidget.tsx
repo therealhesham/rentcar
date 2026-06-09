@@ -15,6 +15,7 @@ import {
   Send,
   Truck,
   ChevronDown,
+  Check,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { LocationPickerPopover } from "@/components/home/LocationPickerPopover";
@@ -23,6 +24,7 @@ import { DateRangePickerPopover } from "@/components/home/DateRangePickerPopover
 import { TimePickerPopover } from "@/components/home/TimePickerPopover";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { submitCorporateBookingLead } from "@/app/corporate-lead-actions";
 import { BranchOutsideHoursModal } from "@/components/fleet/BranchOutsideHoursModal";
 import { DeliveryMapDialog } from "@/components/home/DeliveryMapDialog";
@@ -1337,13 +1339,38 @@ export function BookingSearchWidget({
                   لا يقل عن 10 أحرف — بحد أقصى 8000 حرف.
                 </p>
               </div>
-              {corpSuccess ? (
-                <p
-                  role="status"
-                  className="rounded-lg border border-emerald-200/80 bg-emerald-50/90 px-3 py-2 text-[12px] font-bold text-emerald-800"
-                >
-                  تم استلام طلبكم بنجاح. سيتواصل معكم فريق المبيعات قريباً.
-                </p>
+              {corpSuccess && mounted ? createPortal(
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0f1923]/40 p-4 backdrop-blur-sm transition-all duration-300 animate-in fade-in" dir="rtl">
+                  <div 
+                    className="w-full max-w-sm flex flex-col overflow-hidden rounded-3xl bg-white shadow-2xl animate-in zoom-in-95 duration-300"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex flex-col items-center justify-center bg-emerald-500 p-8 text-white relative overflow-hidden">
+                      <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.1)_50%,transparent_75%)] bg-[length:250%_250%] animate-[shimmer_3s_infinite]" />
+                      <div className="rounded-full bg-white p-4 shadow-lg mb-2 relative z-10">
+                        <Check className="size-10 text-emerald-500" strokeWidth={3} />
+                      </div>
+                      <h3 className="text-xl font-bold mt-2 relative z-10">استلام الطلب</h3>
+                    </div>
+                    
+                    <div className="flex flex-col items-center gap-4 p-8 text-center bg-[#fdfbf6]">
+                      <p className="text-[15px] font-semibold leading-relaxed text-[#003749]">
+                        تم استلام طلب حجز الشركات بنجاح!
+                      </p>
+                      <p className="text-[13px] font-medium text-[#6b5a3b] max-w-[250px]">
+                        شكراً لثقتكم برُوائس لتأجير السيارات. سيتواصل معكم فريق المبيعات قريباً عبر الهاتف أو البريد المرفق.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setCorpSuccess(false)}
+                        className="mt-2 w-full rounded-xl bg-[#dbb878] px-5 py-3 text-[14px] font-bold text-white shadow-md transition-all hover:bg-[#c9a356] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#dbb878]/50"
+                      >
+                        حسناً، فهمت
+                      </button>
+                    </div>
+                  </div>
+                </div>,
+                document.body
               ) : null}
             </div>
           ) : rental === "monthly_packages" ? (

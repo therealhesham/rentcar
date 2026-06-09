@@ -7,15 +7,55 @@ import { useRouter } from "next/navigation";
 
 export function SettingsModal({ initialEmails }: { initialEmails: string }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [emails, setEmails] = useState(initialEmails);
+  const [emailList, setEmailList] = useState<string[]>(() => {
+    return initialEmails.split(",").map(e => e.trim()).filter(Boolean);
+  });
+  const [inputValue, setInputValue] = useState("");
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
+  const addEmail = (val: string) => {
+    const trimmed = val.trim();
+    if (!trimmed) return;
+    
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      setError(`البريد الإلكتروني غير صالح: ${trimmed}`);
+      return;
+    }
+    
+    if (!emailList.includes(trimmed)) {
+      setEmailList([...emailList, trimmed]);
+    }
+    setInputValue("");
+    setError("");
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" || e.key === "," || e.key === " ") {
+      e.preventDefault();
+      addEmail(inputValue);
+    } else if (e.key === "Backspace" && !inputValue && emailList.length > 0) {
+      setEmailList(emailList.slice(0, -1));
+    }
+  };
+
+  const removeEmail = (emailToRemove: string) => {
+    setEmailList(emailList.filter(e => e !== emailToRemove));
+  };
+
   const handleSave = () => {
     setError("");
     startTransition(async () => {
-      const res = await updateCorporateLeadsEmailsSetting(emails);
+      // If there's something in the input, try to add it first
+      if (inputValue.trim()) {
+        const trimmed = inputValue.trim();
+        if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed) && !emailList.includes(trimmed)) {
+          emailList.push(trimmed);
+        }
+      }
+      
+      const res = await updateCorporateLeadsEmailsSetting(emailList.join(","));
       if (!res.ok) {
         setError(res.error || "حدث خطأ غير متوقع.");
       } else {
@@ -59,7 +99,7 @@ export function SettingsModal({ initialEmails }: { initialEmails: string }) {
 
             <div className="p-6 space-y-4">
               <p className="text-sm text-on-surface-variant leading-relaxed">
-                أدخل البريد الإلكتروني (أو أكثر من بريد مفصولين بفاصلة <code className="bg-surface-container-highest px-1 py-0.5 rounded text-primary">,</code>) الذي سيستقبل إشعارات عند إرسال طلب حجز شركات جديد.
+                أضف البريد الإلكتروني الذي سيستقبل إشعارات عند إرسال طلب حجز شركات جديد. (اضغط <kbd className="bg-surface-container-highest px-1.5 py-0.5 rounded text-xs mx-1">Enter</kbd> أو مسافة لإضافة البريد).
               </p>
 
               {error && (
@@ -73,14 +113,40 @@ export function SettingsModal({ initialEmails }: { initialEmails: string }) {
                 <label className="block text-sm font-semibold text-on-surface">
                   البريد الإلكتروني للإشعارات
                 </label>
-                <textarea
-                  value={emails}
-                  onChange={(e) => setEmails(e.target.value)}
-                  placeholder="admin@example.com, sales@example.com"
+                <div 
+                  className="w-full min-h-[100px] p-3 rounded-xl border border-outline-variant/30 bg-surface focus-within:ring-2 focus-within:ring-primary focus-within:border-transparent transition-all flex flex-wrap gap-2 items-start"
                   dir="ltr"
-                  rows={3}
-                  className="w-full p-4 rounded-xl border border-outline-variant/30 bg-surface text-on-surface focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none resize-none font-medium placeholder:text-on-surface-variant/40"
-                />
+                  onClick={() => document.getElementById("email-input")?.focus()}
+                >
+                  {emailList.map((email) => (
+                    <span 
+                      key={email} 
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-sm font-medium animate-in fade-in zoom-in-95 duration-200"
+                    >
+                      {email}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeEmail(email);
+                        }}
+                        className="hover:bg-primary/20 p-0.5 rounded-full transition-colors focus:outline-none"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </span>
+                  ))}
+                  <input
+                    id="email-input"
+                    type="email"
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    onBlur={() => addEmail(inputValue)}
+                    placeholder={emailList.length === 0 ? "admin@example.com" : "أضف المزيد..."}
+                    className="flex-1 min-w-[150px] bg-transparent outline-none py-1.5 text-on-surface font-medium placeholder:text-on-surface-variant/40"
+                  />
+                </div>
               </div>
             </div>
 

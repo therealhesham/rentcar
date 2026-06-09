@@ -58,6 +58,23 @@ export default async function FleetPage({
 
   let searchBanner: ReactNode = null;
 
+  const [cities, tabFlags, priceMode, categories, brands, priceBounds] = await Promise.all([
+    getActiveBookingCitiesWithBranches().catch(() => []),
+    getBookingWidgetTabFlags(),
+    getRentalPriceDisplayMode(),
+    getFleetCategoriesForFilter(),
+    getFleetBrandsForFilter(),
+    getFleetPriceBounds(),
+  ]);
+
+  const resolveBranchName = (slug: string) => {
+    for (const city of cities) {
+      const branch = city.branches.find((b) => b.slug.toLowerCase() === slug.toLowerCase());
+      if (branch) return branch.name;
+    }
+    return slug;
+  };
+
   if (pickupRaw && dropoffRaw) {
     const pickupDate = new Date(pickupRaw);
     const dropoffDate = new Date(dropoffRaw);
@@ -108,7 +125,7 @@ export default async function FleetPage({
                   { label: "النوع", value: rental },
                   { label: "المدة", value: durationLabel },
                   { label: "الاستلام", value: modeLabel },
-                  qFirst(params.returnBranch) ? { label: "الفرع", value: qFirst(params.returnBranch)! } : null,
+                  qFirst(params.returnBranch) ? { label: "الفرع", value: resolveBranchName(qFirst(params.returnBranch)!) } : null,
                   qFirst(params.mode) === "delivery" && qFirst(params.daddr)
                     ? { label: "عنوان التوصيل", value: qFirst(params.daddr)! }
                     : null,
@@ -136,13 +153,6 @@ export default async function FleetPage({
       );
     }
   }
-
-  const [priceMode, categories, brands, priceBounds] = await Promise.all([
-    getRentalPriceDisplayMode(),
-    getFleetCategoriesForFilter(),
-    getFleetBrandsForFilter(),
-    getFleetPriceBounds(),
-  ]);
 
   const categorySlug =
     categoryRaw && categories.some((c) => c.slug === categoryRaw) ? categoryRaw : undefined;
@@ -182,11 +192,6 @@ export default async function FleetPage({
     pickupDate: fleetPickupDate,
     priceDisplayMode: priceMode,
   });
-
-  const [cities, tabFlags] = await Promise.all([
-    getActiveBookingCitiesWithBranches().catch(() => []),
-    getBookingWidgetTabFlags(),
-  ]);
 
   return (
     <div className="flex min-h-screen flex-col bg-surface text-on-surface">
