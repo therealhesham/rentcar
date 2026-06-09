@@ -13,6 +13,8 @@ import {
   Inbox,
 } from "lucide-react";
 import { DetailsModal } from "./DetailsModal";
+import { SettingsModal } from "./SettingsModal";
+import { getCorporateLeadsEmailsSetting } from "./settings-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +27,8 @@ export default async function AdminCorporateLeadsPage() {
     orderBy: { createdAt: "desc" },
     take: 100,
   });
+
+  const initialEmails = await getCorporateLeadsEmailsSetting();
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -45,13 +49,16 @@ export default async function AdminCorporateLeadsPage() {
               البريد المذكورين.
             </p>
           </div>
-          <Link
-            href="/admin"
-            className="group flex items-center gap-2 rounded-xl bg-surface-container-high px-5 py-3 text-sm font-semibold text-primary transition-all hover:bg-primary hover:text-on-primary hover:shadow-md"
-          >
-            العودة للوحة التحكم
-            <ArrowRight className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-          </Link>
+          <div className="flex items-center gap-3">
+            <SettingsModal initialEmails={initialEmails} />
+            <Link
+              href="/admin"
+              className="group flex items-center gap-2 rounded-xl bg-surface-container-high px-5 py-3 text-sm font-semibold text-primary transition-all hover:bg-primary hover:text-on-primary hover:shadow-md"
+            >
+              العودة للوحة التحكم
+              <ArrowRight className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+            </Link>
+          </div>
         </div>
         
         {/* Decorative background elements */}
