@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { DetailsModal } from "./DetailsModal";
 import { SettingsModal } from "./SettingsModal";
-import { getCorporateLeadsEmailsSetting } from "./settings-actions";
+import { getNotificationSettings } from "./settings-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +28,7 @@ export default async function AdminCorporateLeadsPage() {
     take: 100,
   });
 
-  const initialEmails = await getCorporateLeadsEmailsSetting();
+  const initialSettings = await getNotificationSettings();
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -50,7 +50,7 @@ export default async function AdminCorporateLeadsPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <SettingsModal initialEmails={initialEmails} />
+            <SettingsModal initialSettings={initialSettings} />
             <Link
               href="/admin"
               className="group flex items-center gap-2 rounded-xl bg-surface-container-high px-5 py-3 text-sm font-semibold text-primary transition-all hover:bg-primary hover:text-on-primary hover:shadow-md"

@@ -4,20 +4,24 @@ import { revalidatePath } from "next/cache";
 import { verifyAdminSession } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
 
-export async function getCorporateLeadsEmailsSetting(): Promise<string> {
+export async function getNotificationSettings(): Promise<{ emails: string; whatsapp: string }> {
   const session = await verifyAdminSession();
   if (!session) {
-    return "";
+    return { emails: "", whatsapp: "" };
   }
   
-  const setting = await prisma.siteSetting.findUnique({
-    where: { key: "corporate_leads_emails" }
-  });
+  const [emailsSetting, whatsappSetting] = await Promise.all([
+    prisma.siteSetting.findUnique({ where: { key: "corporate_leads_emails" } }),
+    prisma.siteSetting.findUnique({ where: { key: "corporate_leads_whatsapp_numbers" } })
+  ]);
   
-  return setting?.value || "";
+  return {
+    emails: emailsSetting?.value || "",
+    whatsapp: whatsappSetting?.value || ""
+  };
 }
 
-export async function updateCorporateLeadsEmailsSetting(emailsStr: string): Promise<{ ok: boolean; error?: string }> {
+export async function updateNotificationSettings(emailsStr: string, whatsappStr: string): Promise<{ ok: boolean; error?: string }> {
   const session = await verifyAdminSession();
   if (!session) {
     return { ok: false, error: "غير مصرح" };
@@ -28,19 +32,33 @@ export async function updateCorporateLeadsEmailsSetting(emailsStr: string): Prom
     .map(e => e.trim().toLowerCase())
     .filter(e => e && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
     
-  const validStr = emails.join(",");
+  const validEmailsStr = emails.join(",");
+
+  const whatsappNumbers = whatsappStr
+    .split(",")
+    .map(w => w.replace(/\s/g, "").replace(/\+/g, "").replace(/^00/, "").trim())
+    .filter(w => w && /^\d{9,15}$/.test(w));
+    
+  const validWhatsappStr = whatsappNumbers.join(",");
 
   try {
-    await prisma.siteSetting.upsert({
-      where: { key: "corporate_leads_emails" },
-      update: { value: validStr },
-      create: { key: "corporate_leads_emails", value: validStr }
-    });
+    await prisma.$transaction([
+      prisma.siteSetting.upsert({
+        where: { key: "corporate_leads_emails" },
+        update: { value: validEmailsStr },
+        create: { key: "corporate_leads_emails", value: validEmailsStr }
+      }),
+      prisma.siteSetting.upsert({
+        where: { key: "corporate_leads_whatsapp_numbers" },
+        update: { value: validWhatsappStr },
+        create: { key: "corporate_leads_whatsapp_numbers", value: validWhatsappStr }
+      })
+    ]);
     
     revalidatePath("/admin/corporate-leads");
     return { ok: true };
   } catch (error) {
-    console.error("Failed to update corporate_leads_emails", error);
+    console.error("Failed to update notification settings", error);
     return { ok: false, error: "فشل حفظ الإعدادات" };
   }
 }

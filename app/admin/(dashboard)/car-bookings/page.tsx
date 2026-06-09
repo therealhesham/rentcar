@@ -10,6 +10,8 @@ import { adminBranchDisplayName, bookingBranchWhere } from "@/lib/admin-access";
 import { requireAdminPage } from "@/lib/admin-page";
 import { addDaysToYmd, NON_BLOCKING_BOOKING_STATUSES } from "@/lib/direct-booking";
 import { prisma } from "@/lib/prisma";
+import { CarBookingsSettingsModal } from "./CarBookingsSettingsModal";
+import { getCarBookingsWhatsappSetting } from "./car-bookings-settings-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -74,6 +76,7 @@ function StatTile({
 
 export default async function AdminCarBookingsPage() {
   const session = await requireAdminPage();
+  const initialWhatsapp = await getCarBookingsWhatsappSetting();
 
   const rows = await prisma.bookingRequest.findMany({
     where: bookingBranchWhere(session, {
@@ -145,13 +148,16 @@ export default async function AdminCarBookingsPage() {
         backHref="/admin"
         backLabel="لوحة التحكم"
         actions={
-          <Link
-            href="/admin/direct-booking"
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-on-primary shadow-sm transition-opacity hover:opacity-95"
-          >
-            <CalendarPlus className="size-4" aria-hidden />
-            حجز جديد
-          </Link>
+          <div className="flex items-center gap-3">
+            <CarBookingsSettingsModal initialWhatsapp={initialWhatsapp} />
+            <Link
+              href="/admin/direct-booking"
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-on-primary shadow-sm transition-opacity hover:opacity-95"
+            >
+              <CalendarPlus className="size-4" aria-hidden />
+              حجز جديد
+            </Link>
+          </div>
         }
       />
 

@@ -141,5 +141,33 @@ export async function sendBookingReceivedNotification(
         console.error("[booking-received] فشل واتساب:", e);
       }
     }
+
+    const waSetting = await prisma.siteSetting.findUnique({
+      where: { key: "maintenance_whatsapp_numbers" }
+    });
+    if (waSetting && waSetting.value) {
+      const numbers = waSetting.value.split(",").map(n => n.trim()).filter(Boolean);
+      if (numbers.length > 0) {
+        const text = [
+          `🚨 *حجز أفراد جديد مسجل*`,
+          ``,
+          `*رقم الطلب:* #${snapshot.id}`,
+          `*المركبة:* ${snapshot.car.fullTitle}`,
+          `*العميل:* ${snapshot.fullName}`,
+          `*رقم الجوال:* ${snapshot.phone}`,
+          `*الفرع:* ${snapshot.branch}`,
+          `*تاريخ الاستلام:* ${snapshot.pickupDate.toLocaleString("ar-SA")}`,
+          `*المدة:* ${snapshot.numberOfDays} أيام`
+        ].join("\n");
+        
+        for (const num of numbers) {
+          try {
+            await sendEvolutionWhatsAppText({ number: num, text });
+          } catch (err) {
+            console.error(`[booking-received] Failed to send WhatsApp to maintenance ${num}`, err);
+          }
+        }
+      }
+    }
   }
 }

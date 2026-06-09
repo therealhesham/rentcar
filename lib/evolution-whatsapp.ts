@@ -8,6 +8,7 @@ import type { BookingPaymentSnapshot } from "@/lib/booking-payment-data";
 import { getBookingForPayment } from "@/lib/booking-payment-data";
 import { e164ToLocalNine } from "@/lib/normalize-saudi-phone";
 import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
+import { prisma } from "@/lib/prisma";
 
 /**
  * إرسال إشعار واتساب بعد الدفع عبر Evolution API.
@@ -158,4 +159,33 @@ export async function sendBookingCompletionWhatsAppAfterPayment(bookingRequestId
 
   const text = buildBookingCompletionMessage(snapshot);
   await postSendText({ number, text });
+
+  // Add logic to notify maintenance manager
+  const waSetting = await prisma.siteSetting.findUnique({
+    where: { key: "maintenance_whatsapp_numbers" }
+  });
+  if (waSetting && waSetting.value) {
+    const numbers = waSetting.value.split(",").map(n => n.trim()).filter(Boolean);
+    if (numbers.length > 0) {
+      const maintenanceText = [
+        `🚨 *حجز أفراد جديد مدفوع ومؤكد*`,
+        ``,
+        `*رقم الطلب:* #${snapshot.id}`,
+        `*المركبة:* ${snapshot.car.fullTitle}`,
+        `*العميل:* ${snapshot.fullName}`,
+        `*رقم الجوال:* ${snapshot.phone}`,
+        `*الفرع:* ${snapshot.branch}`,
+        `*تاريخ الاستلام:* ${snapshot.pickupDate.toLocaleString("ar-SA")}`,
+        `*المدة:* ${snapshot.numberOfDays} أيام`
+      ].join("\n");
+      
+      for (const num of numbers) {
+        try {
+          await postSendText({ number: num, text: maintenanceText });
+        } catch (err) {
+          console.error(`[evolution-whatsapp] Failed to send to maintenance ${num}`, err);
+        }
+      }
+    }
+  }
 }

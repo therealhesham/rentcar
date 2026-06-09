@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { isOutgoingMailTransportConfigured, sendPlainTransactionalEmail } from "@/lib/booking-invoice-email";
+import { isEvolutionWhatsAppConfigured, sendEvolutionWhatsAppText } from "@/lib/evolution-whatsapp";
 
 export type CorporateLeadActionState = { ok: boolean; error?: string };
 
@@ -85,6 +86,37 @@ export async function submitCorporateBookingLead(
               });
             } catch (mailErr) {
               console.error(`Failed to send email to ${email}`, mailErr);
+            }
+          }
+        }
+      }
+    }
+
+    if (isEvolutionWhatsAppConfigured()) {
+      const waSetting = await prisma.siteSetting.findUnique({
+        where: { key: "corporate_leads_whatsapp_numbers" }
+      });
+      if (waSetting && waSetting.value) {
+        const numbers = waSetting.value.split(",").map(n => n.trim()).filter(Boolean);
+        if (numbers.length > 0) {
+          const text = [
+            `🚨 *طلب حجز شركات جديد*`,
+            ``,
+            `*اسم الشركة:* ${companyName}`,
+            `*رقم الجوال:* ${phone}`,
+            `*البريد الإلكتروني:* ${companyEmail}`,
+            `*الرقم الضريبي:* ${taxNumber}`,
+            ``,
+            `*تفاصيل الطلب:*`,
+            details
+          ].join("\n");
+          
+          for (const num of numbers) {
+            try {
+              // The setting accepts digits. Assuming the user inputs full numbers like 9665xxxxxxxx.
+              await sendEvolutionWhatsAppText({ number: num, text });
+            } catch (err) {
+              console.error(`Failed to send WhatsApp to ${num}`, err);
             }
           }
         }
