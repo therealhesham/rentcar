@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { BOOKING_STATUS_UNDER_REVIEW } from "@/lib/booking-cash-flow";
-import { sendBookingReceivedNotification } from "@/lib/booking-received-notification";
+import { sendBookingReceivedNotification, sendAdminEmailForNewBooking } from "@/lib/booking-received-notification";
 import {
   resendBookingInvoiceEmail,
   sendBookingInvoiceEmailAfterPayment,
@@ -140,6 +140,12 @@ export async function confirmMockPayment(
         await sendBookingInvoiceEmailAfterPayment(id);
       } catch (e) {
         console.error("[booking-invoice-email] بعد تأكيد الدفع:", e);
+      }
+
+      try {
+        await sendAdminEmailForNewBooking(id);
+      } catch (e) {
+        console.error("[sendAdminEmailForNewBooking] بعد تأكيد الدفع:", e);
       }
 
       try {

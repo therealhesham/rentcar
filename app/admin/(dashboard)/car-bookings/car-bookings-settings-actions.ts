@@ -4,24 +4,35 @@ import { revalidatePath } from "next/cache";
 import { verifyAdminSession } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
 
-export async function getCarBookingsWhatsappSetting(): Promise<string> {
+export async function getCarBookingsNotificationSettings(): Promise<{ emails: string; whatsapp: string }> {
   const session = await verifyAdminSession();
   if (!session) {
-    return "";
+    return { emails: "", whatsapp: "" };
   }
   
-  const setting = await prisma.siteSetting.findUnique({
-    where: { key: "maintenance_whatsapp_numbers" }
-  });
+  const [emailsSetting, whatsappSetting] = await Promise.all([
+    prisma.siteSetting.findUnique({ where: { key: "car_bookings_emails" } }),
+    prisma.siteSetting.findUnique({ where: { key: "maintenance_whatsapp_numbers" } })
+  ]);
   
-  return setting?.value || "";
+  return {
+    emails: emailsSetting?.value || "",
+    whatsapp: whatsappSetting?.value || ""
+  };
 }
 
-export async function updateCarBookingsWhatsappSetting(whatsappStr: string): Promise<{ ok: boolean; error?: string }> {
+export async function updateCarBookingsNotificationSettings(emailsStr: string, whatsappStr: string): Promise<{ ok: boolean; error?: string }> {
   const session = await verifyAdminSession();
   if (!session) {
     return { ok: false, error: "غير مصرح" };
   }
+
+  const emails = emailsStr
+    .split(",")
+    .map(e => e.trim().toLowerCase())
+    .filter(e => e && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+    
+  const validEmailsStr = emails.join(",");
 
   const whatsappNumbers = whatsappStr
     .split(",")
@@ -31,16 +42,23 @@ export async function updateCarBookingsWhatsappSetting(whatsappStr: string): Pro
   const validWhatsappStr = whatsappNumbers.join(",");
 
   try {
-    await prisma.siteSetting.upsert({
-      where: { key: "maintenance_whatsapp_numbers" },
-      update: { value: validWhatsappStr },
-      create: { key: "maintenance_whatsapp_numbers", value: validWhatsappStr }
-    });
+    await prisma.$transaction([
+      prisma.siteSetting.upsert({
+        where: { key: "car_bookings_emails" },
+        update: { value: validEmailsStr },
+        create: { key: "car_bookings_emails", value: validEmailsStr }
+      }),
+      prisma.siteSetting.upsert({
+        where: { key: "maintenance_whatsapp_numbers" },
+        update: { value: validWhatsappStr },
+        create: { key: "maintenance_whatsapp_numbers", value: validWhatsappStr }
+      })
+    ]);
     
     revalidatePath("/admin/car-bookings");
     return { ok: true };
   } catch (error) {
-    console.error("Failed to update maintenance_whatsapp_numbers", error);
+    console.error("Failed to update car bookings notification settings", error);
     return { ok: false, error: "فشل حفظ الإعدادات" };
   }
 }

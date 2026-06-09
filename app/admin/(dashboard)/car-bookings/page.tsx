@@ -11,7 +11,7 @@ import { requireAdminPage } from "@/lib/admin-page";
 import { addDaysToYmd, NON_BLOCKING_BOOKING_STATUSES } from "@/lib/direct-booking";
 import { prisma } from "@/lib/prisma";
 import { CarBookingsSettingsModal } from "./CarBookingsSettingsModal";
-import { getCarBookingsWhatsappSetting } from "./car-bookings-settings-actions";
+import { getCarBookingsNotificationSettings } from "./car-bookings-settings-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -76,7 +76,7 @@ function StatTile({
 
 export default async function AdminCarBookingsPage() {
   const session = await requireAdminPage();
-  const initialWhatsapp = await getCarBookingsWhatsappSetting();
+  const initialSettings = await getCarBookingsNotificationSettings();
 
   const rows = await prisma.bookingRequest.findMany({
     where: bookingBranchWhere(session, {
@@ -149,7 +149,7 @@ export default async function AdminCarBookingsPage() {
         backLabel="لوحة التحكم"
         actions={
           <div className="flex items-center gap-3">
-            <CarBookingsSettingsModal initialWhatsapp={initialWhatsapp} />
+            <CarBookingsSettingsModal initialSettings={initialSettings} />
             <Link
               href="/admin/direct-booking"
               className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-on-primary shadow-sm transition-opacity hover:opacity-95"

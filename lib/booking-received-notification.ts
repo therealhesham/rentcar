@@ -138,7 +138,7 @@ export async function sendBookingReceivedNotification(
           ),
         });
       } catch (e) {
-        console.error("[booking-received] فشل واتساب:", e);
+        console.error("[booking-received] فشل واتساب للعميل:", e);
       }
     }
 
@@ -148,7 +148,7 @@ export async function sendBookingReceivedNotification(
     if (waSetting && waSetting.value) {
       const numbers = waSetting.value.split(",").map(n => n.trim()).filter(Boolean);
       if (numbers.length > 0) {
-        const text = [
+        const textMaint = [
           `🚨 *حجز أفراد جديد مسجل*`,
           ``,
           `*رقم الطلب:* #${snapshot.id}`,
@@ -162,9 +162,38 @@ export async function sendBookingReceivedNotification(
         
         for (const num of numbers) {
           try {
-            await sendEvolutionWhatsAppText({ number: num, text });
+            await sendEvolutionWhatsAppText({ number: num, text: textMaint });
           } catch (err) {
             console.error(`[booking-received] Failed to send WhatsApp to maintenance ${num}`, err);
+          }
+        }
+      }
+    }
+  }
+
+  await sendAdminEmailForNewBooking(bookingRequestId);
+}
+
+export async function sendAdminEmailForNewBooking(bookingRequestId: number): Promise<void> {
+  const snapshot = await getBookingForPayment(bookingRequestId);
+  if (!snapshot) return;
+
+  if (isOutgoingMailTransportConfigured()) {
+    const emailSetting = await prisma.siteSetting.findUnique({
+      where: { key: "car_bookings_emails" }
+    });
+    if (emailSetting && emailSetting.value) {
+      const adminEmails = emailSetting.value.split(",").map(e => e.trim()).filter(Boolean);
+      if (adminEmails.length > 0) {
+        const adminSubject = `حجز أفراد جديد — طلب #${snapshot.id}`;
+        const adminHtml = buildReceivedHtml(snapshot.fullName, snapshot.id)
+          .replace("شكراً لاختياركم روائس. تم استلام طلب حجزكم بنجاح وهو قيد المراجعة.", `تم تسجيل حجز جديد للعميل ${escapeHtml(snapshot.fullName)} للسيارة ${escapeHtml(snapshot.car.fullTitle)} بفرع ${escapeHtml(snapshot.branch)}.`);
+        
+        for (const email of adminEmails) {
+          try {
+            await sendPlainTransactionalEmail({ to: email, subject: adminSubject, html: adminHtml, text: buildReceivedPlainText(snapshot.fullName, snapshot.id) });
+          } catch (e) {
+            console.error(`[booking-received] Failed to send admin email to ${email}`, e);
           }
         }
       }
