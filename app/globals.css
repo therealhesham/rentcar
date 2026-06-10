@@ -101,3 +101,23 @@ body {
   0%   { transform: translateX(0); }
   100% { transform: translateX(-50%); }
 }
+
+/* Custom thin scrollbar */
+.elegant-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.elegant-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.elegant-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+}
+.elegant-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+/* Firefox support */
+.elegant-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}

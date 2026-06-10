@@ -15,9 +15,9 @@ export async function GET(req: Request) {
   const skip = (page - 1) * limit;
 
   const [total, rows] = await prisma.$transaction([
-    prisma.subscriptionPlan.count({ where: { isActive: true } }),
+    prisma.subscriptionPlan.count({ where: { isActive: true, carModel: { id: { gt: 0 } } } }),
     prisma.subscriptionPlan.findMany({
-      where: { isActive: true },
+      where: { isActive: true, carModel: { id: { gt: 0 } } },
       orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
       skip,
       take: limit,

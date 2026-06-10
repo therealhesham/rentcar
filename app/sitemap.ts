@@ -16,7 +16,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let planEntries: MetadataRoute.Sitemap = [];
   try {
     const plans = await prisma.subscriptionPlan.findMany({
-      where: { isActive: true },
+      where: { isActive: true, carModel: { id: { gt: 0 } } },
       select: { slug: true, updatedAt: true },
       orderBy: { sortOrder: "asc" },
     });

@@ -10,6 +10,7 @@ export default async function AdminSubscriptionPlansPage() {
 
   const [plans, models] = await Promise.all([
     prisma.subscriptionPlan.findMany({
+      where: { carModel: { id: { gt: 0 } } },
       orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
       include: {
         carModel: { include: { brand: true } },
