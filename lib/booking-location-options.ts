@@ -6,6 +6,8 @@ export type BookingBranchOption = {
   name: string;
   /** من لوحة الإدارة؛ null = بدون تقييد بمواعيد */
   openingHours: BranchOpeningHoursSchedule | null;
+  lat?: number | null;
+  lng?: number | null;
 };
 
 /** مدينة نشطة مع فروعها المعروضة في البحث. */

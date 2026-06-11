@@ -75,11 +75,16 @@ export async function getActiveBookingCitiesWithBranches(): Promise<
           name: c.name,
           centerLat: center?.lat ?? null,
           centerLng: center?.lng ?? null,
-          branches: c.branches.map((b) => ({
-            slug: b.slug,
-            name: b.name,
-            openingHours: parseBranchOpeningHoursJson(b.openingHoursJson),
-          })),
+          branches: c.branches.map((b) => {
+            const loc = parseLatLngFromMapUrl(b.mapUrl);
+            return {
+              slug: b.slug,
+              name: b.name,
+              openingHours: parseBranchOpeningHoursJson(b.openingHoursJson),
+              lat: loc?.lat ?? null,
+              lng: loc?.lng ?? null,
+            };
+          }),
         };
       });
   } catch {

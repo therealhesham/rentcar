@@ -101,6 +101,8 @@ model Branch {
   address   String?  @db.VarChar(255)
   phone     String?  @db.VarChar(32)
   mapUrl    String?  @db.Text
+  latitude  Float?
+  longitude Float?
   image     String?  @db.Text
   alt       String?  @db.Text
   sortOrder Int      @default(0)

@@ -55,6 +55,7 @@ import { sumCheckoutOneTimeFees } from "@/lib/checkout-one-time-fees";
 import type { FleetCheckoutEditPrefill } from "@/lib/fleet-checkout-edit-prefill";
 import { DdMmYyDateWithPicker } from "@/components/ui/DdMmYyDateWithPicker";
 import { formatYmdAsDdMmYy, parseDdMmYyToYmd } from "@/lib/booking-search-shared";
+import { getDistanceKM } from "@/lib/geo-distance";
 
 const GOLD = "#dbb878";
 const GOLD_DARK = "#c9a356";
@@ -290,16 +291,13 @@ export function FleetCheckoutClient({
     const pickupLabel =
       mode === "delivery"
         ? (() => {
-            const parts: string[] = [];
             if (deliveryAddressMerged.length > 0) {
-              parts.push(deliveryAddressMerged);
+              return `توصيل — ${deliveryAddressMerged}`;
             }
             if (coordsOk) {
-              parts.push(
-                `${(deliveryLat as number).toFixed(4)}, ${(deliveryLng as number).toFixed(4)}`,
-              );
+              return "توصيل (تم التحديد على الخريطة)";
             }
-            return parts.length > 0 ? `توصيل — ${parts.join(" · ")}` : "توصيل";
+            return "توصيل";
           })()
         : pickupBranch
           ? (branchBySlug[pickupBranch] ?? pickupBranch)
@@ -417,6 +415,25 @@ export function FleetCheckoutClient({
     const b = cityArName(trip.returnCitySlug, bookingCities);
     return `رسوم شحن بين المدن (${a} → ${b})`;
   }, [interCityShippingFeeSar, trip.pickupCitySlug, trip.returnCitySlug, bookingCities]);
+
+  const deliveryDistanceKm = useMemo(() => {
+    if (
+      trip.mode !== "delivery" ||
+      trip.deliveryLat == null ||
+      trip.deliveryLng == null ||
+      !trip.pickupBranchSlugForHours
+    ) {
+      return null;
+    }
+    const branch = bookingCities
+      .flatMap((c) => c.branches)
+      .find((b) => b.slug === trip.pickupBranchSlugForHours);
+
+    if (branch && branch.lat != null && branch.lng != null) {
+      return getDistanceKM(branch.lat, branch.lng, trip.deliveryLat, trip.deliveryLng);
+    }
+    return null;
+  }, [trip, bookingCities]);
 
   const checkoutFeesSumExclTax = useMemo(
     () => sumCheckoutOneTimeFees(checkoutOneTimeFees),
@@ -1494,7 +1511,14 @@ export function FleetCheckoutClient({
                       <div className="relative mb-4">
                         <div className="absolute -start-[23px] top-1 size-2.5 rounded-full border-2 border-[#dbb878] bg-white ring-4 ring-white" />
                         <p className="text-[11px] font-bold uppercase text-[#aaa08e]">الاستلام</p>
-                        <p className="font-extrabold text-[#003749]">{trip.pickupLabel}</p>
+                        <p className="font-extrabold text-[#003749]">
+                          {trip.pickupLabel}
+                          {deliveryDistanceKm !== null && (
+                            <span className="block mt-0.5 text-[11px] font-bold text-[#c9a356]">
+                              يبعد عن الفرع: {deliveryDistanceKm.toFixed(1)} كم
+                            </span>
+                          )}
+                        </p>
                         <p className="text-[12px] font-semibold text-[#8a7752]" dir="ltr">
                           {pu.date} {pu.time ? `• ${pu.time}` : ""}
                         </p>
@@ -1524,13 +1548,25 @@ export function FleetCheckoutClient({
                       </div>
                       
                       {selectedRows.length > 0 && (
-                        <div className="flex justify-between text-[13px]">
-                          <span className="font-semibold text-[#6b5a3b]">
-                            الإضافات ({rentalDurationLabel})
-                          </span>
-                          <span className="font-bold text-[#003749] tabular-nums" dir="ltr">
-                            {formatSarAmount(totals.addonsExclTax)} <SarCurrencyGlyph />
-                          </span>
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-[13px]">
+                            <span className="font-semibold text-[#6b5a3b]">
+                              الإضافات ({rentalDurationLabel})
+                            </span>
+                            <span className="font-bold text-[#003749] tabular-nums" dir="ltr">
+                              {formatSarAmount(totals.addonsExclTax)} <SarCurrencyGlyph />
+                            </span>
+                          </div>
+                          <ul className="space-y-1.5 rounded-lg bg-[#fdfbf6] px-3 py-2 text-[12px] text-[#6b5a3b]">
+                            {selectedRows.map((a) => (
+                              <li key={a.id} className="flex justify-between gap-3">
+                                <span>• {a.titleAr}</span>
+                                <span className="tabular-nums font-semibold text-[#003749]" dir="ltr">
+                                  {formatSarAmount(a.pricePerDay * trip.days)} <SarCurrencyGlyph />
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
                         </div>
                       )}
 

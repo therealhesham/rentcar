@@ -32,15 +32,13 @@ function formatDaysUnitAr(days: number): string {
 }
 
 function formatHoursUnitAr(hours: number): string {
-  const h = Math.round(hours * 10) / 10;
-  const whole = Math.round(h);
-  const use = Math.abs(h - whole) < 0.05 ? whole : h;
-  if (use === 1) return "ساعة واحدة";
-  if (use === 2) return "ساعتين";
-  if (use >= 3 && use <= 10) {
-    return Number.isInteger(use) ? `${use} ساعات` : `${use} ساعات`;
+  const h = Math.ceil(hours);
+  if (h === 1) return "ساعة واحدة";
+  if (h === 2) return "ساعتين";
+  if (h >= 3 && h <= 10) {
+    return `${h} ساعات`;
   }
-  return Number.isInteger(use) ? `${use} ساعة` : `${use} ساعة`;
+  return `${h} ساعة`;
 }
 
 /** ساعات التسليم بعد موعد الإرجاع المتوقّع (نفس منطق غرامة التأخير). */
@@ -53,7 +51,7 @@ export function computeDailyBookingExtraHours(
   const diffMs = dropoff.getTime() - scheduled.getTime();
   if (diffMs <= EXACT_TIME_TOLERANCE_MS) return 0;
   if (diffMs < 0) return 0;
-  return diffMs / 3_600_000;
+  return Math.ceil(diffMs / 3_600_000);
 }
 
 export function computeDailyBookingDurationParts(

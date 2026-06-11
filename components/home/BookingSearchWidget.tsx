@@ -404,10 +404,9 @@ export function BookingSearchWidget({
   }, [mode, returnCity, defaultCitySlug]);
 
   const branchSelectRequired = dateCities.some((c) => c.branches.length > 0);
-  const pickupBranchEffective =
-    mode === "pickup" ? pickupBranch || defaultPickupBranchSlug : "";
+  const pickupBranchEffective = pickupBranch || defaultPickupBranchSlug;
   const returnBranchEffective =
-    mode === "pickup" && !returnLocationDifferent
+    !returnLocationDifferent
       ? pickupBranchEffective
       : returnBranch || defaultReturnBranchSlug;
 
@@ -703,19 +702,13 @@ export function BookingSearchWidget({
     }
 
     if (branchSelectRequired) {
-      if (mode === "pickup" && !pickupBranchEffective) {
-        setError("اختر فرع الاستلام.");
+      if (!pickupBranchEffective) {
+        setError(mode === "delivery" ? "اختر فرع التوصيل." : "اختر فرع الاستلام.");
         return;
       }
-      if (mode === "delivery" || returnLocationDifferent) {
-        if (!returnBranchEffective) {
-          setError(
-            mode === "delivery"
-              ? "اختر فرع التسليم (إرجاع المركبة)."
-              : "اختر فرع الإرجاع.",
-          );
-          return;
-        }
+      if (returnLocationDifferent && !returnBranchEffective) {
+        setError("اختر فرع الإرجاع.");
+        return;
       }
     }
 
@@ -756,7 +749,7 @@ export function BookingSearchWidget({
     params.set("rental", rental);
     params.set("mode", mode);
     params.set("days", String(days));
-    if (mode === "pickup" && pickupBranchEffective) {
+    if (pickupBranchEffective) {
       params.set("pickupBranch", pickupBranchEffective);
     }
     if (returnBranchEffective) {
@@ -1442,66 +1435,66 @@ export function BookingSearchWidget({
 
               {/* ── 1. موقع الاستلام ── */}
               <div className="relative flex-1 min-w-0">
-                {mode === "pickup" ? (
-                  <>
-                    <button
-                      ref={pickupLocRef}
-                      type="button"
-                      aria-expanded={pickupLocOpen}
-                      aria-haspopup="dialog"
-                      onClick={() => { setPickupLocOpen((v) => !v); setReturnLocOpen(false); closeSchedulePopovers(); }}
-                      className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-right rounded-xl sm:rounded-none sm:border-0 sm:border-l sm:border-[#ebe4d3] focus:outline-none"
-                    >
-                      <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
-                        <MapPin className="size-3 text-[#dbb878]" aria-hidden />
-                        موقع الاستلام
-                      </span>
-                      <span className="truncate text-[13px] font-bold text-[#0f1923]">
-                        {branchLabel(pickupBranchEffective) || <span className="font-medium text-[#aaa08e]">{dateCities.length === 0 ? "لا توجد فروع" : "اختر الفرع"}</span>}
-                      </span>
-                      <ChevronDown className={`absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${pickupLocOpen ? "rotate-180" : ""}`} aria-hidden />
-                    </button>
-                    <LocationPickerPopover
-                      isOpen={pickupLocOpen}
-                      onClose={() => setPickupLocOpen(false)}
-                      dateCities={dateCities}
-                      selectedBranchSlug={pickupBranch}
-                      defaultBranchSlug={defaultPickupBranchSlug}
-                      onBranchSelect={(branch, city) => {
-                        handlePickupCityChange(city);
-                        handlePickupBranchChange(branch);
-                      }}
-                      anchorRef={pickupLocRef}
-                      label="موقع الاستلام"
-                    />
-                  </>
-                ) : (
-                  /* delivery mode – map trigger */
+                <button
+                  ref={pickupLocRef}
+                  type="button"
+                  aria-expanded={pickupLocOpen}
+                  aria-haspopup="dialog"
+                  onClick={() => { setPickupLocOpen((v) => !v); setReturnLocOpen(false); closeSchedulePopovers(); }}
+                  className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-right rounded-xl sm:rounded-none sm:border-0 sm:border-l sm:border-[#ebe4d3] focus:outline-none"
+                >
+                  <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
+                    <MapPin className="size-3 text-[#dbb878]" aria-hidden />
+                    {mode === "pickup" ? "موقع الاستلام" : "الفرع"}
+                  </span>
+                  <span className="truncate text-[13px] font-bold text-[#0f1923]">
+                    {branchLabel(pickupBranchEffective) || <span className="font-medium text-[#aaa08e]">{dateCities.length === 0 ? "لا توجد فروع" : "اختر الفرع"}</span>}
+                  </span>
+                  <ChevronDown className={`absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${pickupLocOpen ? "rotate-180" : ""}`} aria-hidden />
+                </button>
+                <LocationPickerPopover
+                  isOpen={pickupLocOpen}
+                  onClose={() => setPickupLocOpen(false)}
+                  dateCities={dateCities}
+                  selectedBranchSlug={pickupBranch}
+                  defaultBranchSlug={defaultPickupBranchSlug}
+                  onBranchSelect={(branch, city) => {
+                    handlePickupCityChange(city);
+                    handlePickupBranchChange(branch);
+                  }}
+                  anchorRef={pickupLocRef}
+                  label={mode === "pickup" ? "موقع الاستلام" : "الفرع"}
+                />
+              </div>
+
+              {/* ── 1.5. موقع التوصيل (delivery mode only) ── */}
+              {mode === "delivery" && (
+                <div className="relative flex-1 min-w-0">
                   <button
                     type="button"
                     onClick={() => setMapOpen(true)}
-                    className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-right rounded-xl sm:rounded-none sm:border-0 sm:border-l sm:border-[#ebe4d3] focus:outline-none"
+                    className="field-trigger relative flex h-full w-full flex-col justify-center gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 text-right rounded-xl sm:rounded-none sm:border-0 sm:border-l sm:border-[#ebe4d3] focus:outline-none overflow-hidden"
                   >
-                    <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
-                      <MapPin className="size-3 text-[#dbb878]" aria-hidden />
-                      {deliveryLocationLabel}
+                    <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
+                      <MapPin className="size-3 shrink-0 text-[#dbb878]" aria-hidden />
+                      <span className="truncate">{deliveryLocationLabel}</span>
                     </span>
                     {deliveryLat != null && deliveryLng != null ? (
-                      <span className="flex items-center gap-2 text-[13px] font-bold text-[#0f3d47]">
-                        <span className="flex size-4 items-center justify-center rounded-full bg-emerald-100">
-                          <span className="size-1.5 rounded-full bg-emerald-500" />
+                      <span className="flex w-full items-center gap-2 text-[13px] font-bold text-[#0f3d47]">
+                        <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-emerald-100">
+                          <span className="size-1.5 shrink-0 rounded-full bg-emerald-500" />
                         </span>
-                        تم تحديد الموقع
+                        <span className="truncate">تم التحديد</span>
                       </span>
                     ) : (
-                      <span className="text-[13px] font-medium text-[#aaa08e]">تحديد على الخريطة</span>
+                      <span className="truncate w-full text-[13px] font-medium text-[#aaa08e]">تحديد خريطة</span>
                     )}
                   </button>
-                )}
-              </div>
+                </div>
+              )}
 
               {/* ── 2. موقع الإرجاع (delivery mode only / or return-diff) ── */}
-              {(mode === "delivery" || returnLocationDifferent) && (
+              {returnLocationDifferent && (
                 <div className="relative flex-1 min-w-0">
                   <button
                     ref={returnLocRef}
@@ -1535,10 +1528,10 @@ export function BookingSearchWidget({
                 </div>
               )}
 
-              {/* pickup mode: show "return different" toggle inside the bar */}
-              {mode === "pickup" && !returnLocationDifferent && (
+              {/* show "return different" toggle inside the bar */}
+              {!returnLocationDifferent && (
                 <div className="flex w-full items-center rounded-2xl border border-[#efe7d6] bg-white px-3 py-1.5 shadow-[0_1px_2px_rgba(0,55,73,0.04),0_6px_16px_-10px_rgba(0,55,73,0.14)] sm:w-auto sm:rounded-none sm:border-0 sm:border-l sm:border-[#ebe4d3] sm:bg-transparent sm:py-0 sm:shadow-none">
-                  <label className="flex cursor-pointer items-center gap-2 py-2 text-[11px] font-semibold text-[#6b5a3b]">
+                  <label className="flex cursor-pointer items-center gap-2 py-2 text-[11px] font-semibold text-[#6b5a3b] whitespace-nowrap">
                     <input
                       type="checkbox"
                       checked={returnLocationDifferent}
