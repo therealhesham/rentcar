@@ -67,6 +67,15 @@ export function AccountLoginClient({ returnTo = "/account" }: Props) {
     return () => window.clearTimeout(id);
   }, [otpCooldownSec]);
 
+  useEffect(() => {
+    if (otpStep !== "code") return;
+    const code = otp.replace(/\s+/g, "").trim();
+    if (code.length === BOOKING_OTP_LENGTH && !otpVerifyBusy) {
+      void doVerifyOtp(code);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [otp]);
+
   function validateIdentifierForSend(): string | null {
     const raw = identifier.trim();
     if (otpChannel === "EMAIL") {
@@ -132,10 +141,9 @@ export function AccountLoginClient({ returnTo = "/account" }: Props) {
     }
   }
 
-  async function handleVerifyOtp(e: React.FormEvent) {
-    e.preventDefault();
+  async function doVerifyOtp(code: string) {
+    if (otpVerifyBusy) return;
     setOtpError(null);
-    const code = otp.replace(/\s+/g, "").trim();
     if (!BOOKING_OTP_REGEX.test(code)) {
       setOtpError(`أدخل الرمز المكوّن من ${bookingOtpLengthLabelAr()}.`);
       return;
@@ -164,6 +172,12 @@ export function AccountLoginClient({ returnTo = "/account" }: Props) {
     } finally {
       setOtpVerifyBusy(false);
     }
+  }
+
+  function handleVerifyOtp(e: React.FormEvent) {
+    e.preventDefault();
+    const code = otp.replace(/\s+/g, "").trim();
+    void doVerifyOtp(code);
   }
 
   async function handleResendOtp() {

@@ -435,6 +435,15 @@ export function FleetCheckoutClient({
     return null;
   }, [trip, bookingCities]);
 
+  const deliveryFeeSar = useMemo(() => {
+    if (deliveryDistanceKm == null) return 0;
+    const branch = bookingCities
+      .flatMap((c) => c.branches)
+      .find((b) => b.slug === trip.pickupBranchSlugForHours);
+    if (!branch || !branch.deliveryFeePerKmSar) return 0;
+    return Math.round(deliveryDistanceKm * branch.deliveryFeePerKmSar);
+  }, [deliveryDistanceKm, trip.pickupBranchSlugForHours, bookingCities]);
+
   const checkoutFeesSumExclTax = useMemo(
     () => sumCheckoutOneTimeFees(checkoutOneTimeFees),
     [checkoutOneTimeFees],
@@ -480,7 +489,7 @@ export function FleetCheckoutClient({
     selectedRows.map((a) => ({ pricePerDay: a.pricePerDay })),
     {
       oneTimeFeesExclTax:
-        interCityShippingFeeSar + checkoutFeesSumExclTax + delayPenaltyExclTax,
+        interCityShippingFeeSar + deliveryFeeSar + checkoutFeesSumExclTax + delayPenaltyExclTax,
     },
   );
 
@@ -1577,6 +1586,17 @@ export function FleetCheckoutClient({
                           </span>
                           <span className="shrink-0 font-bold text-[#003749] tabular-nums" dir="ltr">
                             {formatSarAmount(interCityShippingFeeSar)} <SarCurrencyGlyph />
+                          </span>
+                        </div>
+                      ) : null}
+
+                      {deliveryFeeSar > 0 && deliveryDistanceKm != null ? (
+                        <div className="flex justify-between text-[13px]">
+                          <span className="font-semibold text-[#6b5a3b]">
+                            رسوم التوصيل ({deliveryDistanceKm.toFixed(1)} كم)
+                          </span>
+                          <span className="font-bold text-[#003749] tabular-nums" dir="ltr">
+                            {formatSarAmount(deliveryFeeSar)} <SarCurrencyGlyph />
                           </span>
                         </div>
                       ) : null}

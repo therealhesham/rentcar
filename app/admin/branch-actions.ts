@@ -124,6 +124,9 @@ export async function createBranch(
   const lngRaw = formData.get("longitude");
   const latitude = latRaw ? Number(latRaw) : null;
   const longitude = lngRaw ? Number(lngRaw) : null;
+  
+  const deliveryFeeRaw = formData.get("deliveryFeePerKmSar");
+  const deliveryFeePerKmSar = deliveryFeeRaw ? Number(deliveryFeeRaw) : 0;
 
   if (!name) {
     return { ok: false, error: "أدخل اسم الفرع." };
@@ -174,6 +177,7 @@ export async function createBranch(
         mapUrl,
         latitude,
         longitude,
+        deliveryFeePerKmSar,
         alt,
         image,
         sortOrder: Math.round(sortOrder),
@@ -229,6 +233,9 @@ export async function updateBranch(
   const latitude = latRaw ? Number(latRaw) : null;
   const longitude = lngRaw ? Number(lngRaw) : null;
 
+  const deliveryFeeRaw = formData.get("deliveryFeePerKmSar");
+  const deliveryFeePerKmSar = deliveryFeeRaw ? Number(deliveryFeeRaw) : 0;
+
   if (!name) {
     return { ok: false, error: "أدخل اسم الفرع." };
   }
@@ -279,6 +286,7 @@ export async function updateBranch(
         mapUrl,
         latitude,
         longitude,
+        deliveryFeePerKmSar,
         alt,
         image,
         sortOrder: Math.round(sortOrder),

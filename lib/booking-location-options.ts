@@ -8,6 +8,7 @@ export type BookingBranchOption = {
   openingHours: BranchOpeningHoursSchedule | null;
   lat?: number | null;
   lng?: number | null;
+  deliveryFeePerKmSar?: number;
 };
 
 /** مدينة نشطة مع فروعها المعروضة في البحث. */

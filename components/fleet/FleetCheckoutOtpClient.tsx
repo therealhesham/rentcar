@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { SiteFooter } from "@/components/home/SiteFooter";
 import { SiteNav } from "@/components/shared/SiteNav";
 import { OtpPinInput } from "@/components/ui/OtpPinInput";
-import { BOOKING_OTP_REGEX, bookingOtpLengthLabelAr } from "@/lib/booking-otp-constants";
+import { BOOKING_OTP_LENGTH, BOOKING_OTP_REGEX, bookingOtpLengthLabelAr } from "@/lib/booking-otp-constants";
 import type { BookingOtpChannel } from "@/lib/site-settings";
 import {
   isBranchOutsideHoursBookingError,
@@ -43,6 +43,14 @@ export function FleetCheckoutOtpClient() {
     const id = window.setTimeout(() => setOtpCooldownSec((s) => Math.max(0, s - 1)), 1000);
     return () => window.clearTimeout(id);
   }, [otpCooldownSec]);
+
+  useEffect(() => {
+    const code = otp.replace(/\s+/g, "").trim();
+    if (code.length === BOOKING_OTP_LENGTH && !pending) {
+      void doConfirm(code);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [otp]);
 
   useEffect(() => {
     if (!token || !/^[a-f0-9]{64}$/i.test(token)) {
@@ -127,10 +135,9 @@ export function FleetCheckoutOtpClient() {
     }
   }
 
-  async function handleConfirm(e: React.FormEvent) {
-    e.preventDefault();
+  async function doConfirm(code: string) {
+    if (pending) return;
     setError(null);
-    const code = otp.replace(/\s+/g, "").trim();
     if (!BOOKING_OTP_REGEX.test(code)) {
       setError(`أدخل رمز التحقق المكوّن من ${bookingOtpLengthLabelAr()}.`);
       return;
@@ -163,6 +170,12 @@ export function FleetCheckoutOtpClient() {
     } finally {
       setPending(false);
     }
+  }
+
+  function handleConfirm(e: React.FormEvent) {
+    e.preventDefault();
+    const code = otp.replace(/\s+/g, "").trim();
+    void doConfirm(code);
   }
 
   const backHref = modelId ? `/fleet/checkout?modelId=${encodeURIComponent(modelId)}` : "/fleet";

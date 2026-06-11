@@ -61,6 +61,7 @@ export async function getActiveBookingCitiesWithBranches(): Promise<
             mapUrl: true,
             latitude: true,
             longitude: true,
+            deliveryFeePerKmSar: true,
           },
         },
       },
@@ -96,6 +97,7 @@ export async function getActiveBookingCitiesWithBranches(): Promise<
               openingHours: parseBranchOpeningHoursJson(b.openingHoursJson),
               lat,
               lng,
+              deliveryFeePerKmSar: b.deliveryFeePerKmSar,
             };
           }),
         };

@@ -103,6 +103,7 @@ model Branch {
   mapUrl    String?  @db.Text
   latitude  Float?
   longitude Float?
+  deliveryFeePerKmSar Float @default(0)
   image     String?  @db.Text
   alt       String?  @db.Text
   sortOrder Int      @default(0)
