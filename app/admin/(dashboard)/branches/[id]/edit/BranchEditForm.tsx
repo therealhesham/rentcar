@@ -1,10 +1,12 @@
 "use client";
 
-import { useActionState } from "react";
+import { useState, useActionState } from "react";
 import Link from "next/link";
 import { updateBranch } from "@/app/admin/branch-actions";
 import { BranchOpeningHoursFields } from "@/components/admin/BranchOpeningHoursFields";
 import { AdminImageField } from "@/components/admin/AdminImageField";
+import { DeliveryMapDialog } from "@/components/home/DeliveryMapDialog";
+import { MapPin } from "lucide-react";
 
 type Branch = {
   id: number;
@@ -16,6 +18,8 @@ type Branch = {
   phone: string | null;
   mapUrl: string | null;
   image: string | null;
+  latitude: number | null;
+  longitude: number | null;
   alt: string | null;
   sortOrder: number;
   isActive: boolean;
@@ -32,6 +36,9 @@ type Props = {
 
 export function BranchEditForm({ branch, cities }: Props) {
   const [state, formAction, pending] = useActionState(updateBranch, null);
+  const [lat, setLat] = useState<number | "">(branch.latitude ?? "");
+  const [lng, setLng] = useState<number | "">(branch.longitude ?? "");
+  const [mapOpen, setMapOpen] = useState(false);
 
   return (
     <form
@@ -117,6 +124,53 @@ export function BranchEditForm({ branch, cities }: Props) {
           className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
         />
       </label>
+
+      <label className="text-sm font-medium md:col-span-1">
+        خط العرض (Latitude)
+        <input
+          name="latitude"
+          type="number"
+          step="any"
+          value={lat}
+          onChange={(e) => setLat(e.target.value === "" ? "" : Number(e.target.value))}
+          dir="ltr"
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+        />
+      </label>
+
+      <label className="text-sm font-medium md:col-span-1 relative">
+        خط الطول (Longitude)
+        <div className="flex gap-2 mt-2">
+          <input
+            name="longitude"
+            type="number"
+            step="any"
+            value={lng}
+            onChange={(e) => setLng(e.target.value === "" ? "" : Number(e.target.value))}
+            dir="ltr"
+            className="w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+          />
+          <button
+            type="button"
+            onClick={() => setMapOpen(true)}
+            className="flex shrink-0 items-center gap-2 rounded-xl border border-outline-variant bg-surface-container-low px-3 py-2.5 text-sm font-bold text-on-surface-variant hover:bg-surface-container transition"
+            title="تحديد من الخريطة"
+          >
+            <MapPin className="size-4" />
+          </button>
+        </div>
+      </label>
+
+      <DeliveryMapDialog
+        open={mapOpen}
+        onClose={() => setMapOpen(false)}
+        initial={typeof lat === "number" && typeof lng === "number" ? { lat, lng } : null}
+        onConfirm={(newLat, newLng) => {
+          setLat(newLat);
+          setLng(newLng);
+          setMapOpen(false);
+        }}
+      />
       <label className="text-sm font-medium md:col-span-1">
         ترتيب العرض
         <input

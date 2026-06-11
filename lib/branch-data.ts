@@ -59,6 +59,8 @@ export async function getActiveBookingCitiesWithBranches(): Promise<
             name: true,
             openingHoursJson: true,
             mapUrl: true,
+            latitude: true,
+            longitude: true,
           },
         },
       },
@@ -67,7 +69,12 @@ export async function getActiveBookingCitiesWithBranches(): Promise<
       .filter((c) => c.branches.length > 0)
       .map((c) => {
         const branchCoords = c.branches
-          .map((b) => parseLatLngFromMapUrl(b.mapUrl))
+          .map((b) => {
+            if (b.latitude != null && b.longitude != null) {
+              return { lat: b.latitude, lng: b.longitude };
+            }
+            return parseLatLngFromMapUrl(b.mapUrl);
+          })
           .filter((p): p is NonNullable<typeof p> => p != null);
         const center = computeCityCenterFromBranchCoords(c.slug, branchCoords);
         return {
@@ -76,13 +83,19 @@ export async function getActiveBookingCitiesWithBranches(): Promise<
           centerLat: center?.lat ?? null,
           centerLng: center?.lng ?? null,
           branches: c.branches.map((b) => {
-            const loc = parseLatLngFromMapUrl(b.mapUrl);
+            let lat = b.latitude;
+            let lng = b.longitude;
+            if (lat == null || lng == null) {
+              const loc = parseLatLngFromMapUrl(b.mapUrl);
+              lat = loc?.lat ?? null;
+              lng = loc?.lng ?? null;
+            }
             return {
               slug: b.slug,
               name: b.name,
               openingHours: parseBranchOpeningHoursJson(b.openingHoursJson),
-              lat: loc?.lat ?? null,
-              lng: loc?.lng ?? null,
+              lat,
+              lng,
             };
           }),
         };

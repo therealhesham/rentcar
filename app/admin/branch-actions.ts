@@ -120,6 +120,11 @@ export async function createBranch(
   const isNew = String(formData.get("isNew") ?? "false") === "true";
   const cityId = Number(formData.get("cityId"));
 
+  const latRaw = formData.get("latitude");
+  const lngRaw = formData.get("longitude");
+  const latitude = latRaw ? Number(latRaw) : null;
+  const longitude = lngRaw ? Number(lngRaw) : null;
+
   if (!name) {
     return { ok: false, error: "أدخل اسم الفرع." };
   }
@@ -167,6 +172,8 @@ export async function createBranch(
         address,
         phone,
         mapUrl,
+        latitude,
+        longitude,
         alt,
         image,
         sortOrder: Math.round(sortOrder),
@@ -217,6 +224,11 @@ export async function updateBranch(
   const currentImage = String(formData.get("currentImage") ?? "").trim() || null;
   const cityId = Number(formData.get("cityId"));
 
+  const latRaw = formData.get("latitude");
+  const lngRaw = formData.get("longitude");
+  const latitude = latRaw ? Number(latRaw) : null;
+  const longitude = lngRaw ? Number(lngRaw) : null;
+
   if (!name) {
     return { ok: false, error: "أدخل اسم الفرع." };
   }
@@ -265,6 +277,8 @@ export async function updateBranch(
         address,
         phone,
         mapUrl,
+        latitude,
+        longitude,
         alt,
         image,
         sortOrder: Math.round(sortOrder),
