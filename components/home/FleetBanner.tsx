@@ -1,11 +1,13 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 const IMG = "/ourfleet.jpg";
 
 export function FleetBanner() {
+  const t = useTranslations("FleetShowcase");
   return (
     <section
-      aria-label="تصفح أسطولنا"
+      aria-label={t("browseOurFleet")}
       className="relative isolate overflow-hidden"
       style={{ height: "clamp(180px, 28vw, 320px)" }}
     >
@@ -46,13 +48,13 @@ export function FleetBanner() {
       {/* content */}
       <div className="relative z-10 flex h-full flex-col items-center justify-center gap-4 px-4 text-center">
         <h2 className="rounded-lg px-6 py-3 text-3xl font-black tracking-wide text-white drop-shadow-lg sm:text-4xl lg:text-5xl">
-          تصفح اسطولنا
+          {t("browseOurFleet")}
         </h2>
         <Link
           href="/fleet"
           className="rounded-full border-2 border-white/30 bg-white/10 px-8 py-3 text-sm font-extrabold text-white backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:border-white hover:bg-white hover:text-[#003749]"
         >
-          انتقل إلى أسطولنا
+          {t("goToOurFleet")}
         </Link>
       </div>
     </section>

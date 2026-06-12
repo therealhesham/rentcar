@@ -9,9 +9,10 @@ import {
 } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 
+import { useTranslations, useLocale } from "next-intl";
+
 type ServiceItem = {
-  title: string;
-  description: string;
+  id: string;
   icon: React.ComponentType<{ className?: string }>;
 };
 
@@ -35,43 +36,37 @@ const gridStagger = {
 
 const services: ServiceItem[] = [
   {
-    title: "التأجير اليومي",
-    description:
-      "خيارات مرنة لتأجير السيارات اليومية تلبي احتياجاتك السريعة في التنقل، مع باقة واسعة من السيارات العصرية لتجربة قيادة استثنائية وأسعار تنافسية تلائم ميزانيتك.",
+    id: "dailyRental",
     icon: CalendarDays,
   },
   {
-    title: "التأجير الأسبوعي",
-    description:
-      "تمتع براحة البال والقيادة لفترات أطول مع خيارات التأجير الأسبوعي، سواء لرحلات العمل أو العطلات العائلية، نوفر لك مركبات جاهزة ومجهزة بالكامل.",
+    id: "weeklyRental",
     icon: CalendarRange,
   },
   {
-    title: "التأجير طويل الأجل",
-    description:
-      "برامج مصممة خصيصاً للشركات والأفراد، توفر مرونة عالية واعتمادية طوال العام بأسعار حصرية وخيارات صيانة دورية متكاملة لراحة تدوم.",
+    id: "longTermRental",
     icon: CarFront,
   },
   {
-    title: "التوصيل والاستلام",
-    description:
-      "نوفر وقتك الثمين من خلال خدمة توصيل واستلام المركبة من وإلى وجهتك المحددة، سواء في المطار أو الفندق أو مقر إقامتك بكل احترافية.",
+    id: "deliveryAndCollection",
     icon: Handshake,
   },
   {
-    title: "الدعم والمساعدة",
-    description:
-      "فريقنا التقني جاهز على مدار الساعة لتقديم الدعم الفني والمساعدة على الطريق في الحالات الطارئة، لضمان استمرار رحلتك بأمان وطمأنينة.",
+    id: "supportAndAssistance",
     icon: Truck,
   },
 ];
 
 export function ServicesSection() {
   const reduced = useReducedMotion();
+  const t = useTranslations("Services");
+  const locale = useLocale();
 
   const articles = services.map((service, index) => {
     const colSpanClass = index < 3 ? "xl:col-span-2" : "xl:col-span-3";
     const Icon = service.icon;
+    const title = t(`items.${service.id}.title`);
+    const description = t(`items.${service.id}.description`);
 
     const card = (
       <>
@@ -89,10 +84,10 @@ export function ServicesSection() {
 
         <div className="flex-1">
           <h3 className="mb-3 text-lg font-extrabold text-[#003749] transition-colors duration-300 group-hover:text-[#6b5a3b] sm:mb-4 sm:text-xl">
-            {service.title}
+            {title}
           </h3>
           <p className="text-[14.5px] font-medium leading-[1.8] text-[#8a7752]">
-            {service.description}
+            {description}
           </p>
         </div>
       </>
@@ -102,7 +97,7 @@ export function ServicesSection() {
 
     if (reduced) {
       return (
-        <article key={service.title} className={baseClass}>
+        <article key={service.id} className={baseClass}>
           {card}
         </article>
       );
@@ -110,7 +105,7 @@ export function ServicesSection() {
 
     return (
       <motion.article
-        key={service.title}
+        key={service.id}
         className={baseClass}
         variants={fadeUp}
       >
@@ -124,15 +119,15 @@ export function ServicesSection() {
       <div className="mb-4 flex items-center justify-center gap-3">
         <span className="h-[1.5px] w-12 rounded-full bg-gradient-to-l from-[#dbb878] to-transparent" />
         <span className="text-[12px] font-bold uppercase tracking-[0.2em] text-[#dbb878]">
-          قيمة مضافة
+          {t("addedValue")}
         </span>
         <span className="h-[1.5px] w-12 rounded-full bg-gradient-to-r from-[#dbb878] to-transparent" />
       </div>
       <h2 className="text-2xl font-extrabold tracking-tight text-[#003749] sm:text-4xl lg:text-5xl">
-        خدمات تصنع الفارق
+        {t("title")}
       </h2>
       <p className="mt-5 max-w-2xl text-pretty text-base font-medium leading-relaxed text-[#003749]/70 sm:text-lg">
-        نلتزم بتقديم باقة متكاملة من الخدمات المصممة بعناية فائقة لتتجاوز توقعاتك وتضمن لك تجربة تأجير سلسة، مريحة، وآمنة.
+        {t("description")}
       </p>
     </div>
   );
@@ -169,7 +164,7 @@ export function ServicesSection() {
   );
 
   return (
-    <section className="relative overflow-hidden bg-[#fdfbf6] px-4 py-12 sm:px-8 sm:py-28" dir="rtl">
+    <section className="relative overflow-hidden bg-[#fdfbf6] px-4 py-12 sm:px-8 sm:py-28" dir={locale === 'ar' ? 'rtl' : 'ltr'}>
       <div
         className="absolute inset-0 opacity-[0.02]"
         style={{

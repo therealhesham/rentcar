@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MapPin, Building2, X, ChevronLeft } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { BookingCityBranchesOption } from "@/lib/booking-location-options";
 import { useAnchoredPopoverPosition } from "@/lib/use-anchored-popover-position";
 
@@ -28,6 +29,7 @@ export function LocationPickerPopover({
   label,
 }: Props) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const t = useTranslations("Common");
   const [activeCitySlug, setActiveCitySlug] = useState(
     () => dateCities[0]?.slug ?? ""
   );
@@ -87,7 +89,7 @@ export function LocationPickerPopover({
     <div
       ref={panelRef}
       role="dialog"
-      aria-label={`اختر ${label}`}
+      aria-label={`${t("select")} ${label}`}
       style={panelStyle}
       className="location-popover overflow-hidden rounded-2xl border border-[#ebe4d3] bg-white shadow-[0_20px_60px_-10px_rgba(0,55,73,0.22),0_4px_16px_-4px_rgba(0,55,73,0.12)]"
       dir="rtl"
@@ -98,7 +100,7 @@ export function LocationPickerPopover({
           <span className="flex size-7 items-center justify-center rounded-full bg-[#dbb878]/15">
             <MapPin className="size-3.5 text-[#dbb878]" />
           </span>
-          <span className="text-[13px] font-bold text-[#003749]">اختر {label}</span>
+          <span className="text-[13px] font-bold text-[#003749]">{t("select")} {label}</span>
         </div>
         <button
           type="button"

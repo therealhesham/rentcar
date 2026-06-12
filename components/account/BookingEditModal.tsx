@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, X } from "lucide-react";
-import { updateCustomerBookingDates } from "@/app/account/actions";
+import { updateCustomerBookingDates } from "@/app/[locale]/account/actions";
 import { SarCurrencyGlyph } from "@/components/ui/SarCurrencyGlyph";
 import {
   type BookingDaysPriceInput,

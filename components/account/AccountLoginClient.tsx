@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
-import { loginCustomer, type AuthFormState } from "@/app/account/actions";
+import { loginCustomer, type AuthFormState } from "@/app/[locale]/account/actions";
 import { SiteFooter } from "@/components/home/SiteFooter";
 import { SiteNav } from "@/components/shared/SiteNav";
 import { OtpPinInput } from "@/components/ui/OtpPinInput";

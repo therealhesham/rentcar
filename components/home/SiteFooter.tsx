@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 function InstagramIcon({ className }: { className?: string }) {
   return (
@@ -30,13 +31,15 @@ function TikTokIcon({ className }: { className?: string }) {
   );
 }
 
-const siteLinks = [
-  { href: "/", label: "الرئيسية" },
-  { href: "/fleet", label: "الاسطول" },
-  { href: "/about", label: "نبذة عنا" },
-  { href: "#", label: "السياسة والخصوصية" },
-  { href: "#", label: "الشروط والأحكام" },
-];
+function getSiteLinks(t: any) {
+  return [
+    { href: "/", label: t("home") },
+    { href: "/fleet", label: t("fleet") },
+    { href: "/about", label: t("about") },
+    { href: "#", label: t("privacyPolicy") },
+    { href: "#", label: t("termsAndConditions") },
+  ];
+}
 
 const socialLinks = [
   {
@@ -64,6 +67,9 @@ function isLinkActive(pathname: string, href: string) {
 
 export function SiteFooter() {
   const pathname = usePathname();
+  const t = useTranslations("Footer");
+  const navT = useTranslations("Navigation.siteNav");
+  const siteLinks = getSiteLinks(navT);
 
   return (
     <footer className="w-full text-white" style={{ backgroundColor: FOOTER_BG }}>
@@ -87,7 +93,7 @@ export function SiteFooter() {
         </div>
 
         <div>
-          <h4 className="mb-4 text-sm font-bold text-white">خريطة الموقع</h4>
+          <h4 className="mb-4 text-sm font-bold text-white">{t("usefulLinks")}</h4>
           <ul className="flex flex-wrap justify-center gap-x-5 gap-y-2 md:block md:space-y-2">
             {siteLinks.map((link) => {
               const active = isLinkActive(pathname, link.href);
@@ -116,7 +122,7 @@ export function SiteFooter() {
 
         <div>
           <h4 className="mb-4 text-sm font-bold text-white">
-            وسائل التواصل الاجتماعي
+            {t("followUs")}
           </h4>
           <div className="mb-6 inline-flex items-center justify-center gap-5 rounded-full bg-white px-5 py-2.5 shadow-sm">
             {socialLinks.map((s) => (
@@ -142,7 +148,7 @@ export function SiteFooter() {
         className="w-full px-4 py-4 text-center text-xs font-medium leading-relaxed text-white"
         style={{ backgroundColor: FOOTER_ACCENT }}
       >
-        جميع الحقوق محفوظة لدى روائس لتأجير السيارات
+        {t("allRightsReserved")} - Rawaes
       </div>
     </footer>
   );

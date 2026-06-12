@@ -7,7 +7,7 @@ import {
   rootLayoutMetadata,
   webSiteJsonLd,
 } from "@/lib/seo";
-import "./globals.css";
+import "../globals.css";
 
 const cairo = Cairo({
   subsets: ["arabic", "latin"],

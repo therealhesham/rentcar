@@ -13,16 +13,21 @@ import {
 import { getActiveBookingCitiesWithBranches } from "@/lib/branch-data";
 import { buildPageMetadata } from "@/lib/seo";
 import { getBookingWidgetTabFlags, getHomeHeroSettings } from "@/lib/site-settings";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = buildPageMetadata({
-  title: "تأجير سيارات فاخرة في السعودية",
-  description:
-    "احجز سيارتك أونلاين مع روائس — أسطول فاخر، فروع متعددة، تأجير يومي وأسبوعي وباقات اشتراك شهرية.",
-  path: "/",
-  ogImage: "/ourfleet.jpg",
-});
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> | { locale: string } }) {
+  const resolvedParams = await params;
+  const t = await getTranslations({ locale: resolvedParams.locale, namespace: "HomePage" });
+
+  return buildPageMetadata({
+    title: t("title"),
+    description: t("description"),
+    path: "/",
+    ogImage: "/ourfleet.jpg",
+  });
+}
 
 export default async function Home() {
   const [hero, cities, tabFlags] = await Promise.all([

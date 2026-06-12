@@ -19,7 +19,7 @@ import {
   confirmMockPayment,
   resendBookingInvoice,
   type ConfirmPaymentResult,
-} from "@/app/fleet/payment/payment-actions";
+} from "@/app/[locale]/fleet/payment/payment-actions";
 import type { ResendBookingInvoiceResult } from "@/lib/booking-invoice-email";
 import { SarCurrencyGlyph } from "@/components/ui/SarCurrencyGlyph";
 import { formatSarAmount } from "@/lib/booking-checkout-pricing";

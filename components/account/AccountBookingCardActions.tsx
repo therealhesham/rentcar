@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
-import { cancelCustomerBooking } from "@/app/account/actions";
+import { cancelCustomerBooking } from "@/app/[locale]/account/actions";
 import { SarCurrencyGlyph } from "@/components/ui/SarCurrencyGlyph";
 import { formatSarAmount } from "@/lib/booking-checkout-pricing";
 import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";

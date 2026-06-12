@@ -1,18 +1,15 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
+import { Link } from "@/i18n/routing";
 import { useCallback, useEffect, useState } from "react";
 import { CustomerNavSlot } from "@/components/account/CustomerNavSlot";
+import { LanguageSwitcher } from "./LanguageSwitcher";
+import { useTranslations } from "next-intl";
 
 type NavKey = "home" | "fleet" | "subscriptions" | "about" | "contact";
 
-const links: { href: string; key: NavKey; label: string }[] = [
-  { href: "/", key: "home", label: "الرئيسية" },
-  { href: "/fleet", key: "fleet", label: "الاسطول" },
-  { href: "/about", key: "about", label: "نبذة عنا" },
-  { href: "#contact", key: "contact", label: "تواصل معنا" },
-];
+// links are now defined inside the component to use translations
 
 type SiteNavProps = {
   active?: NavKey;
@@ -20,6 +17,14 @@ type SiteNavProps = {
 
 export function SiteNav({ active = "home" }: SiteNavProps) {
   const [open, setOpen] = useState(false);
+  const t = useTranslations("SiteNav");
+
+  const links: { href: string; key: NavKey; label: string }[] = [
+    { href: "/", key: "home", label: t("home") },
+    { href: "/fleet", key: "fleet", label: t("fleet") },
+    { href: "/about", key: "about", label: t("about") },
+    { href: "#contact", key: "contact", label: t("contact") },
+  ];
 
   const closeMenu = useCallback(() => setOpen(false), []);
 
@@ -72,6 +77,7 @@ export function SiteNav({ active = "home" }: SiteNavProps) {
           </div>
 
           <div className="relative z-10 flex shrink-0 items-center gap-2">
+            <LanguageSwitcher />
             <CustomerNavSlot />
             <button
               type="button"

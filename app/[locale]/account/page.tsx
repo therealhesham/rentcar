@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { logoutCustomer } from "@/app/account/actions";
+import { logoutCustomer } from "@/app/[locale]/account/actions";
 import { SiteFooter } from "@/components/home/SiteFooter";
 import { SiteNav } from "@/components/shared/SiteNav";
 import { AccountBookingCardActions } from "@/components/account/AccountBookingCardActions";

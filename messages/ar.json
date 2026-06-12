@@ -1,0 +1,262 @@
+{
+  "HomePage": {
+    "title": "تأجير سيارات فاخرة في السعودية",
+    "description": "احجز سيارتك أونلاين مع روائس — أسطول فاخر، فروع متعددة، تأجير يومي وأسبوعي وباقات اشتراك شهرية."
+  },
+  "SiteNav": {
+    "home": "الرئيسية",
+    "fleet": "الاسطول",
+    "about": "نبذة عنا",
+    "contact": "تواصل معنا",
+    "login": "تسجيل الدخول"
+  },
+  "BrandHeader": {
+    "tagline": "تأجير سيارات فاخرة في السعودية"
+  },
+  "Hero": {
+    "title": "احجز رحلتك",
+    "description": "فخامة وأناقة في كل كيلومتر",
+    "subtitle": "استأجر سيارة من روائس واستمتع برحلة مريحة وآمنة",
+    "pickUp": "استلام",
+    "delivery": "توصيل",
+    "pickUpTime": "وقت الاستلام",
+    "deliveryTime": "وقت التوصيل",
+    "carType": "نوع السيارة",
+    "pickupLocation": "موقع الاستلام",
+    "deliveryLocation": "موقع التوصيل"
+  },
+  "FeaturedCars": {
+    "title": "سيارات مميزة",
+    "carTypes": {
+      "all": "جميع السيارات",
+      "sedan": "سيدان",
+      "SUV": "عائلية",
+      "luxury": "فاخرة",
+      "sports": "رياضية"
+    }
+  },
+  "InfoSection": {
+    "chooseCar": "اختر سيارتك",
+    "elegant": "أناقة وراحة",
+    "new": "جديدة وآمنة",
+    "chooseYourCar": "اختر السيارة التي تناسب احتياجاتك، سواء للسفر أو للاستخدام اليومي",
+    "luxuryAndElegance": "فخامة وأناقة",
+    "newAndSafe": "جديدة وآمنة",
+    "exploreOurFleet": "تصفح أسطولنا",
+    "readyToBook": "مستعد للحجز؟",
+    "bookYourCarNow": "احجز سيارتك الآن بكل سهولة"
+  },
+  "Testimonials": {
+    "title": "آراء عملائنا",
+    "customerFeedback": "تقييمات العملاء",
+    "rating": "التقييم",
+    "readMore": "قراءة المزيد",
+    "readLess": "عرض أقل",
+    "viewMoreTestimonials": "عرض المزيد من الآراء",
+    "viewAllTestimonials": "عرض جميع الآراء",
+    "noTestimonialsYet": "لا توجد تقييمات حتى الآن"
+  },
+  "WhyChooseUs": {
+    "title": "لماذا تختارنا",
+    "feature1": {
+      "title": "تشكيلة واسعة من السيارات",
+      "description": "أسطول متنوع من أفضل السيارات الجديدة لجميع الاحتياجات"
+    },
+    "feature2": {
+      "title": "أسعار تنافسية",
+      "description": "أسعار تنافسية مع خيارات دفع مرنة"
+    },
+    "feature3": {
+      "title": "خدمة عملاء على مدار الساعة",
+      "description": "خدمة على مدار الساعة لتلبية احتياجاتك"
+    },
+    "feature4": {
+      "title": "تغطية واسعة",
+      "description": "فروع متعددة في أهم مدن المملكة العربية السعودية"
+    }
+  },
+  "Footer": {
+    "aboutUs": "نبذة عنا",
+    "ourServices": "خدماتنا",
+    "usefulLinks": "روابط هامة",
+    "contactInfo": "معلومات التواصل",
+    "aboutDescription": "روائس لتأجير السيارات هي شركة سعودية رائدة متخصصة في تقديم خدمات تأجير السيارات عالية الجودة مع أسطول متنوع من أفضل السيارات الجديدة.",
+    "dailyWeeklyMonthly": "خدمات تأجير سيارات يومية - أسبوعية - شهرية",
+    "luxuryAndComfort": "فخامة وراحة بأفضل الأسعار",
+    "dailyRental": "تأجير يومي",
+    "weeklyRental": "تأجير أسبوعي",
+    "monthlySubscription": "اشتراك شهري",
+    "carTypes": "أنواع السيارات",
+    "contactUs": "تواصل معنا",
+    "termsAndConditions": "الشروط والأحكام",
+    "privacyPolicy": "سياسة الخصوصية",
+    "ourBranches": "فروعنا",
+    "callUs": "اتصل بنا",
+    "emailUs": "راسلنا",
+    "workingHours": "ساعات العمل",
+    "followUs": "تابعنا",
+    "allRightsReserved": "جميع الحقوق محفوظة",
+    "madeWith": "صُنع بـ",
+    "by": "بواسطة"
+  },
+  "ReservationForm": {
+    "rentalCar": "سيارة إيجار",
+    "subtitle": "استأجر سيارة من روائس واستمتع برحلة مريحة وآمنة",
+    "pickUp": "استلام",
+    "delivery": "توصيل",
+    "carType": "نوع السيارة",
+    "carSegment": "فئة السيارة",
+    "passengers": "الركاب",
+    "airConditioned": "مكيفة",
+    "bags": "حقائب",
+    "yes": "نعم",
+    "no": "لا",
+    "pickUpTime": "وقت الاستلام",
+    "deliveryTime": "وقت التوصيل",
+    "continue": "متابعة",
+    "searchCars": "البحث عن سيارات",
+    "daily": "يومي",
+    "weekly": "أسبوعي",
+    "monthly": "شهري",
+    "monthlyPackages": "الباقات الشهرية",
+    "corporate": "حجز الشركات",
+    "pickupDate": "تاريخ الاستلام",
+    "returnDate": "تاريخ التسليم",
+    "selectDate": "اختر التاريخ",
+    "returnLocation": "موقع الإرجاع",
+    "branch": "الفرع",
+    "deliveryAndReturnLocation": "التوصيل وموقع الإرجاع",
+    "deliveryLocation": "موقع التوصيل",
+    "selectOnMap": "تحديد على الخريطة",
+    "locationSelected": "تم التحديد",
+    "returnDifferent": "إرجاع مختلف",
+    "selectBranch": "اختر الفرع",
+    "noBranches": "لا توجد فروع",
+    "returnBranch": "فرع إرجاع المركبة",
+    "pickupLocation": "موقع الاستلام"
+  },
+  "FormStep": {
+    "step1": "الخطوة ١",
+    "step2": "الخطوة ٢",
+    "step3": "الخطوة ٣",
+    "step4": "الخطوة ٤"
+  },
+  "BookingSummary": {
+    "bookingSummary": "ملخص الحجز",
+    "yourRentalDetails": "تفاصيل حجزك",
+    "rentalPeriod": "مدة الإيجار",
+    "carDetails": "تفاصيل السيارة",
+    "priceDetails": "تفاصيل السعر",
+    "duration": "المدة",
+    "days": "أيام",
+    "totalRentalPrice": "إجمالي سعر الإيجار",
+    "total": "الإجمالي",
+    "carModel": "موديل السيارة"
+  },
+  "Booking": {
+    "pageTitle": "الحجز",
+    "yourRentalDetails": "تفاصيل حجزك",
+    "carDetails": "تفاصيل السيارة",
+    "priceDetails": "تفاصيل السعر",
+    "confirmBooking": "تأكيد الحجز",
+    "contactInformation": "معلومات التواصل",
+    "personalInformation": "المعلومات الشخصية",
+    "idDocument": "وثيقة الهوية",
+    "licenseType": "نوع الرخصة",
+    "licenseNumber": "رقم الرخصة",
+    "licenseExpiryDate": "تاريخ انتهاء الرخصة (سنة-شهر-يوم)",
+    "driverLicenseFront": "الرخصة من الأمام",
+    "driverLicenseBack": "الرخصة من الخلف",
+    "idFront": "الهوية من الأمام",
+    "idBack": "الهوية من الخلف",
+    "additionalNotes": "ملاحظات إضافية",
+    "notes": "الملاحظات",
+    "noAdditionalNotes": "لا توجد ملاحظات إضافية",
+    "pickUpAndDelivery": "الاستلام والتوصيل",
+    "pickupDate": "تاريخ الاستلام",
+    "deliveryDate": "تاريخ التوصيل",
+    "pickupTime": "وقت الاستلام",
+    "deliveryTime": "وقت التوصيل",
+    "pickupLocation": "موقع الاستلام",
+    "deliveryLocation": "موقع التوصيل",
+    "rentalPeriod": "مدة الإيجار",
+    "carDetailsSection": "تفاصيل السيارة",
+    "totalRentalPrice": "إجمالي سعر الإيجار",
+    "payment": "الدفع",
+    "total": "الإجمالي",
+    "paymentMethod": "طريقة الدفع",
+    "cash": "نقداً",
+    "tapToPay": "الدفع بالبطاقة",
+    "bookingCompleted": "تم تأكيد الحجز بنجاح!",
+    "checkYourEmail": "تحقق من بريدك الإلكتروني للحصول على تأكيد الحجز."
+  },
+  "Car": {
+    "category": "الفئة",
+    "model": "الموديل",
+    "passengers": "الركاب",
+    "airConditioned": "مكيفة",
+    "luggage": "حقائب",
+    "transmission": "ناقل الحركة",
+    "fuel": "الوقود",
+    "type": "النوع",
+    "bags": "حقائب",
+    "price": "السعر"
+  },
+  "Navigation": {
+    "brand": {
+      "tagline": "تأجير سيارات فاخرة في السعودية"
+    },
+    "siteNav": {
+      "home": "الرئيسية",
+      "fleet": "الاسطول",
+      "about": "نبذة عنا",
+      "contact": "تواصل معنا",
+      "login": "تسجيل الدخول",
+      "privacyPolicy": "سياسة الخصوصية",
+      "termsAndConditions": "الشروط والأحكام"
+    },
+    "homeButton": {
+      "label": "الرئيسية"
+    }
+  },
+  "FleetShowcase": {
+    "ourFleet": "أسطولنا",
+    "browseOurFleet": "تصفح أسطولنا",
+    "goToOurFleet": "انتقل إلى أسطولنا",
+    "theRightVehicle": "المركبة المناسبة",
+    "atTheRightTime": "في الوقت المناسب",
+    "description": "من المشاوير السريعة إلى العطلات الطويلة — اكتشف فئات أسطولنا المصممة لتناسب كل رحلة، مع أسعار واضحة وتجربة حجز سلسة.",
+    "noCarsAdded": "لا توجد مركبات مضافة لهذه الفئة بعد.",
+    "viewFullFleet": "عرض كامل الأسطول"
+  },
+  "Common": {
+    "select": "اختر"
+  },
+  "Services": {
+    "addedValue": "قيمة مضافة",
+    "title": "خدمات تصنع الفارق",
+    "description": "نلتزم بتقديم باقة متكاملة من الخدمات المصممة بعناية فائقة لتتجاوز توقعاتك وتضمن لك تجربة تأجير سلسة، مريحة، وآمنة.",
+    "items": {
+      "dailyRental": {
+        "title": "التأجير اليومي",
+        "description": "خيارات مرنة لتأجير السيارات اليومية تلبي احتياجاتك السريعة في التنقل، مع باقة واسعة من السيارات العصرية لتجربة قيادة استثنائية وأسعار تنافسية تلائم ميزانيتك."
+      },
+      "weeklyRental": {
+        "title": "التأجير الأسبوعي",
+        "description": "تمتع براحة البال والقيادة لفترات أطول مع خيارات التأجير الأسبوعي، سواء لرحلات العمل أو العطلات العائلية، نوفر لك مركبات جاهزة ومجهزة بالكامل."
+      },
+      "longTermRental": {
+        "title": "التأجير طويل الأجل",
+        "description": "برامج مصممة خصيصاً للشركات والأفراد، توفر مرونة عالية واعتمادية طوال العام بأسعار حصرية وخيارات صيانة دورية متكاملة لراحة تدوم."
+      },
+      "deliveryAndCollection": {
+        "title": "التوصيل والاستلام",
+        "description": "نوفر وقتك الثمين من خلال خدمة توصيل واستلام المركبة من وإلى وجهتك المحددة، سواء في المطار أو الفندق أو مقر إقامتك بكل احترافية."
+      },
+      "supportAndAssistance": {
+        "title": "الدعم والمساعدة",
+        "description": "فريقنا التقني جاهز على مدار الساعة لتقديم الدعم الفني والمساعدة على الطريق في الحالات الطارئة، لضمان استمرار رحلتك بأمان وطمأنينة."
+      }
+    }
+  }
+}

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useTranslations } from "next-intl";
 import { Calendar, X, ChevronRight, ChevronLeft } from "lucide-react";
 import { useAnchoredPopoverPosition } from "@/lib/use-anchored-popover-position";
 import { formatYmdAsDdMmYy, parseDdMmYyToYmd } from "@/lib/booking-search-shared";
@@ -43,6 +44,7 @@ export function DatePickerPopover({
   onConfirm,
   anchorRef,
 }: Props) {
+  const t = useTranslations("Common");
   const panelRef = useRef<HTMLDivElement>(null);
   const initialYmd = (dateDdMmYy ? parseDdMmYyToYmd(dateDdMmYy) : null) || minDateYmd || todayYmd();
   const initialDate = ymdToDate(initialYmd) || new Date();
@@ -153,7 +155,7 @@ export function DatePickerPopover({
     <div
       ref={panelRef}
       role="dialog"
-      aria-label={`اختر ${label}`}
+      aria-label={`${t("select")} ${label}`}
       style={panelStyle}
       className="datetime-popover flex flex-col overflow-hidden rounded-2xl border border-[#ebe4d3] bg-white shadow-[0_20px_60px_-10px_rgba(0,55,73,0.22),0_4px_16px_-4px_rgba(0,55,73,0.12)]"
       dir="rtl"
@@ -163,7 +165,7 @@ export function DatePickerPopover({
           <span className="flex size-7 items-center justify-center rounded-full bg-[#dbb878]/15">
             <Calendar className="size-3.5 text-[#dbb878]" />
           </span>
-          <span className="text-[13px] font-bold text-[#003749]">اختر {label}</span>
+          <span className="text-[13px] font-bold text-[#003749]">{t("select")} {label}</span>
         </div>
         <button
           type="button"

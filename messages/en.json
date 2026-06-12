@@ -1,0 +1,262 @@
+{
+  "HomePage": {
+    "title": "Luxury Car Rental in Saudi Arabia",
+    "description": "Book your car online with Rawaes — Luxury fleet, multiple branches, daily & weekly rentals, and monthly subscription packages."
+  },
+  "SiteNav": {
+    "home": "Home",
+    "fleet": "Fleet",
+    "about": "About Us",
+    "contact": "Contact Us",
+    "login": "Login"
+  },
+  "BrandHeader": {
+    "tagline": "Luxury Car Rental in Saudi Arabia"
+  },
+  "Hero": {
+    "title": "Reserve your trip",
+    "description": "Luxury and elegance in every kilometer",
+    "subtitle": "Rent a car from Rawaes and enjoy a comfortable and safe journey",
+    "pickUp": "Pick up",
+    "delivery": "Delivery",
+    "pickUpTime": "Pick up Time",
+    "deliveryTime": "Delivery Time",
+    "carType": "Car Type",
+    "pickupLocation": "Pickup Location",
+    "deliveryLocation": "Delivery Location"
+  },
+  "FeaturedCars": {
+    "title": "Featured Cars",
+    "carTypes": {
+      "all": "All Car Types",
+      "sedan": "Sedan",
+      "SUV": "SUV",
+      "luxury": "Luxury",
+      "sports": "Sports"
+    }
+  },
+  "InfoSection": {
+    "chooseCar": "Choose your car",
+    "elegant": "Elegant and comfortable",
+    "new": "New and safe",
+    "chooseYourCar": "Choose the car that suits your needs, whether it is for travel or daily use",
+    "luxuryAndElegance": "Luxury and elegance",
+    "newAndSafe": "New and safe",
+    "exploreOurFleet": "Explore our fleet",
+    "readyToBook": "Ready to book?",
+    "bookYourCarNow": "Book your car now with ease"
+  },
+  "Testimonials": {
+    "title": "Client Testimonials",
+    "customerFeedback": "Customer feedback",
+    "rating": "Rating",
+    "readMore": "Read More",
+    "readLess": "Read Less",
+    "viewMoreTestimonials": "View More Testimonials",
+    "viewAllTestimonials": "View All Testimonials",
+    "noTestimonialsYet": "No testimonials yet"
+  },
+  "WhyChooseUs": {
+    "title": "Why choose us",
+    "feature1": {
+      "title": "Wide selection of cars",
+      "description": "A diverse fleet of the best new cars for all needs"
+    },
+    "feature2": {
+      "title": "Competitive prices",
+      "description": "Competitive prices with flexible payment options"
+    },
+    "feature3": {
+      "title": "24/7 customer service",
+      "description": "Round-the-clock service to meet your needs"
+    },
+    "feature4": {
+      "title": "Wide range of locations",
+      "description": "Multiple branches in the most important cities in Saudi Arabia"
+    }
+  },
+  "Footer": {
+    "aboutUs": "About Us",
+    "ourServices": "Our Services",
+    "usefulLinks": "Useful Links",
+    "contactInfo": "Contact Info",
+    "aboutDescription": "Rawaes for car rental is a leading Saudi company specializing in providing high-quality car rental services with a diverse fleet of the best new cars for all needs.",
+    "dailyWeeklyMonthly": "Daily - Weekly - Monthly car rental services",
+    "luxuryAndComfort": "Luxury and comfort at the best prices",
+    "dailyRental": "Daily Rental",
+    "weeklyRental": "Weekly Rental",
+    "monthlySubscription": "Monthly Subscription",
+    "carTypes": "Car Types",
+    "contactUs": "Contact Us",
+    "termsAndConditions": "Terms & Conditions",
+    "privacyPolicy": "Privacy Policy",
+    "ourBranches": "Our Branches",
+    "callUs": "Call Us",
+    "emailUs": "Email Us",
+    "workingHours": "Working Hours",
+    "followUs": "Follow Us",
+    "allRightsReserved": "All rights reserved",
+    "madeWith": "Made with",
+    "by": "by"
+  },
+  "ReservationForm": {
+    "rentalCar": "Rental Car",
+    "subtitle": "Rent a car from Rawaes and enjoy a comfortable and safe journey",
+    "pickUp": "Pick up",
+    "delivery": "Delivery",
+    "carType": "Car Type",
+    "carSegment": "Car Segment",
+    "passengers": "Passengers",
+    "airConditioned": "Air Conditioned",
+    "bags": "Bags",
+    "yes": "Yes",
+    "no": "No",
+    "pickUpTime": "Pick up Time",
+    "deliveryTime": "Delivery Time",
+    "continue": "Continue",
+    "searchCars": "Search Cars",
+    "daily": "Daily",
+    "weekly": "Weekly",
+    "monthly": "Monthly",
+    "monthlyPackages": "Monthly Packages",
+    "corporate": "Corporate",
+    "pickupDate": "Pickup Date",
+    "returnDate": "Return Date",
+    "selectDate": "Select Date",
+    "returnLocation": "Return Location",
+    "branch": "Branch",
+    "deliveryAndReturnLocation": "Delivery and Return Location",
+    "deliveryLocation": "Delivery Location",
+    "selectOnMap": "Select on Map",
+    "locationSelected": "Location Selected",
+    "returnDifferent": "Return Different",
+    "selectBranch": "Select Branch",
+    "noBranches": "No Branches",
+    "returnBranch": "Return Branch",
+    "pickupLocation": "Pickup Location"
+  },
+  "FormStep": {
+    "step1": "Step 1",
+    "step2": "Step 2",
+    "step3": "Step 3",
+    "step4": "Step 4"
+  },
+  "BookingSummary": {
+    "bookingSummary": "Booking Summary",
+    "yourRentalDetails": "Your Rental Details",
+    "rentalPeriod": "Rental Period",
+    "carDetails": "Car Details",
+    "priceDetails": "Price Details",
+    "duration": "Duration",
+    "days": "Days",
+    "totalRentalPrice": "Total Rental Price",
+    "total": "Total",
+    "carModel": "Car Model"
+  },
+  "Booking": {
+    "pageTitle": "Booking",
+    "yourRentalDetails": "Your Rental Details",
+    "carDetails": "Car Details",
+    "priceDetails": "Price Details",
+    "confirmBooking": "Confirm Booking",
+    "contactInformation": "Contact Information",
+    "personalInformation": "Personal Information",
+    "idDocument": "ID Document",
+    "licenseType": "License Type",
+    "licenseNumber": "License Number",
+    "licenseExpiryDate": "License Expiry Date (YYYY-MM-DD)",
+    "driverLicenseFront": "Driver’s License Front",
+    "driverLicenseBack": "Driver’s License Back",
+    "idFront": "ID Front",
+    "idBack": "ID Back",
+    "additionalNotes": "Additional Notes",
+    "notes": "Notes",
+    "noAdditionalNotes": "No additional notes",
+    "pickUpAndDelivery": "Pick-up & Delivery",
+    "pickupDate": "Pickup Date",
+    "deliveryDate": "Delivery Date",
+    "pickupTime": "Pickup Time",
+    "deliveryTime": "Delivery Time",
+    "pickupLocation": "Pickup Location",
+    "deliveryLocation": "Delivery Location",
+    "rentalPeriod": "Rental Period",
+    "carDetailsSection": "Car Details",
+    "totalRentalPrice": "Total Rental Price",
+    "payment": "Payment",
+    "total": "Total",
+    "paymentMethod": "Payment Method",
+    "cash": "Cash",
+    "tapToPay": "Tap to pay",
+    "bookingCompleted": "Booking completed successfully!",
+    "checkYourEmail": "Check your email for the booking confirmation."
+  },
+  "Car": {
+    "category": "Category",
+    "model": "Model",
+    "passengers": "Passengers",
+    "airConditioned": "Air Conditioned",
+    "luggage": "Luggage",
+    "transmission": "Transmission",
+    "fuel": "Fuel",
+    "type": "Type",
+    "bags": "Bags",
+    "price": "Price"
+  },
+  "Navigation": {
+    "brand": {
+      "tagline": "Luxury Car Rental in Saudi Arabia"
+    },
+    "siteNav": {
+      "home": "Home",
+      "fleet": "Fleet",
+      "about": "About Us",
+      "contact": "Contact Us",
+      "login": "Login",
+      "privacyPolicy": "Privacy Policy",
+      "termsAndConditions": "Terms and Conditions"
+    },
+    "homeButton": {
+      "label": "Home"
+    }
+  },
+  "FleetShowcase": {
+    "ourFleet": "Our Fleet",
+    "browseOurFleet": "Browse Our Fleet",
+    "goToOurFleet": "Go to Our Fleet",
+    "theRightVehicle": "The Right Vehicle",
+    "atTheRightTime": "At The Right Time",
+    "description": "From quick trips to long vacations — discover our fleet categories designed to suit every journey, with clear prices and a seamless booking experience.",
+    "noCarsAdded": "No vehicles added to this category yet.",
+    "viewFullFleet": "View Full Fleet"
+  },
+  "Common": {
+    "select": "Select"
+  },
+  "Services": {
+    "addedValue": "Added Value",
+    "title": "Services that make a difference",
+    "description": "We are committed to providing a comprehensive package of services carefully designed to exceed your expectations and ensure a smooth, comfortable, and safe rental experience.",
+    "items": {
+      "dailyRental": {
+        "title": "Daily Rental",
+        "description": "Flexible daily car rental options to meet your quick mobility needs, with a wide range of modern cars for an exceptional driving experience and competitive prices that suit your budget."
+      },
+      "weeklyRental": {
+        "title": "Weekly Rental",
+        "description": "Enjoy peace of mind and driving for longer periods with weekly rental options, whether for business trips or family vacations, we provide you with fully equipped vehicles ready to go."
+      },
+      "longTermRental": {
+        "title": "Long-term Rental",
+        "description": "Programs specially designed for companies and individuals, providing high flexibility and reliability all year round with exclusive prices and comprehensive regular maintenance options for lasting comfort."
+      },
+      "deliveryAndCollection": {
+        "title": "Delivery and Collection",
+        "description": "We save your precious time with our professional vehicle delivery and collection service from and to your specified destination, whether at the airport, hotel, or your residence."
+      },
+      "supportAndAssistance": {
+        "title": "Support and Assistance",
+        "description": "Our technical team is ready around the clock to provide technical support and roadside assistance in emergencies, ensuring your journey continues safely and peacefully."
+      }
+    }
+  }
+}

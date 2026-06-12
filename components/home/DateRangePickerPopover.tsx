@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useTranslations } from "next-intl";
 import { CalendarRange, X, ChevronRight, ChevronLeft } from "lucide-react";
 import { useAnchoredPopoverPosition } from "@/lib/use-anchored-popover-position";
 import { computeBookingDays } from "@/lib/booking-days";
@@ -59,6 +60,7 @@ export function DateRangePickerPopover({
   startLabel = "الاستلام",
   endLabel = "التسليم",
 }: Props) {
+  const t = useTranslations("Common");
   const panelRef = useRef<HTMLDivElement>(null);
   const startYmdInit = (startDateDdMmYy ? parseDdMmYyToYmd(startDateDdMmYy) : null) || "";
   const endYmdInit = (endDateDdMmYy ? parseDdMmYyToYmd(endDateDdMmYy) : null) || "";
@@ -226,7 +228,7 @@ export function DateRangePickerPopover({
     <div
       ref={panelRef}
       role="dialog"
-      aria-label="اختر تواريخ الاستلام والتسليم"
+      aria-label={t("selectDate")}
       style={panelStyle}
       className="datetime-popover flex flex-col overflow-hidden rounded-2xl border border-[#ebe4d3] bg-white shadow-[0_20px_60px_-10px_rgba(0,55,73,0.22),0_4px_16px_-4px_rgba(0,55,73,0.12)]"
       dir="rtl"
@@ -258,7 +260,7 @@ export function DateRangePickerPopover({
         <div className={`rounded-lg px-2 py-1.5 ${pickingEnd ? "bg-white/60" : rangeEnd ? "bg-white" : ""}`}>
           <span className="block font-bold text-[#8a7752]">{endLabel}</span>
           <span className="font-bold text-[#003749]">
-            {rangeEnd ? formatYmdAsDdMmYy(rangeEnd) : pickingEnd ? "اختر التاريخ" : "—"}
+            {rangeEnd ? formatYmdAsDdMmYy(rangeEnd) : pickingEnd ? t("selectDate") : "—"}
           </span>
         </div>
       </div>
@@ -331,13 +333,13 @@ export function DateRangePickerPopover({
       <div className="border-t border-[#f0ebe4] bg-[#fdfbf6] px-4 py-3">
         <p className="text-center text-[12px] font-bold text-[#003749]">
           {pickingEnd ? (
-            <span className="text-[#dbb878]">اختر تاريخ {endLabel}</span>
+            <span className="text-[#dbb878]">{t("select")} {endLabel}</span>
           ) : days != null ? (
             <span>
               مدة الحجز: <span className="tabular-nums text-[#dbb878]">{days}</span> يوم
             </span>
           ) : (
-            <span className="text-[#aaa08e]">اختر تاريخ {startLabel} ثم {endLabel}</span>
+            <span className="text-[#aaa08e]">{t("select")} {startLabel} {t("select")} {endLabel}</span>
           )}
         </p>
         {pickingEnd && days != null ? (

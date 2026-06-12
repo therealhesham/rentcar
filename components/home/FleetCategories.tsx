@@ -7,6 +7,7 @@ import {
   type FleetCategoryTab,
 } from "./FleetCategoriesShowcase";
 import { Reveal } from "./HomeMotion";
+import { getLocale } from "next-intl/server";
 
 export async function FleetCategories() {
   const categories = await getFleetCategoriesForHome().catch(() => []);
@@ -34,7 +35,7 @@ export async function FleetCategories() {
     <section
       id="fleet-categories"
       className="relative overflow-hidden bg-[#fafafa] py-12 text-on-surface sm:py-28"
-      dir="rtl"
+      dir={await getLocale() === "ar" ? "rtl" : "ltr"}
       aria-labelledby="fleet-categories-heading"
     >
       <div

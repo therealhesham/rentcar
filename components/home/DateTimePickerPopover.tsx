@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useTranslations } from "next-intl";
 import { Calendar, Clock, X, ChevronRight, ChevronLeft } from "lucide-react";
 import { useAnchoredPopoverPosition } from "@/lib/use-anchored-popover-position";
 
@@ -68,6 +69,7 @@ export function DateTimePickerPopover({
 }: Props) {
   const panelRef = useRef<HTMLDivElement>(null);
   const timeListRef = useRef<HTMLDivElement>(null);
+  const t = useTranslations("Common");
 
   // Derive initial calendar year/month from current value or today
   const initialYmd = dateDdMmYy ? ddMmYyToYmd(dateDdMmYy) : (minDateYmd || todayYmd());
@@ -192,7 +194,7 @@ export function DateTimePickerPopover({
     <div
       ref={panelRef}
       role="dialog"
-      aria-label={`اختر ${label}`}
+      aria-label={`${t("select")} ${label}`}
       style={panelStyle}
       className="datetime-popover flex flex-col overflow-hidden rounded-2xl border border-[#ebe4d3] bg-white shadow-[0_20px_60px_-10px_rgba(0,55,73,0.22),0_4px_16px_-4px_rgba(0,55,73,0.12)]"
       dir="rtl"
@@ -203,7 +205,7 @@ export function DateTimePickerPopover({
           <span className="flex size-7 items-center justify-center rounded-full bg-[#dbb878]/15">
             <Calendar className="size-3.5 text-[#dbb878]" />
           </span>
-          <span className="text-[13px] font-bold text-[#003749]">اختر {label}</span>
+          <span className="text-[13px] font-bold text-[#003749]">{t("select")} {label}</span>
         </div>
         <button
           type="button"

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Clock, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useAnchoredPopoverPosition } from "@/lib/use-anchored-popover-position";
 
 type Props = {
@@ -33,6 +34,7 @@ export function TimePickerPopover({
 }: Props) {
   const panelRef = useRef<HTMLDivElement>(null);
   const timeListRef = useRef<HTMLDivElement>(null);
+  const t = useTranslations("Common");
   const [selectedTime, setSelectedTime] = useState(time || "09:00");
 
   useEffect(() => {
@@ -89,7 +91,7 @@ export function TimePickerPopover({
     <div
       ref={panelRef}
       role="dialog"
-      aria-label={`اختر ${label}`}
+      aria-label={`${t("select")} ${label}`}
       style={panelStyle}
       className="datetime-popover flex flex-col overflow-hidden rounded-2xl border border-[#ebe4d3] bg-white shadow-[0_20px_60px_-10px_rgba(0,55,73,0.22),0_4px_16px_-4px_rgba(0,55,73,0.12)]"
       dir="rtl"
@@ -97,7 +99,7 @@ export function TimePickerPopover({
       <div className="flex items-center justify-between border-b border-[#f0ebe4] bg-gradient-to-l from-[#fdfbf6] to-[#f9f5ee] px-3 py-2.5">
         <div className="flex items-center gap-2">
           <Clock className="size-3.5 text-[#dbb878]" />
-          <span className="text-[12px] font-bold text-[#003749]">{label}</span>
+          <span className="text-[13px] font-bold text-[#003749]">{t("select")} {label}</span>
         </div>
         <button
           type="button"

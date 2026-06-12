@@ -23,6 +23,7 @@ import { DatePickerPopover } from "@/components/home/DatePickerPopover";
 import { DateRangePickerPopover } from "@/components/home/DateRangePickerPopover";
 import { TimePickerPopover } from "@/components/home/TimePickerPopover";
 import { useRouter } from "next/navigation";
+import { useTranslations, useLocale } from "next-intl";
 import { useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { submitCorporateBookingLead } from "@/app/corporate-lead-actions";
@@ -131,6 +132,9 @@ export function BookingSearchWidget({
   combinedPanel?: boolean;
 }) {
   const router = useRouter();
+  const t = useTranslations("ReservationForm");
+  const locale = useLocale();
+  const isRtl = locale === "ar";
   const urlSp = useSearchParams();
   const isCheckout = variant === "checkout";
   const prefillBookingRequestIdRaw = isCheckout
@@ -302,7 +306,7 @@ export function BookingSearchWidget({
 
   const deliveryLocationLabel = (
     <>
-      موقع التوصيل
+      {t("deliveryLocation")}
       <DeliveryOriginCityLabelSuffix
         cityName={deliveryOriginCity.cityNameAr}
         show={mode === "delivery" && deliveryOriginCity.showInLabel}
@@ -957,7 +961,7 @@ export function BookingSearchWidget({
       <form
         ref={formRef}
         onSubmit={handleSearch}
-        dir="rtl"
+        dir={isRtl ? "rtl" : "ltr"}
         className={`booking-card w-full overflow-visible ${
           /* Sticky to viewport on the home search page, EXCEPT in monthly_packages
              & corporate flows (those expand the form and need full scroll access). */
@@ -1005,7 +1009,7 @@ export function BookingSearchWidget({
                   active={rental === "daily"}
                   onClick={() => setRental("daily")}
                   icon={<Car className="size-3 shrink-0" />}
-                  label="يومي"
+                  label={t("daily")}
                 />
               ) : null}
               {tabFlagsEff.rentalWeekly ? (
@@ -1013,7 +1017,7 @@ export function BookingSearchWidget({
                   active={rental === "weekly"}
                   onClick={() => setRental("weekly")}
                   icon={<CalendarDays className="size-3 shrink-0" />}
-                  label="أسبوعي"
+                  label={t("weekly")}
                 />
               ) : null}
               {tabFlagsEff.rentalMonthly ? (
@@ -1021,7 +1025,7 @@ export function BookingSearchWidget({
                   active={rental === "monthly"}
                   onClick={() => setRental("monthly")}
                   icon={<CalendarRange className="size-3 shrink-0" />}
-                  label="شهري"
+                  label={t("monthly")}
                 />
               ) : null}
               {tabFlagsEff.rentalMonthlyPackages ? (
@@ -1029,7 +1033,7 @@ export function BookingSearchWidget({
                   active={rental === "monthly_packages"}
                   onClick={() => setRental("monthly_packages")}
                   icon={<Layers className="size-3 shrink-0" />}
-                  label="الباقات الشهرية"
+                  label={t("monthlyPackages")}
                 />
               ) : null}
               {tabFlagsEff.rentalCorporate ? (
@@ -1037,7 +1041,7 @@ export function BookingSearchWidget({
                   active={rental === "corporate"}
                   onClick={() => setRental("corporate")}
                   icon={<Building2 className="size-3 shrink-0" />}
-                  label="حجز الشركات"
+                  label={t("corporate")}
                 />
               ) : null}
             </div>
@@ -1054,7 +1058,7 @@ export function BookingSearchWidget({
                     active={mode === "pickup"}
                     onClick={() => setMode("pickup")}
                     icon={<PackageCheck className="size-3 shrink-0" />}
-                    label="استلام"
+                    label={t("pickUp")}
                   />
                 ) : null}
                 {tabFlagsEff.modeDelivery ? (
@@ -1062,7 +1066,7 @@ export function BookingSearchWidget({
                     active={mode === "delivery"}
                     onClick={() => setMode("delivery")}
                     icon={<Truck className="size-3 shrink-0" />}
-                    label="توصيل"
+                    label={t("delivery")}
                   />
                 ) : null}
               </div>
@@ -1079,7 +1083,7 @@ export function BookingSearchWidget({
               {freshRebookLocationSummaryAr ? (
                 <div className="rounded-2xl border border-[#dbb878]/30 bg-gradient-to-br from-[#fffdf9] via-white to-[#fdfbf6] px-4 py-3.5 shadow-sm ring-1 ring-[#dbb878]/10">
                   <p className="mb-1.5 text-[10px] font-black uppercase tracking-wider text-[#003749]/45">
-                    موقع الاستلام
+                    {t("pickupLocation")}
                   </p>
                   <p className="text-[13px] font-bold leading-relaxed text-[#2d4a52]">
                     {freshRebookLocationSummaryAr}
@@ -1094,19 +1098,19 @@ export function BookingSearchWidget({
                     aria-expanded={dateRangeOpen && dateRangeAnchor === "pickup"}
                     aria-haspopup="dialog"
                     onClick={() => toggleDateRange("pickup")}
-                    className={`field-trigger relative flex w-full flex-col gap-1 rounded-xl border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-right focus:outline-none ${dateRangeOpen && dateRangeAnchor === "pickup" ? "ring-2 ring-[#dbb878]/40" : ""}`}
+                    className={`field-trigger relative flex w-full flex-col gap-1 rounded-xl border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start focus:outline-none ${dateRangeOpen && dateRangeAnchor === "pickup" ? "ring-2 ring-[#dbb878]/40" : ""}`}
                   >
-                    <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
+                    <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
                       <CalendarClock className="size-3 text-[#dbb878]" aria-hidden />
-                      تاريخ الاستلام
+                      {t("pickupDate")}
                     </span>
                     {pickupDateDraft ? (
                       <span className="text-[13px] font-bold text-[#0f1923]">{pickupDateDraft}</span>
                     ) : (
-                      <span className="text-[13px] font-medium text-[#aaa08e]">اختر التاريخ</span>
+                      <span className="text-[13px] font-medium text-[#aaa08e]">{t("selectDate")}</span>
                     )}
                     <ChevronDown
-                      className={`absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${dateRangeOpen && dateRangeAnchor === "pickup" ? "rotate-180" : ""}`}
+                      className={`absolute start-3 top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${dateRangeOpen && dateRangeAnchor === "pickup" ? "rotate-180" : ""}`}
                       aria-hidden
                     />
                   </button>
@@ -1126,20 +1130,20 @@ export function BookingSearchWidget({
                   >
                     <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
                       <Clock className="size-3 text-[#dbb878]" aria-hidden />
-                      وقت الاستلام
+                      {t("pickUpTime")}
                     </span>
                     <span className="text-[13px] font-bold text-[#0f1923]" dir="ltr">
                       {pickupTimeDraft}
                     </span>
                     <ChevronDown
-                      className={`absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${pickupTimeOpen ? "rotate-180" : ""}`}
+                      className={`absolute start-3 top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${pickupTimeOpen ? "rotate-180" : ""}`}
                       aria-hidden
                     />
                   </button>
                   <TimePickerPopover
                     isOpen={pickupTimeOpen}
                     onClose={() => setPickupTimeOpen(false)}
-                    label="وقت الاستلام"
+                    label={t("pickUpTime")}
                     time={pickupTimeDraft}
                     onConfirm={applyPickupTime}
                     anchorRef={pickupTimeRef}
@@ -1152,19 +1156,19 @@ export function BookingSearchWidget({
                     aria-expanded={dateRangeOpen && dateRangeAnchor === "dropoff"}
                     aria-haspopup="dialog"
                     onClick={() => toggleDateRange("dropoff")}
-                    className={`field-trigger relative flex w-full flex-col gap-1 rounded-xl border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-right focus:outline-none ${dateRangeOpen && dateRangeAnchor === "dropoff" ? "ring-2 ring-[#dbb878]/40" : ""}`}
+                    className={`field-trigger relative flex w-full flex-col gap-1 rounded-xl border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start focus:outline-none ${dateRangeOpen && dateRangeAnchor === "dropoff" ? "ring-2 ring-[#dbb878]/40" : ""}`}
                   >
-                    <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
+                    <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
                       <CalendarRange className="size-3 text-[#dbb878]" aria-hidden />
-                      تاريخ التسليم
+                      {t("returnDate")}
                     </span>
                     {dropoffDateDraft ? (
                       <span className="text-[13px] font-bold text-[#0f1923]">{dropoffDateDraft}</span>
                     ) : (
-                      <span className="text-[13px] font-medium text-[#aaa08e]">اختر التاريخ</span>
+                      <span className="text-[13px] font-medium text-[#aaa08e]">{t("selectDate")}</span>
                     )}
                     <ChevronDown
-                      className={`absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${dateRangeOpen && dateRangeAnchor === "dropoff" ? "rotate-180" : ""}`}
+                      className={`absolute start-3 top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${dateRangeOpen && dateRangeAnchor === "dropoff" ? "rotate-180" : ""}`}
                       aria-hidden
                     />
                   </button>
@@ -1191,17 +1195,17 @@ export function BookingSearchWidget({
                       setDateRangeOpen(false);
                       setPickupTimeOpen(false);
                     }}
-                    className="field-trigger relative flex w-full flex-col gap-1 rounded-xl border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-right focus:outline-none"
+                    className="field-trigger relative flex w-full flex-col gap-1 rounded-xl border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start focus:outline-none"
                   >
-                    <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
+                    <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
                       <Clock className="size-3 text-[#dbb878]" aria-hidden />
-                      وقت التسليم
+                      {t("deliveryTime")}
                     </span>
                     <span className="text-[13px] font-bold text-[#0f1923]" dir="ltr">
                       {dropoffTimeDraft}
                     </span>
                     <ChevronDown
-                      className={`absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${dropoffTimeOpen ? "rotate-180" : ""}`}
+                      className={`absolute start-3 top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${dropoffTimeOpen ? "rotate-180" : ""}`}
                       aria-hidden
                     />
                   </button>
@@ -1379,7 +1383,7 @@ export function BookingSearchWidget({
                 aria-label="مواقع الاستلام والإرجاع"
               >
                 <p className="text-[10px] font-black uppercase tracking-wide text-[#003749]/65">
-                  {mode === "pickup" ? "موقع الاستلام" : "التوصيل وموقع الإرجاع"}
+                  {mode === "pickup" ? t("pickupLocation") : t("deliveryAndReturnLocation")}
                 </p>
                 {mode === "pickup" ? (
                   <div className="rounded-xl border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3">
@@ -1404,17 +1408,17 @@ export function BookingSearchWidget({
                             <span className="flex size-5 items-center justify-center rounded-full bg-emerald-100">
                               <span className="size-2 rounded-full bg-emerald-500" />
                             </span>
-                            تم تحديد الموقع
+                            {t("locationSelected")}
                           </span>
                         ) : (
-                          <span className="text-[#6b5a3b]">تحديد على الخريطة</span>
+                          <span className="text-[#6b5a3b]">{t("selectOnMap")}</span>
                         )}
                         <MapPin className="size-4 shrink-0 text-[#dbb878] opacity-70 transition-opacity group-hover:opacity-100" aria-hidden />
                       </button>
                     </div>
                     <div className="rounded-xl border border-[#ebe4d3]/60 bg-white/50 p-3">
                       <p className="mb-1.5 text-[10px] font-black uppercase tracking-wide text-[#003749]/55">
-                        فرع إرجاع المركبة
+                        {t("returnBranch")}
                       </p>
                       <GroupedBranchSelect
                         id={returnBranchId}
@@ -1441,16 +1445,16 @@ export function BookingSearchWidget({
                   aria-expanded={pickupLocOpen}
                   aria-haspopup="dialog"
                   onClick={() => { setPickupLocOpen((v) => !v); setReturnLocOpen(false); closeSchedulePopovers(); }}
-                  className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-right rounded-xl sm:rounded-none sm:border-0 sm:border-l sm:border-[#ebe4d3] focus:outline-none"
+                  className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl sm:rounded-none sm:border-0 sm:border-e sm:border-[#ebe4d3] focus:outline-none"
                 >
-                  <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
+                  <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
                     <MapPin className="size-3 text-[#dbb878]" aria-hidden />
-                    {mode === "pickup" ? "موقع الاستلام" : "الفرع"}
+                    {mode === "pickup" ? t("pickupLocation") : t("branch")}
                   </span>
                   <span className="truncate text-[13px] font-bold text-[#0f1923]">
-                    {branchLabel(pickupBranchEffective) || <span className="font-medium text-[#aaa08e]">{dateCities.length === 0 ? "لا توجد فروع" : "اختر الفرع"}</span>}
+                    {branchLabel(pickupBranchEffective) || <span className="font-medium text-[#aaa08e]">{dateCities.length === 0 ? t("noBranches") : t("selectBranch")}</span>}
                   </span>
-                  <ChevronDown className={`absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${pickupLocOpen ? "rotate-180" : ""}`} aria-hidden />
+                  <ChevronDown className={`absolute start-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${pickupLocOpen ? "rotate-180" : ""}`} aria-hidden />
                 </button>
                 <LocationPickerPopover
                   isOpen={pickupLocOpen}
@@ -1463,7 +1467,7 @@ export function BookingSearchWidget({
                     handlePickupBranchChange(branch);
                   }}
                   anchorRef={pickupLocRef}
-                  label={mode === "pickup" ? "موقع الاستلام" : "الفرع"}
+                  label={mode === "pickup" ? t("pickupLocation") : t("branch")}
                 />
               </div>
 
@@ -1473,9 +1477,9 @@ export function BookingSearchWidget({
                   <button
                     type="button"
                     onClick={() => setMapOpen(true)}
-                    className="field-trigger relative flex h-full w-full flex-col justify-center gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 text-right rounded-xl sm:rounded-none sm:border-0 sm:border-l sm:border-[#ebe4d3] focus:outline-none overflow-hidden"
+                    className="field-trigger relative flex h-full w-full flex-col justify-center gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 text-start rounded-xl sm:rounded-none sm:border-0 sm:border-e sm:border-[#ebe4d3] focus:outline-none overflow-hidden"
                   >
-                    <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
+                    <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
                       <MapPin className="size-3 shrink-0 text-[#dbb878]" aria-hidden />
                       <span className="truncate">{deliveryLocationLabel}</span>
                     </span>
@@ -1484,10 +1488,10 @@ export function BookingSearchWidget({
                         <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-emerald-100">
                           <span className="size-1.5 shrink-0 rounded-full bg-emerald-500" />
                         </span>
-                        <span className="truncate">تم التحديد</span>
+                        <span className="truncate">{t("locationSelected")}</span>
                       </span>
                     ) : (
-                      <span className="truncate w-full text-[13px] font-medium text-[#aaa08e]">تحديد خريطة</span>
+                      <span className="truncate w-full text-[13px] font-medium text-[#aaa08e]">{t("selectOnMap")}</span>
                     )}
                   </button>
                 </div>
@@ -1502,16 +1506,16 @@ export function BookingSearchWidget({
                     aria-expanded={returnLocOpen}
                     aria-haspopup="dialog"
                     onClick={() => { setReturnLocOpen((v) => !v); setPickupLocOpen(false); closeSchedulePopovers(); }}
-                    className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-right rounded-xl sm:rounded-none sm:border-0 sm:border-l sm:border-[#ebe4d3] focus:outline-none"
+                    className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl sm:rounded-none sm:border-0 sm:border-e sm:border-[#ebe4d3] focus:outline-none"
                   >
-                    <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
+                    <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
                       <MapPin className="size-3 text-[#dbb878]" aria-hidden />
-                      موقع الإرجاع
+                      {t("returnLocation")}
                     </span>
                     <span className="truncate text-[13px] font-bold text-[#0f1923]">
-                      {branchLabel(returnBranchEffective) || <span className="font-medium text-[#aaa08e]">اختر الفرع</span>}
+                      {branchLabel(returnBranchEffective) || <span className="font-medium text-[#aaa08e]">{t("selectBranch")}</span>}
                     </span>
-                    <ChevronDown className={`absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${returnLocOpen ? "rotate-180" : ""}`} aria-hidden />
+                    <ChevronDown className={`absolute start-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${returnLocOpen ? "rotate-180" : ""}`} aria-hidden />
                   </button>
                   <LocationPickerPopover
                     isOpen={returnLocOpen}
@@ -1523,14 +1527,14 @@ export function BookingSearchWidget({
                       handleDeliveryReturnBranch(branch, city);
                     }}
                     anchorRef={returnLocRef}
-                    label="موقع الإرجاع"
+                    label={t("returnLocation")}
                   />
                 </div>
               )}
 
               {/* show "return different" toggle inside the bar */}
               {!returnLocationDifferent && (
-                <div className="flex w-full items-center rounded-2xl border border-[#efe7d6] bg-white px-3 py-1.5 shadow-[0_1px_2px_rgba(0,55,73,0.04),0_6px_16px_-10px_rgba(0,55,73,0.14)] sm:w-auto sm:rounded-none sm:border-0 sm:border-l sm:border-[#ebe4d3] sm:bg-transparent sm:py-0 sm:shadow-none">
+                <div className="flex w-full items-center rounded-2xl border border-[#efe7d6] bg-white px-3 py-1.5 shadow-[0_1px_2px_rgba(0,55,73,0.04),0_6px_16px_-10px_rgba(0,55,73,0.14)] sm:w-auto sm:rounded-none sm:border-0 sm:border-e sm:border-[#ebe4d3] sm:bg-transparent sm:py-0 sm:shadow-none">
                   <label className="flex cursor-pointer items-center gap-2 py-2 text-[11px] font-semibold text-[#6b5a3b] whitespace-nowrap">
                     <input
                       type="checkbox"
@@ -1538,7 +1542,7 @@ export function BookingSearchWidget({
                       onChange={(ev) => handleReturnLocationDifferentChange(ev.target.checked)}
                       className="size-3.5 shrink-0 cursor-pointer rounded border-[#c9a356]/60 text-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/35"
                     />
-                    إرجاع مختلف
+                    {t("returnDifferent")}
                   </label>
                 </div>
               )}
@@ -1564,19 +1568,19 @@ export function BookingSearchWidget({
                     setDropoffTimeOpen(false);
                     setPickupDateOpen((v) => !v);
                   }}
-                  className={`field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-right rounded-xl sm:rounded-none sm:border-0 sm:border-l sm:border-[#ebe4d3] focus:outline-none ${rental === "daily" && dateRangeOpen && dateRangeAnchor === "pickup" ? "ring-2 ring-[#dbb878]/40" : ""}`}
+                  className={`field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl sm:rounded-none sm:border-0 sm:border-e sm:border-[#ebe4d3] focus:outline-none ${rental === "daily" && dateRangeOpen && dateRangeAnchor === "pickup" ? "ring-2 ring-[#dbb878]/40" : ""}`}
                 >
-                  <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
+                  <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
                     <CalendarClock className="size-3 text-[#dbb878]" aria-hidden />
-                    تاريخ الاستلام
+                    {t("pickupDate")}
                   </span>
                   {pickupDateDraft ? (
                     <span className="text-[13px] font-bold text-[#0f1923]">{pickupDateDraft}</span>
                   ) : (
-                    <span className="text-[13px] font-medium text-[#aaa08e]">اختر التاريخ</span>
+                    <span className="text-[13px] font-medium text-[#aaa08e]">{t("selectDate")}</span>
                   )}
                   <ChevronDown
-                    className={`absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${(rental === "daily" ? dateRangeOpen && dateRangeAnchor === "pickup" : pickupDateOpen) ? "rotate-180" : ""}`}
+                    className={`absolute start-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${(rental === "daily" ? dateRangeOpen && dateRangeAnchor === "pickup" : pickupDateOpen) ? "rotate-180" : ""}`}
                     aria-hidden
                   />
                 </button>
@@ -1584,7 +1588,7 @@ export function BookingSearchWidget({
                   <DatePickerPopover
                     isOpen={pickupDateOpen}
                     onClose={() => setPickupDateOpen(false)}
-                    label="تاريخ الاستلام"
+                    label={t("pickupDate")}
                     dateDdMmYy={pickupDateDraft}
                     onConfirm={applyPickupDateFromDraft}
                     anchorRef={pickupDateRef}
@@ -1607,24 +1611,24 @@ export function BookingSearchWidget({
                     setPickupLocOpen(false);
                     setReturnLocOpen(false);
                   }}
-                  className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-right rounded-xl sm:rounded-none sm:border-0 sm:border-l sm:border-[#ebe4d3] focus:outline-none"
+                  className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl sm:rounded-none sm:border-0 sm:border-e sm:border-[#ebe4d3] focus:outline-none"
                 >
-                  <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
+                  <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
                     <Clock className="size-3 text-[#dbb878]" aria-hidden />
-                    وقت الاستلام
+                    {t("pickUpTime")}
                   </span>
                   <span className="text-[13px] font-bold text-[#0f1923]" dir="ltr">
                     {pickupTimeDraft}
                   </span>
                   <ChevronDown
-                    className={`absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${pickupTimeOpen ? "rotate-180" : ""}`}
+                    className={`absolute start-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${pickupTimeOpen ? "rotate-180" : ""}`}
                     aria-hidden
                   />
                 </button>
                 <TimePickerPopover
                   isOpen={pickupTimeOpen}
                   onClose={() => setPickupTimeOpen(false)}
-                  label="وقت الاستلام"
+                  label={t("pickUpTime")}
                   time={pickupTimeDraft}
                   onConfirm={applyPickupTime}
                   anchorRef={pickupTimeRef}
@@ -1646,11 +1650,11 @@ export function BookingSearchWidget({
                     if (rental !== "daily") return;
                     toggleDateRange("dropoff");
                   }}
-                  className={`field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-right rounded-xl sm:rounded-none sm:border-0 sm:border-l sm:border-[#ebe4d3] focus:outline-none disabled:opacity-60 ${rental === "daily" && dateRangeOpen && dateRangeAnchor === "dropoff" ? "ring-2 ring-[#dbb878]/40" : ""}`}
+                  className={`field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl sm:rounded-none sm:border-0 sm:border-e sm:border-[#ebe4d3] focus:outline-none disabled:opacity-60 ${rental === "daily" && dateRangeOpen && dateRangeAnchor === "dropoff" ? "ring-2 ring-[#dbb878]/40" : ""}`}
                 >
-                  <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
+                  <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
                     <CalendarRange className="size-3 text-[#dbb878]" aria-hidden />
-                    تاريخ التسليم
+                    {t("returnDate")}
                     {rental !== "daily" ? (
                       <span className="text-[9px] font-medium text-[#8a7752]/70"></span>
                     ) : null}
@@ -1658,10 +1662,10 @@ export function BookingSearchWidget({
                   {dropoffDateDraft ? (
                     <span className="text-[13px] font-bold text-[#0f1923]">{dropoffDateDraft}</span>
                   ) : (
-                    <span className="text-[13px] font-medium text-[#aaa08e]">اختر التاريخ</span>
+                    <span className="text-[13px] font-medium text-[#aaa08e]">{t("selectDate")}</span>
                   )}
                   <ChevronDown
-                    className={`absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${dateRangeOpen && dateRangeAnchor === "dropoff" ? "rotate-180" : ""}`}
+                    className={`absolute start-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${dateRangeOpen && dateRangeAnchor === "dropoff" ? "rotate-180" : ""}`}
                     aria-hidden
                   />
                 </button>
@@ -1697,24 +1701,24 @@ export function BookingSearchWidget({
                     setPickupLocOpen(false);
                     setReturnLocOpen(false);
                   }}
-                  className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-right rounded-xl sm:rounded-none sm:border-0 sm:border-l sm:border-[#ebe4d3] focus:outline-none disabled:opacity-60"
+                  className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl sm:rounded-none sm:border-0 sm:border-e sm:border-[#ebe4d3] focus:outline-none disabled:opacity-60"
                 >
-                  <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
+                  <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
                     <Clock className="size-3 text-[#dbb878]" aria-hidden />
-                    وقت التسليم
+                    {t("deliveryTime")}
                   </span>
                   <span className="text-[13px] font-bold text-[#0f1923]" dir="ltr">
                     {dropoffTimeDraft}
                   </span>
                   <ChevronDown
-                    className={`absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${dropoffTimeOpen ? "rotate-180" : ""}`}
+                    className={`absolute start-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${dropoffTimeOpen ? "rotate-180" : ""}`}
                     aria-hidden
                   />
                 </button>
                 <TimePickerPopover
                   isOpen={dropoffTimeOpen}
                   onClose={() => setDropoffTimeOpen(false)}
-                  label="وقت التسليم"
+                  label={t("deliveryTime")}
                   time={dropoffTimeDraft}
                   readOnly={rental !== "daily"}
                   onConfirm={applyDropoffTime}
@@ -1741,7 +1745,7 @@ export function BookingSearchWidget({
                     <Search className="size-4 shrink-0" aria-hidden />
                   )}
                   <span className="text-[14px] font-extrabold tracking-wide">
-                    {isCheckout ? "بحث" : "بحث"}
+                    {isCheckout ? t("continue") : t("searchCars")}
                   </span>
                 </button>
               </div>
@@ -1794,8 +1798,7 @@ export function BookingSearchWidget({
                     />
                     <CalendarCheck2 className="size-4 shrink-0" aria-hidden />
                     <span className="text-[14px] font-extrabold tracking-wide">
-بحث
-
+                      {isCheckout ? t("continue") : t("searchCars")}
                     </span>
                   </button>
                 </div>

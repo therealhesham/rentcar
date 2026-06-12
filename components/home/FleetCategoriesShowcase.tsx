@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { FleetCarCard } from "@/components/fleet/FleetCarCard";
 import type { FleetCar } from "@/lib/fleet-types";
 import type { BookingCityBranchesOption } from "@/lib/booking-location-options";
+import { useTranslations } from "next-intl";
 
 const TEAL = "#003749";
 
@@ -22,6 +23,7 @@ export function FleetCategoriesShowcase({ tabs, cities }: Props) {
 
   const current = tabs[active] ?? tabs[0];
   const cars = useMemo(() => current?.cars ?? [], [current]);
+  const t = useTranslations("FleetShowcase");
 
   if (!current) return null;
 
@@ -33,7 +35,7 @@ export function FleetCategoriesShowcase({ tabs, cities }: Props) {
         <div className="mb-3 flex items-center gap-3">
           <span className="h-px w-10 bg-gradient-to-l from-[#dbb878] to-transparent" />
           <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#dbb878]">
-            أسطولنا
+            {t("ourFleet")}
           </span>
           <span className="h-px w-10 bg-gradient-to-r from-[#dbb878] to-transparent" />
         </div>
@@ -41,13 +43,12 @@ export function FleetCategoriesShowcase({ tabs, cities }: Props) {
           id="fleet-categories-heading"
           className="max-w-4xl text-pretty text-xl font-black leading-tight tracking-wide text-[#0f1923] sm:text-3xl md:text-4xl lg:text-[2.35rem]"
         >
-          المركبة المناسبة
+          {t("theRightVehicle")}
           <span className="mx-2 inline-block font-light text-[#003749]/35">|</span>
-          في الوقت المناسب
+          {t("atTheRightTime")}
         </h2>
         <p className="mt-4 max-w-2xl text-pretty text-[15px] font-medium leading-relaxed text-[#5c6570] sm:text-base">
-          من المشاوير السريعة إلى العطلات الطويلة — اكتشف فئات أسطولنا المصممة لتناسب كل رحلة، مع
-          أسعار واضحة وتجربة حجز سلسة.
+          {t("description")}
         </p>
       </header>
 
@@ -107,7 +108,7 @@ export function FleetCategoriesShowcase({ tabs, cities }: Props) {
           aria-labelledby={`fleet-cat-tab-${current.slug}`}
           className="sr-only"
         >
-          لا توجد مركبات مضافة لهذه الفئة بعد.
+          {t("noCarsAdded")}
         </div>
       )}
 
@@ -116,7 +117,7 @@ export function FleetCategoriesShowcase({ tabs, cities }: Props) {
           href="/fleet"
           className="inline-flex items-center gap-2 rounded-full border-2 border-[#003749]/18 bg-white px-8 py-3 text-sm font-extrabold text-[#003749] shadow-sm transition-colors hover:border-[#dbb878]/45 hover:bg-[#fdfbf6]"
         >
-          عرض كامل الأسطول
+          {t("viewFullFleet")}
           <svg viewBox="0 0 24 24" fill="none" className="size-4 rtl:rotate-180" aria-hidden>
             <path
               d="M15 18l-6-6 6-6"

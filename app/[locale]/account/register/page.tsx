@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
-import { registerCustomer, type AuthFormState } from "@/app/account/actions";
+import { registerCustomer, type AuthFormState } from "@/app/[locale]/account/actions";
 import { SiteFooter } from "@/components/home/SiteFooter";
 import { SiteNav } from "@/components/shared/SiteNav";
 
