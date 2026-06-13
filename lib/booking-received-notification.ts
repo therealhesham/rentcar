@@ -80,20 +80,8 @@ function buildReceivedPlainText(fullName: string, bookingId: number): string {
   ].join("\n");
 }
 
-function buildReceivedWhatsAppText(fullName: string, bookingId: number, carTitle: string): string {
-  return [
-    `مرحباً ${fullName.trim()}،`,
-    "",
-    "تم استلام حجزك بنجاح.",
-    "",
-    `رقم الطلب: #${bookingId}`,
-    `المركبة: ${carTitle}`,
-    "",
-    "طلبكم قيد المراجعة — سيتواصل معكم فريق روائس قريباً لتأكيد الحجز هاتفياً.",
-    "ستُرسل الفاتورة بعد التأكيد.",
-    "",
-    "شكراً لاختياركم روائس لتأجير السيارات.",
-  ].join("\n");
+function buildReceivedWhatsAppText(): string {
+  return ""; // unused, kept for compatibility if needed, but we'll use expandTemplate
 }
 
 /**
@@ -129,13 +117,15 @@ export async function sendBookingReceivedNotification(
     const number = e164ToEvolutionWhatsAppNumber(snapshot.phone);
     if (number) {
       try {
+        const { getWhatsAppTemplate, expandTemplate } = await import("@/lib/whatsapp-templates");
+        const customerTemplate = await getWhatsAppTemplate("whatsapp_template_booking_received_customer");
         await sendEvolutionWhatsAppText({
           number,
-          text: buildReceivedWhatsAppText(
-            snapshot.fullName,
-            snapshot.id,
-            snapshot.car.fullTitle,
-          ),
+          text: expandTemplate(customerTemplate, {
+            fullName: snapshot.fullName,
+            bookingId: snapshot.id,
+            carTitle: snapshot.car.fullTitle,
+          }),
         });
       } catch (e) {
         console.error("[booking-received] فشل واتساب للعميل:", e);
@@ -148,17 +138,17 @@ export async function sendBookingReceivedNotification(
     if (waSetting && waSetting.value) {
       const numbers = waSetting.value.split(",").map(n => n.trim()).filter(Boolean);
       if (numbers.length > 0) {
-        const textMaint = [
-          `🚨 *حجز أفراد جديد مسجل*`,
-          ``,
-          `*رقم الطلب:* #${snapshot.id}`,
-          `*المركبة:* ${snapshot.car.fullTitle}`,
-          `*العميل:* ${snapshot.fullName}`,
-          `*رقم الجوال:* ${snapshot.phone}`,
-          `*الفرع:* ${snapshot.branch}`,
-          `*تاريخ الاستلام:* ${snapshot.pickupDate.toLocaleString("ar-SA")}`,
-          `*المدة:* ${snapshot.numberOfDays} أيام`
-        ].join("\n");
+        const { getWhatsAppTemplate, expandTemplate } = await import("@/lib/whatsapp-templates");
+        const adminTemplate = await getWhatsAppTemplate("whatsapp_template_booking_received_admin");
+        const textMaint = expandTemplate(adminTemplate, {
+          bookingId: snapshot.id,
+          carTitle: snapshot.car.fullTitle,
+          fullName: snapshot.fullName,
+          phone: snapshot.phone,
+          branchLocation: snapshot.branch,
+          pickupDate: snapshot.pickupDate.toLocaleString("ar-SA"),
+          numberOfDays: snapshot.numberOfDays,
+        });
         
         for (const num of numbers) {
           try {

@@ -60,7 +60,7 @@ export async function sendEvolutionWhatsAppText(opts: {
   await postSendText(opts);
 }
 
-function buildBookingCompletionMessage(booking: BookingPaymentSnapshot): string {
+async function buildBookingCompletionVars(booking: BookingPaymentSnapshot): Promise<Record<string, string>> {
   const branchLabel = BRANCH_LABEL_AR[booking.branch] ?? booking.branch;
   const pickup = fmtDateTime(booking.pickupDate);
   const dropoffD = new Date(booking.pickupDate);
@@ -81,28 +81,19 @@ function buildBookingCompletionMessage(booking: BookingPaymentSnapshot): string 
     branchLocationLines.push(`موقع الفرع على الخرائط: ${booking.branchMapUrl.trim()}`);
   }
 
-  const introLine = isCashPaymentMethod(booking.paymentMethod)
-    ? booking.paymentStatus.trim().toUpperCase() === "PAID"
-      ? "تم تأكيد حجزكم. تم تسجيل استلام المبلغ نقداً."
-      : "تم تأكيد حجزكم. يُستحق المبلغ نقداً عند الاستلام أو في الفرع حسب الاتفاق."
-    : "تم تأكيد حجزكم واستلام الدفع بنجاح.";
-
-  return [
-    `مرحباً ${booking.fullName.trim()}،`,
-    "",
-    introLine,
-    "",
-    `رقم الطلب: #${booking.id}`,
-    `المركبة: ${booking.car.fullTitle}`,
-    `الاستلام: ${pickup}`,
-    `التسليم: ${dropoff}`,
-    pickupLine,
-    ...branchLocationLines,
-    `طريقة الدفع: ${bookingPaymentMethodLabelAr(booking.paymentMethod)}`,
-    `${invoiceTotalLabelAr(booking)}: ${formatSarAmount(t.totalInclTax)} ر.س (شامل الضريبة)`,
-    "",
-    "شكراً لاختياركم روائس لتأجير السيارات. نتمنى لكم رحلة آمنة.",
-  ].join("\n");
+  return {
+    fullName: booking.fullName.trim(),
+    bookingId: String(booking.id),
+    carTitle: booking.car.fullTitle,
+    pickupDate: pickup,
+    dropoffDate: dropoff,
+    pickupDetails: pickupLine,
+    branchLocation: branchLocationLines.join("\n"),
+    paymentMethod: bookingPaymentMethodLabelAr(booking.paymentMethod),
+    totalAmount: formatSarAmount(t.totalInclTax),
+    phone: booking.phone,
+    numberOfDays: String(booking.numberOfDays),
+  };
 }
 
 async function postSendText(opts: { number: string; text: string }): Promise<void> {
@@ -157,7 +148,11 @@ export async function sendBookingCompletionWhatsAppAfterPayment(bookingRequestId
     return;
   }
 
-  const text = buildBookingCompletionMessage(snapshot);
+  const vars = await buildBookingCompletionVars(snapshot);
+  const { getWhatsAppTemplate, expandTemplate } = await import("@/lib/whatsapp-templates");
+  
+  const customerTemplate = await getWhatsAppTemplate("whatsapp_template_booking_completion_customer");
+  const text = expandTemplate(customerTemplate, vars);
   await postSendText({ number, text });
 
   // Add logic to notify maintenance manager
@@ -167,17 +162,8 @@ export async function sendBookingCompletionWhatsAppAfterPayment(bookingRequestId
   if (waSetting && waSetting.value) {
     const numbers = waSetting.value.split(",").map(n => n.trim()).filter(Boolean);
     if (numbers.length > 0) {
-      const maintenanceText = [
-        `🚨 *حجز أفراد جديد مدفوع ومؤكد*`,
-        ``,
-        `*رقم الطلب:* #${snapshot.id}`,
-        `*المركبة:* ${snapshot.car.fullTitle}`,
-        `*العميل:* ${snapshot.fullName}`,
-        `*رقم الجوال:* ${snapshot.phone}`,
-        `*الفرع:* ${snapshot.branch}`,
-        `*تاريخ الاستلام:* ${snapshot.pickupDate.toLocaleString("ar-SA")}`,
-        `*المدة:* ${snapshot.numberOfDays} أيام`
-      ].join("\n");
+      const adminTemplate = await getWhatsAppTemplate("whatsapp_template_booking_completion_admin");
+      const maintenanceText = expandTemplate(adminTemplate, vars);
       
       for (const num of numbers) {
         try {

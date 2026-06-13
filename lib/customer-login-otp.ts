@@ -213,10 +213,13 @@ export async function sendCustomerLoginOtpForIdentifier(
     const otp = randomDigits(OTP_LEN);
     const codeHash = await bcrypt.hash(otp, 10);
     const expiresAt = new Date(Date.now() + OTP_TTL_MS);
-    const message =
-      channel === "WHATSAPP"
-        ? `رمز تسجيل الدخول في روائس لتأجير السيارات: ${otp}\n\nصالح لمدة 10 دقائق. .`
-        : `رمز تسجيل الدخول: ${otp}`;
+
+    let message = `رمز تسجيل الدخول: ${otp}`;
+    if (channel === "WHATSAPP") {
+      const { getWhatsAppTemplate, expandTemplate } = await import("@/lib/whatsapp-templates");
+      const template = await getWhatsAppTemplate("whatsapp_template_customer_login_otp");
+      message = expandTemplate(template, { otp });
+    }
 
     const smsUrl =
       channel === "SMS"

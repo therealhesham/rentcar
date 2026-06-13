@@ -139,10 +139,12 @@ export async function sendBookingCheckoutOtpFromPublicRequest(body: {
     const otp = randomDigits(OTP_LEN);
     const codeHash = await bcrypt.hash(otp, 10);
     const expiresAt = new Date(Date.now() + OTP_TTL_MS);
-    const message =
-      channel === "WHATSAPP"
-        ? `رمز تأكيد الحجز في روائس: ${otp}\n\nصالح لمدة 10 دقائق. إن لم تطلب هذا الرمز فتجاهل الرسالة.`
-        : `رمز تأكيد الحجز: ${otp}`;
+    let message = `رمز تأكيد الحجز: ${otp}`;
+    if (channel === "WHATSAPP") {
+      const { getWhatsAppTemplate, expandTemplate } = await import("@/lib/whatsapp-templates");
+      const template = await getWhatsAppTemplate("whatsapp_template_booking_checkout_otp");
+      message = expandTemplate(template, { otp });
+    }
 
     const smsUrl =
       channel === "SMS"
