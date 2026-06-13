@@ -104,9 +104,12 @@ export async function createBranch(
   if (!auth.ok) return { ok: false, error: auth.error };
 
   const name = String(formData.get("name") ?? "").trim();
+  const nameEn = String(formData.get("nameEn") ?? "").trim() || null;
   const slugRaw = String(formData.get("slug") ?? "").trim();
   const tagline = String(formData.get("tagline") ?? "").trim() || null;
+  const taglineEn = String(formData.get("taglineEn") ?? "").trim() || null;
   const address = String(formData.get("address") ?? "").trim() || null;
+  const addressEn = String(formData.get("addressEn") ?? "").trim() || null;
   const phone = normalizePhone(String(formData.get("phone") ?? ""));
   let mapUrl: string | null = null;
   try {
@@ -171,8 +174,11 @@ export async function createBranch(
         cityId,
         slug,
         name,
+        nameEn,
         tagline,
+        taglineEn,
         address,
+        addressEn,
         phone,
         mapUrl,
         latitude,
@@ -211,9 +217,12 @@ export async function updateBranch(
   }
 
   const name = String(formData.get("name") ?? "").trim();
+  const nameEn = String(formData.get("nameEn") ?? "").trim() || null;
   const slugRaw = String(formData.get("slug") ?? "").trim();
   const tagline = String(formData.get("tagline") ?? "").trim() || null;
+  const taglineEn = String(formData.get("taglineEn") ?? "").trim() || null;
   const address = String(formData.get("address") ?? "").trim() || null;
+  const addressEn = String(formData.get("addressEn") ?? "").trim() || null;
   const phone = normalizePhone(String(formData.get("phone") ?? ""));
   let mapUrl: string | null = null;
   try {
@@ -280,8 +289,11 @@ export async function updateBranch(
         cityId,
         slug,
         name,
+        nameEn,
         tagline,
+        taglineEn,
         address,
+        addressEn,
         phone,
         mapUrl,
         latitude,

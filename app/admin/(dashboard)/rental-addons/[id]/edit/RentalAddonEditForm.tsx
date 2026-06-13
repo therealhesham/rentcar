@@ -45,6 +45,14 @@ export function RentalAddonEditForm({ addon }: { addon: RentalAddonAdminRow }) {
         />
       </label>
       <label className="text-sm font-medium md:col-span-1">
+        العنوان (إنجليزي)
+        <input
+          name="titleEn"
+          defaultValue={addon.titleEn ?? ""}
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+        />
+      </label>
+      <label className="text-sm font-medium md:col-span-1">
         المعرّف (slug)
         <input
           name="slug"
@@ -55,7 +63,7 @@ export function RentalAddonEditForm({ addon }: { addon: RentalAddonAdminRow }) {
         />
       </label>
 
-      <label className="text-sm font-medium md:col-span-2">
+      <label className="text-sm font-medium md:col-span-1">
         الوصف (عربي، اختياري)
         <textarea
           name="descriptionAr"
@@ -64,13 +72,31 @@ export function RentalAddonEditForm({ addon }: { addon: RentalAddonAdminRow }) {
           className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
         />
       </label>
+      <label className="text-sm font-medium md:col-span-1">
+        الوصف (إنجليزي، اختياري)
+        <textarea
+          name="descriptionEn"
+          rows={3}
+          defaultValue={addon.descriptionEn ?? ""}
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+        />
+      </label>
 
-      <label className="text-sm font-medium md:col-span-2">
-        نص المعلومات (زر i) — اختياري
+      <label className="text-sm font-medium md:col-span-1">
+        نص المعلومات (عربي)
         <textarea
           name="infoAr"
           rows={4}
           defaultValue={addon.infoAr ?? ""}
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+        />
+      </label>
+      <label className="text-sm font-medium md:col-span-1">
+        نص المعلومات (إنجليزي)
+        <textarea
+          name="infoEn"
+          rows={4}
+          defaultValue={addon.infoEn ?? ""}
           className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
         />
       </label>

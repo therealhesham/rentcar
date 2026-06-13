@@ -67,12 +67,20 @@ export default async function AdminSubscriptionPlansPage() {
             </select>
           </label>
           <label className="flex flex-col gap-1">
-            عنوان تسويقي (اختياري)
+            عنوان تسويقي (عربي، اختياري)
             <input name="marketingTitleAr" className="rounded-xl border px-3 py-2" placeholder="سيارة حضرية مريحة للعائلات" />
           </label>
           <label className="flex flex-col gap-1">
-            وصف مختصر (اختياري)
+            عنوان تسويقي (إنجليزي، اختياري)
+            <input name="marketingTitleEn" className="rounded-xl border px-3 py-2" placeholder="Comfortable Urban Car for Families" />
+          </label>
+          <label className="flex flex-col gap-1">
+            وصف مختصر (عربي، اختياري)
             <textarea name="descriptionAr" rows={3} className="rounded-xl border px-3 py-2 font-medium" />
+          </label>
+          <label className="flex flex-col gap-1">
+            وصف مختصر (إنجليزي، اختياري)
+            <textarea name="descriptionEn" rows={3} className="rounded-xl border px-3 py-2 font-medium" />
           </label>
           <label className="flex flex-col gap-1">
             السعر الشهري (بدون ضريبة)

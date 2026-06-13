@@ -11,6 +11,7 @@ import {
 } from "@/lib/subscriptions/duration-options";
 import { subscriptionSubtotalExclVat, vatFromSubtotal } from "@/lib/subscriptions/pricing";
 import { buildPageMetadata } from "@/lib/seo";
+import { localizeDbField } from "@/lib/localize";
 
 export const dynamic = "force-dynamic";
 
@@ -26,9 +27,12 @@ const PLACEHOLDER =
 
 export default async function SubscriptionsLandingPage({
   searchParams,
+  params: routeParams,
 }: {
   searchParams?: Promise<{ page?: string; months?: string; start?: string }>;
+  params: Promise<{ locale: string }>;
 }) {
+  const { locale } = await routeParams;
   const params = await searchParams;
   const page = Math.max(1, Math.min(Number(params?.page) || 1, 999));
   const presetMonthsNum = Number(params?.months);
@@ -113,8 +117,10 @@ export default async function SubscriptionsLandingPage({
 
         <section className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {plans.map((p) => {
-            const carLabel = `${p.carModel.brand.name} ${p.carModel.name}`.trim();
-            const title = p.marketingTitleAr ?? carLabel;
+            const modelNameLocalized = localizeDbField(p.carModel, "name", locale);
+            const carLabel = `${p.carModel.brand.name} ${modelNameLocalized}`.trim();
+            const marketingTitleLocalized = localizeDbField(p, "marketingTitle", locale);
+            const title = marketingTitleLocalized || carLabel;
             const imgSrc = (p.carModel.image?.trim() || PLACEHOLDER) as string;
             const durations = parseDurationOptionsCsv(p.durationOptionsCsv);
             const vatPct = p.carModel.vatRatePercent ?? 15;
@@ -142,11 +148,11 @@ export default async function SubscriptionsLandingPage({
                 <div className="flex flex-1 flex-col gap-4 p-5">
                   <div>
                     <p className="text-[11px] font-bold uppercase tracking-wide text-[#ea580c]">
-                      {p.carModel.category.title}
+                      {localizeDbField(p.carModel.category, "title", locale)}
                     </p>
                     <h2 className="mt-1 text-lg font-extrabold leading-snug text-[#003749]">{title}</h2>
                     <p className="mt-1 text-xs leading-relaxed text-on-surface-variant line-clamp-2">
-                      {p.descriptionAr ?? `اشتراك ${carLabel}: قيادة شهرية بتكلفة شهرية واحدة وفق بدلاتكم.`}
+                      {localizeDbField(p, "description", locale) || `اشتراك ${carLabel}: قيادة شهرية بتكلفة شهرية واحدة وفق بدلاتكم.`}
                     </p>
                   </div>
 

@@ -43,6 +43,15 @@ export function CheckoutFeeCreateForm() {
           className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
         />
       </label>
+      <label className="text-sm font-medium md:col-span-1">
+        الاسم المعروض (إنجليزي)
+        <input
+          name="labelEn"
+          type="text"
+          placeholder="Contract Auth Fee"
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+        />
+      </label>
 
       <label className="text-sm font-medium">
         الرسوم (ريال، دون ضريبة)

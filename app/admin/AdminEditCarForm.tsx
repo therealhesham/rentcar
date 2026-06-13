@@ -32,12 +32,20 @@ export function AdminEditCarForm({ vehicle }: AdminEditCarFormProps) {
         </p>
       </div>
 
-      <label className="text-sm font-medium md:col-span-2">
+      <label className="text-sm font-medium md:col-span-1">
         اسم الموديل (يظهر في صفحة الأسطول)
         <input
           name="modelName"
           required
           defaultValue={vehicle.name}
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+        />
+      </label>
+      <label className="text-sm font-medium md:col-span-1">
+        الموديل (إنجليزي)
+        <input
+          name="nameEn"
+          defaultValue={vehicle.nameEn ?? ""}
           className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
         />
       </label>
@@ -173,12 +181,37 @@ export function AdminEditCarForm({ vehicle }: AdminEditCarFormProps) {
           className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
         />
       </label>
-      <label className="text-sm font-medium md:col-span-2">
-        شارة على البطاقة (اختياري)
+      <label className="text-sm font-medium md:col-span-1">
+        شارة على البطاقة (عربي)
         <input
           name="badge"
           defaultValue={vehicle.badge ?? ""}
           placeholder="مثل: صغيرة"
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+        />
+      </label>
+      <label className="text-sm font-medium md:col-span-1">
+        شارة (إنجليزي)
+        <input
+          name="badgeEn"
+          defaultValue={vehicle.badgeEn ?? ""}
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+        />
+      </label>
+      <label className="text-sm font-medium md:col-span-1">
+        إجراء (عربي)
+        <input
+          name="cta"
+          placeholder="مثل: احجز الآن"
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+        />
+      </label>
+      <label className="text-sm font-medium md:col-span-1">
+        إجراء (إنجليزي)
+        <input
+          name="ctaEn"
+          defaultValue={vehicle.ctaEn ?? ""}
+          placeholder="مثل: Book Now"
           className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
         />
       </label>

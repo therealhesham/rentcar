@@ -13,6 +13,7 @@ import {
   MIN_SUBSCRIPTION_DURATION_MONTHS,
 } from "@/lib/subscriptions/duration-options";
 import { SarAmountWithSymbol } from "@/components/ui/SarAmountWithSymbol";
+import { localizeDbField } from "@/lib/localize";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,7 @@ const IMG_FALLBACK =
 type Params = Promise<{ slug: string }>;
 
 export async function generateMetadata(ctx: { params: Params }): Promise<Metadata> {
-  const { slug } = await ctx.params;
+  const { slug, locale } = await ctx.params as any;
   const plan = await prisma.subscriptionPlan.findFirst({
     where: { slug: slug.trim().toLowerCase(), isActive: true },
     include: { carModel: { include: { brand: true } } },
@@ -34,13 +35,14 @@ export async function generateMetadata(ctx: { params: Params }): Promise<Metadat
       noIndex: true,
     });
   }
-  const title = plan.marketingTitleAr ?? `${plan.carModel.brand.name} ${plan.carModel.name}`;
+  const modelNameLocalized = localizeDbField(plan.carModel, "name", locale || "ar");
+  const title = localizeDbField(plan, "marketingTitle", locale || "ar") || `${plan.carModel.brand.name} ${modelNameLocalized}`;
   const slugNorm = slug.trim().toLowerCase();
   return buildPageMetadata({
     title: `${title} — اشتراك شهري`,
     description:
-      plan.descriptionAr?.trim().slice(0, 160) ||
-      `اشترك شهرياً في ${plan.carModel.brand.name} ${plan.carModel.name} مع روائس.`,
+      localizeDbField(plan, "description", locale || "ar")?.trim().slice(0, 160) ||
+      `اشترك شهرياً في ${plan.carModel.brand.name} ${modelNameLocalized} مع روائس.`,
     path: `/subscriptions/${slugNorm}`,
     keywords: [
       "اشتراك سيارات",
@@ -52,10 +54,10 @@ export async function generateMetadata(ctx: { params: Params }): Promise<Metadat
 }
 
 export default async function SubscriptionPlanDetailPage(ctx: {
-  params: Params;
+  params: Params & Promise<{ locale: string }>;
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { slug } = await ctx.params;
+  const { slug, locale } = await ctx.params;
   const q = ctx.searchParams ? await ctx.searchParams : {};
   const monthsRaw = Array.isArray(q.months) ? q.months[0] : q.months;
   const startRaw = Array.isArray(q.start) ? q.start[0] : q.start;
@@ -85,7 +87,8 @@ export default async function SubscriptionPlanDetailPage(ctx: {
     durationOptionsCsv: plan.durationOptionsCsv,
   };
 
-  const carLabel = `${plan.carModel.brand.name} ${plan.carModel.name}`.trim();
+  const modelNameLocalized = localizeDbField(plan.carModel, "name", locale);
+  const carLabel = `${plan.carModel.brand.name} ${modelNameLocalized}`.trim();
   const heroImage = plan.carModel.image?.trim() || IMG_FALLBACK;
 
   return (
@@ -116,13 +119,13 @@ export default async function SubscriptionPlanDetailPage(ctx: {
             </div>
             <div className="space-y-4 p-6 sm:p-8">
               <p className="text-[11px] font-bold uppercase tracking-widest text-[#775927]/90">
-                {plan.carModel.category.title}
+                {localizeDbField(plan.carModel.category, "title", locale)}
               </p>
               <h1 className="text-3xl font-extrabold text-[#003749]">
-                {plan.marketingTitleAr ?? carLabel}
+                {localizeDbField(plan, "marketingTitle", locale) || carLabel}
               </h1>
               <p className="text-sm leading-relaxed text-on-surface-variant">
-                {plan.descriptionAr ??
+                {localizeDbField(plan, "description", locale) ||
                   `اشترك في ${carLabel}: كيلومترات شهرية حقيقية، عربون واضح، وضريبة تُحسب وفق الأسعار الحالية.`}
               </p>
 

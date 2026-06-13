@@ -16,6 +16,7 @@ export async function createCheckoutOneTimeFee(
   if (!auth.ok) return { ok: false, error: auth.error };
   const slug = String(formData.get("slug") ?? "").trim().toLowerCase();
   const labelAr = String(formData.get("labelAr") ?? "").trim();
+  const labelEn = String(formData.get("labelEn") ?? "").trim() || null;
   const feeRaw = Number(formData.get("feeExclVatSar"));
   const sortOrder = Number(formData.get("sortOrder") ?? 0);
   const isActive = String(formData.get("isActive") ?? "true") === "true";
@@ -35,6 +36,7 @@ export async function createCheckoutOneTimeFee(
       data: {
         slug,
         labelAr,
+        labelEn,
         feeExclVatSar: feeRaw,
         isActive,
         sortOrder: Number.isFinite(sortOrder) ? Math.round(sortOrder) : 0,
@@ -59,6 +61,7 @@ export async function updateCheckoutOneTimeFee(
   if (!auth.ok) return { ok: false, error: auth.error };
   const id = Number(formData.get("id"));
   const labelAr = String(formData.get("labelAr") ?? "").trim();
+  const labelEn = String(formData.get("labelEn") ?? "").trim() || null;
   const feeRaw = Number(formData.get("feeExclVatSar"));
   const sortOrder = Number(formData.get("sortOrder") ?? 0);
 
@@ -76,6 +79,7 @@ export async function updateCheckoutOneTimeFee(
     where: { id },
     data: {
       labelAr,
+      labelEn,
       feeExclVatSar: feeRaw,
       sortOrder: Number.isFinite(sortOrder) ? Math.round(sortOrder) : 0,
     },

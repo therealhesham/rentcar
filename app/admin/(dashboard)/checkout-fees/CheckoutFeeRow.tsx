@@ -15,6 +15,7 @@ export function CheckoutFeeRow({
     id: number;
     slug: string;
     labelAr: string;
+    labelEn: string | null;
     feeExclVatSar: number;
     isActive: boolean;
     sortOrder: number;
@@ -33,7 +34,7 @@ export function CheckoutFeeRow({
         <form action={updAction} className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
           <input type="hidden" name="id" value={row.id} />
           <label className="block min-w-[180px] flex-1 text-xs font-medium text-on-surface-variant">
-            الاسم
+            الاسم (عربي)
             <input
               name="labelAr"
               type="text"
@@ -41,6 +42,15 @@ export function CheckoutFeeRow({
               minLength={2}
               maxLength={255}
               defaultValue={row.labelAr}
+              className="mt-1 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1.5 text-sm text-on-surface outline-none ring-primary/20 focus:ring-2"
+            />
+          </label>
+          <label className="block min-w-[180px] flex-1 text-xs font-medium text-on-surface-variant">
+            الاسم (إنجليزي)
+            <input
+              name="labelEn"
+              type="text"
+              defaultValue={row.labelEn ?? ""}
               className="mt-1 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1.5 text-sm text-on-surface outline-none ring-primary/20 focus:ring-2"
             />
           </label>

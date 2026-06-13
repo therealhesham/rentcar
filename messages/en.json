@@ -133,7 +133,29 @@
     "selectBranch": "Select Branch",
     "noBranches": "No Branches",
     "returnBranch": "Return Branch",
-    "pickupLocation": "Pickup Location"
+    "pickupLocation": "Pickup Location",
+    "corporateSection": {
+      "fillDetails": "Fill out the following details; our team will contact you after reviewing the request.",
+      "companyName": "Company Name",
+      "companyNamePlaceholder": "e.g., ... Trading Company",
+      "companyEmail": "Company Email",
+      "taxNumber": "Tax ID Number",
+      "taxNumberPlaceholder": "15 digits or as per register",
+      "contactMobile": "Contact Mobile",
+      "requestDetails": "Request Details",
+      "requestDetailsPlaceholder": "Number of vehicles, duration, city, any special requirements...",
+      "requestDetailsHelp": "Minimum 10 characters — maximum 8000 characters.",
+      "requestReceivedTitle": "Request Received",
+      "requestReceivedSuccess": "Corporate booking request received successfully!",
+      "requestReceivedMessage": "Thank you for trusting Rawaes Car Rental. Our sales team will contact you soon via phone or the attached email.",
+      "okayUnderstood": "Okay, understood",
+      "corporateBookingDetails": "Corporate Booking Details",
+      "fleetSearchNotCalculated": "Fleet search is not calculated — contact request for corporate bookings and contracts.",
+      "sending": "Sending...",
+      "sendContactRequest": "Send Contact Request",
+      "dataUsedForCommunicationOnly": "Data is used for communication only — no automated booking is confirmed at this step.",
+      "salesTeamMonitors": "Sales team monitors requests during working hours"
+    }
   },
   "FormStep": {
     "step1": "Step 1",
@@ -230,7 +252,9 @@
     "viewFullFleet": "View Full Fleet"
   },
   "Common": {
-    "select": "Select"
+    "select": "Select",
+    "bookNow": "Book Now",
+    "viewDetails": "View Details"
   },
   "Services": {
     "addedValue": "Added Value",
@@ -258,5 +282,50 @@
         "description": "Our technical team is ready around the clock to provide technical support and roadside assistance in emergencies, ensuring your journey continues safely and peacefully."
       }
     }
+  },
+  "PromoBanner": {
+    "ariaLabel": "Promotional Offers",
+    "exclusiveOffers": "Exclusive Offers",
+    "dontMissOut": "Don't Miss Out"
+  },
+  "HomeCta": {
+    "ariaLabel": "Start Booking",
+    "readyToGo": "Ready to go?",
+    "bookYourCarInMinutes": "Book your car in minutes",
+    "ctaDescription": "Choose the branch, dates, and explore the available fleet — a fast and clear booking experience from start to finish.",
+    "browseFleet": "Browse Fleet"
+  },
+  "AboutPage": {
+    "title": "About Us",
+    "description": "Learn about Rawaes Car Rental: our vision, mission, values, and branches in the Kingdom.",
+    "carRental": "Car Rental",
+    "heroSubtitle": "Rawaes Car Rental, Rental and Luxury Services",
+    "pillars": {
+      "vision": {
+        "title": "Our Vision",
+        "body": "To be the leaders of our country in the rental sector and provide innovative services, with a view to the horizon for everyone eager for more."
+      },
+      "mission": {
+        "title": "Our Mission",
+        "body": "We make a difference with global quality and a commitment to professional principles and ethics, and we work to raise the level of assets and support high efficiency."
+      },
+      "values": {
+        "title": "Our Values",
+        "body": "Putting principles and integrity at the forefront of everything we do, providing outstanding customer service, and striving for the best standards of quality and performance."
+      },
+      "fields": {
+        "title": "Our Principles",
+        "body": "Dealing with accuracy, integrity, transparency, and professional behavior in all privileges, and meeting the customer's ambition with the highest standards of advanced quality and continuous development."
+      }
+    },
+    "ourGoal": "Our Goal",
+    "goalBody1": "Providing exceptional services, fostering innovation, and continuously improving our offerings to stay ahead and adapt to trends and technologies for sustainable growth and profitability while maintaining ethical business practices.",
+    "goalBody2": "While creating a positive and inclusive work environment that fosters collaboration, personal growth, making a positive impact on society, and contributing to the communities in which we operate.",
+    "ourBranches": "Our Branches",
+    "branchesSubtitle": "Our locations spread to serve you. Choose the appropriate branch and view its location on the map.",
+    "defaultBranchAddress": "Rawaes Car Rental Branch",
+    "branchLocation": "Branch Location",
+    "noBranches": "There are currently no active branches. You can add branches from the dashboard.",
+    "mapLocationOf": "Map location of {name}"
   }
 }

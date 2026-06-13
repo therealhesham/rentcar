@@ -38,8 +38,10 @@ export async function createFleetCategory(
   if (!auth.ok) return { ok: false, error: auth.error };
 
   const title = String(formData.get("title") ?? "").trim();
+  const titleEn = String(formData.get("titleEn") ?? "").trim() || null;
   const slugRaw = String(formData.get("slug") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
+  const descriptionEn = String(formData.get("descriptionEn") ?? "").trim() || null;
   const imageFile = formData.get("imageFile");
   const galleryImageUrl = String(formData.get("galleryImageUrl") ?? "").trim();
   const alt = String(formData.get("alt") ?? "").trim() || null;
@@ -92,7 +94,9 @@ export async function createFleetCategory(
       data: {
         slug,
         title,
+        titleEn,
         description,
+        descriptionEn,
         image: imageUrl,
         alt,
         sortOrder: Math.round(sortOrder),
@@ -119,8 +123,10 @@ export async function updateFleetCategory(
 
   const id = Number(formData.get("id"));
   const title = String(formData.get("title") ?? "").trim();
+  const titleEn = String(formData.get("titleEn") ?? "").trim() || null;
   const slugRaw = String(formData.get("slug") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
+  const descriptionEn = String(formData.get("descriptionEn") ?? "").trim() || null;
   const imageFile = formData.get("imageFile");
   const galleryImageUrl = String(formData.get("galleryImageUrl") ?? "").trim();
   const currentImage = String(formData.get("currentImage") ?? "").trim();
@@ -177,7 +183,9 @@ export async function updateFleetCategory(
       data: {
         slug,
         title,
+        titleEn,
         description,
+        descriptionEn,
         image: imageUrl,
         alt,
         sortOrder: Math.round(sortOrder),

@@ -44,6 +44,7 @@ model City {
   id        Int      @id @default(autoincrement())
   slug      String   @unique @db.VarChar(64)
   name      String   @db.VarChar(255)
+  nameEn    String?  @db.VarChar(255)
   sortOrder Int      @default(0)
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
@@ -81,6 +82,7 @@ model CheckoutOneTimeFee {
   id            Int      @id @default(autoincrement())
   slug          String   @unique @db.VarChar(64)
   labelAr       String   @db.VarChar(255)
+  labelEn       String?  @db.VarChar(255)
   feeExclVatSar Int
   isActive      Boolean  @default(true)
   sortOrder     Int      @default(0)
@@ -97,8 +99,11 @@ model Branch {
   city      City     @relation(fields: [cityId], references: [id])
   slug      String   @unique @db.VarChar(64)
   name      String
+  nameEn    String?
   tagline   String?  @db.VarChar(255)
+  taglineEn String?  @db.VarChar(255)
   address   String?  @db.VarChar(255)
+  addressEn String?  @db.VarChar(255)
   phone     String?  @db.VarChar(32)
   mapUrl    String?  @db.Text
   latitude  Float?
@@ -149,7 +154,9 @@ model FleetCategory {
   id          Int        @id @default(autoincrement())
   slug        String     @unique @db.VarChar(64)
   title       String
+  titleEn     String?
   description String     @db.Text
+  descriptionEn String?  @db.Text
   image       String
   alt         String?
   sortOrder   Int        @default(0)
@@ -182,6 +189,7 @@ model Brand {
 model CarModel {
   id            Int             @id @default(autoincrement())
   name          String
+  nameEn        String?
   brandId       Int
   brand         Brand           @relation(fields: [brandId], references: [id])
   categoryId    Int
@@ -201,7 +209,9 @@ model CarModel {
   image         String?
   alt           String?
   cta           String?
+  ctaEn         String?
   badge         String?
+  badgeEn       String?
 
   fleetItems         Fleet[]
   bookingRequests    BookingRequest[]
@@ -237,9 +247,12 @@ model RentalAddon {
   id             Int      @id @default(autoincrement())
   slug           String   @unique @db.VarChar(64)
   titleAr        String   @db.VarChar(255)
+  titleEn        String?  @db.VarChar(255)
   descriptionAr  String?  @db.Text
+  descriptionEn  String?  @db.Text
   /// نص معلومات الإضافة الظاهر عبر زر (i): تفاصيل وسياسة الإضافة للعميل.
   infoAr         String?  @db.Text
+  infoEn         String?  @db.Text
   /// السعر لكل يوم بالريال (غير شامل الضريبة)
   pricePerDay    Int
   /// مفتاح أيقونة تقريبي للواجهة (مثل key، child، gauge)
@@ -461,7 +474,9 @@ model SubscriptionPlan {
   carModelId             Int
   carModel               CarModel        @relation(fields: [carModelId], references: [id])
   marketingTitleAr       String?         @db.VarChar(255)
+  marketingTitleEn       String?         @db.VarChar(255)
   descriptionAr          String?         @db.Text
+  descriptionEn          String?         @db.Text
   /// سعر شهر واحد بالريال (غير شامل الضريبة) — يُجمَّد على الاشتراك عند الطلب.
   monthlyPriceSar        Int
   mileageKmPerMonth      Int

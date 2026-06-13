@@ -110,7 +110,9 @@ export async function createSubscriptionPlan(data: FormData) {
     .slice(0, 120);
   const carModelId = Number(data.get("carModelId"));
   const marketingTitleAr = String(data.get("marketingTitleAr") ?? "").trim() || null;
+  const marketingTitleEn = String(data.get("marketingTitleEn") ?? "").trim() || null;
   const descriptionAr = String(data.get("descriptionAr") ?? "").trim() || null;
+  const descriptionEn = String(data.get("descriptionEn") ?? "").trim() || null;
   const monthlyPriceSar = Number(data.get("monthlyPriceSar"));
   const mileageKmPerMonth = Number(data.get("mileageKmPerMonth"));
   const depositAmountSar = Number(data.get("depositAmountSar") ?? 0);
@@ -128,7 +130,9 @@ export async function createSubscriptionPlan(data: FormData) {
       slug,
       carModelId,
       marketingTitleAr,
+      marketingTitleEn,
       descriptionAr,
+      descriptionEn,
       monthlyPriceSar: Math.round(monthlyPriceSar),
       mileageKmPerMonth: Math.round(mileageKmPerMonth),
       insuranceIncluded: data.get("insuranceIncluded") === "on",

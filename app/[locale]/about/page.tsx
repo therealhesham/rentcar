@@ -4,19 +4,22 @@ import { SiteFooter } from "@/components/home/SiteFooter";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { getActiveBranches } from "@/lib/branch-data";
 import { breadcrumbJsonLd, buildPageMetadata } from "@/lib/seo";
+import { getTranslations } from "next-intl/server";
 
-export const metadata = buildPageMetadata({
-  title: "من نحن",
-  description:
-    "تعرّف على روائس لتأجير السيارات: رؤيتنا ورسالتنا وقيمنا وفروعنا في المملكة.",
-  path: "/about",
-});
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> | { locale: string } }) {
+  const resolvedParams = await params;
+  const t = await getTranslations({ locale: resolvedParams.locale, namespace: "AboutPage" });
+
+  return buildPageMetadata({
+    title: t("title"),
+    description: t("description"),
+    path: "/about",
+  });
+}
 
 const pillars = [
   {
     key: "vision",
-    title: "رؤيتنا",
-    body: "نكون رواد بلادنا في قطاع التأجير وتقديم الخدمات المبتكرة، بنظرة للأفق من كل متشوق للمزيد.",
     icon: (
       <svg viewBox="0 0 40 40" fill="none" className="h-10 w-10" aria-hidden>
         <circle cx="20" cy="20" r="19" stroke="#003749" strokeWidth="2" />
@@ -27,8 +30,6 @@ const pillars = [
   },
   {
     key: "mission",
-    title: "رسالتنا",
-    body: "نصنع الفارق بجودة عالمية والتزام بالمبادئ والأخلاق المهنية، ونعمل على رفع مستوى الأصول وندعم الكفاءة العالية.",
     icon: (
       <svg viewBox="0 0 40 40" fill="none" className="h-10 w-10" aria-hidden>
         <path
@@ -43,8 +44,6 @@ const pillars = [
   },
   {
     key: "values",
-    title: "قيمنا",
-    body: "وضع المبادئ والنزاهة في مقدمة كل ما نقوم به، وتقديم خدمة العميل المتميز والسعي نحو أفضل معايير الجودة والأداء.",
     icon: (
       <svg viewBox="0 0 40 40" fill="none" className="h-10 w-10" aria-hidden>
         <rect x="4" y="4" width="32" height="32" rx="8" stroke="#003749" strokeWidth="2" />
@@ -54,8 +53,6 @@ const pillars = [
   },
   {
     key: "fields",
-    title: "مبادئنا",
-    body: "التعامل بدقة ونزاهة وشفافية وسلوك مهني في جميع الامتيازات، وتلبية طموح العميل بأعلى معايير الجودة المتطورة والتطوير المستمر.",
     icon: (
       <svg viewBox="0 0 40 40" fill="none" className="h-10 w-10" aria-hidden>
         <path d="M8 32 L8 20 L16 20 L16 32" stroke="#003749" strokeWidth="2" strokeLinecap="round" />
@@ -109,15 +106,18 @@ function PhoneIcon({ className }: { className?: string }) {
   );
 }
 
-export default async function AboutPage() {
-  const branches = await getActiveBranches();
+export default async function AboutPage({ params }: { params: Promise<{ locale: string }> }) {
+  const resolvedParams = await params;
+  const branches = await getActiveBranches(resolvedParams.locale);
+  const t = await getTranslations("AboutPage");
+  const navT = await getTranslations("SiteNav");
 
   return (
     <div className="flex min-h-screen flex-col bg-surface text-on-surface">
       <JsonLd
         data={breadcrumbJsonLd([
-          { name: "الرئيسية", path: "/" },
-          { name: "من نحن", path: "/about" },
+          { name: navT("home"), path: "/" },
+          { name: t("title"), path: "/about" },
         ])}
       />
       <SiteNav active="about" />
@@ -126,7 +126,7 @@ export default async function AboutPage() {
       <header className="relative flex min-h-[40vh] items-center justify-center overflow-hidden pt-16 sm:min-h-[50vh] sm:pt-20">
         <Image
           src="https://images.unsplash.com/photo-1489821584143-984f940e1256?auto=format&fit=crop&w=1600&q=80"
-          alt="معرض سيارات"
+          alt={t("carRental")}
           fill
           priority
           className="object-cover"
@@ -135,10 +135,10 @@ export default async function AboutPage() {
         <div className="absolute inset-0 bg-[#003749]" />
         <div className="relative z-10 px-4 text-center">
           <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl lg:text-5xl">
-            تأجير السيارات
+            {t("carRental")}
           </h1>
           <p className="mt-3 text-sm font-medium text-white/80 sm:text-base">
-            روائس لتأجير السيارات، خدمات التأجير والرفاهية
+            {t("heroSubtitle")}
           </p>
         </div>
         {/* شريط ذهبي سفلي */}
@@ -156,8 +156,8 @@ export default async function AboutPage() {
               <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-[#003749]/5">
                 {p.icon}
               </div>
-              <h2 className="text-lg font-extrabold text-[#003749]">{p.title}</h2>
-              <p className="text-sm leading-relaxed text-on-surface-variant">{p.body}</p>
+              <h2 className="text-lg font-extrabold text-[#003749]">{t(`pillars.${p.key}.title`)}</h2>
+              <p className="text-sm leading-relaxed text-on-surface-variant">{t(`pillars.${p.key}.body`)}</p>
             </div>
           ))}
         </div>
@@ -167,16 +167,13 @@ export default async function AboutPage() {
       <section className="bg-surface-container-low px-4 py-14 sm:px-8 sm:py-20">
         <div className="mx-auto flex w-full max-w-5xl flex-col items-center gap-10 md:flex-row md:items-start md:gap-16">
           {/* النص + الرسم البياني */}
-          <div className="order-2 flex flex-1 flex-col gap-6 text-center md:order-1 md:text-right">
-            <h2 className="text-3xl font-extrabold text-[#003749] sm:text-4xl">هدفنا</h2>
+          <div className="order-2 flex flex-1 flex-col gap-6 text-center md:order-1 md:text-start">
+            <h2 className="text-3xl font-extrabold text-[#003749] sm:text-4xl">{t("ourGoal")}</h2>
             <p className="text-sm leading-loose text-on-surface-variant sm:text-base">
-              تقديم خدمات استثنائية وتعزيز الابتكار وتحسين عروضنا باستمرار للبقاء في
-              المقدمة والتكيف مع الإتجاهات والتقنيات لتحقيق النمو المستدام والربحية مع
-              الحفاظ على الممارسات التجارية الأخلاقية.
+              {t("goalBody1")}
             </p>
             <p className="text-sm leading-loose text-on-surface-variant sm:text-base">
-              مع تهيئة بيئة عمل إيجابية وشاملة تعزز التعاون والنمو الشخصي وإحداث تأثير
-              إيجابي على المجتمع والمساهمة مع المجتمعات التي نعمل فيها.
+              {t("goalBody2")}
             </p>
 
             {/* رسم بياني */}
@@ -219,9 +216,9 @@ export default async function AboutPage() {
       <section className="overflow-x-clip bg-surface">
         <div className="mx-auto w-full min-w-0 max-w-screen-xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
         <div className="mb-10 text-center">
-          <h2 className="text-3xl font-extrabold text-[#003749] sm:text-4xl">فروعنا</h2>
+          <h2 className="text-3xl font-extrabold text-[#003749] sm:text-4xl">{t("ourBranches")}</h2>
           <p className="mt-3 text-sm text-on-surface-variant sm:text-base">
-            مواقعنا المنتشرة لخدمتكم. اختر الفرع المناسب واستعرض موقعه على الخريطة.
+            {t("branchesSubtitle")}
           </p>
         </div>
 
@@ -237,13 +234,13 @@ export default async function AboutPage() {
                   <p className="mt-1 text-xs leading-relaxed text-on-surface-variant">
                     {branch.address?.trim() ||
                       branch.tagline?.trim() ||
-                      "فرع روائس لتأجير السيارات"}
+                      t("defaultBranchAddress")}
                   </p>
                 </header>
 
                 <div className="min-w-0 overflow-hidden rounded-xl border border-black/5 bg-white">
                   <iframe
-                    title={`موقع ${branch.name} على الخريطة`}
+                    title={t("mapLocationOf", { name: branch.name })}
                     src={resolveBranchEmbedUrl(branch)}
                     className="block h-36 w-full max-w-full"
                     loading="lazy"
@@ -267,14 +264,14 @@ export default async function AboutPage() {
                   rel="noreferrer"
                   className="text-xs font-bold text-[#775927] underline underline-offset-4 transition-opacity hover:opacity-80"
                 >
-                  موقع الفرع
+                  {t("branchLocation")}
                 </a>
               </article>
             ))}
           </div>
         ) : (
           <div className="rounded-2xl border border-dashed border-outline bg-white/70 p-8 text-center text-sm text-on-surface-variant">
-            لا توجد فروع مفعّلة حالياً. يمكنك إضافة الفروع من لوحة التحكم.
+            {t("noBranches")}
           </div>
         )}
         </div>

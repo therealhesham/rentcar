@@ -123,6 +123,14 @@ export function AdminAddCarForm({ categories, brands, branches }: AdminAddCarFor
           className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
         />
       </label>
+      <label className="text-sm font-medium md:col-span-1">
+        الموديل (إنجليزي)
+        <input
+          name="nameEn"
+          placeholder="مثال: Taycan Turbo S"
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+        />
+      </label>
 
       <label className="text-sm font-medium">
         السنة
@@ -253,11 +261,35 @@ export function AdminAddCarForm({ categories, brands, branches }: AdminAddCarFor
           className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
         />
       </label>
-      <label className="text-sm font-medium md:col-span-2">
+      <label className="text-sm font-medium md:col-span-1">
         شارة (مثل: متاح الآن)
         <input
           name="badge"
           placeholder="اختياري"
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+        />
+      </label>
+      <label className="text-sm font-medium md:col-span-1">
+        شارة (إنجليزي)
+        <input
+          name="badgeEn"
+          placeholder="اختياري"
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+        />
+      </label>
+      <label className="text-sm font-medium md:col-span-1">
+        إجراء (عربي)
+        <input
+          name="cta"
+          placeholder="مثال: احجز الآن"
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+        />
+      </label>
+      <label className="text-sm font-medium md:col-span-1">
+        إجراء (إنجليزي)
+        <input
+          name="ctaEn"
+          placeholder="مثال: Book Now"
           className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
         />
       </label>

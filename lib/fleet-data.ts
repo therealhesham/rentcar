@@ -25,6 +25,8 @@ const TRANS_AR: Record<Transmission, string> = {
 const PLACEHOLDER_IMG =
   "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=1200&q=80";
 
+import { localizeDbField } from "@/lib/localize";
+
 const fleetModelInclude = {
   model: {
     include: { brand: true, category: true },
@@ -42,12 +44,13 @@ function mapFleetRowToFleetCar(
   priceMode: RentalPriceDisplayMode,
   discountRules: ReadonlyArray<RentalDiscountRule>,
   referenceDate?: Date | null,
+  locale: string = "ar"
 ): FleetCar {
   const m = row.model;
   const brandName = m.brand.name.trim();
-  const modelName = m.name.trim();
+  const modelName = localizeDbField(m, "name", locale).trim();
   const fullTitle = `${brandName} ${modelName}`.trim();
-  const subtitle = `${m.year} • ${FUEL_AR[m.fuel]} • ${TRANS_AR[m.transmission]}`;
+  const subtitle = `${m.year} • ${locale === "en" ? m.fuel : FUEL_AR[m.fuel]} • ${locale === "en" ? m.transmission : TRANS_AR[m.transmission]}`;
 
   const resolved = resolveBestRentalDiscount(
     discountRules,
@@ -79,7 +82,7 @@ function mapFleetRowToFleetCar(
     priceUi,
     image: m.image?.trim() || PLACEHOLDER_IMG,
     alt: m.alt?.trim() || fullTitle,
-    badge: m.badge,
+    badge: localizeDbField(m, "badge", locale),
     specs: [
       { icon: "door_open", value: String(displayDoors) },
       { icon: "airline_seat_recline_extra", value: String(m.chairs) },
@@ -92,7 +95,7 @@ function mapFleetRowToFleetCar(
 export async function getFleetCarMapByModelIds(
   modelIds: number[],
   priceDisplayMode?: RentalPriceDisplayMode,
-  opts?: { branchId?: number | null; referenceDate?: Date | null },
+  opts?: { branchId?: number | null; referenceDate?: Date | null; locale?: string },
 ): Promise<Map<number, FleetCar>> {
   const map = new Map<number, FleetCar>();
   const unique = [...new Set(modelIds.filter((id) => Number.isFinite(id)))];
@@ -117,7 +120,7 @@ export async function getFleetCarMapByModelIds(
     if (map.has(row.modelId)) continue;
     map.set(
       row.modelId,
-      mapFleetRowToFleetCar(row, priceMode, discountRules, opts?.referenceDate),
+      mapFleetRowToFleetCar(row, priceMode, discountRules, opts?.referenceDate, opts?.locale),
     );
   }
 
@@ -136,6 +139,7 @@ export type FleetDisplayFilters = {
   /** تاريخ الاستلام لتطبيق خصومات الفترة */
   pickupDate?: Date | null;
   priceDisplayMode?: RentalPriceDisplayMode;
+  locale?: string;
 };
 
 export async function getFleetCarsForDisplay(
@@ -149,6 +153,7 @@ export async function getFleetCarsForDisplay(
     branchSlug,
     pickupDate,
     priceDisplayMode: priceDisplayModeIn,
+    locale = "ar",
   } = filters;
 
   const [priceMode, discountRules] = await Promise.all([
@@ -188,7 +193,7 @@ export async function getFleetCarsForDisplay(
   for (const row of rows) {
     if (seenModelIds.has(row.modelId)) continue;
     seenModelIds.add(row.modelId);
-    cars.push(mapFleetRowToFleetCar(row, priceMode, discountRules, pickupDate));
+    cars.push(mapFleetRowToFleetCar(row, priceMode, discountRules, pickupDate, locale));
   }
   return cars;
 }
@@ -198,11 +203,15 @@ export type FleetBrandFilterOption = { id: number; name: string };
 export type FleetPriceBounds = { min: number; max: number };
 
 /** تصنيفات الأسطول للفلاتر (ترتيب لوحة الإدارة) */
-export async function getFleetCategoriesForFilter(): Promise<FleetCategoryFilterOption[]> {
-  return prisma.fleetCategory.findMany({
+export async function getFleetCategoriesForFilter(locale: string = "ar"): Promise<FleetCategoryFilterOption[]> {
+  const cats = await prisma.fleetCategory.findMany({
     orderBy: { sortOrder: "asc" },
-    select: { slug: true, title: true },
+    select: { slug: true, title: true, titleEn: true },
   });
+  return cats.map((c) => ({
+    slug: c.slug,
+    title: localizeDbField(c, "title", locale),
+  }));
 }
 
 /** ماركات لها مركبات متاحة في الأسطول */

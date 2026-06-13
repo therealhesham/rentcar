@@ -13,8 +13,11 @@ type Branch = {
   cityId: number;
   slug: string;
   name: string;
+  nameEn: string | null;
   tagline: string | null;
+  taglineEn: string | null;
   address: string | null;
+  addressEn: string | null;
   phone: string | null;
   mapUrl: string | null;
   image: string | null;
@@ -80,6 +83,14 @@ export function BranchEditForm({ branch, cities }: Props) {
         />
       </label>
       <label className="text-sm font-medium md:col-span-1">
+        اسم الفرع (إنجليزي)
+        <input
+          name="nameEn"
+          defaultValue={branch.nameEn ?? ""}
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+        />
+      </label>
+      <label className="text-sm font-medium md:col-span-1">
         المعرّف (slug)
         <input
           name="slug"
@@ -99,6 +110,14 @@ export function BranchEditForm({ branch, cities }: Props) {
         />
       </label>
       <label className="text-sm font-medium md:col-span-1">
+        شعار قصير (إنجليزي)
+        <input
+          name="taglineEn"
+          defaultValue={branch.taglineEn ?? ""}
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+        />
+      </label>
+      <label className="text-sm font-medium md:col-span-1">
         رقم الجوال
         <input
           name="phone"
@@ -107,11 +126,19 @@ export function BranchEditForm({ branch, cities }: Props) {
           className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
         />
       </label>
-      <label className="text-sm font-medium md:col-span-2">
+      <label className="text-sm font-medium md:col-span-1">
         العنوان
         <input
           name="address"
           defaultValue={branch.address ?? ""}
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+        />
+      </label>
+      <label className="text-sm font-medium md:col-span-1">
+        العنوان (إنجليزي)
+        <input
+          name="addressEn"
+          defaultValue={branch.addressEn ?? ""}
           className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
         />
       </label>

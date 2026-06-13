@@ -135,6 +135,7 @@ export type AdminFleetVehicleEditPayload = {
   categoryId: number;
   categoryTitle: string;
   name: string;
+  nameEn: string | null;
   year: number;
   chairs: number;
   engine: string;
@@ -146,6 +147,9 @@ export type AdminFleetVehicleEditPayload = {
   image: string | null;
   alt: string | null;
   badge: string | null;
+  badgeEn: string | null;
+  cta: string | null;
+  ctaEn: string | null;
   branchFleet: { branchId: number; branchName: string; quantity: number }[];
 };
 
@@ -174,6 +178,7 @@ export async function getFleetVehicleForAdminEdit(
     categoryId: row.categoryId,
     categoryTitle: row.category.title.trim(),
     name: row.name.trim(),
+    nameEn: row.nameEn?.trim() || null,
     year: row.year,
     chairs: row.chairs,
     engine: row.engine.trim(),
@@ -185,6 +190,9 @@ export async function getFleetVehicleForAdminEdit(
     image: row.image?.trim() || null,
     alt: row.alt?.trim() || null,
     badge: row.badge?.trim() || null,
+    badgeEn: row.badgeEn?.trim() || null,
+    cta: row.cta?.trim() || null,
+    ctaEn: row.ctaEn?.trim() || null,
     branchFleet: row.fleetItems.map((f) => ({
       branchId: f.branchId,
       branchName: f.branch.name,

@@ -40,6 +40,14 @@ export function RentalAddonCreateForm() {
         />
       </label>
       <label className="text-sm font-medium md:col-span-1">
+        العنوان (إنجليزي)
+        <input
+          name="titleEn"
+          placeholder="مثال: Child Seat"
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+        />
+      </label>
+      <label className="text-sm font-medium md:col-span-1">
         المعرّف (slug) — إنجليزي
         <input
           name="slug"
@@ -50,7 +58,7 @@ export function RentalAddonCreateForm() {
         />
       </label>
 
-      <label className="text-sm font-medium md:col-span-2">
+      <label className="text-sm font-medium md:col-span-1">
         الوصف (عربي، اختياري)
         <textarea
           name="descriptionAr"
@@ -58,13 +66,30 @@ export function RentalAddonCreateForm() {
           className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
         />
       </label>
+      <label className="text-sm font-medium md:col-span-1">
+        الوصف (إنجليزي، اختياري)
+        <textarea
+          name="descriptionEn"
+          rows={2}
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+        />
+      </label>
 
-      <label className="text-sm font-medium md:col-span-2">
-        نص المعلومات (زر i) — اختياري
+      <label className="text-sm font-medium md:col-span-1">
+        نص المعلومات (عربي)
         <textarea
           name="infoAr"
           rows={3}
           placeholder="مثال: تشمل هذه الإضافة ... والسياسة: يمكن التعديل قبل تأكيد الحجز النهائي."
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+        />
+      </label>
+      <label className="text-sm font-medium md:col-span-1">
+        نص المعلومات (إنجليزي)
+        <textarea
+          name="infoEn"
+          rows={3}
+          placeholder="مثال: This addon includes..."
           className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
         />
       </label>

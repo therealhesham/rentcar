@@ -99,7 +99,7 @@ type Props = {
   branchBySlug: Record<string, string>;
   bookingCities: BookingCityBranchesOption[];
   interCityShippingRules: Array<{ fromSlug: string; toSlug: string; feeExclVatSar: number }>;
-  checkoutOneTimeFees: Array<{ slug: string; labelAr: string; feeExclVatSar: number }>;
+  checkoutOneTimeFees: Array<{ slug: string; label: string; feeExclVatSar: number }>;
   sessionCustomer:
     | {
         name: string;
@@ -1114,7 +1114,7 @@ export function FleetCheckoutClient({
                       const on = selected.has(a.id);
                       const infoOpen = openAddonInfoId === a.id;
                       const infoId = `addon-info-${a.id}`;
-                      const infoText = a.infoAr?.trim() || "";
+                      const infoText = a.info?.trim() || "";
                       return (
                         <label
                           key={a.id}
@@ -1147,14 +1147,14 @@ export function FleetCheckoutClient({
                               <AddonVisual iconKey={a.iconKey} />
                             </div>
                             <div className="flex items-center gap-1.5">
-                              <span className="text-[15px] font-extrabold text-[#003749]">{a.titleAr}</span>
+                              <span className="text-[15px] font-extrabold text-[#003749]">{a.title}</span>
                               {infoText ? (
                                 <span className="relative inline-flex">
                                   <button
                                     type="button"
                                     aria-expanded={infoOpen}
                                     aria-controls={infoId}
-                                    aria-label={`شرح ${a.titleAr}`}
+                                    aria-label={`شرح ${a.title}`}
                                     className="inline-flex size-5 items-center justify-center rounded-full border border-[#d9d0bf] text-[#8f8573] transition-colors hover:border-[#dbb878] hover:text-[#dbb878]"
                                     onClick={(e) => {
                                       e.preventDefault();
@@ -1569,7 +1569,7 @@ export function FleetCheckoutClient({
                           <ul className="space-y-1.5 rounded-lg bg-[#fdfbf6] px-3 py-2 text-[12px] text-[#6b5a3b]">
                             {selectedRows.map((a) => (
                               <li key={a.id} className="flex justify-between gap-3">
-                                <span>• {a.titleAr}</span>
+                                <span>• {a.title}</span>
                                 <span className="tabular-nums font-semibold text-[#003749]" dir="ltr">
                                   {formatSarAmount(a.pricePerDay * trip.days)} <SarCurrencyGlyph />
                                 </span>
@@ -1604,7 +1604,7 @@ export function FleetCheckoutClient({
                       {checkoutOneTimeFees.map((f) => (
                         <div key={f.slug} className="flex justify-between text-[13px]">
                           <span className="max-w-[60%] text-end text-[12px] font-semibold leading-snug text-[#6b5a3b]">
-                            {f.labelAr}
+                            {f.label}
                           </span>
                           <span className="shrink-0 font-bold text-[#003749] tabular-nums" dir="ltr">
                             {formatSarAmount(f.feeExclVatSar)} <SarCurrencyGlyph />

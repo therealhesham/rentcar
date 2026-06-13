@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/prisma";
+import { localizeDbField } from "@/lib/localize";
 
 /** فئات الأسطول للصفحة الرئيسية — مرتبة حسب sortOrder */
-export async function getFleetCategoriesForHome() {
-  return prisma.fleetCategory.findMany({
+export async function getFleetCategoriesForHome(locale: string = "ar") {
+  const rows = await prisma.fleetCategory.findMany({
     orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
     include: {
       _count: { select: { models: true } },
@@ -12,6 +13,7 @@ export async function getFleetCategoriesForHome() {
         select: {
           id: true,
           name: true,
+          nameEn: true,
           chairs: true,
           image: true,
           alt: true,
@@ -20,6 +22,15 @@ export async function getFleetCategoriesForHome() {
       },
     },
   });
+  return rows.map((r) => ({
+    ...r,
+    title: localizeDbField(r, "title", locale),
+    description: localizeDbField(r, "description", locale),
+    models: r.models.map((m) => ({
+      ...m,
+      name: localizeDbField(m, "name", locale),
+    })),
+  }));
 }
 
 /** للإدارة: قائمة الفئات لاختيار الموديل */

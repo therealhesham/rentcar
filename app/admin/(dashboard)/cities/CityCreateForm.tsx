@@ -23,6 +23,14 @@ export function CityCreateForm() {
         />
       </label>
       <label className="text-sm font-medium md:col-span-1">
+        اسم المدينة (إنجليزي)
+        <input
+          name="nameEn"
+          placeholder="مثال: Jeddah"
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+        />
+      </label>
+      <label className="text-sm font-medium md:col-span-1">
         المعرّف (slug) — للتجميع في الحجز
         <input
           name="slug"

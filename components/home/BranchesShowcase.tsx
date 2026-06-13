@@ -1,6 +1,7 @@
 import { MapPin } from "lucide-react";
 import { getActiveBranches, getNewBranchesForHome } from "@/lib/branch-data";
 import { Reveal } from "./HomeMotion";
+import { getLocale } from "next-intl/server";
 
 const branchMapLinks: Record<string, string> = {
   madinah:
@@ -140,8 +141,9 @@ function groupBranchesByCity(
 }
 
 export async function BranchesShowcase() {
-  const newBranches = await getNewBranchesForHome();
-  const branchesRaw = newBranches.length > 0 ? newBranches : await getActiveBranches();
+  const locale = await getLocale();
+  const newBranches = await getNewBranchesForHome(locale);
+  const branchesRaw = newBranches.length > 0 ? newBranches : await getActiveBranches(locale);
 
   if (branchesRaw.length === 0) {
     return null;

@@ -35,6 +35,7 @@ export async function createCity(
   if (!auth.ok) return { ok: false, error: auth.error };
 
   const name = String(formData.get("name") ?? "").trim();
+  const nameEn = String(formData.get("nameEn") ?? "").trim() || null;
   const slugRaw = String(formData.get("slug") ?? "").trim();
   const sortOrder = Number(formData.get("sortOrder") ?? 0);
   const isActive = String(formData.get("isActive") ?? "true") === "true";
@@ -59,6 +60,7 @@ export async function createCity(
       data: {
         slug,
         name,
+        nameEn,
         sortOrder: Math.round(sortOrder),
         isActive,
       },
@@ -88,6 +90,7 @@ export async function updateCity(
   }
 
   const name = String(formData.get("name") ?? "").trim();
+  const nameEn = String(formData.get("nameEn") ?? "").trim() || null;
   const slugRaw = String(formData.get("slug") ?? "").trim();
   const sortOrder = Number(formData.get("sortOrder") ?? 0);
   const isActive = String(formData.get("isActive") ?? "true") === "true";
@@ -112,6 +115,7 @@ export async function updateCity(
       data: {
         slug,
         name,
+        nameEn,
         sortOrder: Math.round(sortOrder),
         isActive,
       },

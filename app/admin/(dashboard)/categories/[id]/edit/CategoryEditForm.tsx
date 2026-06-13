@@ -9,7 +9,9 @@ type Category = {
   id: number;
   slug: string;
   title: string;
+  titleEn: string | null;
   description: string;
+  descriptionEn: string | null;
   image: string;
   alt: string | null;
   sortOrder: number;
@@ -45,6 +47,14 @@ export function CategoryEditForm({ category }: Props) {
         />
       </label>
       <label className="text-sm font-medium md:col-span-1">
+        عنوان الفئة (إنجليزي)
+        <input
+          name="titleEn"
+          defaultValue={category.titleEn ?? ""}
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+        />
+      </label>
+      <label className="text-sm font-medium md:col-span-1">
         المعرّف (slug)
         <input
           name="slug"
@@ -62,6 +72,15 @@ export function CategoryEditForm({ category }: Props) {
           required
           rows={4}
           defaultValue={category.description}
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+        />
+      </label>
+      <label className="text-sm font-medium md:col-span-2">
+        الوصف (إنجليزي)
+        <textarea
+          name="descriptionEn"
+          rows={4}
+          defaultValue={category.descriptionEn ?? ""}
           className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
         />
       </label>

@@ -29,10 +29,11 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   });
 }
 
-export default async function Home() {
+export default async function Home({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
   const [hero, cities, tabFlags] = await Promise.all([
     getHomeHeroSettings(),
-    getActiveBookingCitiesWithBranches().catch(() => []),
+    getActiveBookingCitiesWithBranches(locale).catch(() => []),
     getBookingWidgetTabFlags(),
   ]);
 

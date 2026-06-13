@@ -31,9 +31,12 @@ function firstSearchParam(
 
 export default async function FleetCheckoutPage({
   searchParams,
+  params: routeParams,
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
+  params: Promise<{ locale: string }>;
 }) {
+  const { locale } = await routeParams;
   const sp = searchParams ? await searchParams : {};
   const modelId = Number(firstSearchParam(sp.modelId));
   if (!Number.isInteger(modelId) || modelId < 1) {
@@ -67,13 +70,13 @@ export default async function FleetCheckoutPage({
       branchSlug: checkoutBranchSlug,
       pickupDate: checkoutPickupDate,
     }),
-    getActiveRentalAddons(),
-    getActiveBranches().catch(() => []),
-    getActiveBookingCitiesWithBranches().catch(() => []),
+    getActiveRentalAddons(locale),
+    getActiveBranches(locale).catch(() => []),
+    getActiveBookingCitiesWithBranches(locale).catch(() => []),
     getCustomerProfile(),
     getRentalPriceDisplayMode(),
     getActiveInterCityShippingRules().catch(() => []),
-    getActiveCheckoutOneTimeFees().catch(() => []),
+    getActiveCheckoutOneTimeFees(locale).catch(() => []),
     getBookingWidgetTabFlags(),
   ]);
 

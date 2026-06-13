@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MapPin, Building2, X, ChevronLeft } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import type { BookingCityBranchesOption } from "@/lib/booking-location-options";
 import { useAnchoredPopoverPosition } from "@/lib/use-anchored-popover-position";
 
@@ -30,6 +30,8 @@ export function LocationPickerPopover({
 }: Props) {
   const panelRef = useRef<HTMLDivElement>(null);
   const t = useTranslations("Common");
+  const locale = useLocale();
+  const isRTL = locale === "ar";
   const [activeCitySlug, setActiveCitySlug] = useState(
     () => dateCities[0]?.slug ?? ""
   );
@@ -92,10 +94,10 @@ export function LocationPickerPopover({
       aria-label={`${t("select")} ${label}`}
       style={panelStyle}
       className="location-popover overflow-hidden rounded-2xl border border-[#ebe4d3] bg-white shadow-[0_20px_60px_-10px_rgba(0,55,73,0.22),0_4px_16px_-4px_rgba(0,55,73,0.12)]"
-      dir="rtl"
+      dir={isRTL ? "rtl" : "ltr"}
     >
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-[#f0ebe4] bg-gradient-to-l from-[#fdfbf6] to-[#f9f5ee] px-4 py-3">
+      <div className={`flex items-center justify-between border-b border-[#f0ebe4] ${isRTL ? "bg-gradient-to-l" : "bg-gradient-to-r"} from-[#fdfbf6] to-[#f9f5ee] px-4 py-3`}>
         <div className="flex items-center gap-2">
           <span className="flex size-7 items-center justify-center rounded-full bg-[#dbb878]/15">
             <MapPin className="size-3.5 text-[#dbb878]" />
@@ -113,8 +115,8 @@ export function LocationPickerPopover({
       </div>
 
       <div className="flex" style={{ minHeight: "200px" }}>
-        {/* City tabs - right column */}
-        <div className="w-[130px] shrink-0 border-l border-[#f0ebe4] bg-[#fdfbf6]">
+        {/* City tabs */}
+        <div className={`w-[130px] shrink-0 ${isRTL ? "border-l" : "border-r"} border-[#f0ebe4] bg-[#fdfbf6]`}>
           {dateCities.map((city) => {
             const isActive = city.slug === activeCitySlug;
             return (
@@ -122,26 +124,26 @@ export function LocationPickerPopover({
                 key={city.slug}
                 type="button"
                 onClick={() => setActiveCitySlug(city.slug)}
-                className={`relative flex w-full items-center gap-2 px-3 py-2.5 text-right text-[12px] font-bold transition-all ${
+                className={`relative flex w-full items-center gap-2 px-3 py-2.5 text-start text-[12px] font-bold transition-all ${
                   isActive
                     ? "bg-white text-[#003749]"
                     : "text-[#8a7752] hover:bg-white/60 hover:text-[#003749]"
                 }`}
               >
                 {isActive && (
-                  <span className="absolute inset-y-0 right-0 w-0.5 bg-gradient-to-b from-[#dbb878] to-[#c9a356] rounded-full" />
+                  <span className={`absolute inset-y-0 ${isRTL ? "right-0" : "left-0"} w-0.5 bg-gradient-to-b from-[#dbb878] to-[#c9a356] rounded-full`} />
                 )}
                 <Building2 className={`size-3.5 shrink-0 ${isActive ? "text-[#dbb878]" : "text-[#c9a356]/60"}`} />
                 <span className="truncate">{city.name}</span>
                 {isActive && (
-                  <ChevronLeft className="mr-auto size-3 shrink-0 text-[#dbb878]" />
+                  <ChevronLeft className={`${isRTL ? "mr-auto" : "ml-auto"} size-3 shrink-0 text-[#dbb878] ${!isRTL && "rotate-180"}`} />
                 )}
               </button>
             );
           })}
         </div>
 
-        {/* Branch list - left side */}
+        {/* Branch list */}
         <div className="flex-1 overflow-y-auto py-2" style={{ maxHeight: "280px" }}>
           {activeCity?.branches.length === 0 && (
             <p className="px-4 py-6 text-center text-[12px] text-[#aaa08e]">
@@ -158,7 +160,7 @@ export function LocationPickerPopover({
                   onBranchSelect(branch.slug, activeCitySlug);
                   onClose();
                 }}
-                className={`group flex w-full items-center gap-3 px-4 py-2.5 text-right transition-all ${
+                className={`group flex w-full items-center gap-3 px-4 py-2.5 text-start transition-all ${
                   isSelected
                     ? "bg-[#dbb878]/10 text-[#003749]"
                     : "text-[#3a2f1e] hover:bg-[#fdfbf6]"

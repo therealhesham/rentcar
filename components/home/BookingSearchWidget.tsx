@@ -1224,10 +1224,10 @@ export function BookingSearchWidget({
             <div
               className="flex flex-col gap-3 rounded-xl border border-[#ebe4d3]/70 bg-[#fdfbf6] p-4"
               role="group"
-              aria-label="بيانات حجز الشركات"
+              aria-label={t("corporateSection.corporateBookingDetails")}
             >
               <p className="text-[11px] font-bold leading-relaxed text-[#6b5a3b]">
-                املأ البيانات التالية؛ سيتواصل فريقنا معكم بعد مراجعة الطلب.
+                {t("corporateSection.fillDetails")}
               </p>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
@@ -1235,7 +1235,7 @@ export function BookingSearchWidget({
                     htmlFor={corpNameId}
                     className="mb-0.5 block text-[10px] font-bold uppercase tracking-wide text-[#003749]/55"
                   >
-                    اسم الشركة
+                    {t("corporateSection.companyName")}
                   </label>
                   <input
                     id={corpNameId}
@@ -1246,7 +1246,7 @@ export function BookingSearchWidget({
                     required
                     maxLength={255}
                     className="mt-0.5 w-full rounded-lg border border-[#ebe4d3]/70 bg-white/90 px-2.5 py-2 text-[13px] font-semibold text-[#0f1923] outline-none focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25"
-                    placeholder="مثال: شركة … للتجارة"
+                    placeholder={t("corporateSection.companyNamePlaceholder")}
                   />
                 </div>
                 <div>
@@ -1254,7 +1254,7 @@ export function BookingSearchWidget({
                     htmlFor={corpEmailId}
                     className="mb-0.5 block text-[10px] font-bold uppercase tracking-wide text-[#003749]/55"
                   >
-                    البريد الإلكتروني للشركة
+                    {t("corporateSection.companyEmail")}
                   </label>
                   <input
                     id={corpEmailId}
@@ -1276,7 +1276,7 @@ export function BookingSearchWidget({
                     htmlFor={corpTaxId}
                     className="mb-0.5 block text-[10px] font-bold uppercase tracking-wide text-[#003749]/55"
                   >
-                    الرقم الضريبي
+                    {t("corporateSection.taxNumber")}
                   </label>
                   <input
                     id={corpTaxId}
@@ -1287,7 +1287,7 @@ export function BookingSearchWidget({
                     maxLength={64}
                     dir="ltr"
                     className="mt-0.5 w-full rounded-lg border border-[#ebe4d3]/70 bg-white/90 px-2.5 py-2 text-[13px] font-semibold text-[#0f1923] outline-none focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25"
-                    placeholder="15 رقماً أو حسب السجل"
+                    placeholder={t("corporateSection.taxNumberPlaceholder")}
                   />
                 </div>
                 <div>
@@ -1295,7 +1295,7 @@ export function BookingSearchWidget({
                     htmlFor={corpPhoneId}
                     className="mb-0.5 block text-[10px] font-bold uppercase tracking-wide text-[#003749]/55"
                   >
-                    جوال التواصل
+                    {t("corporateSection.contactMobile")}
                   </label>
                   <input
                     id={corpPhoneId}
@@ -1318,7 +1318,7 @@ export function BookingSearchWidget({
                   htmlFor={corpDetailsId}
                   className="mb-0.5 block text-[10px] font-bold uppercase tracking-wide text-[#003749]/55"
                 >
-                  تفاصيل الطلب
+                  {t("corporateSection.requestDetails")}
                 </label>
                 <textarea
                   id={corpDetailsId}
@@ -1328,16 +1328,16 @@ export function BookingSearchWidget({
                   required
                   rows={4}
                   maxLength={8000}
-                  dir="rtl"
+                  dir={isRtl ? "rtl" : "ltr"}
                   className="mt-0.5 w-full resize-y rounded-lg border border-[#ebe4d3]/70 bg-white/90 px-2.5 py-2 text-[13px] font-medium text-[#0f1923] outline-none focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25"
-                  placeholder="عدد المركبات، المدة، المدينة، أي متطلبات خاصة…"
+                  placeholder={t("corporateSection.requestDetailsPlaceholder")}
                 />
                 <p className="mt-1 text-[9px] font-medium text-[#8a7752]/90">
-                  لا يقل عن 10 أحرف — بحد أقصى 8000 حرف.
+                  {t("corporateSection.requestDetailsHelp")}
                 </p>
               </div>
               {corpSuccess && mounted ? createPortal(
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0f1923]/40 p-4 backdrop-blur-sm transition-all duration-300 animate-in fade-in" dir="rtl">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0f1923]/40 p-4 backdrop-blur-sm transition-all duration-300 animate-in fade-in" dir={isRtl ? "rtl" : "ltr"}>
                   <div 
                     className="w-full max-w-sm flex flex-col overflow-hidden rounded-3xl bg-white shadow-2xl animate-in zoom-in-95 duration-300"
                     onClick={(e) => e.stopPropagation()}
@@ -1347,22 +1347,22 @@ export function BookingSearchWidget({
                       <div className="rounded-full bg-white p-4 shadow-lg mb-2 relative z-10">
                         <Check className="size-10 text-emerald-500" strokeWidth={3} />
                       </div>
-                      <h3 className="text-xl font-bold mt-2 relative z-10">استلام الطلب</h3>
+                      <h3 className="text-xl font-bold mt-2 relative z-10">{t("corporateSection.requestReceivedTitle")}</h3>
                     </div>
                     
                     <div className="flex flex-col items-center gap-4 p-8 text-center bg-[#fdfbf6]">
                       <p className="text-[15px] font-semibold leading-relaxed text-[#003749]">
-                        تم استلام طلب حجز الشركات بنجاح!
+                        {t("corporateSection.requestReceivedSuccess")}
                       </p>
                       <p className="text-[13px] font-medium text-[#6b5a3b] max-w-[250px]">
-                        شكراً لثقتكم برُوائس لتأجير السيارات. سيتواصل معكم فريق المبيعات قريباً عبر الهاتف أو البريد المرفق.
+                        {t("corporateSection.requestReceivedMessage")}
                       </p>
                       <button
                         type="button"
                         onClick={() => setCorpSuccess(false)}
                         className="mt-2 w-full rounded-xl bg-[#dbb878] px-5 py-3 text-[14px] font-bold text-white shadow-md transition-all hover:bg-[#c9a356] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#dbb878]/50"
                       >
-                        حسناً، فهمت
+                        {t("corporateSection.okayUnderstood")}
                       </button>
                     </div>
                   </div>
@@ -1805,7 +1805,7 @@ export function BookingSearchWidget({
               ) : rental === "corporate" ? (
                 <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <span className="text-[11px] font-medium leading-snug text-[#6b5a3b]">
-                    لا يُحتسب البحث في الأسطول — طلب تواصل لحجوزات الشركات والعقود.
+                    {t("corporateSection.fleetSearchNotCalculated")}
                   </span>
                   <button
                     type="submit"
@@ -1816,7 +1816,7 @@ export function BookingSearchWidget({
                     <span className="cta-shimmer pointer-events-none absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0" aria-hidden />
                     <Send className="size-4 shrink-0" aria-hidden />
                     <span className="text-[14px] font-extrabold tracking-wide">
-                      {corpPending ? "جاري الإرسال…" : "إرسال طلب التواصل"}
+                      {corpPending ? t("corporateSection.sending") : t("corporateSection.sendContactRequest")}
                     </span>
                   </button>
                 </div>
@@ -1844,12 +1844,12 @@ export function BookingSearchWidget({
             <div className="mt-2 flex flex-col gap-2 border-t border-[#ebe4d3]/60 pt-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
               <p className="text-[10px] leading-relaxed text-[#aaa08e]">
                 {rental === "corporate"
-                  ? "البيانات تُستخدم للتواصل فقط — لا يتم تأكيد حجز آلياً من هذه الخطوة."
+                  ? t("corporateSection.dataUsedForCommunicationOnly")
                   : "يُحدّث السعر والتوفر بعد تطبيق التواريخ على هذا الحجز"}
               </p>
               {rental === "corporate" ? (
                 <span className="text-[10.5px] font-bold text-[#6b5a3b]">
-                  فريق المبيعات يتابع الطلبات خلال أوقات العمل
+                  {t("corporateSection.salesTeamMonitors")}
                 </span>
               ) : null}
             </div>

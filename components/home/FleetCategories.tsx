@@ -10,7 +10,8 @@ import { Reveal } from "./HomeMotion";
 import { getLocale } from "next-intl/server";
 
 export async function FleetCategories() {
-  const categories = await getFleetCategoriesForHome().catch(() => []);
+  const locale = await getLocale();
+  const categories = await getFleetCategoriesForHome(locale).catch(() => []);
 
   if (categories.length === 0) {
     return null;
@@ -19,8 +20,8 @@ export async function FleetCategories() {
   const allModelIds = categories.flatMap((c) => c.models.map((m) => m.id));
   const priceMode = await getRentalPriceDisplayMode();
   const [carByModel, cities] = await Promise.all([
-    getFleetCarMapByModelIds(allModelIds, priceMode),
-    getActiveBookingCitiesWithBranches().catch(() => []),
+    getFleetCarMapByModelIds(allModelIds, priceMode, { locale }),
+    getActiveBookingCitiesWithBranches(locale).catch(() => []),
   ]);
 
   const tabs: FleetCategoryTab[] = categories.map((cat) => ({

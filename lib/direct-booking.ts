@@ -916,7 +916,7 @@ async function buildBookingAddonsJsonSnapshot(
     .filter((x) => x.feeExclVatSar > 0)
     .map((x) => ({
       slug: x.slug,
-      labelAr: x.labelAr,
+      labelAr: x.label,
       feeExclVatSar: Math.round(x.feeExclVatSar),
     }));
   const hasCheckout = coSnap.length > 0;

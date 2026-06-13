@@ -26,11 +26,19 @@ export function CategoryCreateForm() {
       </h2>
 
       <label className="text-sm font-medium md:col-span-1">
-        عنوان الفئة
+        عنوان الفئة (عربي)
         <input
           name="title"
           required
           placeholder="مثال: سيدان"
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+        />
+      </label>
+      <label className="text-sm font-medium md:col-span-1">
+        عنوان الفئة (إنجليزي)
+        <input
+          name="titleEn"
+          placeholder="مثال: Sedan"
           className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
         />
       </label>
@@ -46,10 +54,18 @@ export function CategoryCreateForm() {
       </label>
 
       <label className="text-sm font-medium md:col-span-2">
-        الوصف
+        الوصف (عربي)
         <textarea
           name="description"
           required
+          rows={3}
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+        />
+      </label>
+      <label className="text-sm font-medium md:col-span-2">
+        الوصف (إنجليزي)
+        <textarea
+          name="descriptionEn"
           rows={3}
           className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
         />

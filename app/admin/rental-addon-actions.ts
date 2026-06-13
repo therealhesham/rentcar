@@ -39,8 +39,11 @@ export async function createRentalAddon(
 
   const slug = normalizeSlug(String(formData.get("slug") ?? ""));
   const titleAr = String(formData.get("titleAr") ?? "").trim();
+  const titleEn = String(formData.get("titleEn") ?? "").trim() || null;
   const descriptionAr = String(formData.get("descriptionAr") ?? "").trim() || null;
+  const descriptionEn = String(formData.get("descriptionEn") ?? "").trim() || null;
   const infoAr = String(formData.get("infoAr") ?? "").trim() || null;
+  const infoEn = String(formData.get("infoEn") ?? "").trim() || null;
   const pricePerDay = Number(formData.get("pricePerDay"));
   const sortOrder = Number(formData.get("sortOrder") ?? 0);
   const iconKey = parseIconKey(String(formData.get("iconKey") ?? ""));
@@ -79,8 +82,11 @@ export async function createRentalAddon(
       data: {
         slug,
         titleAr: titleAr.slice(0, 255),
+        titleEn: titleEn ? titleEn.slice(0, 255) : null,
         descriptionAr,
+        descriptionEn,
         infoAr,
+        infoEn,
         pricePerDay: Math.floor(pricePerDay),
         iconKey,
         exclusiveGroup,
@@ -110,8 +116,11 @@ export async function updateRentalAddon(
   const id = Number(formData.get("id"));
   const slug = normalizeSlug(String(formData.get("slug") ?? ""));
   const titleAr = String(formData.get("titleAr") ?? "").trim();
+  const titleEn = String(formData.get("titleEn") ?? "").trim() || null;
   const descriptionAr = String(formData.get("descriptionAr") ?? "").trim() || null;
+  const descriptionEn = String(formData.get("descriptionEn") ?? "").trim() || null;
   const infoAr = String(formData.get("infoAr") ?? "").trim() || null;
+  const infoEn = String(formData.get("infoEn") ?? "").trim() || null;
   const pricePerDay = Number(formData.get("pricePerDay"));
   const sortOrder = Number(formData.get("sortOrder") ?? 0);
   const iconKey = parseIconKey(String(formData.get("iconKey") ?? ""));
@@ -154,8 +163,11 @@ export async function updateRentalAddon(
       data: {
         slug,
         titleAr: titleAr.slice(0, 255),
+        titleEn: titleEn ? titleEn.slice(0, 255) : null,
         descriptionAr,
+        descriptionEn,
         infoAr,
+        infoEn,
         pricePerDay: Math.floor(pricePerDay),
         iconKey,
         exclusiveGroup,

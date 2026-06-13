@@ -62,6 +62,14 @@ export function BranchCreateForm({ cities }: { cities: CityOption[] }) {
         />
       </label>
       <label className="text-sm font-medium md:col-span-1">
+        اسم الفرع (إنجليزي)
+        <input
+          name="nameEn"
+          placeholder="مثال: Jeddah"
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+        />
+      </label>
+      <label className="text-sm font-medium md:col-span-1">
         المعرّف (slug) — للنماذج والحجز
         <input
           name="slug"
@@ -73,10 +81,18 @@ export function BranchCreateForm({ cities }: { cities: CityOption[] }) {
       </label>
 
       <label className="text-sm font-medium md:col-span-1">
-        شعار قصير (اختياري)
+        شعار قصير (عربي)
         <input
           name="tagline"
           placeholder="فخامة ساحلية"
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+        />
+      </label>
+      <label className="text-sm font-medium md:col-span-1">
+        شعار قصير (إنجليزي)
+        <input
+          name="taglineEn"
+          placeholder="Coastal Luxury"
           className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
         />
       </label>
@@ -89,11 +105,19 @@ export function BranchCreateForm({ cities }: { cities: CityOption[] }) {
           className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
         />
       </label>
-      <label className="text-sm font-medium md:col-span-2">
-        العنوان (اختياري)
+      <label className="text-sm font-medium md:col-span-1">
+        العنوان (عربي)
         <input
           name="address"
           placeholder="المدينة - الحي - الشارع"
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+        />
+      </label>
+      <label className="text-sm font-medium md:col-span-1">
+        العنوان (إنجليزي)
+        <input
+          name="addressEn"
+          placeholder="City - District - Street"
           className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
         />
       </label>

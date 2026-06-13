@@ -86,6 +86,7 @@ export async function createFleetVehicle(
   const categoryId = Number(formData.get("categoryId"));
   const brandId = Number(formData.get("brandId"));
   const modelName = String(formData.get("modelName") ?? "").trim();
+  const nameEn = String(formData.get("nameEn") ?? "").trim() || null;
   const year = Number(formData.get("year"));
   const chairs = Number(formData.get("chairs"));
   const engine = String(formData.get("engine") ?? "").trim();
@@ -99,7 +100,9 @@ export async function createFleetVehicle(
   const galleryImageUrl = String(formData.get("galleryImageUrl") ?? "").trim();
   const alt = String(formData.get("alt") ?? "").trim() || null;
   const badge = String(formData.get("badge") ?? "").trim() || null;
+  const badgeEn = String(formData.get("badgeEn") ?? "").trim() || null;
   const cta = String(formData.get("cta") ?? "").trim() || null;
+  const ctaEn = String(formData.get("ctaEn") ?? "").trim() || null;
 
   if (!Number.isFinite(categoryId) || categoryId < 1) {
     return { ok: false, error: "اختر فئة الأسطول." };
@@ -189,6 +192,7 @@ export async function createFleetVehicle(
       const model = await tx.carModel.create({
         data: {
           name: modelName,
+          nameEn,
           brandId: Math.floor(brandId),
           categoryId: Math.floor(categoryId),
           year,
@@ -201,7 +205,9 @@ export async function createFleetVehicle(
           image,
           alt,
           cta,
+          ctaEn,
           badge,
+          badgeEn,
         },
       });
 
@@ -253,6 +259,7 @@ export async function updateFleetVehicle(
   }
 
   const modelName = String(formData.get("modelName") ?? "").trim();
+  const nameEn = String(formData.get("nameEn") ?? "").trim() || null;
   const chairs = Number(formData.get("chairs"));
   const engine = String(formData.get("engine") ?? "").trim();
   const transmission = String(formData.get("transmission")) as Transmission;
@@ -264,6 +271,9 @@ export async function updateFleetVehicle(
   const galleryImageUrl = String(formData.get("galleryImageUrl") ?? "").trim();
   const alt = String(formData.get("alt") ?? "").trim() || null;
   const badge = String(formData.get("badge") ?? "").trim() || null;
+  const badgeEn = String(formData.get("badgeEn") ?? "").trim() || null;
+  const cta = String(formData.get("cta") ?? "").trim() || null;
+  const ctaEn = String(formData.get("ctaEn") ?? "").trim() || null;
 
   if (!modelName) {
     return { ok: false, error: "أدخل اسم الموديل." };
@@ -322,6 +332,7 @@ export async function updateFleetVehicle(
         where: { id: existing.id },
         data: {
           name: modelName,
+          nameEn,
           chairs: Math.floor(chairs),
           engine,
           transmission,
@@ -330,7 +341,10 @@ export async function updateFleetVehicle(
           vatRatePercent,
           image,
           alt,
+          cta,
+          ctaEn,
           badge,
+          badgeEn,
         },
       });
       const editBranchId = Number(formData.get("fleetBranchId"));

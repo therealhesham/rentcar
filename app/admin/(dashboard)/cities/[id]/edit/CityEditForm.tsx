@@ -8,6 +8,7 @@ type City = {
   id: number;
   slug: string;
   name: string;
+  nameEn: string | null;
   sortOrder: number;
   isActive: boolean;
 };
@@ -32,6 +33,14 @@ export function CityEditForm({ city }: Props) {
           name="name"
           required
           defaultValue={city.name}
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+        />
+      </label>
+      <label className="text-sm font-medium md:col-span-1">
+        اسم المدينة (إنجليزي)
+        <input
+          name="nameEn"
+          defaultValue={city.nameEn ?? ""}
           className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
         />
       </label>

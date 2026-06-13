@@ -41,9 +41,12 @@ function qFirst(v: string | string[] | undefined): string | undefined {
 
 export default async function FleetPage({
   searchParams,
+  params: routeParams,
 }: {
   searchParams?: Promise<FleetSearchParams>;
+  params: Promise<{ locale: string }>;
 }) {
+  const { locale } = await routeParams;
   const params = searchParams ? await searchParams : {};
   const fleetUrlHydrate = buildFleetSearchUrlHydrate(params);
   const categoryRaw = qFirst(params.category);
@@ -59,10 +62,10 @@ export default async function FleetPage({
   let searchBanner: ReactNode = null;
 
   const [cities, tabFlags, priceMode, categories, brands, priceBounds] = await Promise.all([
-    getActiveBookingCitiesWithBranches().catch(() => []),
+    getActiveBookingCitiesWithBranches(locale).catch(() => []),
     getBookingWidgetTabFlags(),
     getRentalPriceDisplayMode(),
-    getFleetCategoriesForFilter(),
+    getFleetCategoriesForFilter(locale),
     getFleetBrandsForFilter(),
     getFleetPriceBounds(),
   ]);
@@ -191,6 +194,7 @@ export default async function FleetPage({
     branchSlug: displayBranchSlug,
     pickupDate: fleetPickupDate,
     priceDisplayMode: priceMode,
+    locale,
   });
 
   return (

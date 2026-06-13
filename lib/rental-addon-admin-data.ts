@@ -4,8 +4,11 @@ export type RentalAddonAdminRow = {
   id: number;
   slug: string;
   titleAr: string;
+  titleEn: string | null;
   descriptionAr: string | null;
+  descriptionEn: string | null;
   infoAr: string | null;
+  infoEn: string | null;
   pricePerDay: number;
   iconKey: string | null;
   exclusiveGroup: string | null;
@@ -21,8 +24,11 @@ export async function getRentalAddonsForAdmin(): Promise<RentalAddonAdminRow[]> 
         id: true,
         slug: true,
         titleAr: true,
+        titleEn: true,
         descriptionAr: true,
+        descriptionEn: true,
         infoAr: true,
+        infoEn: true,
         pricePerDay: true,
         iconKey: true,
         exclusiveGroup: true,
@@ -46,8 +52,11 @@ export async function getRentalAddonById(
         id: true,
         slug: true,
         titleAr: true,
+        titleEn: true,
         descriptionAr: true,
+        descriptionEn: true,
         infoAr: true,
+        infoEn: true,
         pricePerDay: true,
         iconKey: true,
         exclusiveGroup: true,

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { FleetBookNowHintModal } from "@/components/fleet/FleetBookNowHintModal";
 import type { BookingCityBranchesOption } from "@/lib/booking-location-options";
 import {
@@ -38,6 +39,7 @@ function BookNowLink({
   href: string;
   onClick: (e: React.MouseEvent<HTMLAnchorElement>) => void;
 }) {
+  const t = useTranslations("Common");
   return (
     <Link
       href={href}
@@ -49,7 +51,7 @@ function BookNowLink({
       <span className={SHINE_CLASS} aria-hidden />
 
       <CalendarIcon />
-      احجز الآن
+      {t("bookNow")}
 
       {/* arrow */}
       <svg

@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { DAILY_PRICE_EXCL_TAX_AR } from "@/lib/pricing";
 import { SarAmountWithSymbol } from "@/components/ui/SarAmountWithSymbol";
+import { useTranslations } from "next-intl";
 
 const cars = [
   {
@@ -36,6 +37,7 @@ const cars = [
 ] as const;
 
 export function FleetShowcase() {
+  const t = useTranslations("Common");
   return (
     <section id="fleet" className="bg-background py-32">
       <div className="mx-auto max-w-7xl px-8">
@@ -87,14 +89,14 @@ export function FleetShowcase() {
                   type="button"
                   className="w-full rounded-xl border border-outline-variant py-4 text-xs font-bold tracking-wide text-primary transition-colors hover:bg-primary-container/10"
                 >
-                  عرض التفاصيل
+                  {t("viewDetails")}
                 </button>
               ) : (
                 <button
                   type="button"
                   className="golden-gradient w-full rounded-xl py-4 text-xs font-bold tracking-wide text-white shadow-lg transition-all hover:opacity-90"
                 >
-                  احجز الآن
+                  {t("bookNow")}
                 </button>
               )}
             </div>
