@@ -196,8 +196,8 @@ export function BookingSearchWidget({
   const [dropoffTimeOpen, setDropoffTimeOpen] = useState(false);
 
   // ── Anchor refs for popover positioning ──
-  const pickupLocRef = useRef<HTMLButtonElement>(null);
-  const returnLocRef = useRef<HTMLButtonElement>(null);
+  const pickupLocRef = useRef<HTMLDivElement>(null);
+  const returnLocRef = useRef<HTMLDivElement>(null);
   const pickupDateRef = useRef<HTMLButtonElement>(null);
   const dropoffDateRef = useRef<HTMLButtonElement>(null);
   const pickupTimeRef = useRef<HTMLButtonElement>(null);
@@ -811,6 +811,20 @@ export function BookingSearchWidget({
       if (found) return found.name;
     }
     return "";
+  }
+
+  // Resolve map URL for a branch slug
+  function branchMapUrl(slug: string): string | null {
+    for (const city of dateCities) {
+      const found = city.branches.find((b) => b.slug === slug);
+      if (found) {
+        if (found.mapUrl) return found.mapUrl;
+        if (found.lat != null && found.lng != null) {
+          return `https://www.google.com/maps/search/?api=1&query=${found.lat},${found.lng}`;
+        }
+      }
+    }
+    return null;
   }
 
   return (
@@ -1439,23 +1453,48 @@ export function BookingSearchWidget({
 
               {/* ── 1. موقع الاستلام ── */}
               <div className="relative flex-1 min-w-0">
-                <button
+                <div
                   ref={pickupLocRef}
-                  type="button"
+                  role="button"
+                  tabIndex={0}
                   aria-expanded={pickupLocOpen}
                   aria-haspopup="dialog"
                   onClick={() => { setPickupLocOpen((v) => !v); setReturnLocOpen(false); closeSchedulePopovers(); }}
-                  className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl sm:rounded-none sm:border-0 sm:border-e sm:border-[#ebe4d3] focus:outline-none"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setPickupLocOpen((v) => !v);
+                      setReturnLocOpen(false);
+                      closeSchedulePopovers();
+                    }
+                  }}
+                  className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl sm:rounded-none sm:border-0 sm:border-e sm:border-[#ebe4d3] focus:outline-none cursor-pointer"
                 >
                   <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
                     <MapPin className="size-3 text-[#dbb878]" aria-hidden />
                     {mode === "pickup" ? t("pickupLocation") : t("branch")}
                   </span>
-                  <span className="truncate text-[13px] font-bold text-[#0f1923]">
-                    {branchLabel(pickupBranchEffective) || <span className="font-medium text-[#aaa08e]">{dateCities.length === 0 ? t("noBranches") : t("selectBranch")}</span>}
+                  <span className="flex items-center gap-2 truncate text-[13px] font-bold text-[#0f1923]">
+                    <span className="truncate">
+                      {branchLabel(pickupBranchEffective) || <span className="font-medium text-[#aaa08e]">{dateCities.length === 0 ? t("noBranches") : t("selectBranch")}</span>}
+                    </span>
+                    {pickupBranchEffective && branchMapUrl(pickupBranchEffective) && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const url = branchMapUrl(pickupBranchEffective);
+                          if (url) window.open(url, "_blank", "noopener,noreferrer");
+                        }}
+                        className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-[#dbb878]/10 text-[#dbb878] hover:bg-[#dbb878] hover:text-white transition-colors focus:outline-none"
+                        title={isRtl ? "عرض الموقع على الخريطة" : "View on map"}
+                      >
+                        <MapPin className="size-3" />
+                      </button>
+                    )}
                   </span>
                   <ChevronDown className={`absolute start-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${pickupLocOpen ? "rotate-180" : ""}`} aria-hidden />
-                </button>
+                </div>
                 <LocationPickerPopover
                   isOpen={pickupLocOpen}
                   onClose={() => setPickupLocOpen(false)}
@@ -1466,7 +1505,7 @@ export function BookingSearchWidget({
                     handlePickupCityChange(city);
                     handlePickupBranchChange(branch);
                   }}
-                  anchorRef={pickupLocRef}
+                  anchorRef={pickupLocRef as any}
                   containerRef={formRef}
                   label={mode === "pickup" ? t("pickupLocation") : t("branch")}
                 />
@@ -1501,23 +1540,48 @@ export function BookingSearchWidget({
               {/* ── 2. موقع الإرجاع (delivery mode only / or return-diff) ── */}
               {returnLocationDifferent && (
                 <div className="relative flex-1 min-w-0">
-                  <button
+                  <div
                     ref={returnLocRef}
-                    type="button"
+                    role="button"
+                    tabIndex={0}
                     aria-expanded={returnLocOpen}
                     aria-haspopup="dialog"
                     onClick={() => { setReturnLocOpen((v) => !v); setPickupLocOpen(false); closeSchedulePopovers(); }}
-                    className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl sm:rounded-none sm:border-0 sm:border-e sm:border-[#ebe4d3] focus:outline-none"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setReturnLocOpen((v) => !v);
+                        setPickupLocOpen(false);
+                        closeSchedulePopovers();
+                      }
+                    }}
+                    className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl sm:rounded-none sm:border-0 sm:border-e sm:border-[#ebe4d3] focus:outline-none cursor-pointer"
                   >
                     <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
                       <MapPin className="size-3 text-[#dbb878]" aria-hidden />
                       {t("returnLocation")}
                     </span>
-                    <span className="truncate text-[13px] font-bold text-[#0f1923]">
-                      {branchLabel(returnBranchEffective) || <span className="font-medium text-[#aaa08e]">{t("selectBranch")}</span>}
+                    <span className="flex items-center gap-2 truncate text-[13px] font-bold text-[#0f1923]">
+                      <span className="truncate">
+                        {branchLabel(returnBranchEffective) || <span className="font-medium text-[#aaa08e]">{t("selectBranch")}</span>}
+                      </span>
+                      {returnBranchEffective && branchMapUrl(returnBranchEffective) && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const url = branchMapUrl(returnBranchEffective);
+                            if (url) window.open(url, "_blank", "noopener,noreferrer");
+                          }}
+                          className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-[#dbb878]/10 text-[#dbb878] hover:bg-[#dbb878] hover:text-white transition-colors focus:outline-none"
+                          title={isRtl ? "عرض الموقع على الخريطة" : "View on map"}
+                        >
+                          <MapPin className="size-3" />
+                        </button>
+                      )}
                     </span>
                     <ChevronDown className={`absolute start-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${returnLocOpen ? "rotate-180" : ""}`} aria-hidden />
-                  </button>
+                  </div>
                   <LocationPickerPopover
                     isOpen={returnLocOpen}
                     onClose={() => setReturnLocOpen(false)}
@@ -1527,7 +1591,7 @@ export function BookingSearchWidget({
                     onBranchSelect={(branch, city) => {
                       handleDeliveryReturnBranch(branch, city);
                     }}
-                    anchorRef={returnLocRef}
+                    anchorRef={returnLocRef as any}
                     containerRef={formRef}
                     label={t("returnLocation")}
                   />
