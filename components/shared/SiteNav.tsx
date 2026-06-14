@@ -77,8 +77,10 @@ export function SiteNav({ active = "home" }: SiteNavProps) {
           </div>
 
           <div className="relative z-10 flex shrink-0 items-center gap-2">
-            <LanguageSwitcher />
-            <CustomerNavSlot />
+            <div className="hidden items-center gap-2 md:flex">
+              <LanguageSwitcher variant="light" />
+              <CustomerNavSlot variant="light" />
+            </div>
             <button
               type="button"
               onClick={() => setOpen((v) => !v)}
@@ -187,6 +189,16 @@ export function SiteNav({ active = "home" }: SiteNavProps) {
               );
             })}
           </nav>
+
+          <div className="flex flex-col gap-4 border-t border-white/10 px-4 py-6">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-bold text-white/70">{t("language") || "اللغة"}</span>
+              <LanguageSwitcher variant="dark" />
+            </div>
+            <div className="w-full">
+              <CustomerNavSlot variant="dark" />
+            </div>
+          </div>
 
           <div className="border-t border-white/10 px-4 py-4">
             <p className="text-center text-xs font-medium text-white/50">

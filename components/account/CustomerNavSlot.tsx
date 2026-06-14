@@ -21,7 +21,7 @@ function getInitials(source: string): string {
   return cleaned.slice(0, 2).toUpperCase();
 }
 
-export function CustomerNavSlot() {
+export function CustomerNavSlot({ variant = "light" }: { variant?: "light" | "dark" }) {
   const [me, setMe] = useState<MeUser | null | undefined>(undefined);
 
   useEffect(() => {
@@ -42,7 +42,9 @@ export function CustomerNavSlot() {
   if (me === undefined) {
     return (
       <span
-        className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-[#163332]/10 sm:h-11 sm:w-11"
+        className={`h-10 w-10 shrink-0 animate-pulse rounded-full sm:h-11 sm:w-11 ${
+          variant === "dark" ? "bg-white/10" : "bg-[#163332]/10"
+        }`}
         aria-hidden
       />
     );
@@ -51,6 +53,28 @@ export function CustomerNavSlot() {
   if (me) {
     const displayName = me.name?.trim() || me.email.split("@")[0] || "";
     const initials = getInitials(displayName);
+
+    if (variant === "dark") {
+      return (
+        <Link
+          href="/account"
+          title={me.name?.trim() || me.email}
+          aria-label={`حساب ${displayName}`}
+          className="flex w-full items-center gap-3 rounded-2xl bg-white/5 p-3 transition-colors hover:bg-white/10 active:bg-white/15 border border-white/10"
+        >
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#dbb878] to-[#c9a356] text-sm font-extrabold text-white shadow-sm ring-2 ring-[#dbb878]/30">
+            <span dir="ltr" className="select-none uppercase tracking-tight drop-shadow-sm">
+              {initials}
+            </span>
+          </div>
+          <div className="flex flex-col flex-1 overflow-hidden">
+            <span className="truncate text-sm font-bold text-white" dir="auto">{displayName}</span>
+            <span className="truncate text-xs text-white/50" dir="auto">{me.email}</span>
+          </div>
+        </Link>
+      );
+    }
+
     return (
       <Link
         href="/account"
@@ -65,6 +89,25 @@ export function CustomerNavSlot() {
           {initials}
         </span>
       </Link>
+    );
+  }
+
+  if (variant === "dark") {
+    return (
+      <div className="flex w-full flex-col gap-2.5">
+        <Link
+          href="/account/login"
+          className="flex w-full items-center justify-center rounded-xl bg-[#dbb878] px-4 py-3 text-sm font-bold text-[#2a2520] shadow-[0_4px_16px_rgba(219,184,120,0.2)] transition-transform hover:scale-[1.02] active:scale-[0.98]"
+        >
+          Login
+        </Link>
+        <Link
+          href="/account/register"
+          className="flex w-full items-center justify-center rounded-xl border border-white/20 bg-white/5 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-white/10 active:bg-white/15"
+        >
+          Register
+        </Link>
+      </div>
     );
   }
 

@@ -9,7 +9,7 @@ const LOCALES = [
   { value: "en", label: "EN" },
 ] as const;
 
-export function LanguageSwitcher() {
+export function LanguageSwitcher({ variant = "light" }: { variant?: "light" | "dark" }) {
   const [isPending, startTransition] = useTransition();
   const locale = useLocale();
   const router = useRouter();
@@ -48,8 +48,12 @@ export function LanguageSwitcher() {
             disabled={isPending}
             className={`relative z-10 h-8 min-w-[2.25rem] cursor-pointer rounded-full px-2.5 text-xs font-bold tracking-wide transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#dbb878] ${
               isActive
-                ? "bg-[#163332] text-[#dbb878] shadow-[0_2px_8px_rgba(22,51,50,0.4)]"
-                : "text-[#2a2520] hover:text-[#163332] hover:bg-[#dbb878]/20"
+                ? variant === "light"
+                  ? "bg-[#163332] text-[#dbb878] shadow-[0_2px_8px_rgba(22,51,50,0.4)]"
+                  : "bg-[#dbb878] text-[#163332] shadow-[0_2px_8px_rgba(219,184,120,0.4)]"
+                : variant === "light"
+                  ? "text-[#2a2520] hover:text-[#163332] hover:bg-[#dbb878]/20"
+                  : "text-white hover:text-[#dbb878] hover:bg-white/10"
             }`}
           >
             {label}
