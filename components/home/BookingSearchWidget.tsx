@@ -1452,7 +1452,7 @@ export function BookingSearchWidget({
             <div className="search-pill flex flex-col gap-3 sm:flex-row sm:items-stretch sm:gap-0">
 
               {/* ── 1. موقع الاستلام ── */}
-              <div className="relative flex-1 min-w-0">
+              <div className="relative sm:flex-[1.8] flex-1 min-w-0">
                 <div
                   ref={pickupLocRef}
                   role="button"
@@ -1513,7 +1513,7 @@ export function BookingSearchWidget({
 
               {/* ── 1.5. موقع التوصيل (delivery mode only) ── */}
               {mode === "delivery" && (
-                <div className="relative flex-1 min-w-0">
+                <div className="relative sm:flex-[1.8] flex-1 min-w-0">
                   <button
                     type="button"
                     onClick={() => setMapOpen(true)}
@@ -1539,7 +1539,7 @@ export function BookingSearchWidget({
 
               {/* ── 2. موقع الإرجاع (delivery mode only / or return-diff) ── */}
               {returnLocationDifferent && (
-                <div className="relative flex-1 min-w-0">
+                <div className="relative sm:flex-[1.8] flex-1 min-w-0">
                   <div
                     ref={returnLocRef}
                     role="button"
