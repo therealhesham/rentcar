@@ -327,7 +327,7 @@ export function LocationPickerPopover({
     }
 
     // Auto-expand city of selected branch
-    const effectiveBranch = selectedBranchSlug || defaultBranchSlug;
+    const effectiveBranch = selectedBranchSlug;
     const selectedCity = dateCities.find((c) =>
       c.branches.some((b) => b.slug === effectiveBranch)
     );
@@ -376,7 +376,7 @@ export function LocationPickerPopover({
       .filter(Boolean) as BookingCityBranchesOption[];
   }, [query, dateCities]);
 
-  const effectiveBranch = selectedBranchSlug || defaultBranchSlug;
+  const effectiveBranch = selectedBranchSlug;
   const isSearching = query.trim().length > 0;
   const totalBranches = dateCities.reduce((s, c) => s + c.branches.length, 0);
 

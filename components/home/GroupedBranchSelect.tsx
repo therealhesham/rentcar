@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronDown } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { BookingCityBranchesOption } from "@/lib/booking-location-options";
 import { citySlugForBranchSlug } from "@/lib/fleet-search-url-hydrate";
 
@@ -33,11 +34,15 @@ export function GroupedBranchSelect({
   selectClassName = DEFAULT_SELECT_CLASS,
   onBranchSelect,
 }: Props) {
+  const t = useTranslations("ReservationForm");
   const value = branchSlug || defaultBranchSlug;
   const hasBranches = dateCities.some((c) => c.branches.length > 0);
 
   function handleChange(nextBranch: string) {
-    if (!nextBranch) return;
+    if (!nextBranch) {
+      onBranchSelect("", null);
+      return;
+    }
     const city = citySlugForBranchSlug(dateCities, nextBranch);
     onBranchSelect(nextBranch, city);
   }
@@ -56,6 +61,7 @@ export function GroupedBranchSelect({
           disabled={disabled || !hasBranches}
           className={selectClassName}
         >
+          <option value="">{t("selectBranch")}</option>
           {dateCities.map((city) =>
             city.branches.length > 0 ? (
               <optgroup key={city.slug} label={city.name}>

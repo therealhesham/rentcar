@@ -408,11 +408,11 @@ export function BookingSearchWidget({
   }, [mode, returnCity, defaultCitySlug]);
 
   const branchSelectRequired = dateCities.some((c) => c.branches.length > 0);
-  const pickupBranchEffective = pickupBranch || defaultPickupBranchSlug;
+  const pickupBranchEffective = pickupBranch;
   const returnBranchEffective =
     !returnLocationDifferent
       ? pickupBranchEffective
-      : returnBranch || defaultReturnBranchSlug;
+      : returnBranch;
 
   const freshRebookLocationSummaryAr = useMemo(() => {
     if (!isFreshRebookFlow) return "";
@@ -537,7 +537,7 @@ export function BookingSearchWidget({
     setReturnLocationDifferent(checked);
     if (checked) {
       setReturnCity(pickupCity || defaultCitySlug);
-      setReturnBranch(pickupBranch || defaultPickupBranchSlug);
+      setReturnBranch(pickupBranch);
     }
   }
 
@@ -1423,8 +1423,8 @@ export function BookingSearchWidget({
                       <GroupedBranchSelect
                         id={returnBranchId}
                         dateCities={dateCities}
-                        branchSlug={returnBranch || defaultReturnBranchSlug}
-                        defaultBranchSlug={defaultReturnBranchSlug}
+                        branchSlug={returnBranch}
+                        defaultBranchSlug=""
                         required={branchSelectRequired}
                         onBranchSelect={handleDeliveryReturnBranch}
                       />
