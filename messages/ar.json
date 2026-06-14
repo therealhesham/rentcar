@@ -253,6 +253,7 @@
   },
   "Common": {
     "select": "اختر",
+    "selectDate": "اختر التاريخ",
     "bookNow": "احجز الآن",
     "viewDetails": "عرض التفاصيل"
   },

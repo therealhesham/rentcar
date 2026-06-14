@@ -253,6 +253,7 @@
   },
   "Common": {
     "select": "Select",
+    "selectDate": "Select Date",
     "bookNow": "Book Now",
     "viewDetails": "View Details"
   },
