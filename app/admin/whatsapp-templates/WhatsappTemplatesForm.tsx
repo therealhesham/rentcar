@@ -91,7 +91,7 @@ export function WhatsappTemplatesForm({ initialState }: Props) {
         <button 
           type="submit" 
           disabled={pending}
-          className="rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-on-primary transition-opacity disabled:opacity-60"
+          className="cursor-pointer rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-on-primary transition-opacity disabled:cursor-not-allowed disabled:opacity-60"
         >
           {pending ? "جاري الحفظ..." : "حفظ التعديلات"}
         </button>
