@@ -73,6 +73,8 @@ export async function getActiveBookingCitiesWithBranches(
             slug: true,
             name: true,
             nameEn: true,
+            address: true,
+            addressEn: true,
             openingHoursJson: true,
             mapUrl: true,
             latitude: true,
@@ -110,9 +112,11 @@ export async function getActiveBookingCitiesWithBranches(
             return {
               slug: b.slug,
               name: localizeDbField(b, "name", locale),
+              address: localizeDbField(b, "address", locale),
               openingHours: parseBranchOpeningHoursJson(b.openingHoursJson),
               lat,
               lng,
+              mapUrl: b.mapUrl,
               deliveryFeePerKmSar: b.deliveryFeePerKmSar,
             };
           }),

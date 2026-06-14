@@ -121,6 +121,24 @@ export function BranchCreateForm({ cities }: { cities: CityOption[] }) {
           className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
         />
       </label>
+      <label className="text-sm font-medium md:col-span-1">
+        العنوان التفصيلي (عربي)
+        <textarea
+          name="detailedAddress"
+          placeholder="وصف تفصيلي لمكان الفرع (مثال: بجوار البنك...)"
+          rows={3}
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2 resize-y"
+        />
+      </label>
+      <label className="text-sm font-medium md:col-span-1">
+        العنوان التفصيلي (إنجليزي)
+        <textarea
+          name="detailedAddressEn"
+          placeholder="Detailed description of the branch location..."
+          rows={3}
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2 resize-y"
+        />
+      </label>
       <label className="text-sm font-medium md:col-span-2">
         رابط موقع الفرع على الخرائط (https) — اختياري
         <input

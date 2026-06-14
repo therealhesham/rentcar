@@ -104,6 +104,8 @@ model Branch {
   taglineEn String?  @db.VarChar(255)
   address   String?  @db.VarChar(255)
   addressEn String?  @db.VarChar(255)
+  detailedAddress String? @db.Text
+  detailedAddressEn String? @db.Text
   phone     String?  @db.VarChar(32)
   mapUrl    String?  @db.Text
   latitude  Float?

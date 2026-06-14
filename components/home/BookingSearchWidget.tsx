@@ -1467,6 +1467,7 @@ export function BookingSearchWidget({
                     handlePickupBranchChange(branch);
                   }}
                   anchorRef={pickupLocRef}
+                  containerRef={formRef}
                   label={mode === "pickup" ? t("pickupLocation") : t("branch")}
                 />
               </div>
@@ -1527,6 +1528,7 @@ export function BookingSearchWidget({
                       handleDeliveryReturnBranch(branch, city);
                     }}
                     anchorRef={returnLocRef}
+                    containerRef={formRef}
                     label={t("returnLocation")}
                   />
                 </div>

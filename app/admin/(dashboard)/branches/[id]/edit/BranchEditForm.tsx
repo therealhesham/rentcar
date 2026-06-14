@@ -18,6 +18,8 @@ type Branch = {
   taglineEn: string | null;
   address: string | null;
   addressEn: string | null;
+  detailedAddress: string | null;
+  detailedAddressEn: string | null;
   phone: string | null;
   mapUrl: string | null;
   image: string | null;
@@ -140,6 +142,24 @@ export function BranchEditForm({ branch, cities }: Props) {
           name="addressEn"
           defaultValue={branch.addressEn ?? ""}
           className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+        />
+      </label>
+      <label className="text-sm font-medium md:col-span-1">
+        العنوان التفصيلي
+        <textarea
+          name="detailedAddress"
+          defaultValue={branch.detailedAddress ?? ""}
+          rows={3}
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2 resize-y"
+        />
+      </label>
+      <label className="text-sm font-medium md:col-span-1">
+        العنوان التفصيلي (إنجليزي)
+        <textarea
+          name="detailedAddressEn"
+          defaultValue={branch.detailedAddressEn ?? ""}
+          rows={3}
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2 resize-y"
         />
       </label>
       <label className="text-sm font-medium md:col-span-2">

@@ -110,6 +110,8 @@ export async function createBranch(
   const taglineEn = String(formData.get("taglineEn") ?? "").trim() || null;
   const address = String(formData.get("address") ?? "").trim() || null;
   const addressEn = String(formData.get("addressEn") ?? "").trim() || null;
+  const detailedAddress = String(formData.get("detailedAddress") ?? "").trim() || null;
+  const detailedAddressEn = String(formData.get("detailedAddressEn") ?? "").trim() || null;
   const phone = normalizePhone(String(formData.get("phone") ?? ""));
   let mapUrl: string | null = null;
   try {
@@ -179,6 +181,8 @@ export async function createBranch(
         taglineEn,
         address,
         addressEn,
+        detailedAddress,
+        detailedAddressEn,
         phone,
         mapUrl,
         latitude,
@@ -223,6 +227,8 @@ export async function updateBranch(
   const taglineEn = String(formData.get("taglineEn") ?? "").trim() || null;
   const address = String(formData.get("address") ?? "").trim() || null;
   const addressEn = String(formData.get("addressEn") ?? "").trim() || null;
+  const detailedAddress = String(formData.get("detailedAddress") ?? "").trim() || null;
+  const detailedAddressEn = String(formData.get("detailedAddressEn") ?? "").trim() || null;
   const phone = normalizePhone(String(formData.get("phone") ?? ""));
   let mapUrl: string | null = null;
   try {
@@ -294,6 +300,8 @@ export async function updateBranch(
         taglineEn,
         address,
         addressEn,
+        detailedAddress,
+        detailedAddressEn,
         phone,
         mapUrl,
         latitude,

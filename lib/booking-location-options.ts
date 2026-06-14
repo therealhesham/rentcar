@@ -8,6 +8,8 @@ export type BookingBranchOption = {
   openingHours: BranchOpeningHoursSchedule | null;
   lat?: number | null;
   lng?: number | null;
+  address?: string;
+  mapUrl?: string | null;
   deliveryFeePerKmSar?: number;
 };
 
