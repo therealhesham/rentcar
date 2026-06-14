@@ -138,10 +138,10 @@ function BranchCard({
       tabIndex={0}
       onClick={onClick}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }}
-      className={`group relative flex w-full cursor-pointer flex-col gap-2 rounded-xl border p-3.5 text-start transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#dbb878] ${
+      className={`group relative flex w-full cursor-pointer flex-col gap-2.5 rounded-xl border p-4 text-start transition-all duration-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#dbb878] ${
         isSelected
-          ? "border-[#dbb878] bg-[#fffcf5] shadow-[0_0_0_2px_rgba(219,184,120,0.25)]"
-          : "border-[#ebe4d3] bg-white hover:border-[#dbb878]/60 hover:bg-[#fffdf9] hover:shadow-sm"
+          ? "border-[#dbb878] bg-[#fffcf5] shadow-[0_4px_20px_-4px_rgba(219,184,120,0.3)] ring-1 ring-[#dbb878]/50"
+          : "border-[#e8e0d0] bg-white hover:-translate-y-0.5 hover:border-[#dbb878]/60 hover:bg-[#faf9f5] hover:shadow-[0_8px_24px_-8px_rgba(0,55,73,0.12)]"
       }`}
     >
       {/* Selected indicator */}
@@ -156,12 +156,12 @@ function BranchCard({
       {/* Branch name and map pin */}
       <div className="flex items-start justify-between gap-2 pe-6">
         <span className="flex items-center gap-2">
-          <span className={`flex size-7 shrink-0 items-center justify-center rounded-full ${isSelected ? "bg-[#dbb878]/20" : "bg-[#f5f0e8] group-hover:bg-[#dbb878]/15"} transition-colors`}>
+          <span className={`flex size-8 shrink-0 items-center justify-center rounded-full ${isSelected ? "bg-[#dbb878]/20 shadow-inner" : "bg-[#f5f0e8] group-hover:bg-[#dbb878]/15"} transition-all duration-300`}>
             {hasCoords
-              ? <MapPin className={`size-3.5 ${isSelected ? "text-[#c9a356]" : "text-[#8a7752]"}`} />
-              : <Building2 className={`size-3.5 ${isSelected ? "text-[#c9a356]" : "text-[#8a7752]"}`} />}
+              ? <MapPin className={`size-4 ${isSelected ? "text-[#c9a356]" : "text-[#8a7752]"}`} />
+              : <Building2 className={`size-4 ${isSelected ? "text-[#c9a356]" : "text-[#8a7752]"}`} />}
           </span>
-          <span className={`text-[13px] font-bold leading-snug ${isSelected ? "text-[#003749]" : "text-[#1a1a1a] group-hover:text-[#003749]"} transition-colors`}>
+          <span className={`text-[14px] font-bold leading-snug ${isSelected ? "text-[#003749]" : "text-[#1a1a1a] group-hover:text-[#003749]"} transition-colors duration-300`}>
             {branch.name}
           </span>
         </span>
@@ -171,17 +171,18 @@ function BranchCard({
             type="button"
             onClick={handleMapClick}
             title={isRTL ? "عرض الموقع على الخريطة" : "View on map"}
-            className="flex size-7 shrink-0 items-center justify-center rounded-full border border-[#ebe4d3] bg-[#fdfbf6] text-[#8a7752] transition-colors hover:border-[#dbb878] hover:bg-[#dbb878]/10 hover:text-[#c9a356]"
+            className="flex size-8 shrink-0 items-center justify-center rounded-full border border-[#e8e0d0] bg-white text-[#8a7752] shadow-sm transition-all duration-300 hover:scale-105 hover:border-[#dbb878] hover:bg-[#dbb878] hover:text-white hover:shadow-md"
           >
-            <MapPin className="size-3.5" />
+            <MapPin className="size-4" />
           </button>
         )}
       </div>
 
       {/* Address */}
       {branch.address && (
-        <span className="text-[11px] text-[#6b5a3b] leading-relaxed">
-          {branch.address}
+        <span className="flex items-start gap-1.5 text-[12px] text-[#5c4d32] leading-relaxed opacity-90">
+          <MapPin className="mt-0.5 size-3 shrink-0 text-[#8a7752]/70" aria-hidden />
+          <span>{branch.address}</span>
         </span>
       )}
 
@@ -222,11 +223,11 @@ function CityAccordion({
       <button
         type="button"
         onClick={onToggle}
-        className={`flex w-full cursor-pointer items-center justify-between px-4 py-3.5 text-start transition-colors hover:bg-[#fdfbf6] ${isExpanded ? "bg-[#fdfbf6]" : ""}`}
+        className={`group flex w-full cursor-pointer items-center justify-between px-5 py-4 text-start transition-all duration-300 hover:bg-[#faf9f5] ${isExpanded ? "bg-[#faf9f5]" : ""}`}
       >
-        <span className="flex items-center gap-3">
-          <span className={`flex size-8 shrink-0 items-center justify-center rounded-full border transition-colors ${isExpanded ? "border-[#dbb878]/40 bg-[#dbb878]/10" : "border-[#ebe4d3] bg-[#f5f0e8]"}`}>
-            <Building2 className={`size-3.5 ${isExpanded ? "text-[#c9a356]" : "text-[#8a7752]"}`} />
+        <span className="flex items-center gap-3.5">
+          <span className={`flex size-9 shrink-0 items-center justify-center rounded-full border shadow-sm transition-all duration-300 ${isExpanded ? "border-[#dbb878]/50 bg-[#fffcf5] text-[#dbb878] scale-105" : "border-[#e8e0d0] bg-white text-[#8a7752] group-hover:border-[#dbb878]/30 group-hover:text-[#dbb878]"}`}>
+            <Building2 className="size-4" />
           </span>
           <span>
             <span className={`block text-[14px] font-bold ${isExpanded ? "text-[#003749]" : "text-[#1a1a1a]"} transition-colors`}>
@@ -408,30 +409,30 @@ export function LocationPickerPopover({
       role="dialog"
       aria-label={`${t("select")} ${label}`}
       style={panelStyle}
-      className="location-popover flex flex-col overflow-hidden rounded-2xl border border-[#e8e0d0] bg-white shadow-[0_24px_64px_-12px_rgba(0,55,73,0.20),0_4px_16px_-6px_rgba(0,55,73,0.10)]"
+      className="location-popover flex flex-col overflow-hidden rounded-2xl border border-[#e8e0d0]/60 bg-white/95 backdrop-blur-md shadow-[0_32px_64px_-12px_rgba(0,55,73,0.25),0_8px_24px_-8px_rgba(0,55,73,0.15)] ring-1 ring-black/5"
       dir={isRTL ? "rtl" : "ltr"}
     >
       {/* ── Search bar ─────────────────────────────────────── */}
-      <div className="shrink-0 bg-white px-4 pt-4 pb-3">
-        <div className="relative flex items-center gap-2 rounded-xl border-2 border-[#ebe4d3] bg-[#fafaf8] px-3.5 py-2.5 transition-[border-color,box-shadow] focus-within:border-[#dbb878] focus-within:bg-white focus-within:shadow-[0_0_0_3px_rgba(219,184,120,0.15)]">
-          <Search className="size-4 shrink-0 text-[#c9a356]" aria-hidden />
+      <div className="shrink-0 bg-white/80 px-5 pt-5 pb-3">
+        <div className="relative flex items-center gap-2.5 rounded-xl border-2 border-[#e8e0d0] bg-[#faf9f5] px-4 py-3 transition-all duration-300 focus-within:border-[#dbb878] focus-within:bg-white focus-within:shadow-[0_4px_20px_-4px_rgba(219,184,120,0.2)]">
+          <Search className="size-4.5 shrink-0 text-[#dbb878]" aria-hidden />
           <input
             ref={searchRef}
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={isRTL ? "ابحث عن مدينة أو فرع…" : "Search for a city or branch…"}
-            className="flex-1 bg-transparent text-[14px] text-[#0f1923] placeholder:text-[#aaa08e] outline-none"
+            className="flex-1 bg-transparent text-[15px] text-[#003749] placeholder:text-[#8a7752] outline-none"
             aria-label={isRTL ? "بحث عن مدينة أو فرع" : "Search city or branch"}
           />
           {query ? (
             <button
               type="button"
               onClick={() => setQuery("")}
-              className="flex size-6 cursor-pointer shrink-0 items-center justify-center rounded-full transition-colors hover:bg-[#f0ebe4]"
+              className="flex size-7 cursor-pointer shrink-0 items-center justify-center rounded-full bg-[#f5f0e8] text-[#8a7752] transition-all hover:bg-[#e8e0d0] hover:text-[#003749]"
               aria-label={isRTL ? "مسح البحث" : "Clear search"}
             >
-              <X className="size-3.5 text-[#8a7752]" />
+              <X className="size-4" />
             </button>
           ) : null}
         </div>
