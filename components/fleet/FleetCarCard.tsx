@@ -89,7 +89,7 @@ export function FleetCarCard({
       </div>
 
       {/* ────── صورة السيارة ────── */}
-      <div className="relative mx-4 flex h-40 items-center justify-center overflow-hidden rounded-xl bg-gray-50">
+      <div className="relative flex h-48 w-full items-center justify-center overflow-hidden bg-white">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={car.image}
@@ -98,7 +98,7 @@ export function FleetCarCard({
           className="h-full w-full object-contain transition-transform duration-700 ease-out group-hover:scale-[1.04]"
         />
         {car.badge && car.priceUi.discountLabelAr ? (
-          <span className="absolute top-2 left-2 rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white">
+          <span className="absolute top-4 left-4 rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white">
             {car.priceUi.discountLabelAr}
           </span>
         ) : null}
