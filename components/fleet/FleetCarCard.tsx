@@ -58,7 +58,7 @@ export function FleetCarCard({
       {/* ────── الرأس: الاسم يمين، الفئة يسار ────── */}
       <div className="flex items-start justify-between gap-2 px-4 pt-4 pb-2">
 
-        {/* الاسم + السنة */}
+        {/* الاسم + السنة + أو مشابهة */}
         <div className="min-w-0">
           <h3 className="truncate text-base font-bold leading-snug text-gray-900">
             {car.brand} {car.name}
@@ -68,14 +68,16 @@ export function FleetCarCard({
               </span>
             ) : null}
           </h3>
+          <p className="text-[12px] font-medium text-gray-500">أو مشابهة</p>
+
           {meta.length > 0 ? (
-            <p className="mt-0.5 text-[12px] text-gray-500">
+            <p className="mt-0.5 text-[11px] text-gray-400">
               {meta.join(" · ")}
             </p>
           ) : null}
         </div>
 
-        {/* شارة الفئة — بدون بنفسجي */}
+        {/* شارة الفئة */}
         {car.badge ? (
           <span className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-semibold text-gray-600">
             <span className="inline-block h-2 w-2 shrink-0 rounded-full bg-gray-400" />
@@ -166,9 +168,13 @@ export function FleetCarCard({
           )}
         </div>
 
-        {/* زر الحجز — يسار، مقابل السعر */}
+        {/* زر الحجز — يسار */}
         <div className="shrink-0 [&_a]:!w-auto [&_button]:!w-auto">
-          <FleetBookNowButton modelId={car.modelId} cities={cities} />
+          <FleetBookNowButton
+            modelId={car.modelId}
+            cities={cities}
+            carName={`${car.brand} ${car.name}`}
+          />
         </div>
       </div>
 

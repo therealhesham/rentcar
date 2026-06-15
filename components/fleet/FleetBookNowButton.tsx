@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { FleetBookNowHintModal } from "@/components/fleet/FleetBookNowHintModal";
+import { OrSimilarModal } from "@/components/fleet/OrSimilarModal";
 import type { BookingCityBranchesOption } from "@/lib/booking-location-options";
 import {
   validateFleetBookNowSearchParams,
@@ -75,6 +76,7 @@ function BookNowLink({
 type FleetBookNowButtonProps = {
   modelId: number;
   cities?: BookingCityBranchesOption[];
+  carName: string;
 };
 
 function formatAsDatetimeLocal(raw: string | null): string {
@@ -108,11 +110,12 @@ function firstBranchSlug(cities: BookingCityBranchesOption[]): string {
   return "";
 }
 
-function FleetBookNowButtonInner({ modelId, cities = FALLBACK_CITIES }: FleetBookNowButtonProps) {
+function FleetBookNowButtonInner({ modelId, cities = FALLBACK_CITIES, carName }: FleetBookNowButtonProps) {
   const router = useRouter();
   const sp = useSearchParams();
   const extra = sp.toString();
   const href = `/fleet/checkout?modelId=${modelId}${extra ? `&${extra}` : ""}`;
+  const [orSimilarOpen, setOrSimilarOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [draftBranch, setDraftBranch] = useState(() => firstBranchSlug(cities));
   const [draftPickup, setDraftPickup] = useState("");
@@ -137,13 +140,18 @@ function FleetBookNowButtonInner({ modelId, cities = FALLBACK_CITIES }: FleetBoo
   }, [sp, cities]);
 
   function onBookClick(e: React.MouseEvent<HTMLAnchorElement>) {
+    e.preventDefault();
+    setOrSimilarOpen(true);
+  }
+
+  function handleOrSimilarConfirm() {
+    setOrSimilarOpen(false);
     const check = validateFleetBookNowSearchParams(new URLSearchParams(sp.toString()));
     if (!check.ok) {
-      e.preventDefault();
       setModalOpen(true);
-      return;
+    } else {
+      router.push(`/fleet/checkout?modelId=${modelId}&${sp.toString()}`);
     }
-    setModalOpen(false);
   }
 
   function handleConfirmModal(draft: { branch: string; pickup: string; dropoff: string }) {
@@ -165,6 +173,12 @@ function FleetBookNowButtonInner({ modelId, cities = FALLBACK_CITIES }: FleetBoo
   return (
     <>
       <BookNowLink href={href} onClick={onBookClick} />
+      <OrSimilarModal
+        open={orSimilarOpen}
+        carName={carName}
+        onConfirm={handleOrSimilarConfirm}
+        onClose={() => setOrSimilarOpen(false)}
+      />
       <FleetBookNowHintModal
         open={modalOpen}
         cities={cities}
@@ -181,8 +195,10 @@ function FleetBookNowButtonInner({ modelId, cities = FALLBACK_CITIES }: FleetBoo
 function FleetBookNowButtonFallback({
   modelId,
   cities = FALLBACK_CITIES,
+  carName,
 }: FleetBookNowButtonProps) {
   const router = useRouter();
+  const [orSimilarOpen, setOrSimilarOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [draftBranch, setDraftBranch] = useState(() => firstBranchSlug(cities));
   const [draftPickup, setDraftPickup] = useState("");
@@ -194,6 +210,11 @@ function FleetBookNowButtonFallback({
 
   function onBookClick(e: React.MouseEvent<HTMLAnchorElement>) {
     e.preventDefault();
+    setOrSimilarOpen(true);
+  }
+
+  function handleOrSimilarConfirm() {
+    setOrSimilarOpen(false);
     setModalOpen(true);
   }
 
@@ -216,6 +237,12 @@ function FleetBookNowButtonFallback({
         href={`/fleet/checkout?modelId=${modelId}`}
         onClick={onBookClick}
       />
+      <OrSimilarModal
+        open={orSimilarOpen}
+        carName={carName}
+        onConfirm={handleOrSimilarConfirm}
+        onClose={() => setOrSimilarOpen(false)}
+      />
       <FleetBookNowHintModal
         open={modalOpen}
         cities={cities}
@@ -229,10 +256,10 @@ function FleetBookNowButtonFallback({
   );
 }
 
-export function FleetBookNowButton({ modelId, cities = FALLBACK_CITIES }: FleetBookNowButtonProps) {
+export function FleetBookNowButton({ modelId, cities = FALLBACK_CITIES, carName }: FleetBookNowButtonProps) {
   return (
-    <Suspense fallback={<FleetBookNowButtonFallback modelId={modelId} cities={cities} />}>
-      <FleetBookNowButtonInner modelId={modelId} cities={cities} />
+    <Suspense fallback={<FleetBookNowButtonFallback modelId={modelId} cities={cities} carName={carName} />}>
+      <FleetBookNowButtonInner modelId={modelId} cities={cities} carName={carName} />
     </Suspense>
   );
 }
