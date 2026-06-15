@@ -100,6 +100,19 @@ function useWidgetAlignedPosition(
   return { style, ready };
 }
 
+function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371; // Radius of the earth in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;  
+  const dLon = (lon2 - lon1) * Math.PI / 180; 
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2)
+    ; 
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+  return R * c;
+}
+
 type BranchMatch = {
   branch: BookingBranchOption;
   citySlug: string;
@@ -112,11 +125,13 @@ function BranchCard({
   isSelected,
   onClick,
   isRTL,
+  userLocation,
 }: {
   branch: BookingBranchOption;
   isSelected: boolean;
   onClick: () => void;
   isRTL: boolean;
+  userLocation?: { lat: number; lng: number } | null;
 }) {
   const hasCoords = branch.lat != null && branch.lng != null;
   const hasMapLink = !!branch.mapUrl || hasCoords;
@@ -178,13 +193,29 @@ function BranchCard({
         )}
       </div>
 
-      {/* Address */}
-      {branch.address && (
-        <span className="flex items-start gap-1.5 text-[12px] text-[#5c4d32] leading-relaxed opacity-90">
-          <MapPin className="mt-0.5 size-3 shrink-0 text-[#8a7752]/70" aria-hidden />
-          <span>{branch.address}</span>
-        </span>
-      )}
+      {/* Address & Distance */}
+      <div className="flex items-start justify-between gap-2">
+        {branch.address && (
+          <span className="flex items-start gap-1.5 text-[12px] text-[#5c4d32] leading-relaxed opacity-90">
+            <MapPin className="mt-0.5 size-3 shrink-0 text-[#8a7752]/70" aria-hidden />
+            <span>{branch.address}</span>
+          </span>
+        )}
+        
+        {userLocation && branch.lat != null && branch.lng != null && (
+          <span className="shrink-0 flex items-center gap-1.5 text-[11px] font-bold text-[#003749] bg-[#e8e0d0]/40 px-2 py-1 rounded-md">
+            <Navigation className="size-3 text-[#dbb878]" />
+            <span dir="ltr">
+              {(() => {
+                const dist = getDistanceKm(userLocation.lat, userLocation.lng, branch.lat, branch.lng);
+                return dist < 1 
+                  ? `${(dist * 1000).toFixed(0)} ${isRTL ? "متر" : "m"}` 
+                  : `${dist.toFixed(1)} ${isRTL ? "كم" : "km"}`;
+              })()}
+            </span>
+          </span>
+        )}
+      </div>
 
       {/* Opening hours hint */}
       {branch.openingHours && (
@@ -205,6 +236,7 @@ function CityAccordion({
   isExpanded,
   isRTL,
   effectiveBranch,
+  userLocation,
   onToggle,
   onBranchSelect,
 }: {
@@ -212,6 +244,7 @@ function CityAccordion({
   isExpanded: boolean;
   isRTL: boolean;
   effectiveBranch: string;
+  userLocation?: { lat: number; lng: number } | null;
   onToggle: () => void;
   onBranchSelect: (branchSlug: string, citySlug: string) => void;
 }) {
@@ -256,6 +289,7 @@ function CityAccordion({
               branch={branch}
               isSelected={branch.slug === effectiveBranch}
               isRTL={isRTL}
+              userLocation={userLocation}
               onClick={() => onBranchSelect(branch.slug, city.slug)}
             />
           ))}
@@ -284,6 +318,7 @@ export function LocationPickerPopover({
   const isRTL = locale === "ar";
 
   const [query, setQuery] = useState("");
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [expandedCities, setExpandedCities] = useState<Set<string>>(() => {
     // Start with first city expanded
     const s = new Set<string>();
@@ -364,17 +399,43 @@ export function LocationPickerPopover({
   // Search results (filtered cities & branches)
   const filteredCities = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return dateCities;
-    return dateCities
-      .map((city) => {
-        const cityMatches = city.name.toLowerCase().includes(q);
-        const matchedBranches = cityMatches
-          ? city.branches
-          : city.branches.filter((b) => b.name.toLowerCase().includes(q));
-        return matchedBranches.length > 0 ? { ...city, branches: matchedBranches } : null;
-      })
-      .filter(Boolean) as BookingCityBranchesOption[];
-  }, [query, dateCities]);
+    let cities = dateCities;
+    
+    if (q) {
+      cities = cities
+        .map((city) => {
+          const cityMatches = city.name.toLowerCase().includes(q);
+          const matchedBranches = cityMatches
+            ? city.branches
+            : city.branches.filter((b) => b.name.toLowerCase().includes(q));
+          return matchedBranches.length > 0 ? { ...city, branches: matchedBranches } : null;
+        })
+        .filter(Boolean) as BookingCityBranchesOption[];
+    }
+
+    if (userLocation) {
+      cities = cities.map(city => {
+        const sortedBranches = [...city.branches].sort((a, b) => {
+          if (a.lat == null || a.lng == null) return 1;
+          if (b.lat == null || b.lng == null) return -1;
+          const distA = getDistanceKm(userLocation.lat, userLocation.lng, a.lat, a.lng);
+          const distB = getDistanceKm(userLocation.lat, userLocation.lng, b.lat, b.lng);
+          return distA - distB;
+        });
+        return { ...city, branches: sortedBranches };
+      }).sort((cityA, cityB) => {
+        const aFirst = cityA.branches[0];
+        const bFirst = cityB.branches[0];
+        if (!aFirst || aFirst.lat == null || aFirst.lng == null) return 1;
+        if (!bFirst || bFirst.lat == null || bFirst.lng == null) return -1;
+        const distA = getDistanceKm(userLocation.lat, userLocation.lng, aFirst.lat, aFirst.lng);
+        const distB = getDistanceKm(userLocation.lat, userLocation.lng, bFirst.lat, bFirst.lng);
+        return distA - distB;
+      });
+    }
+
+    return cities;
+  }, [query, dateCities, userLocation]);
 
   const effectiveBranch = selectedBranchSlug;
   const isSearching = query.trim().length > 0;
@@ -445,16 +506,30 @@ export function LocationPickerPopover({
             if (!navigator.geolocation) return;
             navigator.geolocation.getCurrentPosition(
               (pos) => {
-                // Find closest branch
-                let best: { slug: string; citySlug: string; dist: number } | null = null;
+                const lat = pos.coords.latitude;
+                const lng = pos.coords.longitude;
+                setUserLocation({ lat, lng });
+                
+                // Find closest city to expand it
+                let bestCity: string | null = null;
+                let minDist = Infinity;
                 for (const city of dateCities) {
                   for (const b of city.branches) {
                     if (b.lat == null || b.lng == null) continue;
-                    const dist = Math.hypot(b.lat - pos.coords.latitude, b.lng - pos.coords.longitude);
-                    if (!best || dist < best.dist) best = { slug: b.slug, citySlug: city.slug, dist };
+                    const dist = getDistanceKm(lat, lng, b.lat, b.lng);
+                    if (dist < minDist) {
+                      minDist = dist;
+                      bestCity = city.slug;
+                    }
                   }
                 }
-                if (best) selectBranch(best.slug, best.citySlug);
+                if (bestCity) {
+                  setExpandedCities((prev) => {
+                    const next = new Set(prev);
+                    next.add(bestCity!);
+                    return next;
+                  });
+                }
               },
               () => {/* ignore */}
             );
@@ -492,6 +567,7 @@ export function LocationPickerPopover({
               isExpanded={expandedCities.has(city.slug)}
               isRTL={isRTL}
               effectiveBranch={effectiveBranch}
+              userLocation={userLocation}
               onToggle={() => toggleCity(city.slug)}
               onBranchSelect={selectBranch}
             />
