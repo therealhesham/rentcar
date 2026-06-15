@@ -48,6 +48,7 @@ export type BookingPaymentSnapshot = {
   paymentMethod: string | null;
   status: string;
   car: {
+    modelId: number;
     fullTitle: string;
     categoryTitle: string;
     pricePerDayExclTax: number;
@@ -142,6 +143,7 @@ export async function getBookingForPayment(
     paymentMethod: row.paymentMethod,
     status: row.status,
     car: {
+      modelId: m.id,
       fullTitle: `${brandName} ${modelName}`.trim(),
       categoryTitle: m.category.title.trim(),
       pricePerDayExclTax: effectiveRentalPrice,

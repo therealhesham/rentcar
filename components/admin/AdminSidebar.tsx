@@ -13,6 +13,7 @@ import {
   CreditCard,
   ClipboardList,
   ExternalLink,
+  FileText,
   Home,
   Image,
   LayoutDashboard,
@@ -70,6 +71,7 @@ const ICONS: Record<AdminNavItem["icon"], LucideIcon> = {
   "corner-down-left": CornerDownLeft,
   ban: Ban,
   "credit-card": CreditCard,
+  "file-text": FileText,
 };
 
 type Props = {

@@ -31,7 +31,8 @@ export type AdminNavItem = {
     | "user-cog"
     | "corner-down-left"
     | "ban"
-    | "credit-card";
+    | "credit-card"
+    | "file-text";
   external?: boolean;
 };
 
@@ -98,6 +99,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     label: "السياسات",
     items: [
       { href: "/admin/cancellation-policy", label: "إلغاء الحجز", icon: "scale" },
+      { href: "/admin/rental-terms", label: "الشروط والأحكام", icon: "file-text" },
     ],
   },
   {

@@ -15,6 +15,21 @@ model SiteSetting {
   updatedAt DateTime @updatedAt
 }
 
+/// شروط وأحكام التأجير — يُدارها الأدمن من لوحة التحكم وتُعرض في صفحة الشروط ولحظة الحجز.
+model RentalTerm {
+  id        Int      @id @default(autoincrement())
+  titleAr   String   @db.VarChar(255)
+  titleEn   String?  @db.VarChar(255)
+  bodyAr    String   @db.Text
+  bodyEn    String?  @db.Text
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
 /// حساب عميل على الموقع العام فقط (تسجيل / دخول / حجز). موظفو الإدارة في `AdminEmployee`.
 model User {
   id           Int      @id @default(autoincrement())

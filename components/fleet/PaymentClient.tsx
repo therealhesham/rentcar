@@ -15,6 +15,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useActionState, useEffect, useMemo, useState, type ReactNode } from "react";
+import { BookingStepper } from "@/components/fleet/BookingStepper";
 import {
   confirmMockPayment,
   resendBookingInvoice,
@@ -121,11 +122,7 @@ type MethodOption =
       Icon: typeof CreditCard;
     };
 
-const CHECKOUT_STEPS = [
-  { label: "الأسطول", href: "/fleet", done: true },
-  { label: "إتمام الحجز", href: "/fleet/checkout", done: true },
-  { label: "الدفع", done: false },
-] as const;
+
 
 const METHOD_OPTIONS: MethodOption[] = [
   {
@@ -331,54 +328,12 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
 
   return (
     <main dir="rtl" className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-      <nav className="mb-6 flex items-center gap-2 text-[13px] font-semibold text-[#aaa08e]">
-        <Link href="/fleet" className="transition-colors hover:text-[#dbb878]">
-          الأسطول
-        </Link>
-        <span aria-hidden>/</span>
-        <span className="text-[#003749]/70">إتمام الحجز</span>
-        <span aria-hidden>/</span>
-        <span className="text-[#003749]">الدفع</span>
-      </nav>
-
-      <ol className="mb-8 flex w-full flex-wrap items-center justify-center gap-2 sm:gap-3">
-        {CHECKOUT_STEPS.map((step, i) => {
-          const isLast = i === CHECKOUT_STEPS.length - 1;
-          const isDone = step.done && !isLast;
-          const content = (
-            <>
-              <span
-                className={`grid size-7 shrink-0 place-items-center rounded-full text-xs font-extrabold ${
-                  isLast
-                    ? "bg-[#003749] text-white"
-                    : isDone
-                      ? "bg-[#ecfdf5] text-[#047857]"
-                      : "bg-[#f4f0ea] text-[#6b5a3b]"
-                }`}
-              >
-                {isDone ? <Check className="size-3.5" aria-hidden /> : i + 1}
-              </span>
-              <span className={isLast ? "font-extrabold text-[#003749]" : "text-[#6b5a3b]"}>
-                {step.label}
-              </span>
-            </>
-          );
-          return (
-            <li key={step.label} className="flex items-center gap-2">
-              {"href" in step && step.href && !isLast ? (
-                <Link href={step.href} className="flex items-center gap-2 transition-opacity hover:opacity-80">
-                  {content}
-                </Link>
-              ) : (
-                <span className="flex items-center gap-2">{content}</span>
-              )}
-              {!isLast ? (
-                <span className="mx-1 hidden h-px w-6 bg-[#ebe4d3] sm:block" aria-hidden />
-              ) : null}
-            </li>
-          );
-        })}
-      </ol>
+      {/* Stepper */}
+      <BookingStepper
+        currentStep={checkoutComplete ? 4 : 3}
+        modelId={booking.car.modelId}
+        bookingId={booking.id}
+      />
 
       <div className="mb-8">
         <h1 className="text-2xl font-extrabold tracking-tight text-[#003749] sm:text-3xl">إتمام الدفع</h1>

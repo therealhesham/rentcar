@@ -54,6 +54,7 @@ import type { RentalAddonDTO } from "@/lib/rental-addon-data";
 import { sumCheckoutOneTimeFees } from "@/lib/checkout-one-time-fees";
 import type { FleetCheckoutEditPrefill } from "@/lib/fleet-checkout-edit-prefill";
 import { DdMmYyDateWithPicker } from "@/components/ui/DdMmYyDateWithPicker";
+import { BookingStepper } from "@/components/fleet/BookingStepper";
 import { formatYmdAsDdMmYy, parseDdMmYyToYmd } from "@/lib/booking-search-shared";
 import { getDistanceKM } from "@/lib/geo-distance";
 
@@ -821,14 +822,8 @@ export function FleetCheckoutClient({
       <SiteNav active="fleet" />
       <div className={`pt-24 pb-20 transition-opacity duration-500 ease-out ${mounted ? 'opacity-100' : 'opacity-0'}`}>
         <main className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          {/* Breadcrumb */}
-          <nav className="mb-8 flex items-center gap-2 text-[13px] font-semibold text-[#aaa08e]">
-            <Link href="/fleet" className="transition-colors hover:text-[#dbb878]">
-              الأسطول
-            </Link>
-            <span>/</span>
-            <span className="text-[#003749]">إتمام الحجز</span>
-          </nav>
+          {/* Stepper */}
+          <BookingStepper currentStep={2} modelId={car.modelId} />
 
           <div className="mb-10 space-y-3">
             {sp.get("rebook") === "1" ? (
