@@ -1159,7 +1159,14 @@ export function BookingSearchWidget({
                     onClose={() => setPickupTimeOpen(false)}
                     label={t("pickUpTime")}
                     time={pickupTimeDraft}
-                    onConfirm={applyPickupTime}
+                    onConfirm={(hm) => {
+                      applyPickupTime(hm);
+                      setPickupTimeOpen(false);
+                      setTimeout(() => {
+                        dropoffTimeRef.current?.focus();
+                        setDropoffTimeOpen(true);
+                      }, 150);
+                    }}
                     anchorRef={pickupTimeRef}
                   />
                 </div>
@@ -1194,7 +1201,14 @@ export function BookingSearchWidget({
                   startDateDdMmYy={pickupDateDraft}
                   endDateDdMmYy={dropoffDateDraft}
                   onStartChange={applyPickupDateOnly}
-                  onRangeChange={applyDateRange}
+                  onRangeChange={(start, end) => {
+                    applyDateRange(start, end);
+                    setDateRangeOpen(false);
+                    setTimeout(() => {
+                      pickupTimeRef.current?.focus();
+                      setPickupTimeOpen(true);
+                    }, 150);
+                  }}
                   anchorRef={dateRangeActiveRef}
                   extraAnchorRefs={[pickupDateRef, dropoffDateRef]}
                 />
@@ -1504,6 +1518,15 @@ export function BookingSearchWidget({
                   onBranchSelect={(branch, city) => {
                     handlePickupCityChange(city);
                     handlePickupBranchChange(branch);
+                    setTimeout(() => {
+                      if (returnLocationDifferent) {
+                        returnLocRef.current?.focus();
+                        setReturnLocOpen(true);
+                      } else {
+                        pickupDateRef.current?.focus();
+                        toggleDateRange("pickup");
+                      }
+                    }, 150);
                   }}
                   anchorRef={pickupLocRef as any}
                   containerRef={formRef}
@@ -1590,6 +1613,10 @@ export function BookingSearchWidget({
                     defaultBranchSlug={defaultReturnBranchSlug}
                     onBranchSelect={(branch, city) => {
                       handleDeliveryReturnBranch(branch, city);
+                      setTimeout(() => {
+                        pickupDateRef.current?.focus();
+                        toggleDateRange("pickup");
+                      }, 150);
                     }}
                     anchorRef={returnLocRef as any}
                     containerRef={formRef}
