@@ -42,7 +42,7 @@ export function BookingStepper({ currentStep, modelId, bookingId }: BookingStepp
   }
 
   return (
-    <div className="w-full mb-6" dir="ltr">
+    <div className="w-full mt-8 mb-8" dir="ltr">
       {/* Step track */}
       <div className="relative flex items-center justify-between px-2 sm:px-4">
         {/* Background track line */}
