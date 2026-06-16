@@ -192,26 +192,7 @@ export default async function AdminCarBookingsPage() {
         />
       </div>
 
-      <div className="mb-6 flex flex-wrap gap-3 text-sm">
-        <Link
-          href="/admin/cancelled-bookings"
-          className="inline-flex items-center gap-1.5 rounded-full border border-outline-variant/30 bg-white px-4 py-2 font-bold text-primary shadow-sm transition-colors hover:bg-surface-container-low"
-        >
-          الحجوزات الملغاة
-        </Link>
-        <Link
-          href="/admin/branch-returns"
-          className="inline-flex items-center gap-1.5 rounded-full border border-outline-variant/30 bg-white px-4 py-2 font-bold text-primary shadow-sm transition-colors hover:bg-surface-container-low"
-        >
-          التسليم الى الفرع
-        </Link>
-        <Link
-          href="/admin/fleet-availability"
-          className="inline-flex items-center gap-1.5 rounded-full border border-outline-variant/30 bg-white px-4 py-2 font-bold text-primary shadow-sm transition-colors hover:bg-surface-container-low"
-        >
-          توفر الأسطول
-        </Link>
-      </div>
+
 
       <AdminCarBookingsList groups={groups} />
     </>
