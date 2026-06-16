@@ -57,7 +57,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     items: [
       { href: "/admin/car-bookings", label: "حجوزات السيارات", icon: "clipboard-list" },
       { href: "/admin/cancelled-bookings", label: "الحجوزات الملغاة", icon: "ban" },
-      { href: "/admin/branch-returns", label: "مرتجعات الفرع", icon: "corner-down-left" },
+      { href: "/admin/branch-returns", label: "التسليم الى الفرع", icon: "corner-down-left" },
       { href: "/admin/customers", label: "العملاء", icon: "users" },
       { href: "/admin/direct-booking", label: "حجز مباشر (مكتب)", icon: "calendar-plus" },
       { href: "/admin/corporate-leads", label: "حجز الشركات", icon: "briefcase" },

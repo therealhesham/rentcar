@@ -71,12 +71,12 @@ export default async function BranchReturnsPage({
   const showBranchColumn = session.isSuperAdmin && !branchFilter;
 
   const pageTitle = session.isSuperAdmin
-    ? "مرتجعات السيارات"
-    : `مرتجعات فرع ${adminBranchDisplayName(session)}`;
+    ? "التسليم الى الفروع"
+    : `التسليم الى فرع ${adminBranchDisplayName(session)}`;
 
   const listTitle =
     viewMode === "month"
-      ? `مرتجعات ${formatMonthTitleAr(yearMonth)}`
+      ? `تسليمات ${formatMonthTitleAr(yearMonth)}`
       : formatReturnDateAr(viewYmd);
 
   return (
@@ -86,11 +86,11 @@ export default async function BranchReturnsPage({
         <p className="mt-2 max-w-3xl text-on-surface-variant">
           {session.isSuperAdmin ? (
             <>
-              اختر يوماً من التقويم لعرض المرتجعات بالساعة، أو اضغط «الشهر» لعرض كل مرتجعات الشهر.
+              اختر يوماً من التقويم لعرض السيارات المسلمة بالساعة، أو اضغط «الشهر» لعرض كل تسليمات الشهر.
             </>
           ) : (
             <>
-              التقويم يوضح عدد السيارات المرتجعة كل يوم. إذا استلم العميل من فرع آخر، يظهر فرع
+              التقويم يوضح عدد السيارات المسلمة كل يوم. إذا استلم العميل من فرع آخر، يظهر فرع
               الاستلام وزر «موافق — استلام» لتحديث المخزون.
             </>
           )}
@@ -123,7 +123,7 @@ export default async function BranchReturnsPage({
               <input type="hidden" name="date" value={viewYmd} />
               <input type="hidden" name="month" value={yearMonth} />
               <label className="flex min-w-[12rem] flex-1 flex-col gap-1 text-sm font-medium">
-                فرع الإرجاع
+                فرع التسليم
                 <select
                   name="branch"
                   defaultValue={branchFilter ?? ""}
@@ -148,14 +148,14 @@ export default async function BranchReturnsPage({
 
           {branchRow ? (
             <p className="mb-3 text-sm text-on-surface">
-              فرع الإرجاع: <span className="font-bold">{branchRow.name}</span>
+              فرع التسليم: <span className="font-bold">{branchRow.name}</span>
             </p>
           ) : null}
 
           <h2 className="text-lg font-extrabold tracking-tight text-primary">{listTitle}</h2>
           <p className="mt-1 text-sm text-on-surface-variant">
             <span className="font-bold tabular-nums text-on-surface">{returns.length}</span>{" "}
-            {viewMode === "month" ? "مرتجع في الشهر" : "مركبة متوقّع إرجاعها في هذا اليوم"}
+            {viewMode === "month" ? "سيارة مسلمة في الشهر" : "مركبة متوقّع تسليمها في هذا اليوم"}
           </p>
         </section>
       </div>
@@ -163,8 +163,8 @@ export default async function BranchReturnsPage({
       {returns.length === 0 ? (
         <p className="rounded-2xl border border-outline-variant/30 bg-surface-container-low px-5 py-6 text-sm text-on-surface-variant">
           {viewMode === "month"
-            ? "لا توجد مرتجعات في هذا الشهر."
-            : "لا توجد مرتجعات مجدولة لهذا اليوم."}
+            ? "لا توجد تسليمات في هذا الشهر."
+            : "لا توجد تسليمات مجدولة لهذا اليوم."}
         </p>
       ) : viewMode === "month" ? (
         <BranchReturnsMonthList

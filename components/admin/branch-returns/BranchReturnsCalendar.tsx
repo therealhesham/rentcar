@@ -76,13 +76,13 @@ export function BranchReturnsCalendar({
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#e8dcc8]/40 bg-[#003749]/[0.03] px-3 py-2.5 sm:px-4">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#8a7f6e]">
-            تقويم المرتجعات
+            تقويم التسليمات
           </p>
           <p className="text-base font-extrabold leading-tight tracking-tight text-[#003749]">
             {formatMonthTitleAr(yearMonth)}
           </p>
           <p className="text-[11px] font-medium text-on-surface-variant">
-            <span className="font-bold tabular-nums text-[#003749]">{monthTotal}</span> مرتجع
+            <span className="font-bold tabular-nums text-[#003749]">{monthTotal}</span> تسليم
           </p>
         </div>
 

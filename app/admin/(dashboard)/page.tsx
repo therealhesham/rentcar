@@ -27,7 +27,7 @@ export const dynamic = "force-dynamic";
 const QUICK_LINKS_ALL = [
   { href: "/admin/statistics", label: "الإحصائيات", icon: BarChart3 },
   { href: "/admin/car-bookings", label: "حجوزات السيارات", icon: ClipboardList },
-  { href: "/admin/branch-returns", label: "مرتجعات الفرع", icon: Truck },
+  { href: "/admin/branch-returns", label: "التسليم الى الفرع", icon: Truck },
   { href: "/admin/direct-booking", label: "حجز مباشر (مكتب)", icon: CalendarPlus },
   { href: "/admin/vehicles", label: "المركبات", icon: Car },
   { href: "/admin/employees", label: "موظفو الفروع", icon: Users, superOnly: true },

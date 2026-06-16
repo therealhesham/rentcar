@@ -25,7 +25,7 @@ export function BranchReturnsMonthList({
   if (dayKeys.length === 0) {
     return (
       <p className="rounded-2xl border border-outline-variant/30 bg-surface-container-low px-5 py-6 text-sm text-on-surface-variant">
-        لا توجد مرتجعات في هذا الشهر.
+        لا توجد تسليمات في هذا الشهر.
       </p>
     );
   }
