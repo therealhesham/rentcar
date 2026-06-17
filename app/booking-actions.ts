@@ -7,6 +7,7 @@ import {
 } from "@/lib/direct-booking";
 import { branchIdsFromReturnSlug } from "@/lib/booking-branches";
 import { prisma } from "@/lib/prisma";
+import { createNotification } from "@/lib/notification-service";
 
 type BookingActionState = { ok: boolean; error?: string };
 
@@ -55,6 +56,18 @@ export async function submitBookingRequest(
   } catch (e) {
     console.error(e);
     return { ok: false, error: "تعذّر إرسال الطلب الآن، حاول مرة أخرى." };
+  }
+
+  // Trigger real-time notification for inquiry
+  try {
+    const targetBranchId = branchIds.branchId ?? branchIds.returnBranchId;
+    await createNotification(
+      { branchId: targetBranchId },
+      "طلب استفسار جديد",
+      `تم تقديم طلب استفسار جديد للعميل ${data.fullName}`
+    );
+  } catch (err) {
+    console.error("[submitBookingRequest] Notification trigger error:", err);
   }
 
   revalidatePath("/admin");

@@ -16,6 +16,7 @@ import {
 } from "@/lib/direct-booking";
 import { sendBookingCompletionWhatsAppAfterPayment } from "@/lib/evolution-whatsapp";
 import { prisma } from "@/lib/prisma";
+import { createNotification } from "@/lib/notification-service";
 
 export async function convertInquiryToDirect(
   _prev: { ok: boolean; error?: string } | null,
@@ -40,6 +41,15 @@ export async function convertInquiryToDirect(
   const result = await convertInquiryBookingToDirect(bookingRequestId, carModelId);
   if (!result.ok) {
     return { ok: false, error: result.error };
+  }
+
+  const booking = await prisma.bookingRequest.findUnique({ where: { id: bookingRequestId } });
+  if (booking) {
+    await createNotification(
+      { branchId: booking.branchId ?? null },
+      "تحويل حجز",
+      `تم تحويل طلب استفسار إلى حجز مباشر للعميل ${booking.fullName}`
+    );
   }
 
   revalidatePath("/admin");

@@ -163,6 +163,8 @@ model AdminEmployee {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  notifications Notification[]
+
   @@index([branchId])
   @@index([isActive])
 }
@@ -589,4 +591,17 @@ model SubscriptionDocument {
 
   @@index([subscriptionId])
   @@unique([subscriptionId, kind])
+}
+
+/// إشعار إداري يرسل للموظفين عند وقوع أحداث هامة (مثل حجز جديد).
+model Notification {
+  id         Int           @id @default(autoincrement())
+  employeeId Int
+  employee   AdminEmployee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  title      String        @db.VarChar(255)
+  message    String        @db.Text
+  isRead     Boolean       @default(false)
+  createdAt  DateTime      @default(now())
+
+  @@index([employeeId, isRead, createdAt])
 }

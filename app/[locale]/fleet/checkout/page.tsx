@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+import { redirect } from "@/i18n/routing";
 import { Suspense } from "react";
 import { FleetCheckoutClient } from "@/components/fleet/FleetCheckoutClient";
 import { getCarModelForCheckout } from "@/lib/checkout-car-data";
@@ -40,7 +40,7 @@ export default async function FleetCheckoutPage({
   const sp = searchParams ? await searchParams : {};
   const modelId = Number(firstSearchParam(sp.modelId));
   if (!Number.isInteger(modelId) || modelId < 1) {
-    redirect("/fleet");
+    redirect({ href: "/fleet", locale });
   }
 
   const checkoutBranchSlug =
@@ -83,7 +83,8 @@ export default async function FleetCheckoutPage({
   const fleetUrlHydrate = buildFleetSearchUrlHydrate(sp);
 
   if (!car) {
-    redirect("/fleet");
+    redirect({ href: "/fleet", locale });
+    return null;
   }
 
   const branchBySlug: Record<string, string> = {};

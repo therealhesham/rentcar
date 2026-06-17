@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { createNotification } from "@/lib/notification-service";
 import {
   DIRECT_BOOKING_MSG_NO_FLEET,
   DIRECT_BOOKING_MSG_UNAVAILABLE_PERIOD,
@@ -1326,6 +1327,28 @@ export async function createDirectBooking(
   if (!bookingRequestId) {
     return { ok: false, error: "تعذّر تسجيل الطلب." };
   }
+
+  // Trigger real-time notification
+  try {
+    const pickupSlugForStore =
+      common.pickupMode === "BRANCH"
+        ? (pickupBranchSlug?.trim().toLowerCase() || common.returnBranchSlug.trim().toLowerCase())
+        : null;
+    const branchIds = await resolveBranchIdsFromSlugs({
+      pickupSlug: pickupSlugForStore,
+      returnSlug: common.returnBranchSlug.trim().toLowerCase(),
+    });
+    const targetBranchId = branchIds.pickupBranchId ?? branchIds.returnBranchId;
+
+    await createNotification(
+      { branchId: targetBranchId },
+      "حجز مباشر جديد",
+      `تم تسجيل حجز جديد للعميل ${common.fullName}`
+    );
+  } catch (err) {
+    console.error("[createDirectBooking] Notification trigger error:", err);
+  }
+
   return { ok: true, bookingRequestId };
 }
 

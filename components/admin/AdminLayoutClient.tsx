@@ -3,6 +3,7 @@
 import { Menu } from "lucide-react";
 import { useState } from "react";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { NotificationBell } from "@/components/admin/NotificationBell";
 import type { AdminSession } from "@/lib/admin-auth";
 import { adminBranchDisplayName } from "@/lib/admin-branch-display";
 import type { AdminNavGroup } from "@/lib/admin-nav";
@@ -55,7 +56,14 @@ export function AdminLayoutClient({ children, session, navGroups }: Props) {
               </p>
             ) : null}
           </div>
+          <div className="flex items-center">
+            <NotificationBell />
+          </div>
         </header>
+
+        <div className="hidden md:flex justify-end px-8 pt-6 w-full max-w-7xl mx-auto">
+          <NotificationBell />
+        </div>
 
         <main className="flex-1 px-4 py-6 sm:px-6 md:px-8 md:py-10">
           <div className="mx-auto w-full max-w-7xl">{children}</div>
