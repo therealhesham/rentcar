@@ -1,3 +1,4 @@
+import React, { Fragment } from "react";
 import Link from "next/link";
 import { ArrowLeft, Calendar, Car, Phone, User } from "lucide-react";
 import { AdminStatusBadge } from "@/components/admin/AdminStatusBadge";
@@ -39,6 +40,7 @@ export type DashboardBookingRow = {
   pickupBranchName: string | null;
   returnBranchName: string | null;
   createdAtLabel: string;
+  createdAtIso: string;
   pickupDateLabel: string;
 };
 
@@ -108,10 +110,40 @@ export function AdminDashboardBookingsSection({ rows, categories, models }: Prop
     );
   }
 
+  const groups = [
+    { title: "حجوزات اليوم", rows: [] as DashboardBookingRow[] },
+    { title: "حجوزات الأمس", rows: [] as DashboardBookingRow[] },
+    { title: "الأسبوع الماضي", rows: [] as DashboardBookingRow[] },
+    { title: "أقدم من ذلك", rows: [] as DashboardBookingRow[] },
+  ];
+
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  rows.forEach((r) => {
+    const d = new Date(r.createdAtIso);
+    const dDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const diffTime = today.getTime() - dDay.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) groups[0].rows.push(r);
+    else if (diffDays === 1) groups[1].rows.push(r);
+    else if (diffDays >= 2 && diffDays <= 7) groups[2].rows.push(r);
+    else groups[3].rows.push(r);
+  });
+
   return (
     <>
       {/* Mobile cards */}
-      <ul className="divide-y divide-outline-variant/15 md:hidden">
+      <div className="md:hidden">
+        {groups.map((group) => {
+          if (group.rows.length === 0) return null;
+          return (
+            <div key={group.title}>
+              <div className="bg-primary/10 px-4 py-2.5 text-sm font-extrabold text-primary border-y border-primary/20">
+                {group.title}
+              </div>
+              <ul className="divide-y divide-outline-variant/15">
         {rows.map((request) => (
           <li key={request.id} className="px-4 py-4">
             <div className="flex items-start justify-between gap-3">
@@ -162,7 +194,11 @@ export function AdminDashboardBookingsSection({ rows, categories, models }: Prop
             </div>
           </li>
         ))}
-      </ul>
+              </ul>
+            </div>
+          );
+        })}
+      </div>
 
       {/* Desktop table */}
       <div className="hidden overflow-x-auto md:block">
@@ -179,61 +215,73 @@ export function AdminDashboardBookingsSection({ rows, categories, models }: Prop
             </tr>
           </thead>
           <tbody>
-            {rows.map((request, i) => (
-              <tr
-                key={request.id}
-                className={`border-b border-outline-variant/10 transition-colors hover:bg-surface-container-low/50 ${
-                  i % 2 === 1 ? "bg-surface-container-low/25" : ""
-                }`}
-              >
-                <td className="px-4 py-3 align-top">
-                  <Link
-                    href={`/admin/bookings/${request.id}`}
-                    className="group block min-w-[140px]"
-                  >
-                    <span className="flex items-center gap-1.5 font-semibold text-on-surface group-hover:text-primary">
-                      <User className="size-3.5 shrink-0 text-on-surface-variant" aria-hidden />
-                      {request.fullName}
-                    </span>
-                    <span className="mt-0.5 block tabular-nums text-xs text-on-surface-variant" dir="ltr">
-                      {request.phone}
-                    </span>
-                  </Link>
-                </td>
-                <td className="px-4 py-3 align-top text-on-surface-variant">
-                  {request.carModelLabel ?? "—"}
-                </td>
-                <td className="px-4 py-3 align-top">
-                  <span className="block tabular-nums">{request.pickupDateLabel}</span>
-                  <span className="mt-0.5 block text-xs text-on-surface-variant">
-                    {request.pickupBranchName ?? "—"}
-                  </span>
-                </td>
-                <td className="px-4 py-3 align-top tabular-nums">{request.numberOfDays}</td>
-                <td className="px-4 py-3 align-top">
-                  <AdminStatusBadge status={request.status} />
-                </td>
-                <td className="px-4 py-3 align-top text-xs text-on-surface-variant tabular-nums">
-                  {request.createdAtLabel}
-                </td>
-                <td className="px-4 py-3 align-top">
-                  <div className="flex min-w-[160px] flex-col gap-2">
-                    <Link
-                      href={`/admin/bookings/${request.id}`}
-                      className="inline-flex items-center gap-1 text-sm font-bold text-primary hover:underline"
+            {groups.map((group) => {
+              if (group.rows.length === 0) return null;
+              return (
+                <Fragment key={group.title}>
+                  <tr className="border-b border-primary/20 bg-primary/5">
+                    <td colSpan={7} className="px-4 py-3 text-sm font-extrabold text-primary">
+                      {group.title}
+                    </td>
+                  </tr>
+                  {group.rows.map((request, i) => (
+                    <tr
+                      key={request.id}
+                      className={`border-b border-outline-variant/10 transition-colors hover:bg-surface-container-low/50 ${
+                        i % 2 === 1 ? "bg-surface-container-low/25" : ""
+                      }`}
                     >
-                      <ArrowLeft className="size-3.5" aria-hidden />
-                      التفاصيل
-                    </Link>
-                    <EditBookingRequestForm
-                      request={editRequestPayload(request)}
-                      categories={categories}
-                      models={models}
-                    />
-                  </div>
-                </td>
-              </tr>
-            ))}
+                      <td className="px-4 py-3 align-top">
+                        <Link
+                          href={`/admin/bookings/${request.id}`}
+                          className="group block min-w-[140px]"
+                        >
+                          <span className="flex items-center gap-1.5 font-semibold text-on-surface group-hover:text-primary">
+                            <User className="size-3.5 shrink-0 text-on-surface-variant" aria-hidden />
+                            {request.fullName}
+                          </span>
+                          <span className="mt-0.5 block tabular-nums text-xs text-on-surface-variant" dir="ltr">
+                            {request.phone}
+                          </span>
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3 align-top text-on-surface-variant">
+                        {request.carModelLabel ?? "—"}
+                      </td>
+                      <td className="px-4 py-3 align-top">
+                        <span className="block tabular-nums">{request.pickupDateLabel}</span>
+                        <span className="mt-0.5 block text-xs text-on-surface-variant">
+                          {request.pickupBranchName ?? "—"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 align-top tabular-nums">{request.numberOfDays}</td>
+                      <td className="px-4 py-3 align-top">
+                        <AdminStatusBadge status={request.status} />
+                      </td>
+                      <td className="px-4 py-3 align-top text-xs text-on-surface-variant tabular-nums">
+                        {request.createdAtLabel}
+                      </td>
+                      <td className="px-4 py-3 align-top">
+                        <div className="flex min-w-[160px] flex-col gap-2">
+                          <Link
+                            href={`/admin/bookings/${request.id}`}
+                            className="inline-flex items-center gap-1 text-sm font-bold text-primary hover:underline"
+                          >
+                            <ArrowLeft className="size-3.5" aria-hidden />
+                            التفاصيل
+                          </Link>
+                          <EditBookingRequestForm
+                            request={editRequestPayload(request)}
+                            categories={categories}
+                            models={models}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </Fragment>
+              );
+            })}
           </tbody>
         </table>
       </div>

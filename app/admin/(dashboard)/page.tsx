@@ -61,9 +61,9 @@ export default async function AdminDashboardPage() {
     prisma.bookingRequest.count({ where: branchScope() }),
     prisma.bookingRequest
       .findMany({
-        where: branchScope({ kind: "DIRECT" }),
+        where: branchScope(),
         orderBy: { createdAt: "desc" },
-        take: 25,
+        take: 100,
         include: {
           carModel: { include: { brand: true } },
           pickupBranch: { select: { slug: true, name: true } },
@@ -141,6 +141,7 @@ export default async function AdminDashboardPage() {
     pickupBranchName: request.pickupBranch?.name ?? null,
     returnBranchName: request.returnBranch?.name ?? null,
     createdAtLabel: new Date(request.createdAt).toLocaleString("ar-SA"),
+    createdAtIso: request.createdAt.toISOString(),
     pickupDateLabel: new Date(request.pickupDate).toLocaleDateString("ar-SA"),
   }));
 
@@ -212,7 +213,7 @@ export default async function AdminDashboardPage() {
           <div>
             <h2 className="text-lg font-extrabold tracking-tight text-on-surface">آخر الحجوزات</h2>
             <p className="mt-1 text-sm leading-relaxed text-on-surface-variant">
-              أحدث 25 حجزاً مباشراً. للتفاصيل الكاملة افتح صفحة الحجز.
+              أحدث 100 حجز. للتفاصيل الكاملة افتح صفحة الحجز.
             </p>
           </div>
           <Link
