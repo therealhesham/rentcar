@@ -55,9 +55,22 @@ export function NotificationBell() {
       } else {
         baseUrl = "ws://localhost:3001";
       }
+    } else {
+      // Force secure WebSocket (wss) if the page is loaded over HTTPS
+      if (typeof window !== "undefined" && window.location.protocol === "https:") {
+        baseUrl = baseUrl.replace(/^ws:\/\//, "wss://");
+      }
     }
     const wsUrl = `${baseUrl}?token=${token}`;
-    const ws = new WebSocket(wsUrl);
+    
+    let ws: WebSocket | null = null;
+    try {
+      ws = new WebSocket(wsUrl);
+    } catch (err) {
+      console.error("[WS] Failed to construct WebSocket:", err);
+    }
+
+    if (!ws) return;
 
     ws.onopen = () => {
       console.log("[WS] Connected to Notification Server");
@@ -93,7 +106,7 @@ export function NotificationBell() {
     wsRef.current = ws;
 
     return () => {
-      ws.close();
+      if (ws) ws.close();
     };
   }, [token]);
 
