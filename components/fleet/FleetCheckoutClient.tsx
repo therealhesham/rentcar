@@ -925,6 +925,12 @@ export function FleetCheckoutClient({
                           onChange={(e) =>
                             setPassportNumber(e.target.value.toUpperCase().replace(/[^A-Z0-9\-]/g, "").slice(0, 24))
                           }
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              document.getElementById("checkout-license-no")?.focus();
+                            }
+                          }}
                           id="checkout-passport"
                           className="peer w-full rounded-xl border border-[#ebe4d3] bg-transparent px-4 pb-3 pt-6 text-[14px] font-semibold text-[#003749] outline-none transition-all focus:border-[#dbb878] focus:ring-1 focus:ring-[#dbb878]"
                           placeholder=" "
@@ -945,7 +951,19 @@ export function FleetCheckoutClient({
                           autoComplete="off"
                           maxLength={10}
                           value={nationalId}
-                          onChange={(e) => setNationalId(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                            setNationalId(val);
+                            if (val.length === 10) {
+                              document.getElementById("checkout-license-no")?.focus();
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              document.getElementById("checkout-license-no")?.focus();
+                            }
+                          }}
                           id="checkout-national-id"
                           className="peer w-full rounded-xl border border-[#ebe4d3] bg-transparent px-4 pb-3 pt-6 text-[14px] font-semibold text-[#003749] outline-none transition-all focus:border-[#dbb878] focus:ring-1 focus:ring-[#dbb878]"
                           placeholder=" "
@@ -967,9 +985,21 @@ export function FleetCheckoutClient({
                         pattern="\d{10}"
                         maxLength={10}
                         value={licenseNumber}
-                        onChange={(e) =>
-                          setLicenseNumber(e.target.value.replace(/\D/g, "").slice(0, 10))
-                        }
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                          setLicenseNumber(val);
+                          if (val.length === 10) {
+                            setTimeout(() => {
+                              document.getElementById("checkout-license-expiry")?.focus();
+                            }, 150);
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            document.getElementById("checkout-license-expiry")?.focus();
+                          }
+                        }}
                         id="checkout-license-no"
                         className="peer w-full rounded-xl border border-[#ebe4d3] bg-transparent px-4 pb-3 pt-6 text-[14px] font-semibold text-[#003749] outline-none transition-all focus:border-[#dbb878] focus:ring-1 focus:ring-[#dbb878]"
                         placeholder=" "
