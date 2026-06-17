@@ -43,7 +43,7 @@ export async function createNotification(
     }
 
     // 3. Send to WS server
-    const wsServerUrl = "http://x2617sp0h55v0ppr6lin1hw6.31.97.55.12.sslip.io";
+    const wsServerUrl = process.env.NEXT_PUBLIC_WS_URL;
     await fetch(`${wsServerUrl}/internal/publish`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
