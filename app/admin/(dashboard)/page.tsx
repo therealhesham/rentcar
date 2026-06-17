@@ -61,7 +61,7 @@ export default async function AdminDashboardPage() {
     prisma.bookingRequest.count({ where: branchScope() }),
     prisma.bookingRequest
       .findMany({
-        where: branchScope(),
+        where: branchScope({ kind: "DIRECT" }),
         orderBy: { createdAt: "desc" },
         take: 25,
         include: {
