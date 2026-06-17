@@ -538,6 +538,10 @@ export function BookingSearchWidget({
     if (checked) {
       setReturnCity(pickupCity || defaultCitySlug);
       setReturnBranch(pickupBranch);
+      setTimeout(() => {
+        returnLocRef.current?.focus();
+        setReturnLocOpen(true);
+      }, 150);
     }
   }
 
@@ -1163,8 +1167,13 @@ export function BookingSearchWidget({
                       applyPickupTime(hm);
                       setPickupTimeOpen(false);
                       setTimeout(() => {
-                        dropoffTimeRef.current?.focus();
-                        setDropoffTimeOpen(true);
+                        if (rental === "daily") {
+                          dropoffDateRef.current?.focus();
+                          toggleDateRange("dropoff");
+                        } else {
+                          dropoffTimeRef.current?.focus();
+                          setDropoffTimeOpen(true);
+                        }
                       }, 150);
                     }}
                     anchorRef={pickupTimeRef}
@@ -1524,7 +1533,11 @@ export function BookingSearchWidget({
                         setReturnLocOpen(true);
                       } else {
                         pickupDateRef.current?.focus();
-                        toggleDateRange("pickup");
+                        if (rental === "daily") {
+                          toggleDateRange("pickup");
+                        } else {
+                          setPickupDateOpen(true);
+                        }
                       }
                     }, 150);
                   }}
@@ -1615,7 +1628,11 @@ export function BookingSearchWidget({
                       handleDeliveryReturnBranch(branch, city);
                       setTimeout(() => {
                         pickupDateRef.current?.focus();
-                        toggleDateRange("pickup");
+                        if (rental === "daily") {
+                          toggleDateRange("pickup");
+                        } else {
+                          setPickupDateOpen(true);
+                        }
                       }, 150);
                     }}
                     anchorRef={returnLocRef as any}
@@ -1683,7 +1700,14 @@ export function BookingSearchWidget({
                     onClose={() => setPickupDateOpen(false)}
                     label={t("pickupDate")}
                     dateDdMmYy={pickupDateDraft}
-                    onConfirm={applyPickupDateFromDraft}
+                    onConfirm={(dateDdMmYy) => {
+                      applyPickupDateFromDraft(dateDdMmYy);
+                      setPickupDateOpen(false);
+                      setTimeout(() => {
+                        pickupTimeRef.current?.focus();
+                        setPickupTimeOpen(true);
+                      }, 150);
+                    }}
                     anchorRef={pickupDateRef}
                   />
                 ) : null}
@@ -1727,8 +1751,13 @@ export function BookingSearchWidget({
                     applyPickupTime(hm);
                     setPickupTimeOpen(false);
                     setTimeout(() => {
-                      dropoffTimeRef.current?.focus();
-                      setDropoffTimeOpen(true);
+                      if (rental === "daily") {
+                        dropoffDateRef.current?.focus();
+                        toggleDateRange("dropoff");
+                      } else {
+                        dropoffTimeRef.current?.focus();
+                        setDropoffTimeOpen(true);
+                      }
                     }, 150);
                   }}
                   anchorRef={pickupTimeRef}
@@ -1776,13 +1805,20 @@ export function BookingSearchWidget({
                     onClose={() => setDateRangeOpen(false)}
                     startDateDdMmYy={pickupDateDraft}
                     endDateDdMmYy={dropoffDateDraft}
-                    onStartChange={applyPickupDateOnly}
-                    onRangeChange={(start, end) => {
-                      applyDateRange(start, end);
+                    onStartChange={(start) => {
+                      applyPickupDateOnly(start);
                       setDateRangeOpen(false);
                       setTimeout(() => {
                         pickupTimeRef.current?.focus();
                         setPickupTimeOpen(true);
+                      }, 150);
+                    }}
+                    onRangeChange={(start, end) => {
+                      applyDateRange(start, end);
+                      setDateRangeOpen(false);
+                      setTimeout(() => {
+                        dropoffTimeRef.current?.focus();
+                        setDropoffTimeOpen(true);
                       }, 150);
                     }}
                     anchorRef={dateRangeActiveRef}
