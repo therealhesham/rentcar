@@ -247,7 +247,7 @@ export default async function AdminDashboardPage(props: {
         title="لوحة التحكم"
         description={
           session.isSuperAdmin
-            ? "نظرة سريعة على الطلبات والأسطول. استخدم القائمة الجانبية للوصول إلى أي قسم."
+            ? undefined
             : `بيانات فرع ${adminBranchDisplayName(session)} فقط. مرحباً ${session.displayName}. الحجوزات والعملاء والمركبات مرتبطة بهذا الفرع.`
         }
         backHref={undefined}
@@ -265,25 +265,6 @@ export default async function AdminDashboardPage(props: {
         </div>
       ) : null}
 
-      <section className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <AdminStatCard label="حجوزات (الكل)" value={countAll} href="/admin" />
-        <AdminStatCard label="حجوزات جديدة" value={countNewUnderReview} href="/admin?status=new" />
-        {session.isSuperAdmin ? (
-          <>
-            <AdminStatCard label="وحدات الأسطول" value={fleetUnits} href="/admin/vehicles" />
-            <AdminStatCard label="فئات الأسطول" value={categoriesCount} href="/admin/categories" />
-            <AdminStatCard label="الماركات" value={brandsCount} href="/admin/vehicles" />
-            <AdminStatCard label="موديلات مسجّلة" value={modelsCount} href="/admin/vehicles" />
-          </>
-        ) : (
-          <AdminStatCard
-            label="موديلات متاحة للحجز"
-            value={bookableModels.length}
-            href="/admin/fleet-availability"
-            hint="في نطاق فرعك"
-          />
-        )}
-      </section>
 
       <AdminCard className="mt-2" noPadding>
         <div className="flex flex-col gap-3 border-b border-outline-variant/15 bg-surface-container-low/40 px-5 py-4 sm:px-6">

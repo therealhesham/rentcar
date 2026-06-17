@@ -1,7 +1,7 @@
 import React, { Fragment } from "react";
 import Link from "next/link";
 import { ArrowLeft, Calendar, Car, Phone, User } from "lucide-react";
-import { AdminStatusBadge } from "@/components/admin/AdminStatusBadge";
+import { AdminStatusBadge, AdminPaymentBadge } from "@/components/admin/AdminStatusBadge";
 import { EditBookingRequestForm } from "@/components/admin/EditBookingRequestForm";
 
 export type DashboardBookingRow = {
@@ -148,7 +148,10 @@ export function AdminDashboardBookingsSection({ rows, categories, models }: Prop
           <li key={request.id} className="px-4 py-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <AdminStatusBadge status={request.status} />
+                <div className="flex flex-wrap gap-2">
+                  <AdminStatusBadge status={request.status} />
+                  <AdminPaymentBadge paymentStatus={request.paymentStatus} paymentMethod={request.paymentMethod} />
+                </div>
                 <p className="mt-2 font-extrabold text-on-surface">{request.fullName}</p>
                 <p className="mt-0.5 flex items-center gap-1.5 text-sm text-on-surface-variant">
                   <Phone className="size-3.5 shrink-0" aria-hidden />
@@ -256,7 +259,10 @@ export function AdminDashboardBookingsSection({ rows, categories, models }: Prop
                       </td>
                       <td className="px-4 py-3 align-top tabular-nums">{request.numberOfDays}</td>
                       <td className="px-4 py-3 align-top">
-                        <AdminStatusBadge status={request.status} />
+                        <div className="flex flex-col items-start gap-1.5">
+                          <AdminStatusBadge status={request.status} />
+                          <AdminPaymentBadge paymentStatus={request.paymentStatus} paymentMethod={request.paymentMethod} />
+                        </div>
                       </td>
                       <td className="px-4 py-3 align-top text-xs text-on-surface-variant tabular-nums">
                         {request.createdAtLabel}

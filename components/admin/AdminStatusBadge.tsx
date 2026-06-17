@@ -1,5 +1,5 @@
-import { bookingStatusLabelAr } from "@/lib/booking-display-labels";
-
+import { bookingStatusLabelAr, bookingPaymentStatusLabelAr } from "@/lib/booking-display-labels";
+import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
 const STATUS_STYLES: Record<string, string> = {
   NEW: "bg-[#fff7ed] text-[#9a3412] ring-[#fdba74]/40",
   UNDER_REVIEW: "bg-[#fef3c7] text-[#b45309] ring-[#fcd34d]/50",
@@ -37,6 +37,33 @@ export function AdminKindBadge({ kind }: { kind: string }) {
       }`}
     >
       {isDirect ? "حجز مباشر" : "استفسار"}
+    </span>
+  );
+}
+
+export function AdminPaymentBadge({
+  paymentStatus,
+  paymentMethod,
+}: {
+  paymentStatus: string | null;
+  paymentMethod: string | null;
+}) {
+  const code = (paymentStatus || "PENDING").trim().toUpperCase();
+  const style =
+    code === "PAID"
+      ? "bg-[#ecfdf5] text-[#047857] ring-[#6ee7b7]/40"
+      : code === "REFUNDED" || code === "PARTIAL_REFUND"
+      ? "bg-[#fef2f2] text-[#b91c1c] ring-[#fecaca]/40"
+      : "bg-[#fff7ed] text-[#9a3412] ring-[#fdba74]/40";
+
+  const methodLabel = paymentMethod ? bookingPaymentMethodLabelAr(paymentMethod) : null;
+
+  return (
+    <span
+      className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold ring-1 ring-inset ${style}`}
+    >
+      {bookingPaymentStatusLabelAr(code)}
+      {methodLabel ? ` · ${methodLabel}` : ""}
     </span>
   );
 }
