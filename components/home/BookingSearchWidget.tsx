@@ -1723,7 +1723,14 @@ export function BookingSearchWidget({
                   onClose={() => setPickupTimeOpen(false)}
                   label={t("pickUpTime")}
                   time={pickupTimeDraft}
-                  onConfirm={applyPickupTime}
+                  onConfirm={(hm) => {
+                    applyPickupTime(hm);
+                    setPickupTimeOpen(false);
+                    setTimeout(() => {
+                      dropoffTimeRef.current?.focus();
+                      setDropoffTimeOpen(true);
+                    }, 150);
+                  }}
                   anchorRef={pickupTimeRef}
                 />
               </div>
@@ -1770,7 +1777,14 @@ export function BookingSearchWidget({
                     startDateDdMmYy={pickupDateDraft}
                     endDateDdMmYy={dropoffDateDraft}
                     onStartChange={applyPickupDateOnly}
-                    onRangeChange={applyDateRange}
+                    onRangeChange={(start, end) => {
+                      applyDateRange(start, end);
+                      setDateRangeOpen(false);
+                      setTimeout(() => {
+                        pickupTimeRef.current?.focus();
+                        setPickupTimeOpen(true);
+                      }, 150);
+                    }}
                     anchorRef={dateRangeActiveRef}
                     extraAnchorRefs={[pickupDateRef, dropoffDateRef]}
                   />
