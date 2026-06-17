@@ -10,6 +10,12 @@ import {
   Shield,
   Truck,
   Users,
+  Inbox,
+  AlertCircle,
+  PhoneCall,
+  CalendarCheck,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 import { AdminCard } from "@/components/admin/AdminCard";
 import {
@@ -24,30 +30,51 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-const QUICK_LINKS_ALL = [
-  { href: "/admin/statistics", label: "الإحصائيات", icon: BarChart3 },
-  { href: "/admin/car-bookings", label: "حجوزات السيارات", icon: ClipboardList },
-  { href: "/admin/branch-returns", label: "التسليم الى الفرع", icon: Truck },
-  { href: "/admin/direct-booking", label: "حجز مباشر (مكتب)", icon: CalendarPlus },
-  { href: "/admin/vehicles", label: "المركبات", icon: Car },
-  { href: "/admin/employees", label: "موظفو الفروع", icon: Users, superOnly: true },
-  { href: "/admin/customers", label: "العملاء", icon: Users },
-  { href: "/admin/fleet-availability", label: "توفر الأسطول", icon: LayoutGrid },
-  { href: "/admin/booking-otp-delivery", label: "رمز التحقق", icon: KeyRound, superOnly: true },
-] as const;
-
-export default async function AdminDashboardPage() {
+export default async function AdminDashboardPage(props: {
+  searchParams?: Promise<{ filter?: string; status?: string }>;
+}) {
   const session = await requireAdminPage();
   const branchScope = (extra?: Parameters<typeof bookingBranchWhere>[1]) =>
     bookingBranchWhere(session, extra);
-  const quickLinks = QUICK_LINKS_ALL.filter((l) => session.isSuperAdmin || !("superOnly" in l && l.superOnly));
+
+  const sp = props.searchParams ? await props.searchParams : {};
+  const statusParam = sp.status || (sp.filter === "new" ? "new" : "");
+
+  let statusWhere: any = {};
+  if (statusParam === "new") {
+    statusWhere = { status: { in: ["NEW", "UNDER_REVIEW"] } };
+  } else if (statusParam === "contacted") {
+    statusWhere = { status: "CONTACTED" };
+  } else if (statusParam === "confirmed") {
+    statusWhere = { status: "CONFIRMED" };
+  } else if (statusParam === "picked_up") {
+    statusWhere = { status: "PICKED_UP" };
+  } else if (statusParam === "returned_completed") {
+    statusWhere = { status: { in: ["RETURNED", "COMPLETED"] } };
+  } else if (statusParam === "cancelled_rejected") {
+    statusWhere = { status: { in: ["CANCELLED", "REJECTED"] } };
+  }
+
+  const bookingsWhere = {
+    ...branchScope(),
+    ...statusWhere,
+  };
 
   const [
     categoriesCount,
     brandsCount,
     modelsCount,
     fleetRows,
-    bookingTotal,
+    
+    // Counts for tabs
+    countAll,
+    countNewUnderReview,
+    countContacted,
+    countConfirmed,
+    countPickedUp,
+    countReturnedCompleted,
+    countCancelledRejected,
+
     bookingRequests,
     bookableModelsRaw,
     fleetCategoriesForEdit,
@@ -59,9 +86,45 @@ export default async function AdminDashboardPage() {
       ? prisma.fleet.findMany({ select: { quantity: true } })
       : Promise.resolve([]),
     prisma.bookingRequest.count({ where: branchScope() }),
+    prisma.bookingRequest.count({
+      where: {
+        ...branchScope(),
+        status: { in: ["NEW", "UNDER_REVIEW"] },
+      },
+    }),
+    prisma.bookingRequest.count({
+      where: {
+        ...branchScope(),
+        status: "CONTACTED",
+      },
+    }),
+    prisma.bookingRequest.count({
+      where: {
+        ...branchScope(),
+        status: "CONFIRMED",
+      },
+    }),
+    prisma.bookingRequest.count({
+      where: {
+        ...branchScope(),
+        status: "PICKED_UP",
+      },
+    }),
+    prisma.bookingRequest.count({
+      where: {
+        ...branchScope(),
+        status: { in: ["RETURNED", "COMPLETED"] },
+      },
+    }),
+    prisma.bookingRequest.count({
+      where: {
+        ...branchScope(),
+        status: { in: ["CANCELLED", "REJECTED"] },
+      },
+    }),
     prisma.bookingRequest
       .findMany({
-        where: branchScope(),
+        where: bookingsWhere,
         orderBy: { createdAt: "desc" },
         take: 100,
         include: {
@@ -145,13 +208,46 @@ export default async function AdminDashboardPage() {
     pickupDateLabel: new Date(request.pickupDate).toLocaleDateString("ar-SA"),
   }));
 
+  let cardTitle = "آخر الحجوزات";
+  let cardDescription = "أحدث 100 حجز. للتفاصيل الكاملة افتح صفحة الحجز.";
+
+  if (statusParam === "new") {
+    cardTitle = "الحجوزات الجديدة وتحت المراجعة";
+    cardDescription = "قائمة بالطلبات الجديدة وتحت المراجعة المعلقة والمحتاجة لمتابعة.";
+  } else if (statusParam === "contacted") {
+    cardTitle = "حجوزات تم التواصل معها";
+    cardDescription = "الحجوزات التي تم التواصل مع أصحابها ومتابعة التفاصيل.";
+  } else if (statusParam === "confirmed") {
+    cardTitle = "الحجوزات المؤكدة";
+    cardDescription = "الحجوزات المؤكدة وفي انتظار موعد استلام السيارة.";
+  } else if (statusParam === "picked_up") {
+    cardTitle = "الحجوزات النشطة (مستلمة)";
+    cardDescription = "الحجوزات التي تم تسليم مركباتها للعملاء وهي نشطة حالياً.";
+  } else if (statusParam === "returned_completed") {
+    cardTitle = "الحجوزات المستلمة والمكتملة";
+    cardDescription = "الحجوزات التي انتهت وتم إرجاع السيارة أو إكمال الإجراءات.";
+  } else if (statusParam === "cancelled_rejected") {
+    cardTitle = "الحجوزات الملغاة والمرفوضة";
+    cardDescription = "الحجوزات التي تم إلغاؤها من قبل العميل أو رفضها من الإدارة.";
+  }
+
+  const tabs = [
+    { id: "", label: "الكل", count: countAll, icon: Inbox },
+    { id: "new", label: "جديد وتحت المراجعة", count: countNewUnderReview, icon: AlertCircle },
+    { id: "contacted", label: "تم التواصل", count: countContacted, icon: PhoneCall },
+    { id: "confirmed", label: "مؤكد", count: countConfirmed, icon: CalendarCheck },
+    { id: "picked_up", label: "مستلم", count: countPickedUp, icon: KeyRound },
+    { id: "returned_completed", label: "مسلّم/مكتمل", count: countReturnedCompleted, icon: CheckCircle },
+    { id: "cancelled_rejected", label: "ملغي/مرفوض", count: countCancelledRejected, icon: XCircle },
+  ];
+
   return (
     <>
       <AdminPageHeader
         title="لوحة التحكم"
         description={
           session.isSuperAdmin
-            ? "نظرة سريعة على الطلبات والأسطول. استخدم الروابط السريعة أو القائمة الجانبية للوصول إلى أي قسم."
+            ? "نظرة سريعة على الطلبات والأسطول. استخدم القائمة الجانبية للوصول إلى أي قسم."
             : `بيانات فرع ${adminBranchDisplayName(session)} فقط. مرحباً ${session.displayName}. الحجوزات والعملاء والمركبات مرتبطة بهذا الفرع.`
         }
         backHref={undefined}
@@ -169,28 +265,9 @@ export default async function AdminDashboardPage() {
         </div>
       ) : null}
 
-      <AdminCard className="mb-8" title="روابط سريعة" description="الوصول المباشر إلى الأقسام الأكثر استخداماً.">
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {quickLinks.map((link) => {
-            const Icon = link.icon;
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="flex items-center gap-3 rounded-xl border border-outline-variant/20 bg-surface-container-low/30 px-4 py-3 text-sm font-bold text-on-surface transition-all hover:border-primary/30 hover:bg-primary-container/20 hover:text-primary"
-              >
-                <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-white text-primary shadow-sm ring-1 ring-outline-variant/15">
-                  <Icon className="size-4" aria-hidden />
-                </span>
-                {link.label}
-              </Link>
-            );
-          })}
-        </div>
-      </AdminCard>
-
       <section className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <AdminStatCard label="حجوزات (الكل)" value={bookingTotal} href="/admin/car-bookings" />
+        <AdminStatCard label="حجوزات (الكل)" value={countAll} href="/admin" />
+        <AdminStatCard label="حجوزات جديدة" value={countNewUnderReview} href="/admin?status=new" />
         {session.isSuperAdmin ? (
           <>
             <AdminStatCard label="وحدات الأسطول" value={fleetUnits} href="/admin/vehicles" />
@@ -209,20 +286,62 @@ export default async function AdminDashboardPage() {
       </section>
 
       <AdminCard className="mt-2" noPadding>
-        <div className="flex flex-col gap-1 border-b border-outline-variant/15 bg-surface-container-low/40 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <div>
-            <h2 className="text-lg font-extrabold tracking-tight text-on-surface">آخر الحجوزات</h2>
-            <p className="mt-1 text-sm leading-relaxed text-on-surface-variant">
-              أحدث 100 حجز. للتفاصيل الكاملة افتح صفحة الحجز.
-            </p>
+        <div className="flex flex-col gap-3 border-b border-outline-variant/15 bg-surface-container-low/40 px-5 py-4 sm:px-6">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-lg font-extrabold tracking-tight text-on-surface">
+                {cardTitle}
+              </h2>
+              <p className="mt-1 text-sm leading-relaxed text-on-surface-variant">
+                {cardDescription}
+              </p>
+            </div>
+            {statusParam ? (
+              <Link
+                href="/admin"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-outline-variant/30 bg-white px-4 py-2 text-xs font-bold text-on-surface shadow-sm transition-colors hover:bg-surface-container-low"
+              >
+                عرض جميع الحجوزات باللوحة
+              </Link>
+            ) : (
+              <Link
+                href="/admin/car-bookings"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-outline-variant/30 bg-white px-4 py-2 text-xs font-bold text-primary shadow-sm transition-colors hover:bg-surface-container-low"
+              >
+                <ClipboardList className="size-3.5" aria-hidden />
+                عرض كل الحجوزات
+              </Link>
+            )}
           </div>
-          <Link
-            href="/admin/car-bookings"
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-outline-variant/30 bg-white px-4 py-2 text-xs font-bold text-primary shadow-sm transition-colors hover:bg-surface-container-low"
-          >
-            <ClipboardList className="size-3.5" aria-hidden />
-            عرض كل الحجوزات
-          </Link>
+
+          {/* Tabs Navigation */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none -mx-2 px-2 sm:mx-0 sm:px-0 mt-2">
+            {tabs.map((tab) => {
+              const isActive = statusParam === tab.id;
+              const Icon = tab.icon;
+              return (
+                <Link
+                  key={tab.id}
+                  href={tab.id ? `/admin?status=${tab.id}` : "/admin"}
+                  className={`inline-flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold transition-all ${
+                    isActive
+                      ? "bg-[#003749] text-white shadow-sm"
+                      : "bg-white text-on-surface-variant hover:bg-[#eae6e2] border border-outline-variant/20"
+                  }`}
+                >
+                  <Icon className="size-3.5" aria-hidden />
+                  <span>{tab.label}</span>
+                  <span
+                    className={`inline-flex min-w-5 h-5 items-center justify-center rounded-full px-1 text-[10px] font-extrabold ${
+                      isActive ? "bg-white/20 text-white" : "bg-outline-variant/30 text-on-surface-variant"
+                    }`}
+                  >
+                    {tab.count}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
         </div>
         <AdminDashboardBookingsSection
           rows={dashboardRows}

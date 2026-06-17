@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Bell, Check, Info } from "lucide-react";
+import { Bell, Check, Info, X } from "lucide-react";
 import {
   getWsToken,
   getUnreadNotifications,
@@ -61,6 +61,18 @@ export function NotificationBell() {
   const [token, setToken] = useState<string | null>(null);
   const [toastMsg, setToastMsg] = useState<{ title: string; message: string } | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleCloseToast = () => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    setToastMsg(null);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    };
+  }, []);
 
   // Fetch token and initial unread list
   useEffect(() => {
@@ -121,8 +133,11 @@ export function NotificationBell() {
           playNotificationSound();
 
           // Show toast
+          if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
           setToastMsg({ title: payload.data.title, message: payload.data.message });
-          setTimeout(() => setToastMsg(null), 5000);
+          toastTimeoutRef.current = setTimeout(() => {
+            setToastMsg(null);
+          }, 5000);
 
           // Fetch the actual notifications from DB to get the real database IDs!
           const unread = await getUnreadNotifications();
@@ -239,14 +254,21 @@ export function NotificationBell() {
       )}
 
       {toastMsg && (
-        <div className="fixed bottom-4 right-4 z-50 flex items-start gap-3 rounded-xl border border-primary/20 bg-white p-4 shadow-xl animate-in slide-in-from-bottom-5">
-          <div className="mt-0.5 rounded-full bg-primary/10 p-1.5 text-primary">
+        <div dir="rtl" className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-96 z-[9999] flex items-start gap-3 rounded-2xl border border-outline-variant/30 bg-white/95 backdrop-blur-sm p-4 shadow-[0_12px_40px_-12px_rgba(0,55,73,0.18)] transition-all duration-300 animate-in slide-in-from-bottom-5">
+          <div className="mt-0.5 shrink-0 rounded-xl bg-primary/10 p-2 text-primary">
             <Bell className="size-5" />
           </div>
-          <div>
-            <p className="font-bold text-on-surface">{toastMsg.title}</p>
-            <p className="text-sm text-on-surface-variant">{toastMsg.message}</p>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-on-surface leading-tight">{toastMsg.title}</p>
+            <p className="mt-1 text-xs text-on-surface-variant leading-relaxed">{toastMsg.message}</p>
           </div>
+          <button
+            onClick={handleCloseToast}
+            className="shrink-0 p-1 text-on-surface-variant/60 hover:text-on-surface hover:bg-surface-container-low rounded-full transition-colors focus:outline-none"
+            title="إغلاق"
+          >
+            <X className="size-4" />
+          </button>
         </div>
       )}
     </div>
