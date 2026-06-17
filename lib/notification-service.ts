@@ -43,8 +43,11 @@ export async function createNotification(
     }
 
     // 3. Send to WS server
-    const wsServerUrl = process.env.NEXT_PUBLIC_WS_URL;
-    await fetch(`${wsServerUrl}/internal/publish`, {
+    const wsServerUrl = process.env.NEXT_PUBLIC_WS_URL || "http://localhost:3001";
+    // Convert ws:// or wss:// to http:// or https:// for HTTP POST
+    const httpPublishUrl = wsServerUrl.replace(/^ws(s?):\/\//, "http$1://");
+
+    await fetch(`${httpPublishUrl}/internal/publish`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
