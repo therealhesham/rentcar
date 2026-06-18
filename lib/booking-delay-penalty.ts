@@ -84,9 +84,9 @@ function formatHoursAr(h: number): string {
 
 function buildDelayLabelAr(kind: DelayPenaltyKind, billableHours: number): string {
   if (kind === "full_day") {
-    return `ساعات تأخير (أكثر من ${DELAY_PENALTY_FULL_DAY_HOURS} ساعات — يوم إضافي)`;
+    return `ساعات تأخير`;
   }
-  return `ساعات تأخير (${formatHoursAr(billableHours)} س — (سعر اليوم ÷ 24) × 2)`;
+  return `ساعات تأخير`;
 }
 
 export function isDailyRentalTab(rentalTab: string | null | undefined): boolean {
