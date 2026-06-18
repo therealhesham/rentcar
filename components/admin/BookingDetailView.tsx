@@ -450,6 +450,14 @@ export function BookingDetailView({ booking, editActions, cancellation }: Props)
                   </span>
                 </div>
               ) : null}
+
+              <Link
+                href={`/admin/bookings/${booking.id}/statement`}
+                className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-outline-variant/40 bg-surface-container-low px-4 py-2.5 text-sm font-bold text-on-surface transition-colors hover:bg-surface-container-high"
+              >
+                <Receipt className="size-4 text-on-surface-variant" aria-hidden />
+                كشف الحساب المحاسبي
+              </Link>
             </BookingDetailSection>
           ) : null}
 

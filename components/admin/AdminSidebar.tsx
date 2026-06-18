@@ -86,7 +86,7 @@ export function AdminSidebar({ open, onClose, session, navGroups }: Props) {
 
   return (
     <aside
-      className={`fixed inset-y-0 start-0 z-50 flex w-[min(100vw-2rem,18rem)] shrink-0 flex-col border-e border-outline-variant/20 bg-[#1c1b1b] text-[#f3f0ef] shadow-2xl transition-transform duration-300 ease-out md:static md:z-auto md:w-60 md:translate-x-0 md:shadow-none lg:w-64 ${
+      className={`print:hidden fixed inset-y-0 start-0 z-50 flex w-[min(100vw-2rem,18rem)] shrink-0 flex-col border-e border-outline-variant/20 bg-[#1c1b1b] text-[#f3f0ef] shadow-2xl transition-transform duration-300 ease-out md:static md:z-auto md:w-60 md:translate-x-0 md:shadow-none lg:w-64 ${
         open ? "translate-x-0" : "translate-x-full md:translate-x-0"
       }`}
       aria-label="قائمة الإدارة"

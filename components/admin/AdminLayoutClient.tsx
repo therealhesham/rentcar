@@ -18,7 +18,7 @@ export function AdminLayoutClient({ children, session, navGroups }: Props) {
   const [navOpen, setNavOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-[#f4f1ee] text-on-surface">
+    <div className="flex min-h-screen bg-[#f4f1ee] text-on-surface print:bg-white">
       {navOpen ? (
         <button
           type="button"
@@ -36,7 +36,7 @@ export function AdminLayoutClient({ children, session, navGroups }: Props) {
       />
 
       <div className="flex min-h-screen min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-outline-variant/25 bg-white/90 px-4 py-3 backdrop-blur-md md:hidden">
+        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-outline-variant/25 bg-white/90 px-4 py-3 backdrop-blur-md md:hidden print:hidden">
           <button
             type="button"
             onClick={() => setNavOpen(true)}
@@ -61,11 +61,11 @@ export function AdminLayoutClient({ children, session, navGroups }: Props) {
           </div>
         </header>
 
-        <div className="hidden md:flex justify-end px-8 pt-6 w-full max-w-7xl mx-auto">
+        <div className="hidden md:flex justify-end px-8 pt-6 w-full max-w-7xl mx-auto print:hidden">
           <NotificationBell />
         </div>
 
-        <main className="flex-1 px-4 py-6 sm:px-6 md:px-8 md:py-10">
+        <main className="flex-1 px-4 py-6 sm:px-6 md:px-8 md:py-10 print:p-0 print:m-0">
           <div className="mx-auto w-full max-w-7xl">{children}</div>
         </main>
       </div>

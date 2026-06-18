@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { RegisterBookingPaymentModal } from "./RegisterBookingPaymentModal";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { ChevronRight, ChevronLeft } from "lucide-react";
+import { ChevronRight, ChevronLeft, ReceiptText } from "lucide-react";
 
 type BookingRow = {
   id: number;
@@ -47,21 +47,19 @@ export function FinancialsTransactionsTable({ bookings, totalCount, currentPage,
       <div className="mb-4 flex w-fit gap-1 rounded-xl bg-surface-container-low p-1">
         <button
           onClick={() => handleTabChange("latest")}
-          className={`rounded-lg px-6 py-2 text-sm font-bold transition-all ${
-            tab === "latest"
+          className={`rounded-lg px-6 py-2 text-sm font-bold transition-all ${tab === "latest"
               ? "bg-white text-primary shadow-sm ring-1 ring-outline-variant/10"
               : "text-on-surface-variant hover:bg-surface-container hover:text-on-surface"
-          }`}
+            }`}
         >
           الأحدث
         </button>
         <button
           onClick={() => handleTabChange("all")}
-          className={`rounded-lg px-6 py-2 text-sm font-bold transition-all ${
-            tab === "all"
+          className={`rounded-lg px-6 py-2 text-sm font-bold transition-all ${tab === "all"
               ? "bg-white text-primary shadow-sm ring-1 ring-outline-variant/10"
               : "text-on-surface-variant hover:bg-surface-container hover:text-on-surface"
-          }`}
+            }`}
         >
           الكل
         </button>
@@ -99,23 +97,34 @@ export function FinancialsTransactionsTable({ bookings, totalCount, currentPage,
                   </td>
                   <td className="py-3">
                     <span
-                      className={`rounded px-2 py-1 text-[10px] font-black tracking-wide ${
-                        booking.paymentStatus === "PAID"
+                      className={`rounded px-2 py-1 text-[10px] font-black tracking-wide ${booking.paymentStatus === "PAID"
                           ? "bg-emerald-100 text-emerald-800"
                           : booking.paymentStatus === "REFUNDED"
-                          ? "bg-rose-100 text-rose-800"
-                          : "bg-amber-100 text-amber-800"
-                      }`}
+                            ? "bg-rose-100 text-rose-800"
+                            : "bg-amber-100 text-amber-800"
+                        }`}
                     >
                       {booking.paymentStatus}
                     </span>
                   </td>
                   <td className="py-3 text-[11px] font-black tracking-wide">
-                    {booking.paymentStatus === "PENDING" ? (
-                      <RegisterBookingPaymentModal bookingId={booking.id} />
-                    ) : (
-                      booking.paymentMethod || "—"
-                    )}
+                    <div className="flex items-center justify-end gap-3">
+                      {booking.paymentStatus === "PENDING" ? (
+                        <RegisterBookingPaymentModal bookingId={booking.id} />
+                      ) : (
+                        booking.paymentMethod || "—"
+                      )}
+                      {booking.paymentStatus === "PAID" || booking.paymentStatus === "REFUNDED" || booking.paymentStatus === "PARTIAL_REFUND" ? (
+                        <Link
+                          href={`/admin/bookings/${booking.id}/statement`}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-outline-variant/30 bg-surface-container-low px-2.5 py-1.5 text-primary hover:bg-surface-container-high"
+                          title="كشف حساب"
+                        >
+                          <ReceiptText className="size-3.5" aria-hidden />
+                          كشف حساب
+                        </Link>
+                      ) : null}
+                    </div>
                   </td>
                 </tr>
               ))
