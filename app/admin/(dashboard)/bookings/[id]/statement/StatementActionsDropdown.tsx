@@ -3,12 +3,14 @@
 import { Printer, ChevronDown, Mail, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { adminSendStatementEmail } from "./statement-actions";
+import Link from "next/link";
 
 type Props = {
   bookingId: number;
+  printViaNavigation?: boolean;
 };
 
-export function StatementActionsDropdown({ bookingId }: Props) {
+export function StatementActionsDropdown({ bookingId, printViaNavigation }: Props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
@@ -52,16 +54,28 @@ export function StatementActionsDropdown({ bookingId }: Props) {
     }
   };
 
+  const printButtonClass = "inline-flex items-center gap-2 rounded-s-xl px-4 py-2 text-sm font-bold text-on-primary transition-colors hover:bg-white/20";
+
   return (
     <div className="relative inline-flex items-center rounded-xl bg-primary shadow-sm print:hidden" ref={menuRef}>
       {/* Primary Print Button */}
-      <button
-        onClick={() => window.print()}
-        className="inline-flex items-center gap-2 rounded-s-xl px-4 py-2 text-sm font-bold text-on-primary transition-colors hover:bg-white/20"
-      >
-        <Printer className="size-4" aria-hidden />
-        طباعة الكشف
-      </button>
+      {printViaNavigation ? (
+        <Link
+          href={`/admin/bookings/${bookingId}/statement`}
+          className={printButtonClass}
+        >
+          <Printer className="size-4" aria-hidden />
+          طباعة الكشف
+        </Link>
+      ) : (
+        <button
+          onClick={() => window.print()}
+          className={printButtonClass}
+        >
+          <Printer className="size-4" aria-hidden />
+          طباعة الكشف
+        </button>
+      )}
 
       {/* Divider */}
       <div className="w-[1px] self-stretch bg-white/20" />

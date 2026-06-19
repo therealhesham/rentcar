@@ -31,6 +31,7 @@ import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label"
 import { resolveBookingKycForDisplay } from "@/lib/booking-kyc-display";
 import { formatReturnDateAr } from "@/lib/booking-return-schedule";
 import { addDaysToYmd } from "@/lib/direct-booking";
+import { StatementActionsDropdown } from "@/app/admin/(dashboard)/bookings/[id]/statement/StatementActionsDropdown";
 
 function paymentStatusLabelAr(ps: string): string {
   const k = ps.trim().toUpperCase();
@@ -190,7 +191,11 @@ export function BookingDetailView({ booking, editActions, cancellation }: Props)
             </span>
           </span>
         }
-        // actions={headerActions}
+        actions={
+          booking.kind === "DIRECT" ? (
+            <StatementActionsDropdown bookingId={booking.id} printViaNavigation={true} />
+          ) : undefined
+        }
       />
 
       {/* Hero summary */}
@@ -279,16 +284,41 @@ export function BookingDetailView({ booking, editActions, cancellation }: Props)
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(17rem,22rem)] lg:items-start">
         {/* Main column */}
         <div className="space-y-6">
-          {booking.kind === "DIRECT" ? (
-            <BookingDetailSection
-              id="attachments"
-              icon={Package}
-              title="المرفقات"
-              description="صور الهوية / الجواز ورخصة القيادة المرفوعة عند الإتمام"
-            >
-              <BookingAttachmentsPanel largePreview {...kycAttachments} />
-            </BookingDetailSection>
-          ) : null}
+          <BookingDetailSection icon={User} title="العميل">
+            <dl className="space-y-3.5">
+              <DetailRow label="الاسم">{booking.fullName}</DetailRow>
+              <DetailRow label="الجوال" mono>
+                <a
+                  href={`tel:${booking.phone}`}
+                  className="inline-flex items-center gap-1.5 text-primary hover:underline"
+                >
+                  <Phone className="h-3.5 w-3.5" aria-hidden />
+                  {booking.phone}
+                </a>
+              </DetailRow>
+              {booking.contactEmail ? (
+                <DetailRow label="البريد" mono>
+                  <a
+                    href={`mailto:${booking.contactEmail}`}
+                    className="inline-flex max-w-full items-center gap-1.5 truncate text-primary hover:underline"
+                  >
+                    <Mail className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                    <span className="truncate">{booking.contactEmail}</span>
+                  </a>
+                </DetailRow>
+              ) : null}
+              <DetailRow label="الفئة العمرية">{booking.ageRange}</DetailRow>
+              {booking.customer ? (
+                <DetailRow label="حساب مسجّل">
+                  <span className="block text-end text-xs leading-relaxed">
+                    {booking.customer.name ?? "—"}
+                    <br />
+                    <span dir="ltr">{booking.customer.email}</span>
+                  </span>
+                </DetailRow>
+              ) : null}
+            </dl>
+          </BookingDetailSection>
 
           {booking.pickupMode === "DELIVERY" &&
           (booking.deliveryAddress?.trim() ||
@@ -327,77 +357,6 @@ export function BookingDetailView({ booking, editActions, cancellation }: Props)
               description="لقطة الأسعار عند إنشاء الحجز"
             >
               <BookingAddonsSnapshot raw={booking.addonsJson} />
-            </BookingDetailSection>
-          ) : null}
-        </div>
-
-        {/* Sidebar */}
-        <aside className="space-y-6 lg:sticky lg:top-6">
-          {editActions ? (
-            <BookingDetailSection
-              icon={Settings}
-              title="تعديل الطلب"
-              description="تغيير بيانات العميل، التواريخ، الفرع، الحالة، أو السيارة"
-            >
-              {editActions}
-            </BookingDetailSection>
-          ) : null}
-
-          <BookingDetailSection icon={User} title="العميل">
-            <dl className="space-y-3.5">
-              <DetailRow label="الاسم">{booking.fullName}</DetailRow>
-              <DetailRow label="الجوال" mono>
-                <a
-                  href={`tel:${booking.phone}`}
-                  className="inline-flex items-center gap-1.5 text-primary hover:underline"
-                >
-                  <Phone className="h-3.5 w-3.5" aria-hidden />
-                  {booking.phone}
-                </a>
-              </DetailRow>
-              {booking.contactEmail ? (
-                <DetailRow label="البريد" mono>
-                  <a
-                    href={`mailto:${booking.contactEmail}`}
-                    className="inline-flex max-w-full items-center gap-1.5 truncate text-primary hover:underline"
-                  >
-                    <Mail className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                    <span className="truncate">{booking.contactEmail}</span>
-                  </a>
-                </DetailRow>
-              ) : null}
-              <DetailRow label="الفئة العمرية">{booking.ageRange}</DetailRow>
-              {booking.customer ? (
-                <DetailRow label="حساب مسجّل">
-                  <span className="block text-end text-xs leading-relaxed">
-                    {booking.customer.name ?? "—"}
-                    <br />
-                    <span dir="ltr">{booking.customer.email}</span>
-                  </span>
-                </DetailRow>
-              ) : null}
-            </dl>
-          </BookingDetailSection>
-
-          {booking.kind === "DIRECT" ? (
-            <BookingDetailSection
-              icon={Car}
-              title="مراحل التشغيل"
-              description="استلام المركبة من الفرع ثم إرجاعها — للكاش تُرسل الفاتورة عند الإرجاع"
-            >
-              <BookingLifecyclePanel
-                bookingRequestId={booking.id}
-                kind={booking.kind}
-                status={booking.status}
-                paymentStatus={booking.paymentStatus}
-                paymentMethod={booking.paymentMethod}
-                vehiclePickedUpAt={
-                  (booking as { vehiclePickedUpAt?: Date | null }).vehiclePickedUpAt ?? null
-                }
-                vehicleReturnedAt={
-                  (booking as { vehicleReturnedAt?: Date | null }).vehicleReturnedAt ?? null
-                }
-              />
             </BookingDetailSection>
           ) : null}
 
@@ -451,13 +410,53 @@ export function BookingDetailView({ booking, editActions, cancellation }: Props)
                 </div>
               ) : null}
 
-              <Link
-                href={`/admin/bookings/${booking.id}/statement`}
-                className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-outline-variant/40 bg-surface-container-low px-4 py-2.5 text-sm font-bold text-on-surface transition-colors hover:bg-surface-container-high"
-              >
-                <Receipt className="size-4 text-on-surface-variant" aria-hidden />
-                كشف الحساب المحاسبي
-              </Link>
+
+            </BookingDetailSection>
+          ) : null}
+
+          {booking.kind === "DIRECT" ? (
+            <BookingDetailSection
+              id="attachments"
+              icon={Package}
+              title="المرفقات"
+              description="صور الهوية / الجواز ورخصة القيادة المرفوعة عند الإتمام"
+            >
+              <BookingAttachmentsPanel largePreview {...kycAttachments} />
+            </BookingDetailSection>
+          ) : null}
+        </div>
+
+        {/* Sidebar */}
+        <aside className="space-y-6 lg:sticky lg:top-6">
+          {editActions ? (
+            <BookingDetailSection
+              icon={Settings}
+              title="تعديل الطلب"
+              description="تغيير بيانات العميل، التواريخ، الفرع، الحالة، أو السيارة"
+            >
+              {editActions}
+            </BookingDetailSection>
+          ) : null}
+
+          {booking.kind === "DIRECT" ? (
+            <BookingDetailSection
+              icon={Car}
+              title="مراحل التشغيل"
+              description="استلام المركبة من الفرع ثم إرجاعها — للكاش تُرسل الفاتورة عند الإرجاع"
+            >
+              <BookingLifecyclePanel
+                bookingRequestId={booking.id}
+                kind={booking.kind}
+                status={booking.status}
+                paymentStatus={booking.paymentStatus}
+                paymentMethod={booking.paymentMethod}
+                vehiclePickedUpAt={
+                  (booking as { vehiclePickedUpAt?: Date | null }).vehiclePickedUpAt ?? null
+                }
+                vehicleReturnedAt={
+                  (booking as { vehicleReturnedAt?: Date | null }).vehicleReturnedAt ?? null
+                }
+              />
             </BookingDetailSection>
           ) : null}
 

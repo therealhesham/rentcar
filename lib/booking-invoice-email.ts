@@ -375,14 +375,18 @@ export async function sendPlainTransactionalEmail(opts: {
   throw new Error("لم يُضبط إرسال البريد (SMTP أو Resend).");
 }
 
-async function deliverBookingInvoiceEmail(bookingRequestId: number): Promise<{ to: string }> {
+async function deliverBookingInvoiceEmail(bookingRequestId: number, bypassReadyCheck = false): Promise<{ to: string }> {
   const to = await resolveInvoiceRecipientEmail(bookingRequestId);
   if (!to) {
     throw new Error("NO_RECIPIENT");
   }
 
   const snapshot = await getBookingForPayment(bookingRequestId);
-  if (!snapshot || !isInvoiceDeliveryReady(snapshot)) {
+  if (!snapshot) {
+    throw new Error("NOT_READY");
+  }
+  
+  if (!bypassReadyCheck && !isInvoiceDeliveryReady(snapshot)) {
     throw new Error("NOT_READY");
   }
 
@@ -443,7 +447,7 @@ async function deliverBookingInvoiceEmail(bookingRequestId: number): Promise<{ t
  */
 export async function sendBookingInvoiceEmailAfterPayment(bookingRequestId: number): Promise<void> {
   try {
-    await deliverBookingInvoiceEmail(bookingRequestId);
+    await deliverBookingInvoiceEmail(bookingRequestId, false);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     if (msg === "NO_RECIPIENT") {
@@ -481,7 +485,7 @@ export async function resendBookingInvoiceEmail(
     return { ok: false, error: "إرسال البريد غير مفعّل على الخادم." };
   }
   try {
-    const { to } = await deliverBookingInvoiceEmail(bookingRequestId);
+    const { to } = await deliverBookingInvoiceEmail(bookingRequestId, true);
     return { ok: true, to };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
