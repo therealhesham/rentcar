@@ -25,6 +25,7 @@ export async function markBookingAsPaid(_prev: any, formData: FormData) {
           paymentStatus: "PAID",
           paymentMethod: method,
           paidAt: new Date(),
+          paymentReceivedBy: auth.session.displayName,
           status: "CONFIRMED",
         },
       });
@@ -44,6 +45,7 @@ export async function markBookingAsPaid(_prev: any, formData: FormData) {
       revalidatePath(`/admin/bookings/${bookingId}`);
       return { ok: true };
     } catch (e) {
+      console.error("[markBookingAsPaid] error:", e);
       return { ok: false, error: "حدث خطأ أثناء تحديث حالة الدفع." };
     }
   }

@@ -12,6 +12,8 @@ type BookingRow = {
   carType: string;
   paymentStatus: string;
   paymentMethod: string | null;
+  paidAt: Date | null;
+  paymentReceivedBy: string | null;
 };
 
 type Props = {
@@ -19,7 +21,7 @@ type Props = {
   totalCount: number;
   currentPage: number;
   pageSize: number;
-  tab: "latest" | "all";
+  tab: "latest" | "all" | "cash";
 };
 
 export function FinancialsTransactionsTable({ bookings, totalCount, currentPage, pageSize, tab }: Props) {
@@ -27,7 +29,7 @@ export function FinancialsTransactionsTable({ bookings, totalCount, currentPage,
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const handleTabChange = (newTab: "latest" | "all") => {
+  const handleTabChange = (newTab: "latest" | "all" | "cash") => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("tab", newTab);
     params.delete("page");
@@ -63,6 +65,15 @@ export function FinancialsTransactionsTable({ bookings, totalCount, currentPage,
         >
           الكل
         </button>
+        <button
+          onClick={() => handleTabChange("cash")}
+          className={`rounded-lg px-6 py-2 text-sm font-bold transition-all ${tab === "cash"
+              ? "bg-white text-primary shadow-sm ring-1 ring-outline-variant/10"
+              : "text-on-surface-variant hover:bg-surface-container hover:text-on-surface"
+            }`}
+        >
+          الكاش
+        </button>
       </div>
 
       <div className="overflow-x-auto">
@@ -74,12 +85,14 @@ export function FinancialsTransactionsTable({ bookings, totalCount, currentPage,
               <th className="pb-3">السيارة</th>
               <th className="pb-3">حالة الدفع</th>
               <th className="pb-3">الطريقة</th>
+              <th className="pb-3">استلام بواسطة</th>
+              <th className="pb-3">تاريخ الدفع</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-outline-variant/20">
             {bookings.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-6 text-center text-on-surface-variant">
+                <td colSpan={7} className="py-6 text-center text-on-surface-variant">
                   لا توجد معاملات
                 </td>
               </tr>
@@ -108,7 +121,7 @@ export function FinancialsTransactionsTable({ bookings, totalCount, currentPage,
                     </span>
                   </td>
                   <td className="py-3 text-[11px] font-black tracking-wide">
-                    <div className="flex items-center justify-end gap-3">
+                    <div className="flex items-center gap-3">
                       {booking.paymentStatus === "PENDING" ? (
                         <RegisterBookingPaymentModal bookingId={booking.id} />
                       ) : (
@@ -125,6 +138,15 @@ export function FinancialsTransactionsTable({ bookings, totalCount, currentPage,
                         </Link>
                       ) : null}
                     </div>
+                  </td>
+                  <td className="py-3 text-[11px] font-bold text-on-surface-variant">
+                    {booking.paymentReceivedBy || "—"}
+                  </td>
+                  <td className="py-3 text-[11px] text-on-surface-variant whitespace-nowrap">
+                    {booking.paidAt ? new Date(booking.paidAt).toLocaleString("ar-SA", {
+                      year: "numeric", month: "2-digit", day: "2-digit",
+                      hour: "2-digit", minute: "2-digit", hour12: true
+                    }) : "—"}
                   </td>
                 </tr>
               ))

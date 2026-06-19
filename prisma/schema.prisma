@@ -391,6 +391,8 @@ model BookingRequest {
   paidAt        DateTime?
   /// طريقة الدفع المختارة عند الإتمام: TABBY | TAMARA | CARD | POINTS (ربط البوابات لاحقاً).
   paymentMethod String?   @db.VarChar(24)
+  /// اسم أو معرّف الموظف/النظام الذي سجل الدفعة
+  paymentReceivedBy String? @db.VarChar(128)
   status        String              @default("NEW")
   /// وقت إلغاء الطلب من الحساب (إن وُجد).
   cancelledAt              DateTime?

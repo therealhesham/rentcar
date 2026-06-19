@@ -24,7 +24,7 @@ export default async function FinancialsPage(props: {
 
   const q = typeof searchParams?.q === "string" ? searchParams.q.trim() : "";
   const date = typeof searchParams?.date === "string" ? searchParams.date : "";
-  const tab = searchParams?.tab === "all" ? "all" : "latest";
+  const tab = searchParams?.tab === "all" ? "all" : searchParams?.tab === "cash" ? "cash" : "latest";
   const pageStr = typeof searchParams?.page === "string" ? searchParams.page : "";
   const page = pageStr && !isNaN(Number(pageStr)) ? Math.max(1, Number(pageStr)) : 1;
   const pageSize = 20;
@@ -81,6 +81,7 @@ export default async function FinancialsPage(props: {
   });
 
   let bookingsPaidThisMonthTotalSar = 0;
+  let cashBookingsThisMonthTotalSar = 0;
   for (const row of paidBookingsThisMonth) {
     if (!row.carModel) continue;
     const { addons, interCityShipping, checkoutOneTimeFees, delayPenalty } =
@@ -100,6 +101,9 @@ export default async function FinancialsPage(props: {
     );
     
     bookingsPaidThisMonthTotalSar += totals.totalInclTax;
+    if (row.paymentMethod === "CASH") {
+      cashBookingsThisMonthTotalSar += totals.totalInclTax;
+    }
   }
 
   const currentMonthName = new Intl.DateTimeFormat('ar-SA', { month: 'long' }).format(new Date());
@@ -148,6 +152,23 @@ export default async function FinancialsPage(props: {
     recentBookingPayments = [...pendingBookings, ...paidBookings];
     totalCount = recentBookingPayments.length;
     recentBookingPayments = recentBookingPayments.slice((page - 1) * pageSize, page * pageSize);
+  } else if (tab === "cash") {
+    const cashWhere: any = {
+      paymentMethod: "CASH",
+      paymentStatus: { in: ["PAID", "REFUNDED", "PARTIAL_REFUND"] }
+    };
+    if (combinedAnd.length > 0) {
+      cashWhere.AND = combinedAnd;
+    }
+
+    totalCount = await prisma.bookingRequest.count({ where: cashWhere });
+    recentBookingPayments = await prisma.bookingRequest.findMany({
+      where: cashWhere,
+      orderBy: { updatedAt: "desc" },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      include: { customer: true, carModel: { include: { brand: true } } }
+    });
   } else {
     const allWhere: any = {
       paymentStatus: { in: ["PENDING", "PAID", "REFUNDED", "PARTIAL_REFUND"] }
@@ -179,6 +200,12 @@ export default async function FinancialsPage(props: {
           value={`${formatSar(bookingsPaidThisMonthTotalSar)} ر.س`}
           highlight
           hint={`${paidBookingsThisMonth.length} حجز مدفوع`}
+        />
+        <AdminStatCard
+          label={`مدفوعات الكاش (${currentMonthName})`}
+          value={`${formatSar(cashBookingsThisMonthTotalSar)} ر.س`}
+          highlight
+          hint="إجمالي الدفع النقدي"
         />
         <AdminStatCard
           label="استردادات إلغاء (30 يوماً)"
@@ -245,7 +272,7 @@ export default async function FinancialsPage(props: {
             totalCount={totalCount}
             currentPage={page}
             pageSize={pageSize}
-            tab={tab}
+            tab={tab as "latest" | "all" | "cash"}
           />
         </AdminCard>
       </div>

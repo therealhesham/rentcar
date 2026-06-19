@@ -240,6 +240,11 @@ export default async function BookingStatementPage(props: {
                   وقت الدفع: {booking.paidAt.toLocaleString("ar-SA")}
                 </p>
               ) : null}
+              {booking.paymentReceivedBy ? (
+                <p className="mt-2 text-xs text-on-surface-variant flex items-center gap-1.5">
+                  <span className="font-bold">استلام الدفعة بواسطة:</span> {booking.paymentReceivedBy}
+                </p>
+              ) : null}
             </div>
 
             <div className="rounded-xl border border-outline-variant/30 p-5">
