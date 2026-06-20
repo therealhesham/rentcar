@@ -4,6 +4,7 @@ import Link from "next/link";
 import { RegisterBookingPaymentModal } from "./RegisterBookingPaymentModal";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { ChevronRight, ChevronLeft, ReceiptText } from "lucide-react";
+import { AdminStatusBadge } from "@/components/admin/AdminStatusBadge";
 
 type BookingRow = {
   id: number;
@@ -159,9 +160,7 @@ export function FinancialsTransactionsTable({ bookings, totalCount, currentPage,
                     </div>
                   </td>
                   <td className="py-3">
-                    <span className="rounded bg-surface-container-high px-2 py-1 text-[10px] font-bold text-on-surface-variant">
-                      {booking.status}
-                    </span>
+                    <AdminStatusBadge status={booking.status} />
                   </td>
                   <td className="py-3 text-[11px] font-bold text-on-surface-variant">
                     {booking.paymentReceivedBy || "—"}
