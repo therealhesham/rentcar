@@ -187,6 +187,41 @@ export default async function FinancialsPage(props: {
     });
   }
 
+  const mappedBookingPayments = recentBookingPayments.map(row => {
+    let computedTotal = 0;
+    if (row.carModel) {
+      const { addons, interCityShipping, checkoutOneTimeFees, delayPenalty } =
+        parseBookingPricingSnapshot(row.addonsJson);
+      const effectiveRentalPrice = resolveBookingRentalPricePerDayExclTax(row.carModel.price, row.addonsJson);
+      const shipFee = interCityShipping?.feeExclVatSar ?? 0;
+      const checkoutFeesSum = checkoutOneTimeFees.reduce((s, x) => s + x.feeExclVatSar, 0);
+      const delayFee = delayPenalty?.feeExclVatSar ?? 0;
+      const totals = computeCheckoutTotals(
+        effectiveRentalPrice,
+        row.numberOfDays,
+        row.carModel.vatRatePercent,
+        addons.map((a) => ({ pricePerDay: a.pricePerDayExclTax })),
+        { oneTimeFeesExclTax: shipFee + checkoutFeesSum + delayFee },
+      );
+      computedTotal = totals.totalInclTax;
+    }
+
+    return {
+      id: row.id,
+      fullName: row.fullName,
+      carModel: row.carModel,
+      carType: row.carType,
+      paymentStatus: row.paymentStatus,
+      paymentMethod: row.paymentMethod,
+      paidAt: row.paidAt,
+      paymentReceivedBy: row.paymentReceivedBy,
+      status: row.status,
+      pickupDate: row.pickupDate,
+      numberOfDays: row.numberOfDays,
+      computedTotal,
+    };
+  });
+
   return (
     <div className="space-y-8">
       <AdminPageHeader
@@ -268,7 +303,7 @@ export default async function FinancialsPage(props: {
             <FinancialsFilters />
           </div>
           <FinancialsTransactionsTable
-            bookings={recentBookingPayments}
+            bookings={mappedBookingPayments}
             totalCount={totalCount}
             currentPage={page}
             pageSize={pageSize}

@@ -14,6 +14,10 @@ type BookingRow = {
   paymentMethod: string | null;
   paidAt: Date | null;
   paymentReceivedBy: string | null;
+  status: string;
+  pickupDate: Date;
+  numberOfDays: number;
+  computedTotal: number;
 };
 
 type Props = {
@@ -83,8 +87,11 @@ export function FinancialsTransactionsTable({ bookings, totalCount, currentPage,
               <th className="pb-3 pr-2">رقم الحجز</th>
               <th className="pb-3">العميل</th>
               <th className="pb-3">السيارة</th>
+              <th className="pb-3">المدة والتواريخ</th>
+              <th className="pb-3">الإجمالي</th>
               <th className="pb-3">حالة الدفع</th>
               <th className="pb-3">الطريقة</th>
+              <th className="pb-3">حالة الحجز</th>
               <th className="pb-3">استلام بواسطة</th>
               <th className="pb-3">تاريخ الدفع</th>
             </tr>
@@ -107,6 +114,18 @@ export function FinancialsTransactionsTable({ bookings, totalCount, currentPage,
                     {booking.carModel
                       ? `${booking.carModel.brand.name} ${booking.carModel.name}`
                       : booking.carType}
+                  </td>
+                  <td className="py-3">
+                    <div className="text-[11px]">
+                      <span className="font-bold text-on-surface">{booking.numberOfDays} أيام</span>
+                      <br />
+                      <span className="text-on-surface-variant whitespace-nowrap" dir="ltr">
+                        {new Date(booking.pickupDate).toLocaleDateString("ar-SA")}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="py-3 font-bold text-emerald-700 whitespace-nowrap">
+                    {booking.computedTotal > 0 ? `${booking.computedTotal.toLocaleString()} ر.س` : "—"}
                   </td>
                   <td className="py-3">
                     <span
@@ -138,6 +157,11 @@ export function FinancialsTransactionsTable({ bookings, totalCount, currentPage,
                         </Link>
                       ) : null}
                     </div>
+                  </td>
+                  <td className="py-3">
+                    <span className="rounded bg-surface-container-high px-2 py-1 text-[10px] font-bold text-on-surface-variant">
+                      {booking.status}
+                    </span>
                   </td>
                   <td className="py-3 text-[11px] font-bold text-on-surface-variant">
                     {booking.paymentReceivedBy || "—"}

@@ -129,6 +129,15 @@ export function BookingDetailView({ booking, editActions, cancellation }: Props)
     <div className="flex flex-wrap items-center gap-2">
       {booking.kind === "DIRECT" ? (
         <Link
+          href={`/admin/bookings/${booking.id}/finance`}
+          className="inline-flex items-center gap-2 rounded-xl border border-outline-variant/30 bg-white px-4 py-2.5 text-sm font-bold text-on-surface shadow-sm transition-colors hover:bg-surface-container-low"
+        >
+          <Receipt className="h-4 w-4 text-emerald-700" aria-hidden />
+          العمليات المالية
+        </Link>
+      ) : null}
+      {booking.kind === "DIRECT" ? (
+        <Link
           href={`/fleet/payment/${booking.id}`}
           target="_blank"
           className="inline-flex items-center gap-2 rounded-xl border border-outline-variant/30 bg-white px-4 py-2.5 text-sm font-bold text-on-surface shadow-sm transition-colors hover:bg-surface-container-low"
@@ -162,9 +171,12 @@ export function BookingDetailView({ booking, editActions, cancellation }: Props)
           </span>
         }
         actions={
-          booking.kind === "DIRECT" ? (
-            <StatementActionsDropdown bookingId={booking.id} printViaNavigation={true} />
-          ) : undefined
+          <div className="flex items-center gap-2">
+            {headerActions}
+            {booking.kind === "DIRECT" ? (
+              <StatementActionsDropdown bookingId={booking.id} printViaNavigation={true} />
+            ) : null}
+          </div>
         }
       />
 
