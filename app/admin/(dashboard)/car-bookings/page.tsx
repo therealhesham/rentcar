@@ -77,7 +77,6 @@ function StatTile({
 export default async function AdminCarBookingsPage() {
   const session = await requireAdminPage();
   const initialSettings = await getCarBookingsNotificationSettings();
-
   const rows = await prisma.bookingRequest.findMany({
     where: bookingBranchWhere(session, {
       kind: "DIRECT",
@@ -115,6 +114,8 @@ export default async function AdminCarBookingsPage() {
       deliveryLat: b.deliveryLat,
       deliveryLng: b.deliveryLng,
       status: b.status,
+      kind: b.kind as "INQUIRY" | "DIRECT",
+      carModelId: b.carModelId,
       paymentStatus: b.paymentStatus ?? null,
     };
     const list = groupsMap.get(startYmd) ?? [];

@@ -16,6 +16,7 @@ import {
   CalendarCheck,
   CheckCircle,
   XCircle,
+  Search,
 } from "lucide-react";
 import { AdminCard } from "@/components/admin/AdminCard";
 import {
@@ -31,7 +32,7 @@ import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage(props: {
-  searchParams?: Promise<{ filter?: string; status?: string }>;
+  searchParams?: Promise<{ filter?: string; status?: string; q?: string }>;
 }) {
   const session = await requireAdminPage();
   const branchScope = (extra?: Parameters<typeof bookingBranchWhere>[1]) =>
@@ -39,6 +40,8 @@ export default async function AdminDashboardPage(props: {
 
   const sp = props.searchParams ? await props.searchParams : {};
   const statusParam = sp.status || (sp.filter === "new" ? "new" : "");
+
+  const qParam = typeof sp.q === "string" ? sp.q.trim() : "";
 
   let statusWhere: any = {};
   if (statusParam === "new") {
@@ -55,9 +58,20 @@ export default async function AdminDashboardPage(props: {
     statusWhere = { status: { in: ["CANCELLED", "REJECTED"] } };
   }
 
+  const qFilter: any = qParam
+    ? {
+        OR: [
+          { fullName: { contains: qParam } },
+          { phone: { contains: qParam } },
+          ...(Number.isInteger(Number(qParam)) ? [{ id: Number(qParam) }] : []),
+        ],
+      }
+    : {};
+
   const bookingsWhere = {
     ...branchScope(),
     ...statusWhere,
+    ...qFilter,
   };
 
   const [
@@ -85,41 +99,47 @@ export default async function AdminDashboardPage(props: {
     session.isSuperAdmin
       ? prisma.fleet.findMany({ select: { quantity: true } })
       : Promise.resolve([]),
-    prisma.bookingRequest.count({ where: branchScope() }),
+    prisma.bookingRequest.count({ where: { ...branchScope(), ...qFilter } }),
     prisma.bookingRequest.count({
       where: {
         ...branchScope(),
         status: { in: ["NEW", "UNDER_REVIEW"] },
+        ...qFilter,
       },
     }),
     prisma.bookingRequest.count({
       where: {
         ...branchScope(),
         status: "CONTACTED",
+        ...qFilter,
       },
     }),
     prisma.bookingRequest.count({
       where: {
         ...branchScope(),
         status: "CONFIRMED",
+        ...qFilter,
       },
     }),
     prisma.bookingRequest.count({
       where: {
         ...branchScope(),
         status: "PICKED_UP",
+        ...qFilter,
       },
     }),
     prisma.bookingRequest.count({
       where: {
         ...branchScope(),
         status: { in: ["RETURNED", "COMPLETED"] },
+        ...qFilter,
       },
     }),
     prisma.bookingRequest.count({
       where: {
         ...branchScope(),
         status: { in: ["CANCELLED", "REJECTED"] },
+        ...qFilter,
       },
     }),
     prisma.bookingRequest
@@ -296,14 +316,18 @@ export default async function AdminDashboardPage(props: {
           </div>
 
           {/* Tabs Navigation */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none -mx-2 px-2 sm:mx-0 sm:px-0 mt-2">
+          <div className="mt-3 flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none -mx-2 px-2 sm:mx-0 sm:px-0">
             {tabs.map((tab) => {
               const isActive = statusParam === tab.id;
               const Icon = tab.icon;
+              const targetUrl = new URLSearchParams();
+              if (tab.id) targetUrl.set("status", tab.id);
+              if (qParam) targetUrl.set("q", qParam);
+
               return (
                 <Link
                   key={tab.id}
-                  href={tab.id ? `/admin?status=${tab.id}` : "/admin"}
+                  href={`/admin?${targetUrl.toString()}`}
                   className={`inline-flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold transition-all ${
                     isActive
                       ? "bg-[#003749] text-white shadow-sm"
@@ -324,6 +348,30 @@ export default async function AdminDashboardPage(props: {
             })}
           </div>
         </div>
+
+        {/* Search Bar - Above Table */}
+        <div className="flex items-center justify-end border-b border-outline-variant/15 bg-surface-container-lowest px-5 py-2.5 sm:px-6">
+          <form action="/admin" method="GET" className="flex w-full max-w-[260px] shrink-0 items-center gap-2">
+            {statusParam && <input type="hidden" name="status" value={statusParam} />}
+            <div className="relative flex-1">
+              <Search className="absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-on-surface-variant" aria-hidden />
+              <input
+                type="search"
+                name="q"
+                defaultValue={qParam}
+                placeholder="بحث برقم الحجز، الجوال..."
+                className="w-full rounded-lg border border-outline-variant/40 bg-white py-1.5 pe-2 ps-8 text-[11px] font-medium outline-none transition-all focus:border-primary focus:ring-1 focus:ring-primary"
+              />
+            </div>
+            <button
+              type="submit"
+              className="cursor-pointer shrink-0 rounded-lg bg-surface-container-high px-3 py-1.5 text-[11px] font-bold text-on-surface transition-colors hover:bg-surface-container-highest"
+            >
+              بحث
+            </button>
+          </form>
+        </div>
+
         <AdminDashboardBookingsSection
           rows={dashboardRows}
           categories={fleetCategoriesForEdit}

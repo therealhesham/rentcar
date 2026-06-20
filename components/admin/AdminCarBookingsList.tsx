@@ -8,8 +8,11 @@ import {
   Phone,
   Truck,
   User,
+  CreditCard,
 } from "lucide-react";
 import { AdminStatusBadge } from "@/components/admin/AdminStatusBadge";
+import { BookingListQuickActions } from "@/components/admin/BookingListQuickActions";
+import { AdminQuickPaymentModal } from "@/components/admin/AdminQuickPaymentModal";
 
 export type CarBookingRow = {
   id: number;
@@ -26,6 +29,8 @@ export type CarBookingRow = {
   deliveryLat: number | null;
   deliveryLng: number | null;
   status: string;
+  kind: "INQUIRY" | "DIRECT";
+  carModelId: number | null;
   paymentStatus: string | null;
 };
 
@@ -78,23 +83,36 @@ function PickupModeCell({ row }: { row: CarBookingRow }) {
   );
 }
 
-function BookingActions({ id }: { id: number }) {
+function BookingActions({ row }: { row: CarBookingRow }) {
   return (
-    <div className="flex flex-col gap-1.5">
-      <Link
-        href={`/admin/bookings/${id}`}
-        className="inline-flex items-center gap-1 text-sm font-bold text-primary hover:underline"
-      >
-        <ArrowLeft className="size-3.5" aria-hidden />
-        التفاصيل
-      </Link>
-      <Link
-        href={`/admin/bookings/${id}?edit=1`}
-        className="inline-flex items-center gap-1 text-xs font-bold text-on-surface-variant hover:text-primary hover:underline"
-      >
-        <Pencil className="size-3" aria-hidden />
-        تعديل
-      </Link>
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between gap-3">
+        <Link
+          href={`/admin/bookings/${row.id}`}
+          className="inline-flex items-center gap-1 text-sm font-bold text-primary hover:underline"
+        >
+          <ArrowLeft className="size-3.5" aria-hidden />
+          التفاصيل
+        </Link>
+        <Link
+          href={`/admin/bookings/${row.id}?edit=1`}
+          className="inline-flex items-center justify-center rounded p-1.5 text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-colors"
+          title="تعديل"
+        >
+          <Pencil className="size-4" aria-hidden />
+        </Link>
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5">
+        {row.paymentStatus?.trim().toUpperCase() !== "PAID" && (
+          <AdminQuickPaymentModal bookingId={row.id} />
+        )}
+        <BookingListQuickActions
+          bookingId={row.id}
+          status={row.status}
+          kind={row.kind}
+          carModelId={row.carModelId}
+        />
+      </div>
     </div>
   );
 }
@@ -163,7 +181,7 @@ export function AdminCarBookingsList({ groups }: Props) {
                       </span>
                     </p>
                   </div>
-                  <BookingActions id={row.id} />
+                  <BookingActions row={row} />
                 </div>
 
                 <dl className="mt-3 space-y-2 text-sm">
@@ -247,7 +265,7 @@ export function AdminCarBookingsList({ groups }: Props) {
                       #{row.id}
                     </td>
                     <td className="px-4 py-3 align-top">
-                      <BookingActions id={row.id} />
+                      <BookingActions row={row} />
                     </td>
                   </tr>
                 ))}

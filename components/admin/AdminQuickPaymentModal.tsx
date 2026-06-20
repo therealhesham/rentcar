@@ -1,0 +1,113 @@
+"use client";
+
+import { useActionState, useEffect, useState, useTransition } from "react";
+import { CreditCard, Loader2 } from "lucide-react";
+import { processAdminQuickPayment } from "@/app/admin/booking-request-actions";
+
+type Props = {
+  bookingId: number;
+};
+
+const PAYMENT_METHODS = [
+  { value: "CASH", label: "الدفع عند الفرع / شبكة (نقاط بيع)" },
+  { value: "MADA", label: "مدى (إلكتروني)" },
+  { value: "CARD", label: "بطاقة ائتمانية (إلكتروني)" },
+  { value: "APPLE_PAY", label: "Apple Pay" },
+  { value: "TABBY", label: "تابي" },
+  { value: "TAMARA", label: "تمارا" },
+  { value: "AMKAN", label: "إمكان" },
+];
+
+export function AdminQuickPaymentModal({ bookingId }: Props) {
+  const [open, setOpen] = useState(false);
+  const [method, setMethod] = useState("CASH");
+  const [errorMsg, setErrorMsg] = useState("");
+  const [isPending, startTransition] = useTransition();
+
+  const handleConfirm = () => {
+    setErrorMsg("");
+    startTransition(async () => {
+      const result = await processAdminQuickPayment(bookingId, method);
+      if (!result.ok) {
+        setErrorMsg(result.error || "حدث خطأ أثناء التأكيد");
+      } else {
+        setOpen(false);
+      }
+    });
+  };
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="inline-flex cursor-pointer items-center gap-1 rounded-lg bg-amber-100 px-2 py-1.5 text-[11px] font-bold text-amber-900 transition-colors hover:bg-amber-200"
+        title="تأكيد الدفع اليدوي"
+      >
+        <CreditCard className="size-3.5 shrink-0" aria-hidden />
+        دفع
+      </button>
+
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <button
+            type="button"
+            className="absolute inset-0 bg-inverse-surface/50 backdrop-blur-sm cursor-default"
+            onClick={() => !isPending && setOpen(false)}
+          />
+          <div className="relative z-10 w-full max-w-sm rounded-2xl border border-outline-variant/40 bg-surface-container-lowest p-5 editorial-shadow">
+            <h3 className="text-lg font-extrabold text-on-surface">
+              تأكيد الدفع يدويًا
+            </h3>
+            <p className="mt-1 text-sm text-on-surface-variant">
+              اختر وسيلة الدفع التي استخدمها العميل لتسجيل الطلب كمدفوع.
+            </p>
+
+            <div className="mt-4">
+              {errorMsg && (
+                <div className="mb-4 rounded-xl bg-error-container/40 px-3 py-2 text-sm font-bold text-error">
+                  {errorMsg}
+                </div>
+              )}
+              <label className="block text-sm font-bold text-on-surface">
+                وسيلة الدفع
+                <select
+                  value={method}
+                  onChange={(e) => setMethod(e.target.value)}
+                  disabled={isPending}
+                  className="mt-1 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+                >
+                  {PAYMENT_METHODS.map((m) => (
+                    <option key={m.value} value={m.value}>
+                      {m.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="mt-6 flex flex-wrap items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                disabled={isPending}
+                className="cursor-pointer rounded-xl px-4 py-2 text-sm font-bold text-on-surface-variant hover:bg-surface-container transition-colors disabled:opacity-50"
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirm}
+                disabled={isPending}
+                className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-primary px-5 py-2 text-sm font-bold text-on-primary hover:opacity-95 disabled:opacity-60"
+              >
+                {isPending && <Loader2 className="size-4 animate-spin" />}
+                تأكيد الدفع
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}

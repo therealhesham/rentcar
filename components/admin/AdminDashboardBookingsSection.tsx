@@ -1,8 +1,10 @@
 import React, { Fragment } from "react";
 import Link from "next/link";
-import { ArrowLeft, Calendar, Car, Phone, User } from "lucide-react";
+import { ArrowLeft, Calendar, Car, Phone, User, CreditCard } from "lucide-react";
 import { AdminStatusBadge, AdminPaymentBadge } from "@/components/admin/AdminStatusBadge";
 import { EditBookingRequestForm } from "@/components/admin/EditBookingRequestForm";
+import { BookingListQuickActions } from "@/components/admin/BookingListQuickActions";
+import { AdminQuickPaymentModal } from "@/components/admin/AdminQuickPaymentModal";
 
 export type DashboardBookingRow = {
   id: number;
@@ -152,7 +154,10 @@ export function AdminDashboardBookingsSection({ rows, categories, models }: Prop
                   <AdminStatusBadge status={request.status} />
                   <AdminPaymentBadge paymentStatus={request.paymentStatus} paymentMethod={request.paymentMethod} />
                 </div>
-                <p className="mt-2 font-extrabold text-on-surface">{request.fullName}</p>
+                <p className="mt-2 font-extrabold text-on-surface">
+                  <span className="text-on-surface-variant font-medium me-1 text-[13px]">#{request.id}</span>
+                  {request.fullName}
+                </p>
                 <p className="mt-0.5 flex items-center gap-1.5 text-sm text-on-surface-variant">
                   <Phone className="size-3.5 shrink-0" aria-hidden />
                   <span dir="ltr" className="tabular-nums">
@@ -188,11 +193,22 @@ export function AdminDashboardBookingsSection({ rows, categories, models }: Prop
               <div className="text-[11px] text-on-surface-variant">{request.createdAtLabel}</div>
             </dl>
 
-            <div className="mt-3 border-t border-outline-variant/10 pt-3">
+            <div className="mt-3 border-t border-outline-variant/10 pt-3 flex flex-wrap items-center gap-2">
               <EditBookingRequestForm
                 request={editRequestPayload(request)}
                 categories={categories}
                 models={models}
+                triggerLabel=""
+                triggerClassName="inline-flex items-center justify-center rounded p-1.5 text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-colors"
+              />
+              {request.paymentStatus?.trim().toUpperCase() !== "PAID" && (
+                <AdminQuickPaymentModal bookingId={request.id} />
+              )}
+              <BookingListQuickActions
+                bookingId={request.id}
+                status={request.status}
+                kind={request.kind}
+                carModelId={request.carModelId}
               />
             </div>
           </li>
@@ -213,7 +229,7 @@ export function AdminDashboardBookingsSection({ rows, categories, models }: Prop
               <th className="px-4 py-3">الاستلام</th>
               <th className="px-4 py-3">الأيام</th>
               <th className="px-4 py-3">الحالة</th>
-              <th className="px-4 py-3">الوقت</th>
+              <th className="px-4 py-3">إضافة الحجز</th>
               <th className="px-4 py-3">إجراءات</th>
             </tr>
           </thead>
@@ -241,7 +257,10 @@ export function AdminDashboardBookingsSection({ rows, categories, models }: Prop
                         >
                           <span className="flex items-center gap-1.5 font-semibold text-on-surface group-hover:text-primary">
                             <User className="size-3.5 shrink-0 text-on-surface-variant" aria-hidden />
-                            {request.fullName}
+                            <span>
+                              <span className="text-on-surface-variant font-medium me-1 text-xs">#{request.id}</span>
+                              {request.fullName}
+                            </span>
                           </span>
                           <span className="mt-0.5 block tabular-nums text-xs text-on-surface-variant" dir="ltr">
                             {request.phone}
@@ -269,18 +288,33 @@ export function AdminDashboardBookingsSection({ rows, categories, models }: Prop
                       </td>
                       <td className="px-4 py-3 align-top">
                         <div className="flex min-w-[160px] flex-col gap-2">
-                          <Link
-                            href={`/admin/bookings/${request.id}`}
-                            className="inline-flex items-center gap-1 text-sm font-bold text-primary hover:underline"
-                          >
-                            <ArrowLeft className="size-3.5" aria-hidden />
-                            التفاصيل
-                          </Link>
-                          <EditBookingRequestForm
-                            request={editRequestPayload(request)}
-                            categories={categories}
-                            models={models}
-                          />
+                          <div className="flex items-center justify-between gap-2">
+                            <Link
+                              href={`/admin/bookings/${request.id}`}
+                              className="inline-flex items-center gap-1 text-sm font-bold text-primary hover:underline"
+                            >
+                              <ArrowLeft className="size-3.5" aria-hidden />
+                              التفاصيل
+                            </Link>
+                            <EditBookingRequestForm
+                              request={editRequestPayload(request)}
+                              categories={categories}
+                              models={models}
+                              triggerLabel=""
+                              triggerClassName="inline-flex items-center justify-center rounded p-1.5 text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-colors"
+                            />
+                          </div>
+                          <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                            {request.paymentStatus?.trim().toUpperCase() !== "PAID" && (
+                              <AdminQuickPaymentModal bookingId={request.id} />
+                            )}
+                            <BookingListQuickActions
+                              bookingId={request.id}
+                              status={request.status}
+                              kind={request.kind}
+                              carModelId={request.carModelId}
+                            />
+                          </div>
                         </div>
                       </td>
                     </tr>
