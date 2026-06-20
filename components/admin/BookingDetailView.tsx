@@ -88,36 +88,6 @@ function DetailRow({
   );
 }
 
-function SummaryStat({
-  label,
-  value,
-  sub,
-}: {
-  label: string;
-  value: string;
-  sub?: string;
-}) {
-  return (
-    <div className="rounded-xl border border-white/60 bg-white/70 px-4 py-3 backdrop-blur-sm">
-      <p className="text-[11px] font-bold uppercase tracking-wide text-on-surface-variant">
-        {label}
-      </p>
-      <p className="mt-1 text-sm font-extrabold leading-snug text-on-surface">{value}</p>
-      {sub ? <p className="mt-0.5 text-xs text-on-surface-variant">{sub}</p> : null}
-    </div>
-  );
-}
-
-function BranchPill({ label, name }: { label: string; name: string }) {
-  return (
-    <div className="min-w-0 flex-1 rounded-xl border border-outline-variant/20 bg-white px-4 py-3 shadow-sm">
-      <p className="text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">
-        {label}
-      </p>
-      <p className="mt-1 truncate text-sm font-extrabold text-[#003749]">{name}</p>
-    </div>
-  );
-}
 
 type Props = {
   booking: AdminBookingDetail;
@@ -199,86 +169,69 @@ export function BookingDetailView({ booking, editActions, cancellation }: Props)
       />
 
       {/* Hero summary */}
-      <div className="mb-8 overflow-hidden rounded-2xl border border-outline-variant/25 bg-gradient-to-bl from-primary-container/35 via-white to-surface-container-low shadow-[0_8px_32px_-12px_rgba(0,55,73,0.15)]">
-        <div className="p-5 sm:p-6 lg:p-7">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-            <div className="flex min-w-0 flex-1 gap-4">
-              {carImage ? (
-                <div className="hidden shrink-0 overflow-hidden rounded-2xl border border-outline-variant/20 bg-white shadow-sm sm:block sm:h-24 sm:w-36">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={carImage}
-                    alt={carLabel}
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-              ) : (
-                <div className="hidden h-24 w-36 shrink-0 items-center justify-center rounded-2xl border border-outline-variant/20 bg-white text-primary sm:flex">
-                  <Car className="h-10 w-10 opacity-40" aria-hidden />
-                </div>
-              )}
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <AdminKindBadge kind={booking.kind} />
-                  <AdminStatusBadge status={booking.status} />
-                  {booking.kind === "DIRECT" ? (
-                    <span
-                      className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold ring-1 ring-inset ${paymentStatusStyles(booking.paymentStatus)}`}
-                    >
-                      {paymentStatusLabelAr(booking.paymentStatus)}
-                    </span>
-                  ) : null}
-                </div>
-                <p className="mt-3 text-xl font-extrabold tracking-tight text-[#003749] sm:text-2xl">
-                  {carLabel}
-                </p>
-                {booking.carModel?.year ? (
-                  <p className="mt-1 text-sm text-on-surface-variant">
-                    {booking.carModel.category.title} · {booking.carModel.year}
-                  </p>
-                ) : null}
-              </div>
+      <div className="mb-8 rounded-2xl border border-outline-variant/30 bg-surface-container-lowest p-5 shadow-sm sm:p-6">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <AdminKindBadge kind={booking.kind} />
+              <AdminStatusBadge status={booking.status} />
+              {booking.kind === "DIRECT" ? (
+                <span
+                  className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold ring-1 ring-inset ${paymentStatusStyles(booking.paymentStatus)}`}
+                >
+                  {paymentStatusLabelAr(booking.paymentStatus)}
+                </span>
+              ) : null}
             </div>
 
-            <div className="grid w-full gap-2 sm:grid-cols-2 lg:max-w-md lg:grid-cols-2">
-              <SummaryStat
-                label="مدة الحجز"
-                value={`${booking.numberOfDays} ${booking.numberOfDays === 1 ? "يوم" : "أيام"}`}
-              />
-              <SummaryStat
-                label="بداية الاستلام"
-                value={formatReturnDateAr(pickupYmd)}
-                sub={formatPickupDateTime(booking.pickupDate)}
-              />
-              <SummaryStat label="موعد الإرجاع" value={formatReturnDateAr(returnYmd)} />
-              <SummaryStat
-                label="طريقة الاستلام"
-                value={booking.pickupMode === "DELIVERY" ? "توصيل" : "من الفرع"}
-              />
-            </div>
-          </div>
-
-          {booking.kind === "DIRECT" ? (
-            <div className="mt-6">
-              {interBranch ? (
-                <p className="mb-3 flex items-center gap-2 rounded-xl border border-amber-200/80 bg-amber-50/90 px-3 py-2 text-xs font-bold text-amber-950">
-                  <ArrowLeftRight className="h-4 w-4 shrink-0" aria-hidden />
-                  استلام من فرع وإرجاع لفرع آخر — راجع المرتجعات لتأكيد تحويل المخزون
+            <div>
+              <h2 className="text-xl font-bold text-[#003749] sm:text-2xl">
+                {carLabel} {booking.carModel?.year ? `(${booking.carModel.year})` : ""}
+              </h2>
+              {booking.carModel?.year ? (
+                <p className="mt-0.5 text-sm text-on-surface-variant">
+                  {booking.carModel.category.title}
                 </p>
               ) : null}
-              <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
-                <BranchPill label="فرع الاستلام" name={pickupName} />
-                <span
-                  className="flex h-9 w-9 shrink-0 items-center justify-center self-center rounded-full bg-primary/10 text-primary"
-                  aria-hidden
-                >
-                  <ArrowLeftRight className="h-4 w-4" />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm font-medium text-on-surface-variant">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 shrink-0" aria-hidden />
+                <span>
+                  {booking.numberOfDays} {booking.numberOfDays === 1 ? "يوم" : "أيام"}
+                  {" · "}
+                  {formatReturnDateAr(pickupYmd)} إلى {formatReturnDateAr(returnYmd)}
                 </span>
-                <BranchPill label="فرع الإرجاع" name={returnName} />
+              </div>
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 shrink-0" aria-hidden />
+                <span>
+                  {booking.pickupMode === "DELIVERY" ? "توصيل للعميل" : "استلام من الفرع"}
+                </span>
               </div>
             </div>
-          ) : null}
+          </div>
         </div>
+
+        {booking.kind === "DIRECT" ? (
+          <div className="mt-5 border-t border-outline-variant/20 pt-5">
+            <div className="flex flex-wrap items-center gap-3 text-sm font-semibold text-on-surface">
+              <span className="text-on-surface-variant">استلام:</span>
+              <span className="text-primary">{pickupName}</span>
+              <ArrowLeftRight className="mx-1 h-4 w-4 text-on-surface-variant/50" aria-hidden />
+              <span className="text-on-surface-variant">إرجاع:</span>
+              <span className="text-primary">{returnName}</span>
+            </div>
+
+            {interBranch ? (
+              <p className="mt-3 flex items-center gap-2 rounded-xl border border-amber-200/80 bg-amber-50/90 px-3 py-2 text-xs font-bold text-amber-950">
+                <ArrowLeftRight className="h-4 w-4 shrink-0" aria-hidden />
+                استلام من فرع وإرجاع لفرع آخر — راجع المرتجعات لتأكيد تحويل المخزون
+              </p>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(17rem,22rem)] lg:items-start">
