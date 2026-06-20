@@ -33,6 +33,8 @@ export type BookingPaymentSnapshot = {
   branch: string;
   /** اسم فرع الاستلام بالعربية (من Branch.name) */
   pickupBranchLabelAr: string | null;
+  /** اسم فرع التسليم بالعربية */
+  returnBranchLabelAr: string | null;
   /** من جدول الفروع — لعرض الموقع في إشعارات واتساب وغيرها */
   branchAddress: string | null;
   branchMapUrl: string | null;
@@ -130,6 +132,7 @@ export async function getBookingForPayment(
       pickupBranch: row.pickupBranch,
       returnBranch: row.returnBranch,
     }),
+    returnBranchLabelAr: row.returnBranch?.name?.trim() || null,
     branchAddress: row.returnBranch?.address?.trim() || null,
     branchMapUrl: row.returnBranch?.mapUrl?.trim() || null,
     pickupMode: row.pickupMode,

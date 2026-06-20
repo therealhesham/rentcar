@@ -7,10 +7,7 @@ export async function GET(req: NextRequest) {
   const type = req.nextUrl.searchParams.get("type") || "invoice";
 
   if (type === "received") {
-    const html = buildReceivedHtml("محمد عبدالله", 12345);
-    return new NextResponse(html, {
-      headers: { "Content-Type": "text/html; charset=utf-8" },
-    });
+    // handled below by passing dummySnapshot to buildReceivedHtml
   }
 
   const dummySnapshot = {
@@ -23,6 +20,7 @@ export async function GET(req: NextRequest) {
     numberOfDays: 3,
     pickupMode: "BRANCH",
     pickupBranchLabelAr: "فرع المطار الرئيسي",
+    returnBranchLabelAr: "فرع البلد",
     deliveryAddress: null,
     car: {
       id: 99,
@@ -57,7 +55,7 @@ export async function GET(req: NextRequest) {
     branch: "المطار",
   } as unknown as BookingPaymentSnapshot;
 
-  const html = buildInvoiceHtml(dummySnapshot);
+  const html = type === "received" ? buildReceivedHtml(dummySnapshot) : buildInvoiceHtml(dummySnapshot);
   return new NextResponse(html, {
     headers: { "Content-Type": "text/html; charset=utf-8" },
   });
