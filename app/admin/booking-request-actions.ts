@@ -123,6 +123,10 @@ export async function updateBookingRequest(
       ? Number(rawModel)
       : NaN;
 
+  if (statusUpper === "PICKED_UP" && parsed.data.pickupDate && new Date() < parsed.data.pickupDate) {
+    return { ok: false, error: "لا يمكن تسليم السيارة للعميل قبل الموعد المحدد للحجز." };
+  }
+
   const result = await updateBookingRequestByAdmin(bookingRequestId, {
     ...parsed.data,
     status,
@@ -184,7 +188,7 @@ export async function quickUpdateBookingStatus(
 
   const beforeUpdate = await prisma.bookingRequest.findUnique({
     where: { id: bookingRequestId },
-    select: { status: true, paymentMethod: true, kind: true, carModelId: true },
+    select: { status: true, paymentMethod: true, kind: true, carModelId: true, pickupDate: true },
   });
 
   if (!beforeUpdate) return { ok: false, error: "الطلب غير موجود." };
@@ -197,6 +201,10 @@ export async function quickUpdateBookingStatus(
 
   if (statusUpper === "CONFIRMED" && beforeUpdate.kind === "DIRECT" && !beforeUpdate.carModelId) {
     return { ok: false, error: "لا يمكن التأكيد لعدم وجود مركبة مرتبطة." };
+  }
+
+  if (statusUpper === "PICKED_UP" && new Date() < beforeUpdate.pickupDate) {
+    return { ok: false, error: "لا يمكن تسليم السيارة للعميل قبل الموعد المحدد للحجز." };
   }
 
   await prisma.bookingRequest.update({

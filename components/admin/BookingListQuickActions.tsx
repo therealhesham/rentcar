@@ -110,7 +110,7 @@ export function BookingListQuickActions({ bookingId, status, kind, carModelId }:
               className="inline-flex items-center gap-1 rounded-lg bg-violet-100 px-2 py-1.5 text-[11px] font-bold text-violet-800 transition-colors hover:bg-violet-200"
             >
               <CornerDownLeft className="size-3.5 shrink-0" aria-hidden />
-              استلام من العميل
+              استلام السيارة من العميل
             </button>
           )}
         </div>

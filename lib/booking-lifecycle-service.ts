@@ -19,6 +19,7 @@ async function loadDirectBooking(bookingRequestId: number) {
       status: true,
       paymentStatus: true,
       paymentMethod: true,
+      pickupDate: true,
     },
   });
 }
@@ -34,6 +35,10 @@ export async function recordBookingPickupFromBranch(
   }
 
   const now = new Date();
+  if (now < booking.pickupDate) {
+    return { ok: false, error: "لا يمكن استلام السيارة قبل الموعد المحدد للحجز." };
+  }
+
   const updated = await prisma.bookingRequest.updateMany({
     where: {
       id: bookingRequestId,
