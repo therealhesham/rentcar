@@ -136,7 +136,7 @@ export function BookingDetailView({ booking, editActions, cancellation }: Props)
           العمليات المالية
         </Link>
       ) : null}
-      {booking.kind === "DIRECT" ? (
+      {/* {booking.kind === "DIRECT" ? (
         <Link
           href={`/fleet/payment/${booking.id}`}
           target="_blank"
@@ -145,13 +145,13 @@ export function BookingDetailView({ booking, editActions, cancellation }: Props)
           <ExternalLink className="h-4 w-4" aria-hidden />
           صفحة الدفع
         </Link>
-      ) : null}
-      <Link
+      ) : null} */}
+      {/* <Link
         href={`/admin/bookings/${booking.id}?edit=1`}
         className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-on-primary shadow-sm transition-opacity hover:opacity-95"
       >
         تعديل الطلب
-      </Link>
+      </Link> */}
     </div>
   );
 
@@ -286,8 +286,8 @@ export function BookingDetailView({ booking, editActions, cancellation }: Props)
           </BookingDetailSection>
 
           {booking.pickupMode === "DELIVERY" &&
-          (booking.deliveryAddress?.trim() ||
-            (booking.deliveryLat != null && booking.deliveryLng != null)) ? (
+            (booking.deliveryAddress?.trim() ||
+              (booking.deliveryLat != null && booking.deliveryLng != null)) ? (
             <BookingDetailSection
               icon={MapPin}
               title="التوصيل"
