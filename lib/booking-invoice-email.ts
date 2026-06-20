@@ -30,7 +30,7 @@ function fmtDateTime(d: Date): string {
   });
 }
 
-function buildInvoiceHtml(booking: BookingPaymentSnapshot): string {
+export function buildInvoiceHtml(booking: BookingPaymentSnapshot): string {
   const header = invoiceEmailHeaderForBooking(booking);
   const totalLabel = invoiceTotalLabelAr(booking);
   const branchLabel = booking.pickupBranchLabelAr?.trim() || "—";

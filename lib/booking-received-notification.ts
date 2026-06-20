@@ -38,7 +38,7 @@ async function resolveRecipientEmail(bookingRequestId: number): Promise<string |
   return null;
 }
 
-function buildReceivedHtml(fullName: string, bookingId: number): string {
+export function buildReceivedHtml(fullName: string, bookingId: number): string {
   return `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head><meta charset="utf-8"/><meta name="viewport" content="width=device-width"/></head>
