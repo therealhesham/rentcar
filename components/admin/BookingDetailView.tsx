@@ -335,6 +335,17 @@ export function BookingDetailView({ booking, editActions, cancellation }: Props)
                     {paymentStatusLabelAr(booking.paymentStatus)}
                   </span>
                 </DetailRow>
+                {typeof booking.paidAmountSar === "number" && booking.paidAmountSar > 0 ? (
+                  <DetailRow label="إجمالي المستحق" mono>
+                    <SarAmountWithSymbol
+                      bold
+                      amountClassName="font-extrabold text-on-surface"
+                      glyphClassName="text-on-surface-variant"
+                    >
+                      {formatSarAmount(booking.paidAmountSar)}
+                    </SarAmountWithSymbol>
+                  </DetailRow>
+                ) : null}
                 {booking.paymentMethod ? (
                   <DetailRow label="الطريقة">
                     {bookingPaymentMethodLabelAr(booking.paymentMethod)}

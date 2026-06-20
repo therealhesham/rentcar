@@ -9,9 +9,9 @@ type Props = {
 };
 
 const PAYMENT_METHODS = [
-  { value: "CASH", label: "الدفع عند الفرع / شبكة (نقاط بيع)" },
-  { value: "MADA", label: "مدى (إلكتروني)" },
-  { value: "CARD", label: "بطاقة ائتمانية (إلكتروني)" },
+  { value: "CASH", label: "الدفع عند الفرع" },
+  { value: "MADA", label: "مدى" },
+  { value: "CARD", label: "بطاقة ائتمانية" },
   { value: "APPLE_PAY", label: "Apple Pay" },
   { value: "TABBY", label: "تابي" },
   { value: "TAMARA", label: "تمارا" },

@@ -7,6 +7,8 @@ import {
 import { isCashPaymentMethod } from "@/lib/booking-cash-flow";
 import { sendBookingInvoiceEmailAfterPayment } from "@/lib/booking-invoice-email";
 import { prisma } from "@/lib/prisma";
+import { computeCheckoutTotals } from "@/lib/booking-checkout-pricing";
+import { parseBookingPricingSnapshot, resolveBookingRentalPricePerDayExclTax } from "@/lib/booking-pricing-snapshot";
 
 export type LifecycleActionResult = { ok: true } | { ok: false; error: string };
 
@@ -20,6 +22,11 @@ async function loadDirectBooking(bookingRequestId: number) {
       paymentStatus: true,
       paymentMethod: true,
       pickupDate: true,
+      numberOfDays: true,
+      addonsJson: true,
+      carModel: {
+        select: { price: true, vatRatePercent: true },
+      },
     },
   });
 }
@@ -69,6 +76,23 @@ export async function recordBookingReturnToBranch(
   const now = new Date();
   const cash = isCashPaymentMethod(booking.paymentMethod);
 
+  // حساب المبلغ الكامل المدفوع لحظة تأكيد الكاش عند الإرجاع
+  let cashPaidAmount: number | null = null;
+  if (cash && booking.carModel) {
+    const { addons, interCityShipping, checkoutOneTimeFees } = parseBookingPricingSnapshot(booking.addonsJson);
+    const effectivePrice = resolveBookingRentalPricePerDayExclTax(booking.carModel.price, booking.addonsJson);
+    const shipFee = interCityShipping?.feeExclVatSar ?? 0;
+    const feesSum = checkoutOneTimeFees.reduce((s, x) => s + x.feeExclVatSar, 0);
+    const totals = computeCheckoutTotals(
+      effectivePrice,
+      booking.numberOfDays,
+      booking.carModel.vatRatePercent,
+      addons.map((a) => ({ pricePerDay: a.pricePerDayExclTax })),
+      { oneTimeFeesExclTax: shipFee + feesSum },
+    );
+    cashPaidAmount = totals.totalInclTax;
+  }
+
   const updated = await prisma.bookingRequest.updateMany({
     where: {
       id: bookingRequestId,
@@ -83,6 +107,7 @@ export async function recordBookingReturnToBranch(
         ? {
             paymentStatus: "PAID",
             paidAt: now,
+            paidAmountSar: cashPaidAmount,
           }
         : {}),
     },
@@ -129,6 +154,29 @@ export async function syncLifecycleFromAdminStatusChange(
     if (isCashPaymentMethod(paymentMethod)) {
       data.paymentStatus = "PAID";
       data.paidAt = now;
+      // حساب وحفظ المبلغ الكامل المدفوع
+      const br = await prisma.bookingRequest.findUnique({
+        where: { id: bookingRequestId },
+        select: {
+          numberOfDays: true,
+          addonsJson: true,
+          carModel: { select: { price: true, vatRatePercent: true } },
+        },
+      });
+      if (br?.carModel) {
+        const { addons, interCityShipping, checkoutOneTimeFees } = parseBookingPricingSnapshot(br.addonsJson);
+        const effectivePrice = resolveBookingRentalPricePerDayExclTax(br.carModel.price, br.addonsJson);
+        const shipFee = interCityShipping?.feeExclVatSar ?? 0;
+        const feesSum = checkoutOneTimeFees.reduce((s, x) => s + x.feeExclVatSar, 0);
+        const totals = computeCheckoutTotals(
+          effectivePrice,
+          br.numberOfDays,
+          br.carModel.vatRatePercent,
+          addons.map((a) => ({ pricePerDay: a.pricePerDayExclTax })),
+          { oneTimeFeesExclTax: shipFee + feesSum },
+        );
+        (data as Record<string, unknown>).paidAmountSar = totals.totalInclTax;
+      }
     }
   }
 

@@ -1,23 +1,52 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useActionState } from "react";
+import { useState, useActionState } from "react";
 import { processBookingRefund } from "@/app/admin/booking-finance-actions";
 import { AlertCircle, CheckCircle2, Loader2, ArrowLeftRight } from "lucide-react";
 
 export function BookingFinanceOperationsPanel({
   bookingId,
   paymentStatus,
-  currentRefundAmount = 0
+  currentRefundAmount = 0,
+  totalPaidAmountSar = null,
 }: {
   bookingId: number;
   paymentStatus: string;
   currentRefundAmount?: number;
+  totalPaidAmountSar?: number | null;
 }) {
   const [isPartial, setIsPartial] = useState(false);
   const [state, formAction, isPending] = useActionState(processBookingRefund, null);
 
   const statusKey = paymentStatus.trim().toUpperCase();
+
+  // عند استرداد كامل، المبلغ يُحسب تلقائياً من المبلغ المدفوع مطروحاً منه ما سبق استرداده
+  const remainingAmount =
+    totalPaidAmountSar != null
+      ? Math.max(0, totalPaidAmountSar - currentRefundAmount)
+      : null;
+
+  const autoAmount = !isPartial ? remainingAmount : null;
+
+  // قيمة الـ input دائماً controlled — تتزامن مع autoAmount أو تُعدَّل يدوياً
+  const [amountValue, setAmountValue] = useState<string>(
+    autoAmount != null ? String(autoAmount) : ""
+  );
+
+  function handleIsPartialChange(partial: boolean) {
+    setIsPartial(partial);
+    if (!partial) {
+      // Full refund: ملء تلقائي بالمبلغ المتبقي
+      const remaining =
+        totalPaidAmountSar != null
+          ? Math.max(0, totalPaidAmountSar - currentRefundAmount)
+          : null;
+      setAmountValue(remaining != null ? String(remaining) : "");
+    } else {
+      // Partial: تفريغ الحقل ليكتب المستخدم
+      setAmountValue("");
+    }
+  }
 
   return (
     <div className="rounded-2xl border border-outline-variant/30 bg-surface-container-lowest p-6 shadow-sm">
@@ -59,7 +88,7 @@ export function BookingFinanceOperationsPanel({
             <div className="flex flex-wrap gap-3">
               <button
                 type="button"
-                onClick={() => setIsPartial(false)}
+                onClick={() => handleIsPartialChange(false)}
                 className={`rounded-xl border px-4 py-2.5 text-sm font-bold transition-colors ${
                   !isPartial
                     ? "border-primary bg-primary/10 text-primary"
@@ -70,7 +99,7 @@ export function BookingFinanceOperationsPanel({
               </button>
               <button
                 type="button"
-                onClick={() => setIsPartial(true)}
+                onClick={() => handleIsPartialChange(true)}
                 className={`rounded-xl border px-4 py-2.5 text-sm font-bold transition-colors ${
                   isPartial
                     ? "border-primary bg-primary/10 text-primary"
@@ -86,16 +115,35 @@ export function BookingFinanceOperationsPanel({
             <label htmlFor="amount" className="mb-1.5 block text-sm font-bold text-on-surface">
               المبلغ المسترد (ر.س)
             </label>
-            <input
-              type="number"
-              id="amount"
-              name="amount"
-              required
-              step="0.01"
-              min="0.01"
-              className="w-full rounded-xl border-outline-variant/40 bg-surface-container-lowest px-4 py-2.5 text-sm font-medium text-on-surface outline-none ring-primary/50 transition-all focus:border-primary focus:ring-2"
-              placeholder="مثال: 150.00"
-            />
+            <div className="relative">
+              <input
+                type="number"
+                id="amount"
+                name="amount"
+                required
+                step="0.01"
+                min="0.01"
+                readOnly={!isPartial && autoAmount != null}
+                value={amountValue}
+                onChange={(e) => setAmountValue(e.target.value)}
+                className={`w-full rounded-xl border-outline-variant/40 bg-surface-container-lowest px-4 py-2.5 text-sm font-medium text-on-surface outline-none ring-primary/50 transition-all focus:border-primary focus:ring-2 ${
+                  !isPartial && autoAmount != null
+                    ? "bg-primary/5 border-primary/30 text-primary font-bold cursor-not-allowed"
+                    : ""
+                }`}
+                placeholder={autoAmount == null ? "مثال: 150.00" : undefined}
+              />
+              {!isPartial && autoAmount != null && (
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-primary font-bold">
+                  تلقائي
+                </span>
+              )}
+            </div>
+            {!isPartial && totalPaidAmountSar == null && (
+              <p className="mt-1.5 text-xs text-on-surface-variant">
+                المبلغ غير محفوظ للحجوزات القديمة — أدخله يدوياً.
+              </p>
+            )}
           </div>
 
           <div>
@@ -124,3 +172,4 @@ export function BookingFinanceOperationsPanel({
     </div>
   );
 }
+

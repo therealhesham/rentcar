@@ -17,6 +17,8 @@ import {
 import { sendBookingCompletionWhatsAppAfterPayment } from "@/lib/evolution-whatsapp";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/lib/notification-service";
+import { computeCheckoutTotals } from "@/lib/booking-checkout-pricing";
+import { parseBookingPricingSnapshot, resolveBookingRentalPricePerDayExclTax } from "@/lib/booking-pricing-snapshot";
 
 export async function convertInquiryToDirect(
   _prev: { ok: boolean; error?: string } | null,
@@ -258,13 +260,37 @@ export async function processAdminQuickPayment(
 
   const beforeUpdate = await prisma.bookingRequest.findUnique({
     where: { id: bookingRequestId },
-    select: { paymentStatus: true, status: true, kind: true },
+    select: {
+      paymentStatus: true,
+      status: true,
+      kind: true,
+      numberOfDays: true,
+      addonsJson: true,
+      carModel: { select: { price: true, vatRatePercent: true } },
+    },
   });
 
   if (!beforeUpdate) return { ok: false, error: "الطلب غير موجود." };
 
   if (beforeUpdate.paymentStatus === "PAID") {
     return { ok: false, error: "الطلب مدفوع بالفعل." };
+  }
+
+  // حساب المبلغ الكامل شامل الضريبة
+  let paidAmountSar: number | null = null;
+  if (beforeUpdate.carModel) {
+    const { addons, interCityShipping, checkoutOneTimeFees } = parseBookingPricingSnapshot(beforeUpdate.addonsJson);
+    const effectivePrice = resolveBookingRentalPricePerDayExclTax(beforeUpdate.carModel.price, beforeUpdate.addonsJson);
+    const shipFee = interCityShipping?.feeExclVatSar ?? 0;
+    const feesSum = checkoutOneTimeFees.reduce((s, x) => s + x.feeExclVatSar, 0);
+    const totals = computeCheckoutTotals(
+      effectivePrice,
+      beforeUpdate.numberOfDays,
+      beforeUpdate.carModel.vatRatePercent,
+      addons.map((a) => ({ pricePerDay: a.pricePerDayExclTax })),
+      { oneTimeFeesExclTax: shipFee + feesSum },
+    );
+    paidAmountSar = totals.totalInclTax;
   }
 
   const { sendBookingInvoiceEmailAfterPayment } = await import("@/lib/booking-invoice-email");
@@ -276,6 +302,7 @@ export async function processAdminQuickPayment(
       paymentMethod,
       paidAt: new Date(),
       balanceDueAtBranchSar: null,
+      paidAmountSar,
     },
   });
 

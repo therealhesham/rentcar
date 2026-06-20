@@ -42,6 +42,8 @@ import {
   resolveRentalDiscountForModel,
   type RentalDiscountPriceSnap,
 } from "@/lib/rental-discount";
+import { computeCheckoutTotals } from "@/lib/booking-checkout-pricing";
+import { parseBookingPricingSnapshot } from "@/lib/booking-pricing-snapshot";
 
 export { addDaysToYmd, lastInclusiveBookingDayYmd } from "@/lib/booking-calendar-ymd";
 
@@ -1206,6 +1208,19 @@ export async function createDirectBooking(
     return { ok: false, error: addonsSnap.error };
   }
 
+  // حساب المبلغ الإجمالي المدفوع (شامل الضريبة) لحفظه لحظة الدفع الإلكتروني
+  const { addons: addonsForTotals, interCityShipping: shipForTotals, checkoutOneTimeFees: feesForTotals } =
+    parseBookingPricingSnapshot(addonsSnap.json);
+  const shipFeeForTotals = shipForTotals?.feeExclVatSar ?? 0;
+  const checkoutFeesSum = feesForTotals.reduce((s: number, x: { feeExclVatSar: number }) => s + x.feeExclVatSar, 0);
+  const bookingTotals = computeCheckoutTotals(
+    effectivePricePerDay,
+    days,
+    model.vatRatePercent,
+    addonsForTotals.map((a: { pricePerDayExclTax: number }) => ({ pricePerDay: a.pricePerDayExclTax })),
+    { oneTimeFeesExclTax: shipFeeForTotals + checkoutFeesSum },
+  );
+
   const carType = model.category.slug || model.category.title;
 
   const runOnce = () =>
@@ -1283,6 +1298,7 @@ export async function createDirectBooking(
             paymentStatus: electronicPayNow ? "PAID" : "PENDING",
             paymentMethod: paymentMethodStored,
             paidAt: electronicPayNow ? new Date() : null,
+            paidAmountSar: electronicPayNow ? bookingTotals.totalInclTax : null,
           },
           select: { id: true },
         });
