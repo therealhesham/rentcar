@@ -70,7 +70,6 @@ export function AdminAddCarForm({ categories, brands, branches }: AdminAddCarFor
   return (
     <form
       action={formAction}
-      encType="multipart/form-data"
       className="grid gap-4 rounded-2xl border border-outline-variant/30 bg-surface-container-low p-6 md:grid-cols-2"
     >
       <h2 className="md:col-span-2 text-lg font-extrabold tracking-tight">

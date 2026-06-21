@@ -354,7 +354,7 @@ export function VehicleEditForm({ vehicle }: Props) {
   const [state, formAction, pending] = useActionState(updateFleetVehicle, null);
 
   return (
-    <form action={formAction} encType="multipart/form-data" noValidate>
+    <form action={formAction} noValidate>
       <input type="hidden" name="modelId" value={vehicle.id} />
 
       {/* ── Status banner ── */}

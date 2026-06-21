@@ -22,7 +22,6 @@ export function HomeHeroEditForm({
   return (
     <form
       action={formAction}
-      encType="multipart/form-data"
       className="grid gap-6 rounded-2xl border border-outline-variant/30 bg-surface-container-low p-6"
     >
       <input type="hidden" name="currentImageLeft" value={currentLeftImageUrl} />

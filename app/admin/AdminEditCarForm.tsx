@@ -16,7 +16,6 @@ export function AdminEditCarForm({ vehicle }: AdminEditCarFormProps) {
   return (
     <form
       action={formAction}
-      encType="multipart/form-data"
       className="grid gap-4 rounded-2xl border border-outline-variant/30 bg-surface-container-low p-6 md:grid-cols-2"
     >
       <input type="hidden" name="modelId" value={vehicle.id} />

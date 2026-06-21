@@ -19,7 +19,6 @@ export function PromoBannerEditForm({ currentSlides }: Props) {
   return (
     <form
       action={formAction}
-      encType="multipart/form-data"
       className="grid gap-8 rounded-2xl border border-outline-variant/30 bg-surface-container-low p-6"
     >
       <div>
