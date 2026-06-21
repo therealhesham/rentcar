@@ -279,7 +279,6 @@ export default async function AdminDashboardPage(props: {
   const tabs = [
     { id: "", label: "الكل", count: countAll, icon: Inbox },
     { id: "new", label: "جديد وتحت المراجعة", count: countNewUnderReview, icon: AlertCircle },
-    { id: "contacted", label: "تم التواصل", count: countContacted, icon: PhoneCall },
     { id: "confirmed", label: "مؤكد", count: countConfirmed, icon: CalendarCheck },
     { id: "picked_up", label: "مستلم", count: countPickedUp, icon: KeyRound },
     { id: "returned_completed", label: "مسلّم/مكتمل", count: countReturnedCompleted, icon: CheckCircle },
