@@ -37,12 +37,16 @@ export type AdminNavItem = {
     | "file-text";
   external?: boolean;
   permission?: AdminPermission;
+  /** إخفاء العنصر من القائمة الجانبية (لكن الصفحة لا تزال صالحة) */
+  hidden?: boolean;
 };
 
 export type AdminNavGroup = {
   id: string;
   label: string;
   items: AdminNavItem[];
+  /** يجعل القسم قابلاً للطي (مختصراً بشكل افتراضي) */
+  collapsible?: boolean;
 };
 
 export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
@@ -59,11 +63,11 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     id: "bookings",
     label: "الحجوزات والعملاء",
     items: [
-      { href: "/admin/car-bookings", label: "حجوزات السيارات", icon: "clipboard-list", permission: "BOOKINGS" },
-      { href: "/admin/cancelled-bookings", label: "الحجوزات الملغاة", icon: "ban", permission: "BOOKINGS" },
+      { href: "/admin/car-bookings", label: "حجوزات السيارات", icon: "clipboard-list", permission: "BOOKINGS", hidden: true },
+      { href: "/admin/cancelled-bookings", label: "الحجوزات الملغاة", icon: "ban", permission: "BOOKINGS", hidden: true },
       { href: "/admin/branch-returns", label: "التسليم الى الفرع", icon: "corner-down-left", permission: "BOOKINGS" },
       { href: "/admin/customers", label: "العملاء", icon: "users", permission: "BOOKINGS" },
-      { href: "/admin/direct-booking", label: "حجز مباشر (مكتب)", icon: "calendar-plus", permission: "BOOKINGS" },
+      { href: "/admin/direct-booking", label: "حجز مباشر (مكتب)", icon: "calendar-plus", permission: "BOOKINGS", hidden: true },
       { href: "/admin/corporate-leads", label: "حجز الشركات", icon: "briefcase", permission: "CORPORATE_LEADS" },
       { href: "/admin/fleet-availability", label: "توفر المركبات", icon: "activity", permission: "BOOKINGS" },
     ],
@@ -71,6 +75,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
   {
     id: "content",
     label: "المحتوى والموقع",
+    collapsible: true,
     items: [
       { href: "/admin/home", label: "هيرو الرئيسية", icon: "image", permission: "CONTENT" },
       { href: "/admin/promo-banner", label: "البانر الترويجي", icon: "megaphone", permission: "CONTENT" },
@@ -84,6 +89,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
   {
     id: "fleet",
     label: "الأسطول والفروع",
+    collapsible: true,
     items: [
       { href: "/admin/vehicles", label: "المركبات", icon: "car", permission: "FLEET" },
       { href: "/admin/categories", label: "فئات الأسطول", icon: "tags", permission: "FLEET" },

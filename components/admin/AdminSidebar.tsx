@@ -9,6 +9,7 @@ import {
   Building2,
   CalendarPlus,
   Car,
+  ChevronDown,
   CornerDownLeft,
   CreditCard,
   ClipboardList,
@@ -36,6 +37,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import { LogoutButton } from "@/app/admin/LogoutButton";
 import type { AdminSession } from "@/lib/admin-auth";
 import { adminBranchDisplayName } from "@/lib/admin-branch-display";
@@ -81,6 +83,72 @@ type Props = {
   navGroups: AdminNavGroup[];
 };
 
+function CollapsibleNavGroup({
+  group,
+  pathname,
+  onClose,
+}: {
+  group: AdminNavGroup;
+  pathname: string;
+  onClose: () => void;
+}) {
+  const visibleItems = group.items.filter((i) => !i.hidden);
+  const hasActiveItem = visibleItems.some((i) => isAdminNavActive(pathname, i.href));
+  const [open, setOpen] = useState(hasActiveItem);
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="mb-1 flex w-full items-center justify-between px-2 text-[10px] font-bold uppercase tracking-wider text-white/35 hover:text-white/55 transition-colors"
+      >
+        <span>{group.label}</span>
+        <ChevronDown
+          className={`size-3 transition-transform duration-200 ${open ? "rotate-0" : "-rotate-90"}`}
+          aria-hidden
+        />
+      </button>
+      {open && (
+        <ul className="flex flex-col gap-0.5">
+          {visibleItems.map((item) => {
+            const active = isAdminNavActive(pathname, item.href);
+            const Icon = ICONS[item.icon];
+            return (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  onClick={onClose}
+                  target={item.external ? "_blank" : undefined}
+                  rel={item.external ? "noopener noreferrer" : undefined}
+                  className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-bold transition-colors ${
+                    active
+                      ? "bg-[#e8c084] text-[#281800] shadow-[0_4px_14px_-4px_rgba(232,192,132,0.5)]"
+                      : "text-white/78 hover:bg-white/8 hover:text-white"
+                  }`}
+                  aria-current={active ? "page" : undefined}
+                >
+                  <Icon
+                    className={`size-4 shrink-0 ${active ? "text-[#5d4211]" : "text-[#e8c084]/70"}`}
+                    aria-hidden
+                  />
+                  <span className="min-w-0 truncate">{item.label}</span>
+                  {item.external ? (
+                    <ExternalLink
+                      className="ms-auto size-3.5 shrink-0 opacity-50"
+                      aria-hidden
+                    />
+                  ) : null}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export function AdminSidebar({ open, onClose, session, navGroups }: Props) {
   const pathname = usePathname() ?? "";
 
@@ -116,47 +184,63 @@ export function AdminSidebar({ open, onClose, session, navGroups }: Props) {
       </div>
 
       <nav className="elegant-scrollbar flex flex-1 flex-col gap-5 overflow-y-auto overscroll-contain px-3 py-4">
-        {navGroups.map((group) => (
-          <div key={group.id}>
-            <p className="mb-2 px-2 text-[10px] font-bold uppercase tracking-wider text-white/35">
-              {group.label}
-            </p>
-            <ul className="flex flex-col gap-0.5">
-              {group.items.map((item) => {
-                const active = isAdminNavActive(pathname, item.href);
-                const Icon = ICONS[item.icon];
-                return (
-                  <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      onClick={onClose}
-                      target={item.external ? "_blank" : undefined}
-                      rel={item.external ? "noopener noreferrer" : undefined}
-                      className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-bold transition-colors ${
-                        active
-                          ? "bg-[#e8c084] text-[#281800] shadow-[0_4px_14px_-4px_rgba(232,192,132,0.5)]"
-                          : "text-white/78 hover:bg-white/8 hover:text-white"
-                      }`}
-                      aria-current={active ? "page" : undefined}
-                    >
-                      <Icon
-                        className={`size-4 shrink-0 ${active ? "text-[#5d4211]" : "text-[#e8c084]/70"}`}
-                        aria-hidden
-                      />
-                      <span className="min-w-0 truncate">{item.label}</span>
-                      {item.external ? (
-                        <ExternalLink
-                          className="ms-auto size-3.5 shrink-0 opacity-50"
+        {navGroups.map((group) => {
+          const visibleItems = group.items.filter((i) => !i.hidden);
+          if (visibleItems.length === 0) return null;
+
+          if (group.collapsible) {
+            return (
+              <CollapsibleNavGroup
+                key={group.id}
+                group={{ ...group, items: visibleItems }}
+                pathname={pathname}
+                onClose={onClose}
+              />
+            );
+          }
+
+          return (
+            <div key={group.id}>
+              <p className="mb-2 px-2 text-[10px] font-bold uppercase tracking-wider text-white/35">
+                {group.label}
+              </p>
+              <ul className="flex flex-col gap-0.5">
+                {visibleItems.map((item) => {
+                  const active = isAdminNavActive(pathname, item.href);
+                  const Icon = ICONS[item.icon];
+                  return (
+                    <li key={item.href}>
+                      <Link
+                        href={item.href}
+                        onClick={onClose}
+                        target={item.external ? "_blank" : undefined}
+                        rel={item.external ? "noopener noreferrer" : undefined}
+                        className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-bold transition-colors ${
+                          active
+                            ? "bg-[#e8c084] text-[#281800] shadow-[0_4px_14px_-4px_rgba(232,192,132,0.5)]"
+                            : "text-white/78 hover:bg-white/8 hover:text-white"
+                        }`}
+                        aria-current={active ? "page" : undefined}
+                      >
+                        <Icon
+                          className={`size-4 shrink-0 ${active ? "text-[#5d4211]" : "text-[#e8c084]/70"}`}
                           aria-hidden
                         />
-                      ) : null}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
+                        <span className="min-w-0 truncate">{item.label}</span>
+                        {item.external ? (
+                          <ExternalLink
+                            className="ms-auto size-3.5 shrink-0 opacity-50"
+                            aria-hidden
+                          />
+                        ) : null}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          );
+        })}
       </nav>
 
       <div className="border-t border-white/10 p-3">
