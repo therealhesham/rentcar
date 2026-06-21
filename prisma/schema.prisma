@@ -406,6 +406,9 @@ model BookingRequest {
   paidAmountSar Float?
   /// مبلغ مستحق يُحصَّل عند الفرع بعد تعديل/تمديد العميل لحجز مدفوع (فرق السعر). يطالب به الموظف عند تسليم/إرجاع السيارة.
   balanceDueAtBranchSar Float?
+  /// إجمالي الحجز المستحق (شامل الضريبة) — snapshot مجمَّد عند إنشاء الحجز أو آخر تعديل للمدة.
+  /// يُستخدم بدلاً من إعادة الحساب من السعر الحالي حتى لو تغيّر سعر الموديل لاحقاً.
+  snapshotTotalAmountSar Float?
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
 

@@ -17,6 +17,7 @@ import {
   CheckCircle,
   XCircle,
   Search,
+  Banknote,
 } from "lucide-react";
 import { AdminCard } from "@/components/admin/AdminCard";
 import {
@@ -56,6 +57,14 @@ export default async function AdminDashboardPage(props: {
     statusWhere = { status: { in: ["RETURNED", "COMPLETED"] } };
   } else if (statusParam === "cancelled_rejected") {
     statusWhere = { status: { in: ["CANCELLED", "REJECTED"] } };
+  } else if (statusParam === "unpaid") {
+    statusWhere = {
+      status: { notIn: ["CANCELLED", "REJECTED"] },
+      OR: [
+        { paymentStatus: "PENDING", kind: "DIRECT" },
+        { balanceDueAtBranchSar: { gt: 0 } },
+      ],
+    };
   }
 
   const qFilter: any = qParam
@@ -88,6 +97,7 @@ export default async function AdminDashboardPage(props: {
     countPickedUp,
     countReturnedCompleted,
     countCancelledRejected,
+    countUnpaid,
 
     bookingRequests,
     bookableModelsRaw,
@@ -139,6 +149,17 @@ export default async function AdminDashboardPage(props: {
       where: {
         ...branchScope(),
         status: { in: ["CANCELLED", "REJECTED"] },
+        ...qFilter,
+      },
+    }),
+    prisma.bookingRequest.count({
+      where: {
+        ...branchScope(),
+        status: { notIn: ["CANCELLED", "REJECTED"] },
+        OR: [
+          { paymentStatus: "PENDING", kind: "DIRECT" },
+          { balanceDueAtBranchSar: { gt: 0 } },
+        ],
         ...qFilter,
       },
     }),
@@ -221,6 +242,7 @@ export default async function AdminDashboardPage(props: {
     cancellationDeductedDays: request.cancellationDeductedDays ?? null,
     cancellationRefundAmountSar: request.cancellationRefundAmountSar ?? null,
     cancellationRefundExternalRef: request.cancellationRefundExternalRef ?? null,
+    balanceDueAtBranchSar: request.balanceDueAtBranchSar ?? null,
     pickupBranchName: request.pickupBranch?.name ?? null,
     returnBranchName: request.returnBranch?.name ?? null,
     createdAtLabel: new Date(request.createdAt).toLocaleString("ar-SA"),
@@ -249,6 +271,9 @@ export default async function AdminDashboardPage(props: {
   } else if (statusParam === "cancelled_rejected") {
     cardTitle = "الحجوزات الملغاة والمرفوضة";
     cardDescription = "الحجوزات التي تم إلغاؤها من قبل العميل أو رفضها من الإدارة.";
+  } else if (statusParam === "unpaid") {
+    cardTitle = "مبالغ مستحقة (غير مدفوعة)";
+    cardDescription = "حجوزات نشطة أو مكتملة بانتظار الدفع أو يوجد عليها رصيد إضافي مستحق للفرع.";
   }
 
   const tabs = [
@@ -258,6 +283,7 @@ export default async function AdminDashboardPage(props: {
     { id: "confirmed", label: "مؤكد", count: countConfirmed, icon: CalendarCheck },
     { id: "picked_up", label: "مستلم", count: countPickedUp, icon: KeyRound },
     { id: "returned_completed", label: "مسلّم/مكتمل", count: countReturnedCompleted, icon: CheckCircle },
+    { id: "unpaid", label: "مبالغ مستحقة", count: countUnpaid, icon: Banknote },
     { id: "cancelled_rejected", label: "ملغي/مرفوض", count: countCancelledRejected, icon: XCircle },
   ];
 

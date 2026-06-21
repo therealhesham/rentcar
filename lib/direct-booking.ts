@@ -1299,6 +1299,7 @@ export async function createDirectBooking(
             paymentMethod: paymentMethodStored,
             paidAt: electronicPayNow ? new Date() : null,
             paidAmountSar: electronicPayNow ? bookingTotals.totalInclTax : null,
+            snapshotTotalAmountSar: bookingTotals.totalInclTax,
           },
           select: { id: true },
         });
@@ -1533,13 +1534,62 @@ export async function updateBookingRequestByAdmin(
 
   const booking = await prisma.bookingRequest.findUnique({
     where: { id: bookingRequestId },
-    select: { id: true, kind: true },
+    select: {
+      id: true,
+      kind: true,
+      numberOfDays: true,
+      paymentStatus: true,
+      balanceDueAtBranchSar: true,
+      paidAmountSar: true,
+      snapshotTotalAmountSar: true,
+      addonsJson: true,
+      carModel: { select: { price: true, vatRatePercent: true } },
+    },
   });
   if (!booking) {
     return { ok: false, error: "الطلب غير موجود." };
   }
 
   const days = safeBookingDays(input.numberOfDays);
+
+  // ─── حساب فرق السعر عند تغيير عدد الأيام بعد الدفع ───────────────────────
+  // إذا كان الحجز مدفوعاً وتغيّر عدد الأيام، نراكم الفرق في balanceDueAtBranchSar
+  // ليطالب به الموظف عند تسليم أو إرجاع السيارة في الفرع.
+  let updatedBalanceDueAtBranchSar: number | null | undefined = undefined; // undefined = لا تغيير
+  let updatedSnapshotTotalAmountSar: number | null | undefined = undefined; // undefined = لا تغيير
+  if (
+    booking.kind === "DIRECT" &&
+    booking.carModel &&
+    days !== booking.numberOfDays
+  ) {
+    const { bookingDaysPriceInputFromSnapshot, bookingTotalInclTaxForDays } =
+      await import("@/lib/booking-edit");
+    const priceInput = bookingDaysPriceInputFromSnapshot(
+      booking.carModel.price,
+      booking.carModel.vatRatePercent,
+      booking.addonsJson,
+    );
+    const oldTotal = bookingTotalInclTaxForDays(priceInput, booking.numberOfDays);
+    const newTotal = bookingTotalInclTaxForDays(priceInput, days);
+    const diff = newTotal - oldTotal;
+
+    // استرجاع الإجمالي السابق (للحجوزات القديمة التي لا تملك snapshot، نستنتجه)
+    const previousTotal = booking.snapshotTotalAmountSar ?? 
+      (booking.paymentStatus.trim().toUpperCase() === "PAID" && typeof booking.paidAmountSar === "number" 
+        ? booking.paidAmountSar + (booking.balanceDueAtBranchSar ?? 0) 
+        : oldTotal);
+
+    // snapshot الإجمالي الجديد مجمّد وقت التعديل بإضافة فرق التمديد فقط
+    updatedSnapshotTotalAmountSar = Math.round((previousTotal + diff) * 100) / 100;
+
+    // فرق مستحق عند الفرع (للحجوزات المدفوعة مسبقاً فقط)
+    if (booking.paymentStatus.trim().toUpperCase() === "PAID") {
+      const base = booking.balanceDueAtBranchSar ?? 0;
+      const next = base + diff;
+      const rounded = Math.round(next * 100) / 100;
+      updatedBalanceDueAtBranchSar = rounded > 0 ? rounded : null;
+    }
+  }
   const branchIds = await branchIdsFromReturnSlug({
     returnBranchSlug: input.returnBranchSlug,
     pickupMode: input.pickupMode,
@@ -1669,6 +1719,13 @@ export async function updateBookingRequestByAdmin(
           }
         }
 
+        // إعادة بناء addonsJson لتعكس عدد الأيام الجديد
+        let newAddonsJson: string | null | undefined = undefined;
+        if (days !== booking.numberOfDays) {
+          const { rebuildAddonsJsonForDays } = await import("@/lib/booking-edit");
+          newAddonsJson = rebuildAddonsJsonForDays(booking.addonsJson, days);
+        }
+
         const updated = await tx.bookingRequest.updateMany({
           where: { id: bookingRequestId, kind: "DIRECT" },
           data: {
@@ -1677,6 +1734,13 @@ export async function updateBookingRequestByAdmin(
             returnBranchId: updatedBranchIds.returnBranchId,
             carModelId,
             carType,
+            ...(newAddonsJson !== undefined ? { addonsJson: newAddonsJson } : {}),
+            ...(updatedBalanceDueAtBranchSar !== undefined
+              ? { balanceDueAtBranchSar: updatedBalanceDueAtBranchSar }
+              : {}),
+            ...(updatedSnapshotTotalAmountSar !== undefined
+              ? { snapshotTotalAmountSar: updatedSnapshotTotalAmountSar }
+              : {}),
           },
         });
         if (updated.count === 0) {
@@ -1786,6 +1850,8 @@ export async function updateDirectBookingDates(input: {
   addonsJson: string | null;
   /** مبلغ مستحق يُحصَّل عند الفرع بعد التعديل (فرق السعر). null = لا يُغيَّر. */
   balanceDueAtBranchSar?: number | null;
+  /** snapshot الإجمالي الجديد بعد التعديل (شامل الضريبة) — مجمَّد وقت التعديل. */
+  snapshotTotalAmountSar?: number | null;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const { bookingRequestId } = input;
   const days = safeBookingDays(input.numberOfDays);
@@ -1875,6 +1941,9 @@ export async function updateDirectBookingDates(input: {
             addonsJson: input.addonsJson,
             ...(input.balanceDueAtBranchSar !== undefined
               ? { balanceDueAtBranchSar: input.balanceDueAtBranchSar }
+              : {}),
+            ...(input.snapshotTotalAmountSar !== undefined
+              ? { snapshotTotalAmountSar: input.snapshotTotalAmountSar }
               : {}),
           },
         });

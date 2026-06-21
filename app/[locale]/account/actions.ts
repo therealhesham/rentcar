@@ -103,6 +103,8 @@ export async function updateCustomerBookingDates(
       addonsJson: true,
       paymentStatus: true,
       balanceDueAtBranchSar: true,
+      paidAmountSar: true,
+      snapshotTotalAmountSar: true,
       carModel: { select: { price: true, vatRatePercent: true } },
     },
   });
@@ -164,6 +166,7 @@ export async function updateCustomerBookingDates(
   // فرق السعر الناتج عن التمديد/التعديل يُحصَّل عند الفرع وقت الإرجاع.
   // نراكم الفرق على الرصيد المستحق (لا يقل عن صفر). يُصفَّر تلقائياً عند الدفع أونلاين أو إرجاع السيارة.
   let balanceDueAtBranchSar: number | null = booking.balanceDueAtBranchSar ?? null;
+  let snapshotTotalAmountSar: number | null = null;
   if (booking.carModel) {
     const priceInput = bookingDaysPriceInputFromSnapshot(
       booking.carModel.price,
@@ -172,8 +175,19 @@ export async function updateCustomerBookingDates(
     );
     const oldTotal = bookingTotalInclTaxForDays(priceInput, booking.numberOfDays);
     const newTotal = bookingTotalInclTaxForDays(priceInput, numberOfDays);
+    const diff = newTotal - oldTotal;
+    
+    // استرجاع الإجمالي السابق (للحجوزات القديمة التي لا تملك snapshot، نستنتجه)
+    const previousTotal = booking.snapshotTotalAmountSar ?? 
+      (booking.paymentStatus.trim().toUpperCase() === "PAID" && typeof booking.paidAmountSar === "number" 
+        ? booking.paidAmountSar + (booking.balanceDueAtBranchSar ?? 0) 
+        : oldTotal);
+
+    // snapshot الإجمالي الجديد مجمّد وقت التعديل بإضافة فرق التمديد فقط
+    snapshotTotalAmountSar = Math.round((previousTotal + diff) * 100) / 100;
+
     const base = booking.balanceDueAtBranchSar ?? 0;
-    const next = base + (newTotal - oldTotal);
+    const next = base + diff;
     const rounded = Math.max(0, Math.round(next * 100) / 100);
     balanceDueAtBranchSar = rounded > 0 ? rounded : null;
   }
@@ -186,6 +200,7 @@ export async function updateCustomerBookingDates(
     numberOfDays,
     addonsJson: newAddonsJson,
     balanceDueAtBranchSar,
+    snapshotTotalAmountSar,
   });
   if (!result.ok) return result;
 

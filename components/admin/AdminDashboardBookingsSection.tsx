@@ -5,6 +5,7 @@ import { AdminStatusBadge, AdminPaymentBadge } from "@/components/admin/AdminSta
 import { EditBookingRequestForm } from "@/components/admin/EditBookingRequestForm";
 import { BookingListQuickActions } from "@/components/admin/BookingListQuickActions";
 import { AdminQuickPaymentModal } from "@/components/admin/AdminQuickPaymentModal";
+import { BookingRowActionsDropdown } from "@/components/admin/BookingRowActionsDropdown";
 
 export type DashboardBookingRow = {
   id: number;
@@ -39,6 +40,7 @@ export type DashboardBookingRow = {
   cancellationDeductedDays: number | null;
   cancellationRefundAmountSar: number | null;
   cancellationRefundExternalRef: string | null;
+  balanceDueAtBranchSar: number | null;
   pickupBranchName: string | null;
   returnBranchName: string | null;
   createdAtLabel: string;
@@ -153,6 +155,11 @@ export function AdminDashboardBookingsSection({ rows, categories, models }: Prop
                 <div className="flex flex-wrap gap-2">
                   <AdminStatusBadge status={request.status} />
                   <AdminPaymentBadge paymentStatus={request.paymentStatus} paymentMethod={request.paymentMethod} />
+                  {request.balanceDueAtBranchSar && request.balanceDueAtBranchSar > 0 ? (
+                    <span className="inline-flex items-center gap-1 rounded-md bg-error-container/20 px-2 py-0.5 text-[10px] font-bold text-error border border-error/20">
+                      مستحق: {request.balanceDueAtBranchSar} ر.س
+                    </span>
+                  ) : null}
                 </div>
                 <p className="mt-2 font-extrabold text-on-surface">
                   <span className="text-on-surface-variant font-medium me-1 text-[13px]">#{request.id}</span>
@@ -193,24 +200,17 @@ export function AdminDashboardBookingsSection({ rows, categories, models }: Prop
               <div className="text-[11px] text-on-surface-variant">{request.createdAtLabel}</div>
             </dl>
 
-            <div className="mt-3 border-t border-outline-variant/10 pt-3 flex flex-wrap items-center gap-2">
-              <EditBookingRequestForm
-                request={editRequestPayload(request)}
-                categories={categories}
-                models={models}
-                triggerLabel=""
-                triggerClassName="inline-flex items-center justify-center rounded p-1.5 text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-colors"
-              />
-              {request.paymentStatus?.trim().toUpperCase() !== "PAID" && (
-                <AdminQuickPaymentModal bookingId={request.id} />
-              )}
-              <BookingListQuickActions
-                bookingId={request.id}
-                status={request.status}
-                kind={request.kind}
-                carModelId={request.carModelId}
-              />
-            </div>
+            {request.status !== "CANCELLED" && request.status !== "REJECTED" && (
+              <div className="mt-3 border-t border-outline-variant/10 pt-3 flex justify-end">
+                <BookingRowActionsDropdown
+                  request={editRequestPayload(request)}
+                  paymentStatus={request.paymentStatus}
+                  categories={categories}
+                  models={models}
+                  isMobile
+                />
+              </div>
+            )}
           </li>
         ))}
               </ul>
@@ -281,41 +281,27 @@ export function AdminDashboardBookingsSection({ rows, categories, models }: Prop
                         <div className="flex flex-col items-start gap-1.5">
                           <AdminStatusBadge status={request.status} />
                           <AdminPaymentBadge paymentStatus={request.paymentStatus} paymentMethod={request.paymentMethod} />
+                          {request.balanceDueAtBranchSar && request.balanceDueAtBranchSar > 0 ? (
+                            <span className="inline-flex items-center gap-1 rounded-md bg-error-container/20 px-2 py-0.5 text-[10px] font-bold text-error border border-error/20">
+                              مستحق: {request.balanceDueAtBranchSar} ر.س
+                            </span>
+                          ) : null}
                         </div>
                       </td>
                       <td className="px-4 py-3 align-top text-xs text-on-surface-variant tabular-nums">
                         {request.createdAtLabel}
                       </td>
-                      <td className="px-4 py-3 align-top">
-                        <div className="flex min-w-[160px] flex-col gap-2">
-                          <div className="flex items-center justify-between gap-2">
-                            <Link
-                              href={`/admin/bookings/${request.id}`}
-                              className="inline-flex items-center gap-1 text-sm font-bold text-primary hover:underline"
-                            >
-                              <ArrowLeft className="size-3.5" aria-hidden />
-                              التفاصيل
-                            </Link>
-                            <EditBookingRequestForm
-                              request={editRequestPayload(request)}
-                              categories={categories}
-                              models={models}
-                              triggerLabel=""
-                              triggerClassName="inline-flex items-center justify-center rounded p-1.5 text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-colors"
-                            />
-                          </div>
-                          <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                            {request.paymentStatus?.trim().toUpperCase() !== "PAID" && (
-                              <AdminQuickPaymentModal bookingId={request.id} />
-                            )}
-                            <BookingListQuickActions
-                              bookingId={request.id}
-                              status={request.status}
-                              kind={request.kind}
-                              carModelId={request.carModelId}
-                            />
-                          </div>
-                        </div>
+                      <td className="px-4 py-3 align-top text-end">
+                        {request.status !== "CANCELLED" && request.status !== "REJECTED" ? (
+                          <BookingRowActionsDropdown
+                            request={editRequestPayload(request)}
+                            paymentStatus={request.paymentStatus}
+                            categories={categories}
+                            models={models}
+                          />
+                        ) : (
+                          <span className="text-xs text-on-surface-variant">—</span>
+                        )}
                       </td>
                     </tr>
                   ))}

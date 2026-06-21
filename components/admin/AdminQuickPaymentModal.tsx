@@ -18,8 +18,7 @@ const PAYMENT_METHODS = [
   { value: "AMKAN", label: "إمكان" },
 ];
 
-export function AdminQuickPaymentModal({ bookingId }: Props) {
-  const [open, setOpen] = useState(false);
+export function AdminQuickPaymentModalInner({ bookingId, onClose }: { bookingId: number, onClose: () => void }) {
   const [method, setMethod] = useState("CASH");
   const [errorMsg, setErrorMsg] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -31,10 +30,75 @@ export function AdminQuickPaymentModal({ bookingId }: Props) {
       if (!result.ok) {
         setErrorMsg(result.error || "حدث خطأ أثناء التأكيد");
       } else {
-        setOpen(false);
+        onClose();
       }
     });
   };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+      <button
+        type="button"
+        className="absolute inset-0 bg-inverse-surface/50 backdrop-blur-sm cursor-default"
+        onClick={() => !isPending && onClose()}
+      />
+      <div className="relative z-10 w-full max-w-sm rounded-2xl border border-outline-variant/40 bg-surface-container-lowest p-5 editorial-shadow">
+        <h3 className="text-lg font-extrabold text-on-surface">
+          تأكيد الدفع يدويًا
+        </h3>
+        <p className="mt-1 text-sm text-on-surface-variant">
+          اختر وسيلة الدفع التي استخدمها العميل لتسجيل الطلب كمدفوع.
+        </p>
+
+        <div className="mt-4">
+          {errorMsg && (
+            <div className="mb-4 rounded-xl bg-error-container/40 px-3 py-2 text-sm font-bold text-error">
+              {errorMsg}
+            </div>
+          )}
+          <label className="block text-sm font-bold text-on-surface">
+            وسيلة الدفع
+            <select
+              value={method}
+              onChange={(e) => setMethod(e.target.value)}
+              disabled={isPending}
+              className="mt-1 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+            >
+              {PAYMENT_METHODS.map((m) => (
+                <option key={m.value} value={m.value}>
+                  {m.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <div className="mt-6 flex flex-wrap items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isPending}
+            className="cursor-pointer rounded-xl px-4 py-2 text-sm font-bold text-on-surface-variant hover:bg-surface-container transition-colors disabled:opacity-50"
+          >
+            إلغاء
+          </button>
+          <button
+            type="button"
+            onClick={handleConfirm}
+            disabled={isPending}
+            className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-primary px-5 py-2 text-sm font-bold text-on-primary hover:opacity-95 disabled:opacity-60"
+          >
+            {isPending && <Loader2 className="size-4 animate-spin" />}
+            تأكيد الدفع
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function AdminQuickPaymentModal({ bookingId }: Props) {
+  const [open, setOpen] = useState(false);
 
   return (
     <>
@@ -48,66 +112,7 @@ export function AdminQuickPaymentModal({ bookingId }: Props) {
         دفع
       </button>
 
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <button
-            type="button"
-            className="absolute inset-0 bg-inverse-surface/50 backdrop-blur-sm cursor-default"
-            onClick={() => !isPending && setOpen(false)}
-          />
-          <div className="relative z-10 w-full max-w-sm rounded-2xl border border-outline-variant/40 bg-surface-container-lowest p-5 editorial-shadow">
-            <h3 className="text-lg font-extrabold text-on-surface">
-              تأكيد الدفع يدويًا
-            </h3>
-            <p className="mt-1 text-sm text-on-surface-variant">
-              اختر وسيلة الدفع التي استخدمها العميل لتسجيل الطلب كمدفوع.
-            </p>
-
-            <div className="mt-4">
-              {errorMsg && (
-                <div className="mb-4 rounded-xl bg-error-container/40 px-3 py-2 text-sm font-bold text-error">
-                  {errorMsg}
-                </div>
-              )}
-              <label className="block text-sm font-bold text-on-surface">
-                وسيلة الدفع
-                <select
-                  value={method}
-                  onChange={(e) => setMethod(e.target.value)}
-                  disabled={isPending}
-                  className="mt-1 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
-                >
-                  {PAYMENT_METHODS.map((m) => (
-                    <option key={m.value} value={m.value}>
-                      {m.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            <div className="mt-6 flex flex-wrap items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                disabled={isPending}
-                className="cursor-pointer rounded-xl px-4 py-2 text-sm font-bold text-on-surface-variant hover:bg-surface-container transition-colors disabled:opacity-50"
-              >
-                إلغاء
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirm}
-                disabled={isPending}
-                className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-primary px-5 py-2 text-sm font-bold text-on-primary hover:opacity-95 disabled:opacity-60"
-              >
-                {isPending && <Loader2 className="size-4 animate-spin" />}
-                تأكيد الدفع
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {open && <AdminQuickPaymentModalInner bookingId={bookingId} onClose={() => setOpen(false)} />}
     </>
   );
 }
