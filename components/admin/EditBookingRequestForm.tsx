@@ -22,11 +22,11 @@ export type { EditableBookingRow } from "@/lib/admin-booking-edit-types";
 
 type CategoryOption = { slug: string; title: string };
 
-function paymentStatusLabelArForBooking(ps: string | null | undefined): string {
+function paymentStatusLabelArForBooking(ps: string | null | undefined, balanceDue?: number | null): string {
   const k = String(ps ?? "")
     .trim()
     .toUpperCase();
-  if (k === "PAID") return "مدفوع";
+  if (k === "PAID") return (balanceDue && balanceDue > 0) ? "مدفوع جزئياً" : "مدفوع";
   if (k === "REFUNDED") return "مسترد بالكامل";
   if (k === "PARTIAL_REFUND") return "استرداد جزئي";
   if (k === "NO_REFUND") return "بدون استرداد";
@@ -227,7 +227,7 @@ export function EditBookingModalInner({
                     const ps = request.paymentStatus?.trim().toUpperCase() ?? "";
                     const cls =
                       ps === "PAID"
-                        ? "bg-emerald-100 text-emerald-800"
+                        ? ((request.balanceDueAtBranchSar ?? 0) > 0 ? "bg-amber-100 text-amber-900" : "bg-emerald-100 text-emerald-800")
                         : ps === "REFUNDED"
                           ? "bg-sky-100 text-sky-900"
                           : ps === "PARTIAL_REFUND"
@@ -237,7 +237,7 @@ export function EditBookingModalInner({
                               : "bg-amber-100 text-amber-900";
                     return (
                       <span className={`rounded-full px-2.5 py-0.5 font-extrabold ${cls}`}>
-                        {paymentStatusLabelArForBooking(request.paymentStatus)}
+                        {paymentStatusLabelArForBooking(request.paymentStatus, request.balanceDueAtBranchSar)}
                       </span>
                     );
                   })()}

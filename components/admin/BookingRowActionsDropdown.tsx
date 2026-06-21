@@ -15,6 +15,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { AdminQuickPaymentModalInner } from "./AdminQuickPaymentModal";
+import { AdminBalancePaymentModalInner } from "./AdminBalancePaymentModal";
 import { EditBookingModalInner, type EditableBookingRow } from "./EditBookingRequestForm";
 import { quickUpdateBookingStatus } from "@/app/admin/booking-request-actions";
 
@@ -33,6 +34,7 @@ export function BookingRowActionsDropdown({ request, paymentStatus, categories, 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [balancePaymentModalOpen, setBalancePaymentModalOpen] = useState(false);
 
   const [isPending, startTransition] = useTransition();
   const [modalConfig, setModalConfig] = useState<{
@@ -81,10 +83,11 @@ export function BookingRowActionsDropdown({ request, paymentStatus, categories, 
   const status = request.status.trim().toUpperCase();
   const ps = paymentStatus?.trim().toUpperCase();
   const showPayment = ps !== "PAID";
+  const showBalancePayment = ps === "PAID" && (request.balanceDueAtBranchSar ?? 0) > 0;
 
   return (
     <>
-      <div className="relative inline-block text-right" ref={ref}>
+      <div className={`relative inline-block text-right ${dropdownOpen ? "z-50" : "z-auto"}`} ref={ref}>
         <button
           type="button"
           onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -139,6 +142,17 @@ export function BookingRowActionsDropdown({ request, paymentStatus, categories, 
                   >
                     <CreditCard className="size-3.5 text-amber-700" />
                     دفع
+                  </button>
+                )}
+                
+                {showBalancePayment && (
+                  <button
+                    type="button"
+                    onClick={() => setBalancePaymentModalOpen(true)}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-start text-xs font-bold text-amber-900 hover:bg-amber-100 transition-colors"
+                  >
+                    <CreditCard className="size-3.5 text-amber-700" />
+                    سداد الدفعة المتبقية
                   </button>
                 )}
 
@@ -226,6 +240,14 @@ export function BookingRowActionsDropdown({ request, paymentStatus, categories, 
         <AdminQuickPaymentModalInner
           bookingId={request.id}
           onClose={() => setPaymentModalOpen(false)}
+        />
+      )}
+
+      {balancePaymentModalOpen && (
+        <AdminBalancePaymentModalInner
+          bookingId={request.id}
+          balanceDue={request.balanceDueAtBranchSar!}
+          onClose={() => setBalancePaymentModalOpen(false)}
         />
       )}
 

@@ -44,25 +44,32 @@ export function AdminKindBadge({ kind }: { kind: string }) {
 export function AdminPaymentBadge({
   paymentStatus,
   paymentMethod,
+  balanceDueAtBranchSar,
 }: {
   paymentStatus: string | null;
   paymentMethod: string | null;
+  balanceDueAtBranchSar?: number | null;
 }) {
   const code = (paymentStatus || "PENDING").trim().toUpperCase();
+  const isPartiallyPaid = code === "PAID" && (balanceDueAtBranchSar ?? 0) > 0;
+  
   const style =
-    code === "PAID"
+    isPartiallyPaid
+      ? "bg-[#fef3c7] text-[#b45309] ring-[#fcd34d]/50" // Amber/Yellow style for partial
+      : code === "PAID"
       ? "bg-[#ecfdf5] text-[#047857] ring-[#6ee7b7]/40"
       : code === "REFUNDED" || code === "PARTIAL_REFUND"
       ? "bg-[#fef2f2] text-[#b91c1c] ring-[#fecaca]/40"
       : "bg-[#fff7ed] text-[#9a3412] ring-[#fdba74]/40";
 
   const methodLabel = paymentMethod ? bookingPaymentMethodLabelAr(paymentMethod) : null;
+  const statusLabel = isPartiallyPaid ? "مدفوع جزئياً" : bookingPaymentStatusLabelAr(code);
 
   return (
     <span
       className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold ring-1 ring-inset ${style}`}
     >
-      {bookingPaymentStatusLabelAr(code)}
+      {statusLabel}
       {methodLabel ? ` · ${methodLabel}` : ""}
     </span>
   );

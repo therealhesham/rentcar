@@ -33,18 +33,18 @@ import { formatReturnDateAr } from "@/lib/booking-return-schedule";
 import { addDaysToYmd } from "@/lib/direct-booking";
 import { StatementActionsDropdown } from "@/app/admin/(dashboard)/bookings/[id]/statement/StatementActionsDropdown";
 
-function paymentStatusLabelAr(ps: string): string {
+function paymentStatusLabelAr(ps: string, balanceDue?: number): string {
   const k = ps.trim().toUpperCase();
-  if (k === "PAID") return "مدفوع";
+  if (k === "PAID") return (balanceDue && balanceDue > 0) ? "مدفوع جزئياً" : "مدفوع";
   if (k === "REFUNDED") return "مسترد بالكامل";
   if (k === "PARTIAL_REFUND") return "استرداد جزئي";
   if (k === "NO_REFUND") return "بدون استرداد";
   return "بانتظار الدفع";
 }
 
-function paymentStatusStyles(ps: string): string {
+function paymentStatusStyles(ps: string, balanceDue?: number): string {
   const k = ps.trim().toUpperCase();
-  if (k === "PAID") return "bg-emerald-50 text-emerald-900 ring-emerald-200/60";
+  if (k === "PAID") return (balanceDue && balanceDue > 0) ? "bg-amber-50 text-amber-950 ring-amber-200/60" : "bg-emerald-50 text-emerald-900 ring-emerald-200/60";
   if (k === "REFUNDED") return "bg-sky-50 text-sky-900 ring-sky-200/60";
   if (k === "PARTIAL_REFUND") return "bg-violet-50 text-violet-900 ring-violet-200/60";
   if (k === "NO_REFUND") return "bg-neutral-100 text-neutral-800 ring-neutral-200/60";
@@ -189,9 +189,9 @@ export function BookingDetailView({ booking, editActions, cancellation }: Props)
               <AdminStatusBadge status={booking.status} />
               {booking.kind === "DIRECT" ? (
                 <span
-                  className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold ring-1 ring-inset ${paymentStatusStyles(booking.paymentStatus)}`}
+                  className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold ring-1 ring-inset ${paymentStatusStyles(booking.paymentStatus, balanceDueAtBranch)}`}
                 >
-                  {paymentStatusLabelAr(booking.paymentStatus)}
+                  {paymentStatusLabelAr(booking.paymentStatus, balanceDueAtBranch)}
                 </span>
               ) : null}
             </div>
@@ -330,9 +330,9 @@ export function BookingDetailView({ booking, editActions, cancellation }: Props)
               <dl className="space-y-3.5">
                 <DetailRow label="الحالة">
                   <span
-                    className={`inline-flex rounded-full px-2 py-0.5 text-xs font-bold ring-1 ring-inset ${paymentStatusStyles(booking.paymentStatus)}`}
+                    className={`inline-flex rounded-full px-2 py-0.5 text-xs font-bold ring-1 ring-inset ${paymentStatusStyles(booking.paymentStatus, balanceDueAtBranch)}`}
                   >
-                    {paymentStatusLabelAr(booking.paymentStatus)}
+                    {paymentStatusLabelAr(booking.paymentStatus, balanceDueAtBranch)}
                   </span>
                 </DetailRow>
                 {typeof booking.paidAmountSar === "number" && booking.paidAmountSar > 0 ? (

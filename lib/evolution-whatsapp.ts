@@ -175,3 +175,25 @@ export async function sendBookingCompletionWhatsAppAfterPayment(bookingRequestId
     }
   }
 }
+
+export async function sendBookingConfirmedWhatsAppToCustomer(bookingRequestId: number): Promise<void> {
+  if (!isEvolutionWhatsAppConfigured()) return;
+
+  const snapshot = await getBookingForPayment(bookingRequestId);
+  if (!snapshot) return;
+
+  const number = e164ToEvolutionWhatsAppNumber(snapshot.phone);
+  if (!number) return;
+
+  const vars = await buildBookingCompletionVars(snapshot);
+  const { getWhatsAppTemplate, expandTemplate } = await import("@/lib/whatsapp-templates");
+  
+  const template = await getWhatsAppTemplate("whatsapp_template_booking_confirmed_customer");
+  const text = expandTemplate(template, vars);
+  
+  try {
+    await postSendText({ number, text });
+  } catch (err) {
+    console.error(`[evolution-whatsapp] Failed to send confirmed whatsapp to customer`, err);
+  }
+}

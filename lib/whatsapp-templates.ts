@@ -7,6 +7,7 @@ export const WHATSAPP_TEMPLATE_KEYS = [
   "whatsapp_template_booking_completion_admin",
   "whatsapp_template_booking_received_customer",
   "whatsapp_template_booking_received_admin",
+  "whatsapp_template_booking_confirmed_customer",
 ] as const;
 
 export type WhatsAppTemplateKey = typeof WHATSAPP_TEMPLATE_KEYS[number];
@@ -24,6 +25,8 @@ export const DEFAULT_WHATSAPP_TEMPLATES: Record<WhatsAppTemplateKey, string> = {
     "مرحباً {fullName}،\n\nتم استلام حجزك بنجاح.\n\nرقم الطلب: #{bookingId}\nالمركبة: {carTitle}\n\nطلبكم قيد المراجعة — سيتواصل معكم فريق روائس قريباً لتأكيد الحجز هاتفياً.\nستُرسل الفاتورة بعد التأكيد.\n\nشكراً لاختياركم روائس لتأجير السيارات.",
   whatsapp_template_booking_received_admin: 
     "🚨 *حجز أفراد جديد مسجل*\n\n*رقم الطلب:* #{bookingId}\n*المركبة:* {carTitle}\n*العميل:* {fullName}\n*رقم الجوال:* {phone}\n*الفرع:* {branchLocation}\n*تاريخ الاستلام:* {pickupDate}\n*المدة:* {numberOfDays} أيام",
+  whatsapp_template_booking_confirmed_customer:
+    "مرحباً {fullName}،\n\nتم تأكيد حجزك لدينا بنجاح.\n\nرقم الطلب: #{bookingId}\nالمركبة: {carTitle}\n{pickupDetails}\nتاريخ الاستلام: {pickupDate}\nالمدة: {numberOfDays} أيام\n\nنتطلع لخدمتك قريباً، شكراً لاختياركم روائس لتأجير السيارات.",
 };
 
 export async function getWhatsAppTemplate(key: WhatsAppTemplateKey): Promise<string> {

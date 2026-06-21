@@ -14,7 +14,7 @@ import {
   parseCommonBookingFieldsFromFormData,
   updateBookingRequestByAdmin,
 } from "@/lib/direct-booking";
-import { sendBookingCompletionWhatsAppAfterPayment } from "@/lib/evolution-whatsapp";
+import { sendBookingCompletionWhatsAppAfterPayment, sendBookingConfirmedWhatsAppToCustomer } from "@/lib/evolution-whatsapp";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/lib/notification-service";
 import { computeCheckoutTotals } from "@/lib/booking-checkout-pricing";
@@ -147,11 +147,19 @@ export async function updateBookingRequest(
     beforeUpdate?.kind === "DIRECT" &&
     isCashPaymentMethod(beforeUpdate.paymentMethod);
 
-  if (statusUpper === "CONFIRMED" && wasNotConfirmed && cashDirect) {
-    try {
-      await sendBookingCompletionWhatsAppAfterPayment(bookingRequestId);
-    } catch (e) {
-      console.error("[evolution-whatsapp] بعد تأكيد الموظف (كاش):", e);
+  if (statusUpper === "CONFIRMED" && wasNotConfirmed) {
+    if (cashDirect) {
+      try {
+        await sendBookingCompletionWhatsAppAfterPayment(bookingRequestId);
+      } catch (e) {
+        console.error("[evolution-whatsapp] بعد تأكيد الموظف (كاش):", e);
+      }
+    } else {
+      try {
+        await sendBookingConfirmedWhatsAppToCustomer(bookingRequestId);
+      } catch (e) {
+        console.error("[evolution-whatsapp] بعد تأكيد الموظف (تأكيد فقط):", e);
+      }
     }
   }
 
@@ -217,11 +225,19 @@ export async function quickUpdateBookingStatus(
   const wasNotConfirmed = beforeUpdate.status.trim().toUpperCase() !== "CONFIRMED";
   const cashDirect = beforeUpdate.kind === "DIRECT" && isCashPaymentMethod(beforeUpdate.paymentMethod);
 
-  if (statusUpper === "CONFIRMED" && wasNotConfirmed && cashDirect) {
-    try {
-      await sendBookingCompletionWhatsAppAfterPayment(bookingRequestId);
-    } catch (e) {
-      console.error("[evolution-whatsapp] بعد تأكيد الموظف السريع (كاش):", e);
+  if (statusUpper === "CONFIRMED" && wasNotConfirmed) {
+    if (cashDirect) {
+      try {
+        await sendBookingCompletionWhatsAppAfterPayment(bookingRequestId);
+      } catch (e) {
+        console.error("[evolution-whatsapp] بعد تأكيد الموظف السريع (كاش):", e);
+      }
+    } else {
+      try {
+        await sendBookingConfirmedWhatsAppToCustomer(bookingRequestId);
+      } catch (e) {
+        console.error("[evolution-whatsapp] بعد تأكيد الموظف السريع (تأكيد فقط):", e);
+      }
     }
   }
 
@@ -332,6 +348,48 @@ export async function processAdminQuickPayment(
   revalidatePath("/admin/car-bookings");
   revalidatePath(`/admin/bookings/${bookingRequestId}`);
   revalidatePath(`/fleet/payment/${bookingRequestId}`);
+  return { ok: true };
+}
+
+export async function processAdminBalancePayment(
+  bookingRequestId: number,
+  paymentMethod: string
+): Promise<{ ok: boolean; error?: string }> {
+  const auth = await requireAdminForAction();
+  if (!auth.ok) return { ok: false, error: auth.error };
+
+  if (!Number.isInteger(bookingRequestId) || bookingRequestId < 1) {
+    return { ok: false, error: "معرّف الطلب غير صالح." };
+  }
+
+  const scope = await assertBookingRequestInScope(auth.session, bookingRequestId);
+  if (!scope.ok) return { ok: false, error: scope.error };
+
+  const booking = await prisma.bookingRequest.findUnique({
+    where: { id: bookingRequestId },
+    select: { paidAmountSar: true, balanceDueAtBranchSar: true, paymentStatus: true },
+  });
+
+  if (!booking) return { ok: false, error: "الطلب غير موجود." };
+  if ((booking.balanceDueAtBranchSar ?? 0) <= 0) {
+    return { ok: false, error: "لا يوجد مبالغ متبقية مستحقة لهذا الحجز." };
+  }
+
+  const newPaidAmount = (booking.paidAmountSar ?? 0) + (booking.balanceDueAtBranchSar ?? 0);
+
+  await prisma.bookingRequest.update({
+    where: { id: bookingRequestId },
+    data: {
+      paidAmountSar: newPaidAmount,
+      balanceDueAtBranchSar: 0,
+      // Optional: we leave paymentStatus as PAID. 
+    },
+  });
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/car-bookings");
+  revalidatePath(`/admin/bookings/${bookingRequestId}`);
+  revalidatePath(`/admin/bookings/${bookingRequestId}/finance`);
   return { ok: true };
 }
 

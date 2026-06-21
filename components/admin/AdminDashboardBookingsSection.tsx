@@ -88,6 +88,7 @@ function editRequestPayload(request: DashboardBookingRow) {
     cancellationDeductedDays: request.cancellationDeductedDays,
     cancellationRefundAmountSar: request.cancellationRefundAmountSar,
     cancellationRefundExternalRef: request.cancellationRefundExternalRef,
+    balanceDueAtBranchSar: request.balanceDueAtBranchSar,
   };
 }
 
@@ -154,7 +155,11 @@ export function AdminDashboardBookingsSection({ rows, categories, models }: Prop
               <div className="min-w-0">
                 <div className="flex flex-wrap gap-2">
                   <AdminStatusBadge status={request.status} />
-                  <AdminPaymentBadge paymentStatus={request.paymentStatus} paymentMethod={request.paymentMethod} />
+                  <AdminPaymentBadge 
+                    paymentStatus={request.paymentStatus} 
+                    paymentMethod={request.paymentMethod}
+                    balanceDueAtBranchSar={request.balanceDueAtBranchSar}
+                  />
                   {request.balanceDueAtBranchSar && request.balanceDueAtBranchSar > 0 ? (
                     <span className="inline-flex items-center gap-1 rounded-md bg-error-container/20 px-2 py-0.5 text-[10px] font-bold text-error border border-error/20">
                       مستحق: {request.balanceDueAtBranchSar} ر.س
@@ -220,7 +225,7 @@ export function AdminDashboardBookingsSection({ rows, categories, models }: Prop
       </div>
 
       {/* Desktop table */}
-      <div className="hidden overflow-x-auto md:block">
+      <div className="hidden overflow-x-auto lg:overflow-visible pb-32 md:block">
         <table className="w-full min-w-[880px] text-start text-sm">
           <thead className="sticky top-0 z-10 bg-white shadow-[0_1px_0_0_rgba(0,0,0,0.06)]">
             <tr className="border-b border-outline-variant/20 bg-surface-container-low/80 text-[11px] font-bold uppercase tracking-wide text-on-surface-variant">
@@ -280,7 +285,11 @@ export function AdminDashboardBookingsSection({ rows, categories, models }: Prop
                       <td className="px-4 py-3 align-top">
                         <div className="flex flex-col items-start gap-1.5">
                           <AdminStatusBadge status={request.status} />
-                          <AdminPaymentBadge paymentStatus={request.paymentStatus} paymentMethod={request.paymentMethod} />
+                          <AdminPaymentBadge 
+                            paymentStatus={request.paymentStatus} 
+                            paymentMethod={request.paymentMethod} 
+                            balanceDueAtBranchSar={request.balanceDueAtBranchSar} 
+                          />
                           {request.balanceDueAtBranchSar && request.balanceDueAtBranchSar > 0 ? (
                             <span className="inline-flex items-center gap-1 rounded-md bg-error-container/20 px-2 py-0.5 text-[10px] font-bold text-error border border-error/20">
                               مستحق: {request.balanceDueAtBranchSar} ر.س

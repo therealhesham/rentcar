@@ -39,6 +39,11 @@ const TEMPLATE_INFO: Record<WhatsAppTemplateKey, { label: string; description: s
     description: "تُرسل للإدارة فور تسجيل طلب حجز جديد.",
     vars: "{bookingId}, {carTitle}, {fullName}, {phone}, {branchLocation}, {pickupDate}, {numberOfDays}",
   },
+  whatsapp_template_booking_confirmed_customer: {
+    label: "إشعار تأكيد الحجز المبدئي (للعميل)",
+    description: "تُرسل للعميل بمجرد تأكيد الحجز من الموظف قبل الدفع.",
+    vars: "{fullName}, {bookingId}, {carTitle}, {pickupDetails}, {pickupDate}, {numberOfDays}",
+  },
 };
 
 export function WhatsappTemplatesForm({ initialState }: Props) {

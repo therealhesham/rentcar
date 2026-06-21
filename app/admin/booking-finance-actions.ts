@@ -89,7 +89,7 @@ export async function processBookingPayment(
 
   const booking = await prisma.bookingRequest.findUnique({
     where: { id: bookingId },
-    select: { paymentStatus: true, kind: true },
+    select: { paymentStatus: true, kind: true, balanceDueAtBranchSar: true, paidAmountSar: true },
   });
 
   if (!booking) return { ok: false, error: "الطلب غير موجود." };
@@ -97,23 +97,36 @@ export async function processBookingPayment(
     return { ok: false, error: "تسجيل الدفع متاح للحجوزات المباشرة فقط." };
   }
   if (booking.paymentStatus === "PAID") {
-    return { ok: false, error: "الحجز مدفوع مسبقاً." };
-  }
-  if (booking.paymentStatus === "REFUNDED") {
-    return { ok: false, error: "الحجز مسترد ولا يمكن تسجيل دفعة عليه." };
-  }
+    if ((booking.balanceDueAtBranchSar ?? 0) <= 0) {
+      return { ok: false, error: "الحجز مدفوع مسبقاً ولا توجد دفعة متبقية." };
+    }
+    
+    // Pay balance
+    const newPaidAmount = (booking.paidAmountSar ?? 0) + amount;
+    const newBalance = (booking.balanceDueAtBranchSar ?? 0) - amount;
 
-  await prisma.bookingRequest.update({
-    where: { id: bookingId },
-    data: {
-      paymentStatus:    "PAID",
-      paidAmountSar:    amount,
-      paymentMethod:    rawMethod,
-      paidAt:           new Date(),
-      ...(externalRef ? { cancellationRefundExternalRef: externalRef } : {}),
-      ...(receivedBy  ? { paymentReceivedBy: receivedBy }             : {}),
-    },
-  });
+    await prisma.bookingRequest.update({
+      where: { id: bookingId },
+      data: {
+        paidAmountSar: newPaidAmount,
+        balanceDueAtBranchSar: newBalance > 0 ? newBalance : 0,
+        // optionally update paymentMethod, but since they might be different, let's just record it.
+      },
+    });
+  } else {
+    await prisma.bookingRequest.update({
+      where: { id: bookingId },
+      data: {
+        paymentStatus:    "PAID",
+        paidAmountSar:    amount,
+        paymentMethod:    rawMethod,
+        paidAt:           new Date(),
+        ...(externalRef ? { cancellationRefundExternalRef: externalRef } : {}),
+        ...(receivedBy  ? { paymentReceivedBy: receivedBy }             : {}),
+        balanceDueAtBranchSar: 0,
+      },
+    });
+  }
 
   revalidatePath("/admin/car-bookings");
   revalidatePath(`/admin/bookings/${bookingId}`);

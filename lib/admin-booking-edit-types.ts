@@ -33,4 +33,5 @@ export type EditableBookingRow = {
   cancellationDeductedDays: number | null;
   cancellationRefundAmountSar: number | null;
   cancellationRefundExternalRef: string | null;
+  balanceDueAtBranchSar?: number | null;
 };
