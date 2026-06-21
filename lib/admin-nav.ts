@@ -69,7 +69,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/admin/customers", label: "العملاء", icon: "users", permission: "BOOKINGS" },
       { href: "/admin/direct-booking", label: "حجز مباشر (مكتب)", icon: "calendar-plus", permission: "BOOKINGS", hidden: true },
       { href: "/admin/corporate-leads", label: "حجز الشركات", icon: "briefcase", permission: "CORPORATE_LEADS" },
-      { href: "/admin/fleet-availability", label: "توفر المركبات", icon: "activity", permission: "BOOKINGS" },
+      { href: "/admin/fleet-availability", label: "توفر المركبات", icon: "activity", permission: "BOOKINGS", hidden: true },
     ],
   },
   {
