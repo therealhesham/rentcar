@@ -102,19 +102,19 @@ type Props = {
   interCityShippingRules: Array<{ fromSlug: string; toSlug: string; feeExclVatSar: number }>;
   checkoutOneTimeFees: Array<{ slug: string; label: string; feeExclVatSar: number }>;
   sessionCustomer:
-    | {
-        name: string;
-        phoneLocal: string;
-        email: string;
-        idDocumentKind: string | null;
-        nationalIdNumber: string | null;
-        passportNumber: string | null;
-        licenseNumber: string | null;
-        licenseExpiryYmd: string | null;
-        idCardImageUrl: string | null;
-        driverLicenseImageUrl: string | null;
-      }
-    | null;
+  | {
+    name: string;
+    phoneLocal: string;
+    email: string;
+    idDocumentKind: string | null;
+    nationalIdNumber: string | null;
+    passportNumber: string | null;
+    licenseNumber: string | null;
+    licenseExpiryYmd: string | null;
+    idCardImageUrl: string | null;
+    driverLicenseImageUrl: string | null;
+  }
+  | null;
   rentalPriceDisplayMode: RentalPriceDisplayMode;
   /** بيانات حجز قائم عند «تعديل الحجز» — لملء الحقول بعد التحقق من الخادم */
   editPrefill: FleetCheckoutEditPrefill | null;
@@ -157,7 +157,7 @@ export function FleetCheckoutClient({
   type IdDocUiKind = "SAUDI_ID" | "VISITOR";
   const sessionIdDocKind =
     sessionCustomer?.idDocumentKind === "VISITOR" ||
-    sessionCustomer?.idDocumentKind === "RESIDENT_VISITOR"
+      sessionCustomer?.idDocumentKind === "RESIDENT_VISITOR"
       ? ("VISITOR" as const)
       : ("SAUDI_ID" as const);
   const [idDocKind, setIdDocKind] = useState<IdDocUiKind>(sessionIdDocKind);
@@ -292,14 +292,14 @@ export function FleetCheckoutClient({
     const pickupLabel =
       mode === "delivery"
         ? (() => {
-            if (deliveryAddressMerged.length > 0) {
-              return `توصيل — ${deliveryAddressMerged}`;
-            }
-            if (coordsOk) {
-              return "توصيل (تم التحديد على الخريطة)";
-            }
-            return "توصيل";
-          })()
+          if (deliveryAddressMerged.length > 0) {
+            return `توصيل — ${deliveryAddressMerged}`;
+          }
+          if (coordsOk) {
+            return "توصيل (تم التحديد على الخريطة)";
+          }
+          return "توصيل";
+        })()
         : pickupBranch
           ? (branchBySlug[pickupBranch] ?? pickupBranch)
           : (branchBySlug[branchSlug] ?? branchSlug);
@@ -673,11 +673,11 @@ export function FleetCheckoutClient({
 
     const pickupMode: "BRANCH" | "DELIVERY" =
       trip.mode === "delivery" &&
-      (((trip.deliveryLat != null &&
-        trip.deliveryLng != null &&
-        Number.isFinite(trip.deliveryLat) &&
-        Number.isFinite(trip.deliveryLng)) ||
-        (trip.deliveryAddress?.trim().length ?? 0) >= DELIVERY_ADDRESS_MIN_CHARS))
+        (((trip.deliveryLat != null &&
+          trip.deliveryLng != null &&
+          Number.isFinite(trip.deliveryLat) &&
+          Number.isFinite(trip.deliveryLng)) ||
+          (trip.deliveryAddress?.trim().length ?? 0) >= DELIVERY_ADDRESS_MIN_CHARS))
         ? "DELIVERY"
         : "BRANCH";
 
@@ -863,22 +863,19 @@ export function FleetCheckoutClient({
                 <h1 className="text-2xl font-extrabold tracking-tight text-[#003749] sm:text-3xl">
                   بيانات الحجز
                 </h1>
-                <p className="mt-2 text-[14px] text-[#6b5a3b]">
-                  ارفعوا صورة الرخصة (إلزامي)، وصورة الهوية أو الجواز إن وُجدت. ثم راجعوا الإضافات وبيانات التواصل.
-                  تُرسل الفاتورة إلى بريدكم بعد الدفع.
-                </p>
+
               </div>
 
               {/* KYC — هوية / جواز + رخصة */}
               <section className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <span className="flex size-7 items-center justify-center rounded-full bg-[#f4f0ea] text-[#dbb878]">
+                  <span className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-[#dbb878] to-[#c9a356] text-sm font-extrabold text-white shadow-sm">
                     1
                   </span>
                   <h2 className="text-xl font-extrabold text-[#003749]">الهوية والرخصة</h2>
                 </div>
                 <p className="text-[13px] font-semibold leading-relaxed text-[#6b5a3b]">
-                  صورة الرخصة <span className="text-red-600">إلزامية</span> — صورة الهوية أو الجواز اختيارية.
+                  صورة الرخصة <span className="font-extrabold text-red-600">إلزامية</span> — صورة الهوية أو الجواز اختيارية.
                 </p>
 
                 <div className="rounded-3xl border border-[#ebe4d3] bg-white p-6 shadow-sm sm:p-8">
@@ -890,11 +887,10 @@ export function FleetCheckoutClient({
                         setPassportNumber("");
                         setKycFieldError(null);
                       }}
-                      className={`rounded-xl px-4 py-2.5 text-[13px] font-extrabold transition-colors ${
-                        idDocKind === "SAUDI_ID"
-                          ? "bg-[#003749] text-white ring-2 ring-[#dbb878]/50"
-                          : "border border-[#ebe4d3] bg-[#fdfbf6] text-[#003749] hover:border-[#dbb878]/40"
-                      }`}
+                      className={`rounded-xl px-4 py-2.5 text-[13px] font-extrabold transition-colors ${idDocKind === "SAUDI_ID"
+                        ? "bg-[#003749] text-white ring-2 ring-[#dbb878]/50"
+                        : "border border-[#ebe4d3] bg-[#fdfbf6] text-[#003749] hover:border-[#dbb878]/40"
+                        }`}
                     >
                       مواطن/مقيم
                     </button>
@@ -905,11 +901,10 @@ export function FleetCheckoutClient({
                         setNationalId("");
                         setKycFieldError(null);
                       }}
-                      className={`rounded-xl px-4 py-2.5 text-[13px] font-extrabold transition-colors ${
-                        idDocKind === "VISITOR"
-                          ? "bg-[#003749] text-white ring-2 ring-[#dbb878]/50"
-                          : "border border-[#ebe4d3] bg-[#fdfbf6] text-[#003749] hover:border-[#dbb878]/40"
-                      }`}
+                      className={`rounded-xl px-4 py-2.5 text-[13px] font-extrabold transition-colors ${idDocKind === "VISITOR"
+                        ? "bg-[#003749] text-white ring-2 ring-[#dbb878]/50"
+                        : "border border-[#ebe4d3] bg-[#fdfbf6] text-[#003749] hover:border-[#dbb878]/40"
+                        }`}
                     >
                       زائر
                     </button>
@@ -1056,59 +1051,92 @@ export function FleetCheckoutClient({
                     </div>
                   </div>
 
-                  <div className="mt-6 grid gap-5 sm:grid-cols-2">
-                    <div className="rounded-2xl border border-dashed border-[#dbb878]/50 bg-[#fffdf9] p-4">
-                      <div className="mb-2 flex items-center gap-2 text-[13px] font-extrabold text-[#003749]">
-                        <UserRound className="size-4 text-[#dbb878]" aria-hidden />
-                        صورة الهوية أو الجواز
-                        <span className="text-[11px] font-bold text-[#aaa08e]">(اختياري)</span>
-                      </div>
-                      <input
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp,image/gif"
-                        className="block w-full text-[12px] font-semibold text-[#6b5a3b] file:me-3 file:rounded-lg file:border-0 file:bg-[#003749]/90 file:px-3 file:py-2 file:text-[12px] file:font-bold file:text-white"
-                        disabled={uploadingKyc !== null}
-                        onChange={(e) => {
-                          const f = e.target.files?.[0];
-                          e.target.value = "";
-                          if (f) void uploadKycImage(f, "id");
-                        }}
-                      />
-                      {uploadingKyc === "id" ? (
-                        <p className="mt-2 text-[11px] font-bold text-[#aaa08e]">جاري الرفع…</p>
-                      ) : null}
-                      {idCardUrl ? (
-                        <div className="relative mt-3 aspect-[16/10] w-full max-w-[220px] overflow-hidden rounded-lg border border-[#ebe4d3] bg-white">
-                          <Image src={idCardUrl} alt="" fill className="object-cover" sizes="220px" unoptimized />
+                  <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                    {/* ID Card Upload */}
+                    <div className="group relative overflow-hidden rounded-2xl border-2 border-dashed border-[#dbb878]/40 bg-gradient-to-br from-[#fffef9] to-[#fdf9f0] p-5 transition-all hover:border-[#dbb878]/70 hover:shadow-[0_4px_16px_-6px_rgba(219,184,120,0.25)]">
+                      <div className="mb-3 flex items-center gap-2">
+                        <div className="flex size-8 items-center justify-center rounded-lg bg-[#f4f0ea] text-[#dbb878]">
+                          <UserRound className="size-4" aria-hidden />
                         </div>
-                      ) : null}
+                        <div>
+                          <p className="text-[13px] font-extrabold text-[#003749]">صورة الهوية أو الجواز</p>
+                          <p className="text-[11px] font-semibold text-[#aaa08e]">اختياري</p>
+                        </div>
+                      </div>
+                      {idCardUrl ? (
+                        <div className="relative mb-3 aspect-[16/10] w-full overflow-hidden rounded-xl border border-[#ebe4d3] bg-white shadow-sm">
+                          <Image src={idCardUrl} alt="" fill className="object-cover" sizes="(max-width:640px) 100vw,280px" unoptimized />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition-opacity group-hover:opacity-100">
+                            <span className="rounded-lg bg-white/90 px-3 py-1 text-[11px] font-bold text-[#003749]">تغيير الصورة</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mb-3 flex h-20 items-center justify-center rounded-xl border border-dashed border-[#dbb878]/30 bg-[#fdfbf6]">
+                          <div className="text-center">
+                            <UserRound className="mx-auto mb-1 size-6 text-[#dbb878]/60" />
+                            <p className="text-[11px] font-semibold text-[#aaa08e]">اسحب الصورة هنا أو اضغط للتحديد</p>
+                          </div>
+                        </div>
+                      )}
+                      <label className="relative flex cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl bg-[#003749] px-4 py-2.5 text-[12px] font-bold text-white transition-all hover:bg-[#004d63]">
+                        <FileImage className="size-3.5" />
+                        {uploadingKyc === "id" ? "جاري الرفع…" : (idCardUrl ? "تغيير" : "اختر ملفاً")}
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,image/gif"
+                          className="absolute inset-0 cursor-pointer opacity-0"
+                          disabled={uploadingKyc !== null}
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            e.target.value = "";
+                            if (f) void uploadKycImage(f, "id");
+                          }}
+                        />
+                      </label>
                     </div>
 
-                    <div className="rounded-2xl border border-[#ebe4d3] bg-[#fdfbf6] p-4">
-                      <div className="mb-2 flex items-center gap-2 text-[13px] font-extrabold text-[#003749]">
-                        <FileImage className="size-4 text-[#dbb878]" aria-hidden />
-                        صورة الرخصة
-                        <span className="text-red-600">*</span>
-                      </div>
-                      <input
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp,image/gif"
-                        className="block w-full text-[12px] font-semibold text-[#6b5a3b] file:me-3 file:rounded-lg file:border-0 file:bg-[#003749] file:px-3 file:py-2 file:text-[12px] file:font-bold file:text-white"
-                        disabled={uploadingKyc !== null}
-                        onChange={(e) => {
-                          const f = e.target.files?.[0];
-                          e.target.value = "";
-                          if (f) void uploadKycImage(f, "license");
-                        }}
-                      />
-                      {uploadingKyc === "license" ? (
-                        <p className="mt-2 text-[11px] font-bold text-[#aaa08e]">جاري الرفع…</p>
-                      ) : null}
-                      {licenseDocUrl ? (
-                        <div className="relative mt-3 aspect-[16/10] w-full max-w-[220px] overflow-hidden rounded-lg border border-[#ebe4d3] bg-white">
-                          <Image src={licenseDocUrl} alt="" fill className="object-cover" sizes="220px" unoptimized />
+                    {/* License Upload */}
+                    <div className="group relative overflow-hidden rounded-2xl border-2 border-[#dbb878]/60 bg-gradient-to-br from-[#fffef9] to-[#fdf9f0] p-5 shadow-[0_0_0_1px_rgba(219,184,120,0.15)] transition-all hover:border-[#dbb878] hover:shadow-[0_4px_16px_-6px_rgba(219,184,120,0.35)]">
+                      <div className="mb-3 flex items-center gap-2">
+                        <div className="flex size-8 items-center justify-center rounded-lg bg-[#dbb878]/20 text-[#c9a356]">
+                          <FileImage className="size-4" aria-hidden />
                         </div>
-                      ) : null}
+                        <div>
+                          <p className="text-[13px] font-extrabold text-[#003749]">صورة رخصة القيادة</p>
+                          <p className="text-[11px] font-extrabold text-red-600"></p>
+                        </div>
+                      </div>
+                      {licenseDocUrl ? (
+                        <div className="relative mb-3 aspect-[16/10] w-full overflow-hidden rounded-xl border border-[#dbb878]/30 bg-white shadow-sm">
+                          <Image src={licenseDocUrl} alt="" fill className="object-cover" sizes="(max-width:640px) 100vw,280px" unoptimized />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition-opacity group-hover:opacity-100">
+                            <span className="rounded-lg bg-white/90 px-3 py-1 text-[11px] font-bold text-[#003749]">تغيير الصورة</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mb-3 flex h-20 items-center justify-center rounded-xl border border-dashed border-[#dbb878]/50 bg-[#fffdf9]">
+                          <div className="text-center">
+                            <FileImage className="mx-auto mb-1 size-6 text-[#dbb878]/70" />
+                            <p className="text-[11px] font-semibold text-[#aaa08e]">اسحب الصورة هنا أو اضغط للتحديد</p>
+                          </div>
+                        </div>
+                      )}
+                      <label className="relative flex cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl px-4 py-2.5 text-[12px] font-bold text-white transition-all"
+                        style={{ background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)`, boxShadow: '0 4px 12px -4px rgba(219,184,120,0.5)' }}>
+                        <FileImage className="size-3.5" />
+                        {uploadingKyc === "license" ? "جاري الرفع…" : (licenseDocUrl ? "تغيير الرخصة" : "ارفع صورة الرخصة")}
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,image/gif"
+                          className="absolute inset-0 cursor-pointer opacity-0"
+                          disabled={uploadingKyc !== null}
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            e.target.value = "";
+                            if (f) void uploadKycImage(f, "license");
+                          }}
+                        />
+                      </label>
                     </div>
                   </div>
 
@@ -1123,12 +1151,13 @@ export function FleetCheckoutClient({
               {/* Addons Section */}
               <section className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <span className="flex size-7 items-center justify-center rounded-full bg-[#f4f0ea] text-[#dbb878]">
+                  <span className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-[#dbb878] to-[#c9a356] text-sm font-extrabold text-white shadow-sm">
                     2
                   </span>
-                  <h2 className="text-xl font-extrabold text-[#003749]">إضافات وتأمين (اختياري)</h2>
+                  <h2 className="text-xl font-extrabold text-[#003749]">إضافات وتأمين</h2>
+                  <span className="rounded-full border border-[#ebe4d3] bg-[#fdfbf6] px-2.5 py-0.5 text-[11px] font-bold text-[#aaa08e]">اختياري</span>
                 </div>
-                
+
                 <div className="grid gap-4 sm:grid-cols-2">
                   {addons.length === 0 ? (
                     <div className="col-span-2 rounded-2xl border border-dashed border-[#ebe4d3] bg-white p-8 text-center">
@@ -1143,11 +1172,10 @@ export function FleetCheckoutClient({
                       return (
                         <label
                           key={a.id}
-                          className={`group relative flex cursor-pointer flex-col justify-between rounded-2xl border p-5 transition-all duration-300 hover:shadow-[0_8px_24px_-10px_rgba(219,184,120,0.25)] ${
-                            on
-                              ? "border-[#dbb878] bg-[#fefdfb] shadow-[0_0_0_1px_rgba(219,184,120,0.5)]"
-                              : "border-[#ebe4d3] bg-white hover:border-[#dbb878]/50"
-                          }`}
+                          className={`group relative flex cursor-pointer flex-col justify-between rounded-2xl border p-5 transition-all duration-300 hover:shadow-[0_8px_24px_-10px_rgba(219,184,120,0.25)] ${on
+                            ? "border-[#dbb878] bg-[#fefdfb] shadow-[0_0_0_1px_rgba(219,184,120,0.5)]"
+                            : "border-[#ebe4d3] bg-white hover:border-[#dbb878]/50"
+                            }`}
                         >
                           {/* Native hidden checkbox to make label click work */}
                           <input
@@ -1159,9 +1187,8 @@ export function FleetCheckoutClient({
 
                           {/* Selection indicator */}
                           <div
-                            className={`absolute start-4 top-4 flex size-5 items-center justify-center rounded border transition-colors ${
-                              on ? `border-[${GOLD}] bg-[${GOLD}]` : "border-[#d1ccbf] bg-white group-hover:border-[#dbb878]"
-                            }`}
+                            className={`absolute start-4 top-4 flex size-5 items-center justify-center rounded border transition-colors ${on ? `border-[${GOLD}] bg-[${GOLD}]` : "border-[#d1ccbf] bg-white group-hover:border-[#dbb878]"
+                              }`}
                             style={{ backgroundColor: on ? GOLD : undefined, borderColor: on ? GOLD : undefined }}
                           >
                             {on && <Check className="size-3.5 text-white stroke-[3]" />}
@@ -1192,9 +1219,8 @@ export function FleetCheckoutClient({
                                   <span
                                     id={infoId}
                                     role="tooltip"
-                                    className={`pointer-events-none absolute bottom-full end-0 z-30 mb-1 w-56 rounded-xl border border-[#ebe4d3] bg-white p-3 text-[12px] leading-relaxed text-[#5f5341] shadow-[0_16px_40px_-20px_rgba(0,0,0,0.35)] transition-all duration-150 ${
-                                      infoOpen ? "opacity-100" : "opacity-0"
-                                    }`}
+                                    className={`pointer-events-none absolute bottom-full end-0 z-30 mb-1 w-56 rounded-xl border border-[#ebe4d3] bg-white p-3 text-[12px] leading-relaxed text-[#5f5341] shadow-[0_16px_40px_-20px_rgba(0,0,0,0.35)] transition-all duration-150 ${infoOpen ? "opacity-100" : "opacity-0"
+                                      }`}
                                     style={{
                                       transform: `translateY(${infoOpen ? "0" : "4px"})`,
                                     }}
@@ -1220,9 +1246,8 @@ export function FleetCheckoutClient({
                               </span>
                             </div>
                             <div
-                              className={`text-[12px] font-bold transition-colors ${
-                                on ? "text-[#dbb878]" : "text-[#aaa08e] group-hover:text-[#003749]"
-                              }`}
+                              className={`text-[12px] font-bold transition-colors ${on ? "text-[#dbb878]" : "text-[#aaa08e] group-hover:text-[#003749]"
+                                }`}
                             >
                               {on ? "تم الإختيار" : "إضافة"}
                             </div>
@@ -1235,14 +1260,22 @@ export function FleetCheckoutClient({
               </section>
 
               {/* Installment Options Banner */}
-              <section className="flex flex-col gap-3 sm:flex-row">
-                <div className="flex flex-1 items-center gap-3 rounded-2xl border border-[#ebe4d3] bg-white p-4 shadow-sm">
-                  <div className="flex size-10 items-center justify-center rounded-full bg-[#f4f0ea] text-[#003749]">
-                    <CreditCard className="size-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-[13px] font-extrabold text-[#003749]">قسّمها على 4 دفعات</h3>
-                    <p className="text-[11px] font-semibold text-[#aaa08e]">متوفر عبر تابي وتمارا بدون فوائد</p>
+              <section>
+                <div className="relative overflow-hidden rounded-2xl border border-[#dbb878]/30 bg-gradient-to-r from-[#003749] to-[#004d63] p-5 shadow-[0_8px_24px_-10px_rgba(0,55,73,0.3)]">
+                  <div className="absolute -end-6 -top-6 size-24 rounded-full bg-[#dbb878]/10" />
+                  <div className="absolute -bottom-4 end-12 size-16 rounded-full bg-[#dbb878]/8" />
+                  <div className="relative flex items-center gap-4">
+                    <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-[#dbb878]/20 text-[#dbb878]">
+                      <CreditCard className="size-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-[14px] font-extrabold text-white">قسّمها على 4 دفعات بدون فوائد</h3>
+                      <p className="mt-0.5 text-[12px] font-semibold text-white/60">متوفر عبر تابي وتمارا — تختار عند الدفع</p>
+                    </div>
+                    <div className="ms-auto flex gap-2">
+                      <span className="rounded-lg bg-white/10 px-3 py-1.5 text-[11px] font-extrabold text-[#dbb878] backdrop-blur-sm">تابي</span>
+                      <span className="rounded-lg bg-white/10 px-3 py-1.5 text-[11px] font-extrabold text-[#dbb878] backdrop-blur-sm">تمارا</span>
+                    </div>
                   </div>
                 </div>
               </section>
@@ -1250,7 +1283,7 @@ export function FleetCheckoutClient({
               {/* Customer Details Form */}
               <section className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <span className="flex size-7 items-center justify-center rounded-full bg-[#f4f0ea] text-[#dbb878]">
+                  <span className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-[#dbb878] to-[#c9a356] text-sm font-extrabold text-white shadow-sm">
                     3
                   </span>
                   <h2 className="text-xl font-extrabold text-[#003749]">بيانات التواصل</h2>
@@ -1284,7 +1317,7 @@ export function FleetCheckoutClient({
                     </div>
                   ) : (
                     <div className="mb-8 grid gap-5 sm:grid-cols-2">
-                       {/* Name Field */}
+                      {/* Name Field */}
                       <div className="group relative">
                         <input
                           type="text"
@@ -1295,11 +1328,10 @@ export function FleetCheckoutClient({
                           autoComplete="name"
                           readOnly={identityFieldsReadOnly}
                           defaultValue={contactNameDefault}
-                          className={`peer w-full rounded-xl border border-[#ebe4d3] px-4 pb-3 pt-6 text-[14px] font-semibold text-[#003749] outline-none transition-all ${
-                            identityFieldsReadOnly
-                              ? "cursor-default bg-[#f4f2ec] focus:border-[#ebe4d3] focus:ring-0"
-                              : "bg-transparent focus:border-[#dbb878] focus:ring-1 focus:ring-[#dbb878]"
-                          }`}
+                          className={`peer w-full rounded-xl border border-[#ebe4d3] px-4 pb-3 pt-6 text-[14px] font-semibold text-[#003749] outline-none transition-all ${identityFieldsReadOnly
+                            ? "cursor-default bg-[#f4f2ec] focus:border-[#ebe4d3] focus:ring-0"
+                            : "bg-transparent focus:border-[#dbb878] focus:ring-1 focus:ring-[#dbb878]"
+                            }`}
                           placeholder=" "
                         />
                         <label
@@ -1313,11 +1345,10 @@ export function FleetCheckoutClient({
                       {/* Phone Field */}
                       <div className="group relative">
                         <div
-                          className={`flex w-full overflow-hidden rounded-xl border border-[#ebe4d3] transition-all ${
-                            identityFieldsReadOnly
-                              ? "bg-[#f4f2ec]"
-                              : "focus-within:border-[#dbb878] focus-within:ring-1 focus-within:ring-[#dbb878]"
-                          }`}
+                          className={`flex w-full overflow-hidden rounded-xl border border-[#ebe4d3] transition-all ${identityFieldsReadOnly
+                            ? "bg-[#f4f2ec]"
+                            : "focus-within:border-[#dbb878] focus-within:ring-1 focus-within:ring-[#dbb878]"
+                            }`}
                         >
                           <span className="flex items-center bg-[#fdfbf6] px-3 border-e border-[#ebe4d3] text-[13px] font-bold text-[#003749]" dir="ltr">
                             +966
@@ -1334,11 +1365,10 @@ export function FleetCheckoutClient({
                               autoComplete="tel-national"
                               readOnly={identityFieldsReadOnly}
                               defaultValue={contactPhoneDefault}
-                              className={`peer w-full px-4 pb-2 pt-6 text-[14px] font-semibold text-[#003749] outline-none ${
-                                identityFieldsReadOnly
-                                  ? "cursor-default bg-transparent focus:ring-0"
-                                  : "bg-transparent"
-                              }`}
+                              className={`peer w-full px-4 pb-2 pt-6 text-[14px] font-semibold text-[#003749] outline-none ${identityFieldsReadOnly
+                                ? "cursor-default bg-transparent focus:ring-0"
+                                : "bg-transparent"
+                                }`}
                               placeholder=" "
                               dir="ltr"
                             />
@@ -1354,7 +1384,7 @@ export function FleetCheckoutClient({
 
                       {/* Age Field */}
                       <div className="group relative sm:col-span-2">
-                         <select
+                        <select
                           name="age"
                           id="age"
                           required
@@ -1429,14 +1459,19 @@ export function FleetCheckoutClient({
                   <button
                     type="submit"
                     disabled={pending || slotBlocked || !trip.pickupIso || uploadingKyc !== null}
-                    className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl py-4 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5 active:translate-y-0"
+                    className="group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-2xl py-4 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5 hover:shadow-[0_12px_28px_-8px_rgba(219,184,120,0.6)] active:translate-y-0"
                     style={{
                       background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)`,
-                      boxShadow: "0 8px 24px -6px rgba(219,184,120,0.5)",
+                      boxShadow: "0 8px 24px -6px rgba(219,184,120,0.45)",
                     }}
                   >
-                    <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-white/0 via-white/20 to-white/0 transition-transform duration-700 group-hover:translate-x-full" aria-hidden />
-                    <span className="text-[15px] font-extrabold text-white tracking-wide">
+                    <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-white/0 via-white/25 to-white/0 transition-transform duration-700 group-hover:translate-x-full" aria-hidden />
+                    {pending ? (
+                      <Loader2 className="size-5 animate-spin text-white" />
+                    ) : (
+                      <CheckCircle2 className="size-5 text-white/90" />
+                    )}
+                    <span className="text-[15px] font-extrabold tracking-wide text-white">
                       {pending ? "جاري المعالجة..." : "تأكيد البيانات والمتابعة"}
                     </span>
                   </button>
@@ -1446,19 +1481,21 @@ export function FleetCheckoutClient({
 
             {/* ─── Sidebar (Checkout Summary) ─── */}
             <aside className="order-1 lg:order-2">
-              <div className="sticky top-24 overflow-hidden rounded-3xl border border-[#ebe4d3] bg-white shadow-[0_24px_60px_-20px_rgba(15,61,71,0.12)]">
+              <div className="sticky top-24 overflow-hidden rounded-3xl border border-[#ebe4d3] bg-white shadow-[0_24px_60px_-20px_rgba(15,61,71,0.15)]">
                 {/* Car Image Area */}
-                <div className="relative aspect-[16/10] bg-gradient-to-br from-[#fdfbf6] to-[#f4f0ea]">
+                <div className="relative aspect-[16/10] overflow-hidden bg-gradient-to-br from-[#fdfbf6] via-[#f7f2e9] to-[#f0ebe0]">
                   <Image
                     src={car.image}
                     alt={car.alt}
                     fill
-                    className="object-contain p-6 drop-shadow-xl"
+                    className="object-contain p-6 drop-shadow-2xl transition-transform duration-700 hover:scale-105"
                     sizes="(max-width: 1024px) 100vw, 360px"
                   />
-                  <div className="absolute start-4 top-4 rounded-full bg-white/90 px-3 py-1 text-[11px] font-bold text-[#003749] backdrop-blur-sm shadow-sm ring-1 ring-black/5">
+                  <div className="absolute start-4 top-4 rounded-full bg-white/90 px-3 py-1 text-[11px] font-extrabold text-[#003749] backdrop-blur-sm shadow-md ring-1 ring-[#dbb878]/20">
                     {car.categoryTitle}
                   </div>
+                  {/* Subtle shimmer overlay */}
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-white/20 to-transparent" />
                 </div>
 
                 {/* Content Area */}
@@ -1541,7 +1578,7 @@ export function FleetCheckoutClient({
                     {/* Dates block */}
                     <div className="relative ps-5">
                       <div className="absolute bottom-1.5 start-1.5 top-1.5 w-0.5 rounded-full bg-gradient-to-b from-[#dbb878] to-[#003749]/20" />
-                      
+
                       <div className="relative mb-4">
                         <div className="absolute -start-[23px] top-1 size-2.5 rounded-full border-2 border-[#dbb878] bg-white ring-4 ring-white" />
                         <p className="text-[11px] font-bold uppercase text-[#aaa08e]">الاستلام</p>
@@ -1568,7 +1605,11 @@ export function FleetCheckoutClient({
                       </div>
                     </div>
 
-                    <div className="my-6 border-t border-dashed border-[#ebe4d3]" />
+                    <div className="my-5 flex items-center gap-3">
+                      <div className="h-px flex-1 bg-gradient-to-r from-[#ebe4d3] to-transparent" />
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-[#c4b89a]">تفاصيل التسعير</span>
+                      <div className="h-px flex-1 bg-gradient-to-l from-[#ebe4d3] to-transparent" />
+                    </div>
 
                     {/* Pricing Breakdown */}
                     <div className="space-y-3">
@@ -1580,7 +1621,7 @@ export function FleetCheckoutClient({
                           {formatSarAmount(totals.rentalExclTax)} <SarCurrencyGlyph />
                         </span>
                       </div>
-                      
+
                       {selectedRows.length > 0 && (
                         <div className="space-y-2">
                           <div className="flex justify-between text-[13px]">
@@ -1657,15 +1698,17 @@ export function FleetCheckoutClient({
                     </div>
 
                     {/* Total Row */}
-                    <div className="mt-4 rounded-2xl bg-[#003749] p-5 text-white shadow-inner">
-                      <div className="flex items-end justify-between">
+                    <div className="relative mt-4 overflow-hidden rounded-2xl p-5 text-white shadow-[0_8px_24px_-8px_rgba(0,55,73,0.4)]" style={{ background: `linear-gradient(135deg, #003749 0%, #004d63 60%, #005a75 100%)` }}>
+                      <div className="absolute -end-4 -top-4 size-20 rounded-full bg-[#dbb878]/10" />
+                      <div className="absolute bottom-0 start-0 h-1 w-full" style={{ background: `linear-gradient(90deg, ${GOLD} 0%, ${GOLD_DARK} 100%)` }} />
+                      <div className="relative flex items-end justify-between">
                         <div>
-                          <p className="text-[12px] font-semibold text-white/70 uppercase tracking-widest">المجموع النهائي</p>
-                          <p className="text-[11px] text-white/50">شامل الضريبة</p>
+                          <p className="text-[11px] font-bold uppercase tracking-widest text-white/60">المجموع النهائي</p>
+                          <p className="mt-0.5 text-[10px] text-white/40">شامل ضريبة القيمة المضافة</p>
                         </div>
                         <div className="text-end">
                           <p
-                            className="text-2xl font-extrabold tabular-nums tracking-tight"
+                            className="text-[28px] font-extrabold tabular-nums tracking-tight leading-none"
                             dir="ltr"
                             aria-label={`${formatSarAmount(totals.totalInclTax)} ريال سعودي`}
                           >
