@@ -38,10 +38,10 @@ export default async function AdminEmployeesPage() {
         >
           ← لوحة التحكم
         </Link>
-        <h1 className="text-3xl font-extrabold tracking-tight">موظفو الفروع</h1>
+        <h1 className="text-3xl font-extrabold tracking-tight">إدارة الموظفين والصلاحيات</h1>
         <p className="mt-2 text-on-surface-variant">
-          أنشئ حسابات دخول مرتبطة بفرع محدد. كل موظف يرى في لوحة التحكم بيانات فرعه فقط (حجوزات،
-          عملاء، مركبات، توفر).
+          أنشئ حسابات دخول للموظفين وحدد الفروع التي يديرونها والصلاحيات الممنوحة لهم في لوحة الإدارة.
+          الموظف الذي يتبع "الإدارة المركزية" يرى كافة الفروع حسب صلاحياته.
         </p>
       </header>
 
@@ -75,11 +75,20 @@ export default async function AdminEmployeesPage() {
                     {e.email}
                   </p>
                   <p className="mt-1 text-sm font-medium text-primary">
-                    فرع: {e.branch?.name ?? "—"}{" "}
+                    فرع: {e.branch?.name ?? "الإدارة المركزية"}{" "}
                     {e.branch?.slug ? (
                       <span className="font-mono text-on-surface-variant">({e.branch.slug})</span>
                     ) : null}
                   </p>
+                  {e.permissionsJson && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {JSON.parse(e.permissionsJson).map((p: string) => (
+                        <span key={p} className="rounded bg-primary-container px-2 py-0.5 text-[10px] font-bold text-on-primary-container">
+                          {p}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <AdminEmployeeToggleForm employeeId={e.id} isActive={e.isActive} />
               </li>

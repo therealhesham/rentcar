@@ -18,6 +18,7 @@ export async function createAdminEmployee(
   const password = String(formData.get("password") ?? "");
   const name = String(formData.get("name") ?? "").trim();
   const branchId = Number(formData.get("branchId"));
+  const permissions = formData.getAll("permissions").map(String);
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return { ok: false, error: "أدخل بريداً إلكترونياً صالحاً." };
@@ -25,16 +26,17 @@ export async function createAdminEmployee(
   if (password.length < 6) {
     return { ok: false, error: "كلمة المرور 6 أحرف على الأقل." };
   }
-  if (!Number.isInteger(branchId) || branchId < 1) {
-    return { ok: false, error: "اختر الفرع." };
-  }
 
-  const branch = await prisma.branch.findUnique({
-    where: { id: branchId, isActive: true },
-    select: { id: true },
-  });
-  if (!branch) {
-    return { ok: false, error: "الفرع غير موجود أو غير نشط." };
+  let finalBranchId: number | null = null;
+  if (Number.isInteger(branchId) && branchId > 0) {
+    const branch = await prisma.branch.findUnique({
+      where: { id: branchId, isActive: true },
+      select: { id: true },
+    });
+    if (!branch) {
+      return { ok: false, error: "الفرع غير موجود أو غير نشط." };
+    }
+    finalBranchId = branch.id;
   }
 
   const exists = await prisma.adminEmployee.findUnique({ where: { email } });
@@ -47,9 +49,10 @@ export async function createAdminEmployee(
       email,
       passwordHash: await hashPassword(password),
       name: name || null,
-      branchId,
+      branchId: finalBranchId,
       isSuperAdmin: false,
       isActive: true,
+      permissionsJson: JSON.stringify(permissions),
     },
   });
 

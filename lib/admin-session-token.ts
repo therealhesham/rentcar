@@ -10,6 +10,8 @@ export type AdminSession = {
   branchName: string | null;
   /** اسم الموظف أو البريد — ليس اسم الفرع */
   displayName: string;
+  /** مصفوفة الصلاحيات الممنوحة للموظف (فارغة لمدير النظام) */
+  permissions: string[];
 };
 
 function getSessionSecret(): string | undefined {
@@ -54,7 +56,12 @@ export function parseAdminSessionToken(raw: string | undefined | null): AdminSes
   if (data.branchSlug != null && typeof data.branchSlug !== "string") return null;
   if (data.branchName != null && typeof data.branchName !== "string") return null;
   if (typeof data.displayName !== "string") return null;
-  if (!data.isSuperAdmin && !data.branchSlug) return null;
+  if (!Array.isArray(data.permissions)) return null;
+  if (!data.isSuperAdmin && !data.branchSlug && data.permissions.length === 0) {
+    // We used to block no-branch entirely, but now a headquarters employee might have no branch but HAS permissions.
+    // However, if they have no branch AND no permissions, they're useless. We'll allow it anyway for valid tokens, 
+    // access control will handle the rest.
+  }
   return data;
 }
 

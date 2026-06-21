@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 import type { AdminSession } from "@/lib/admin-auth";
 import { getAdminSession } from "@/lib/admin-auth";
 import { ADMIN_NAV_GROUPS, type AdminNavGroup } from "@/lib/admin-nav";
+import type { AdminPermission } from "@/lib/admin-permissions";
 import { isSuperAdminOnlyPath } from "@/lib/admin-routes";
 import { bookingInBranchScope } from "@/lib/booking-branches";
 import { prisma } from "@/lib/prisma";
@@ -16,16 +17,21 @@ const BRANCH_EXTRA_NAV: AdminNavGroup["items"] = [
 
 export function getAdminNavGroupsForSession(session: AdminSession): AdminNavGroup[] {
   if (session.isSuperAdmin) return ADMIN_NAV_GROUPS;
-  return ADMIN_NAV_GROUPS.filter((g) => BRANCH_NAV_GROUP_IDS.has(g.id)).map((g) => {
-    if (g.id !== "bookings") return g;
+
+  const allowedPermissions = new Set(session.permissions || []);
+  
+  return ADMIN_NAV_GROUPS.map((group) => {
+    const filteredItems = group.items.filter((item) => {
+      if (item.external) return true; // Always show external links
+      if (!item.permission) return false; // Hide items with no permission explicitly defined (safety)
+      return allowedPermissions.has(item.permission);
+    });
+
     return {
-      ...g,
-      items: [
-        ...g.items.filter((i) => i.href !== "/admin/corporate-leads"),
-        ...BRANCH_EXTRA_NAV,
-      ],
+      ...group,
+      items: filteredItems,
     };
-  });
+  }).filter((group) => group.items.length > 0);
 }
 
 export { adminBranchDisplayName } from "@/lib/admin-branch-display";
@@ -61,13 +67,27 @@ export async function requireSuperAdminForAction(): Promise<
   return auth;
 }
 
+export async function requirePermissionForAction(
+  permission: AdminPermission
+): Promise<{ ok: true; session: AdminSession } | { ok: false; error: string }> {
+  const auth = await requireAdminForAction();
+  if (!auth.ok) return auth;
+  if (auth.session.isSuperAdmin) return auth;
+  if (!auth.session.permissions.includes(permission)) {
+    return { ok: false, error: "ليس لديك صلاحية لتنفيذ هذا الإجراء." };
+  }
+  return auth;
+}
+
 export async function assertBookingRequestInScope(
   session: AdminSession,
   bookingRequestId: number,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   if (session.isSuperAdmin) return { ok: true };
   if (!session.branchSlug) {
-    return { ok: false, error: "حسابك غير مرتبط بفرع." };
+    // If they have no branchSlug, they are a headquarters employee.
+    // They are allowed to see all branches.
+    return { ok: true };
   }
   const row = await prisma.bookingRequest.findUnique({
     where: { id: bookingRequestId },

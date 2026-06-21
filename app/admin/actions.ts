@@ -40,8 +40,19 @@ export async function loginAdmin(
     if (!match) {
       return { ok: false, error: "البريد أو كلمة المرور غير صحيحة." };
     }
-    if (!employee.isSuperAdmin && !employee.branch) {
-      return { ok: false, error: "حسابك غير مرتبط بفرع. تواصل مع مدير النظام." };
+    const permissionsJson = employee.permissionsJson;
+    let permissions: string[] = [];
+    if (permissionsJson) {
+      try {
+        permissions = JSON.parse(permissionsJson);
+        if (!Array.isArray(permissions)) permissions = [];
+      } catch {
+        permissions = [];
+      }
+    }
+
+    if (!employee.isSuperAdmin && !employee.branch && permissions.length === 0) {
+      return { ok: false, error: "حسابك غير مرتبط بفرع ولا يملك أي صلاحيات. تواصل مع مدير النظام." };
     }
     await setAdminSessionCookie({
       employeeId: employee.id,
@@ -50,6 +61,7 @@ export async function loginAdmin(
       branchSlug: employee.branch?.slug ?? null,
       branchName: employee.branch?.name ?? null,
       displayName: employee.name?.trim() || employee.email,
+      permissions,
     });
     return { ok: true };
   }
@@ -64,6 +76,7 @@ export async function loginAdmin(
       branchSlug: null,
       branchName: null,
       displayName: "مدير النظام",
+      permissions: [],
     });
     return { ok: true };
   }

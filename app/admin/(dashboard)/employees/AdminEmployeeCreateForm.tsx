@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef } from "react";
 import { createAdminEmployee } from "@/app/admin/admin-employee-actions";
+import { ADMIN_PERMISSIONS, ADMIN_PERMISSION_LABELS } from "@/lib/admin-permissions";
 
 type BranchOption = { id: number; name: string; slug: string };
 
@@ -22,20 +23,20 @@ export function AdminEmployeeCreateForm({ branches }: { branches: BranchOption[]
       className="mb-10 grid gap-4 rounded-2xl border border-outline-variant/30 bg-surface-container-low p-6 md:grid-cols-2"
     >
       <h2 className="md:col-span-2 text-lg font-extrabold tracking-tight">
-        إضافة موظف فرع
+        إضافة موظف
       </h2>
       <p className="md:col-span-2 text-sm text-on-surface-variant">
-        يُنشأ حساب دخول للوحة الإدارة مرتبطاً بفرع واحد. يرى الموظف حجوزات وعملاء ومركبات ذلك الفرع فقط.
+        أدخل بيانات الموظف والصلاحيات الممنوحة له. يمكن اختيار "الإدارة المركزية" إذا كان الموظف يعمل للإدارة ويرى كافة الفروع.
       </p>
 
       <label className="text-sm font-medium md:col-span-1">
         الفرع
         <select
           name="branchId"
-          required
-          defaultValue={branches[0]?.id ?? ""}
+          defaultValue=""
           className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
         >
+          <option value="">الإدارة المركزية (بدون فرع محدد)</option>
           {branches.map((b) => (
             <option key={b.id} value={b.id}>
               {b.name} ({b.slug})
@@ -77,7 +78,22 @@ export function AdminEmployeeCreateForm({ branches }: { branches: BranchOption[]
           className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
         />
       </label>
-
+      <div className="md:col-span-2 mt-2 border-t border-outline-variant/30 pt-4">
+        <label className="mb-3 block text-sm font-bold text-on-surface">الصلاحيات الممنوحة</label>
+        <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+          {ADMIN_PERMISSIONS.map((perm) => (
+            <label key={perm} className="flex cursor-pointer items-center gap-2 rounded-lg border border-outline-variant/50 bg-surface-container-lowest p-3 hover:bg-surface-container-low">
+              <input
+                type="checkbox"
+                name="permissions"
+                value={perm}
+                className="h-4 w-4 rounded border-outline text-primary focus:ring-primary"
+              />
+              <span className="text-sm font-medium text-on-surface">{ADMIN_PERMISSION_LABELS[perm]}</span>
+            </label>
+          ))}
+        </div>
+      </div>
       {state?.error ? (
         <p className="md:col-span-2 rounded-xl bg-error-container/40 px-3 py-2 text-sm font-bold text-error">
           {state.error}
