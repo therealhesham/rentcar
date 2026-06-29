@@ -992,23 +992,10 @@ export function BookingSearchWidget({
         } ${
           combinedPanel
             ? ""
-            : "rounded-[1.75rem] bg-gradient-to-br from-[#fdfbf6] via-white to-[#fbf6ea] p-1 shadow-[0_36px_88px_-24px_rgba(0,55,73,0.22),0_12px_28px_-8px_rgba(0,55,73,0.08)] ring-1 ring-[#dbb878]/20 sm:p-2"
+            : "rounded-3xl bg-white p-4 shadow-[0_4px_32px_rgba(0,0,0,0.08)] sm:p-6"
         } ${mounted ? "" : "opacity-0"}`}
       >
-        {/* Decorative gold hairline at the very top — adds a luxury accent */}
-        {!combinedPanel ? (
-          <>
-            <span
-              aria-hidden
-              className="pointer-events-none absolute inset-x-[18%] top-0 h-px bg-gradient-to-r from-transparent via-[#dbb878]/60 to-transparent"
-            />
-            {/* Soft inner glow at the top edge */}
-            <span
-              aria-hidden
-              className="pointer-events-none absolute inset-x-0 top-0 h-12 rounded-t-[1.75rem] bg-gradient-to-b from-white/70 to-transparent"
-            />
-          </>
-        ) : null}
+        {/* no decorative hairline — clean card edge */}
 
         {/* ═══════════════════════════════════════
             SECTION 1: Quiet options strip (rental type + mode)
@@ -1016,74 +1003,76 @@ export function BookingSearchWidget({
             so the pill below remains the visual hero.
         ═══════════════════════════════════════ */}
         {!isFreshRebookFlow ? (
-          <div className="flex flex-col gap-2.5 px-3 pt-3 pb-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-4 sm:gap-y-2 sm:px-5 sm:pt-4 sm:pb-4">
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            {/* ── Rental-type tabs (left pill) ── */}
             <div
               role="tablist"
               aria-label="نوع الحجز"
-              className="tabs-scroll -mx-3 flex items-center gap-x-1 overflow-x-auto px-3 sm:mx-0 sm:flex-wrap sm:gap-x-1.5 sm:gap-y-1 sm:overflow-visible sm:px-0"
+              className="tabs-scroll flex items-center gap-1 overflow-x-auto rounded-xl bg-[#f3f3f6] p-1"
             >
               {tabFlagsEff.rentalDaily ? (
-                <QuietTab
+                <HtmlTab
                   active={rental === "daily"}
                   onClick={() => setRental("daily")}
-                  icon={<Car className="size-3 shrink-0" />}
+                  icon={<Car className="size-3.5 shrink-0" />}
                   label={t("daily")}
                 />
               ) : null}
               {tabFlagsEff.rentalWeekly ? (
-                <QuietTab
+                <HtmlTab
                   active={rental === "weekly"}
                   onClick={() => setRental("weekly")}
-                  icon={<CalendarDays className="size-3 shrink-0" />}
+                  icon={<CalendarDays className="size-3.5 shrink-0" />}
                   label={t("weekly")}
                 />
               ) : null}
               {tabFlagsEff.rentalMonthly ? (
-                <QuietTab
+                <HtmlTab
                   active={rental === "monthly"}
                   onClick={() => setRental("monthly")}
-                  icon={<CalendarRange className="size-3 shrink-0" />}
+                  icon={<CalendarRange className="size-3.5 shrink-0" />}
                   label={t("monthly")}
                 />
               ) : null}
               {tabFlagsEff.rentalMonthlyPackages ? (
-                <QuietTab
+                <HtmlTab
                   active={rental === "monthly_packages"}
                   onClick={() => setRental("monthly_packages")}
-                  icon={<Layers className="size-3 shrink-0" />}
+                  icon={<Layers className="size-3.5 shrink-0" />}
                   label={t("monthlyPackages")}
                 />
               ) : null}
               {tabFlagsEff.rentalCorporate ? (
-                <QuietTab
+                <HtmlTab
                   active={rental === "corporate"}
                   onClick={() => setRental("corporate")}
-                  icon={<Building2 className="size-3 shrink-0" />}
+                  icon={<Building2 className="size-3.5 shrink-0" />}
                   label={t("corporate")}
                 />
               ) : null}
             </div>
 
+            {/* ── Mode chips (right pill) ── */}
             {rental !== "corporate" &&
             (tabFlagsEff.modePickup || tabFlagsEff.modeDelivery) ? (
               <div
                 role="tablist"
                 aria-label="طريقة الاستلام"
-                className="flex items-center gap-0.5 self-start rounded-full border border-[#ebe4d3] bg-white/90 p-0.5 shadow-[0_1px_4px_-1px_rgba(0,55,73,0.08)] sm:self-auto"
+                className="flex items-center gap-1 rounded-xl bg-[#f3f3f6] p-1"
               >
                 {tabFlagsEff.modePickup ? (
-                  <ModeChip
+                  <HtmlModeChip
                     active={mode === "pickup"}
                     onClick={() => setMode("pickup")}
-                    icon={<PackageCheck className="size-3 shrink-0" />}
+                    icon={<PackageCheck className="size-3.5 shrink-0" />}
                     label={t("pickUp")}
                   />
                 ) : null}
                 {tabFlagsEff.modeDelivery ? (
-                  <ModeChip
+                  <HtmlModeChip
                     active={mode === "delivery"}
                     onClick={() => setMode("delivery")}
-                    icon={<Truck className="size-3 shrink-0" />}
+                    icon={<Truck className="size-3.5 shrink-0" />}
                     label={t("delivery")}
                   />
                 ) : null}
@@ -1471,11 +1460,11 @@ export function BookingSearchWidget({
               </div>
             </SubscriptionPackagesInWidget>
           ) : (
-            /* ═══ SIXT-STYLE ELEGANT PILL ═══ */
-            <div className="search-pill flex flex-col gap-3 sm:flex-row sm:items-stretch sm:gap-0">
+            /* ═══ HTML-STYLE SEARCH GRID ═══ */
+            <div className="search-pill grid grid-cols-1 overflow-hidden rounded-2xl bg-[#eeeef0] sm:grid-cols-[minmax(0,2fr)_auto_minmax(0,1.2fr)_minmax(0,0.8fr)_minmax(0,1.2fr)_minmax(0,0.8fr)_minmax(0,1.4fr)]">
 
               {/* ── 1. موقع الاستلام ── */}
-              <div className="relative sm:flex-[1.8] flex-1 min-w-0">
+              <div className="relative min-w-0">
                 <div
                   ref={pickupLocRef}
                   role="button"
@@ -1491,7 +1480,7 @@ export function BookingSearchWidget({
                       closeSchedulePopovers();
                     }
                   }}
-                  className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl sm:rounded-none sm:border-0 sm:border-e sm:border-[#ebe4d3] focus:outline-none cursor-pointer"
+                  className="field-trigger relative flex h-full w-full flex-col gap-1 bg-white p-4 pe-9 text-start border-0 sm:border-e sm:border-[#d4d4d8] focus:outline-none cursor-pointer hover:bg-[#fafafa] transition-colors"
                 >
                   <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
                     <MapPin className="size-3 text-[#dbb878]" aria-hidden />
@@ -1644,23 +1633,23 @@ export function BookingSearchWidget({
 
               {/* show "return different" toggle inside the bar */}
               {!returnLocationDifferent && (
-                <div className="flex w-full items-center rounded-2xl border border-[#efe7d6] bg-white px-3 py-1.5 shadow-[0_1px_2px_rgba(0,55,73,0.04),0_6px_16px_-10px_rgba(0,55,73,0.14)] sm:w-auto sm:rounded-none sm:border-0 sm:border-e sm:border-[#ebe4d3] sm:bg-transparent sm:py-0 sm:shadow-none">
-                  <label className="flex cursor-pointer items-center gap-2 py-2 text-[11px] font-semibold text-[#6b5a3b] whitespace-nowrap">
+                <div className="flex items-center justify-center bg-white px-3 py-2 sm:border-e sm:border-[#d4d4d8]">
+                  <label className="flex cursor-pointer flex-col items-center gap-1.5 text-center text-[10px] font-semibold text-[#40484b] whitespace-nowrap">
                     <input
                       type="checkbox"
                       checked={returnLocationDifferent}
                       onChange={(ev) => handleReturnLocationDifferentChange(ev.target.checked)}
-                      className="size-3.5 shrink-0 cursor-pointer rounded border-[#c9a356]/60 text-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/35"
+                      className="size-4 shrink-0 cursor-pointer rounded border-[#c9a356]/60 text-[#003749] focus-visible:ring-2 focus-visible:ring-[#dbb878]/35"
                     />
                     {t("returnDifferent")}
                   </label>
                 </div>
               )}
 
-              {/* ── 3+4. التاريخ والوقت — يقترنان في صف واحد على الجوال ── */}
-              <div className="grid grid-cols-2 gap-2.5 sm:contents">
+              {/* ── 3+4. تاريخ ووقت الاستلام ── */}
+              <div className="grid grid-cols-2 gap-0 sm:contents">
               {/* ── 3. تاريخ الاستلام ── */}
-              <div className="relative flex-1 min-w-0">
+              <div className="relative min-w-0">
                 <button
                   ref={pickupDateRef}
                   type="button"
@@ -1678,7 +1667,7 @@ export function BookingSearchWidget({
                     setDropoffTimeOpen(false);
                     setPickupDateOpen((v) => !v);
                   }}
-                  className={`field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl sm:rounded-none sm:border-0 sm:border-e sm:border-[#ebe4d3] focus:outline-none ${rental === "daily" && dateRangeOpen && dateRangeAnchor === "pickup" ? "ring-2 ring-[#dbb878]/40" : ""}`}
+                  className={`field-trigger relative flex h-full w-full flex-col gap-1 bg-white p-4 pe-9 text-start border-0 sm:border-e sm:border-[#d4d4d8] focus:outline-none hover:bg-[#fafafa] transition-colors ${rental === "daily" && dateRangeOpen && dateRangeAnchor === "pickup" ? "bg-[#fafafa]" : ""}`}
                 >
                   <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
                     <CalendarClock className="size-3 text-[#dbb878]" aria-hidden />
@@ -1714,7 +1703,7 @@ export function BookingSearchWidget({
               </div>
 
               {/* ── 4. وقت الاستلام ── */}
-              <div className="relative flex-1 min-w-0">
+              <div className="relative min-w-0">
                 <button
                   ref={pickupTimeRef}
                   type="button"
@@ -1728,7 +1717,7 @@ export function BookingSearchWidget({
                     setPickupLocOpen(false);
                     setReturnLocOpen(false);
                   }}
-                  className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl sm:rounded-none sm:border-0 sm:border-e sm:border-[#ebe4d3] focus:outline-none"
+                  className="field-trigger relative flex h-full w-full flex-col gap-1 bg-white p-4 pe-9 text-start border-0 sm:border-e sm:border-[#d4d4d8] focus:outline-none hover:bg-[#fafafa] transition-colors"
                 >
                   <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
                     <Clock className="size-3 text-[#dbb878]" aria-hidden />
@@ -1765,10 +1754,10 @@ export function BookingSearchWidget({
               </div>
               </div>
 
-              {/* ── 5+6. التاريخ والوقت — يقترنان في صف واحد على الجوال ── */}
-              <div className="grid grid-cols-2 gap-2.5 sm:contents">
+              {/* ── 5+6. تاريخ ووقت التسليم ── */}
+              <div className="grid grid-cols-2 gap-0 sm:contents">
               {/* ── 5. تاريخ التسليم ── */}
-              <div className="relative flex-1 min-w-0">
+              <div className="relative min-w-0">
                 <button
                   ref={dropoffDateRef}
                   type="button"
@@ -1779,7 +1768,7 @@ export function BookingSearchWidget({
                     if (rental !== "daily") return;
                     toggleDateRange("dropoff");
                   }}
-                  className={`field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl sm:rounded-none sm:border-0 sm:border-e sm:border-[#ebe4d3] focus:outline-none disabled:opacity-60 ${rental === "daily" && dateRangeOpen && dateRangeAnchor === "dropoff" ? "ring-2 ring-[#dbb878]/40" : ""}`}
+                  className={`field-trigger relative flex h-full w-full flex-col gap-1 bg-white p-4 pe-9 text-start border-0 sm:border-e sm:border-[#d4d4d8] focus:outline-none disabled:opacity-60 hover:bg-[#fafafa] transition-colors ${rental === "daily" && dateRangeOpen && dateRangeAnchor === "dropoff" ? "bg-[#fafafa]" : ""}`}
                 >
                   <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
                     <CalendarRange className="size-3 text-[#dbb878]" aria-hidden />
@@ -1828,7 +1817,7 @@ export function BookingSearchWidget({
               </div>
 
               {/* ── 6. وقت التسليم ── */}
-              <div className="relative flex-1 min-w-0">
+              <div className="relative min-w-0">
                 <button
                   ref={dropoffTimeRef}
                   type="button"
@@ -1844,7 +1833,7 @@ export function BookingSearchWidget({
                     setPickupLocOpen(false);
                     setReturnLocOpen(false);
                   }}
-                  className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl sm:rounded-none sm:border-0 sm:border-e sm:border-[#ebe4d3] focus:outline-none disabled:opacity-60"
+                  className="field-trigger relative flex h-full w-full flex-col gap-1 bg-white p-4 pe-9 text-start border-0 sm:border-e sm:border-[#d4d4d8] focus:outline-none disabled:opacity-60 hover:bg-[#fafafa] transition-colors"
                 >
                   <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
                     <Clock className="size-3 text-[#dbb878]" aria-hidden />
@@ -1875,11 +1864,10 @@ export function BookingSearchWidget({
                 <button
                   type="submit"
                   disabled={dateCities.length === 0}
-                  className="cta-btn group relative mt-1 flex min-h-[52px] w-full items-center justify-center gap-2 overflow-hidden rounded-2xl px-5 py-4 text-white disabled:pointer-events-none disabled:opacity-45 sm:mt-0 sm:min-h-0 sm:rounded-none sm:rounded-l-full sm:px-9 sm:py-4 sm:text-[15px]"
-                  style={{ background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)` }}
+                  className="group relative flex min-h-[52px] w-full items-center justify-center gap-2 overflow-hidden bg-[#7b5822] px-5 py-4 font-extrabold text-white transition-colors hover:bg-[#60400c] disabled:pointer-events-none disabled:opacity-45 sm:min-h-0 sm:rounded-none sm:px-8 sm:py-4 sm:text-[15px]"
                 >
                   <span
-                    className="cta-shimmer pointer-events-none absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0"
+                    className="cta-shimmer pointer-events-none absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0"
                     aria-hidden
                   />
                   {isCheckout ? (
@@ -2207,3 +2195,62 @@ function FieldCard({
   );
 }
 
+/** Tab button matching the HTML design: grey pill background, teal active */
+function HtmlTab({
+  active,
+  onClick,
+  icon,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg px-4 py-2 text-[12px] font-bold outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-[#003749]/30 ${
+        active
+          ? "bg-[#003749] text-white shadow-[0_2px_8px_-2px_rgba(0,55,73,0.40)]"
+          : "bg-transparent text-[#40484b] hover:bg-white/70 hover:text-[#003749]"
+      }`}
+    >
+      <span aria-hidden>{icon}</span>
+      <span>{label}</span>
+    </button>
+  );
+}
+
+/** Mode chip matching the HTML design: grey pill, teal active state with primary-container-like bg */
+function HtmlModeChip({
+  active,
+  onClick,
+  icon,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg px-4 py-2 text-[12px] font-bold outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-[#003749]/30 ${
+        active
+          ? "bg-[#00414f] text-[#9ccedf] shadow-[0_2px_8px_-2px_rgba(0,55,73,0.40)]"
+          : "bg-transparent text-[#40484b] hover:bg-white/70 hover:text-[#003749]"
+      }`}
+    >
+      <span aria-hidden>{icon}</span>
+      <span>{label}</span>
+    </button>
+  );
+}
