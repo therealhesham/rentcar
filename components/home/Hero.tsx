@@ -1,13 +1,9 @@
-import Image from "next/image";
 import {
   BookingWidget,
   type BookingCityBranchesOption,
 } from "./BookingWidget";
 import type { BookingWidgetTabFlags } from "@/lib/booking-widget-tabs";
 import { HeroEntrance } from "./HomeMotion";
-
-/** مؤقت: عطّل صور الهيرو الجانبية لرفع الـ widget أقرب للـ nav */
-const SHOW_HERO_IMAGES = false;
 
 export type HeroProps = {
   leftImageUrl: string;
@@ -21,70 +17,67 @@ export type HeroProps = {
 export function Hero({
   leftImageUrl,
   leftImageAlt,
-  rightImageUrl,
-  rightImageAlt,
   cities,
   tabFlags,
 }: HeroProps) {
+  // Use the left hero image as the full-bleed background
+  const bgUrl = leftImageUrl;
+
   return (
     <>
-      {SHOW_HERO_IMAGES ? (
-        <header className="relative flex flex-col overflow-x-hidden bg-white pt-24 md:pt-28">
-          <HeroEntrance className="w-full">
-            <div
-              className="relative grid w-full grid-cols-1 md:min-h-[min(45vh,22rem)] md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
-              dir="ltr"
-            >
-              <div className="relative aspect-[5/3] w-full overflow-hidden md:aspect-auto md:min-h-[min(52vh,28rem)]">
-                <Image
-                  src={leftImageUrl}
-                  alt={leftImageAlt}
-                  fill
-                  priority
-                  className="object-cover"
-                  sizes="(min-width: 768px) 50vw, 100vw"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0f3d47]/30 via-transparent to-transparent" />
-                <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-white via-white/70 to-transparent" />
-              </div>
-
-              <div className="relative aspect-[5/3] w-full overflow-hidden md:aspect-auto md:min-h-[min(52vh,28rem)]">
-                <Image
-                  src={rightImageUrl}
-                  alt={rightImageAlt}
-                  fill
-                  priority
-                  className="object-cover"
-                  sizes="(min-width: 768px) 50vw, 100vw"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0f3d47]/30 via-transparent to-transparent" />
-                <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-white via-white/70 to-transparent" />
-              </div>
-            </div>
-          </HeroEntrance>
-        </header>
-      ) : (
-        <section
-          className="relative flex flex-col overflow-x-hidden bg-gradient-to-b from-[#eef6f8] via-white to-[#fdfbf6] pt-[4.5rem] sm:pt-24"
-          aria-hidden
-        >
-          <HeroDecorations />
-        </section>
-      )}
-
-      <div
-        id="home-booking"
-        className={
-          SHOW_HERO_IMAGES
-            ? "-mt-8 scroll-mt-24 px-3 sm:-mt-12 sm:px-6 md:-mt-12 lg:-mt-16 lg:px-8"
-            : "-mt-1 scroll-mt-24 px-3 pb-6 sm:-mt-2 sm:px-6 sm:pb-8 lg:px-8"
-        }
-        dir="rtl"
+      {/* Full-bleed hero background section */}
+      <section
+        className="relative flex min-h-[520px] flex-col items-center justify-end overflow-hidden pb-0 pt-[4.5rem] sm:min-h-[600px] sm:pt-24"
+        aria-label="Hero"
       >
-        <div className="mx-auto w-full max-w-[72rem]">
-          <BookingWidget cities={cities} tabFlags={tabFlags} />
+        {/* Background image */}
+        {bgUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={bgUrl}
+            alt={leftImageAlt}
+            aria-hidden
+            draggable={false}
+            fetchPriority="high"
+            className="pointer-events-none absolute inset-0 -z-10 h-full w-full object-cover opacity-40"
+          />
+        ) : (
+          <HeroDecorations />
+        )}
+
+        {/* Gradient overlays — top fade + bottom fade for seamless blend */}
+        <div
+          className="pointer-events-none absolute inset-0 -z-10"
+          aria-hidden
+          style={{
+            background:
+              "linear-gradient(to bottom, #fcf9f8 0%, transparent 28%, transparent 62%, #fcf9f8 100%)",
+          }}
+        />
+
+        {/* Subtle radial glow decorations */}
+        <div
+          className="pointer-events-none absolute -start-40 top-8 h-80 w-80 rounded-full bg-[#dbb878]/10 blur-3xl"
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute -end-40 top-24 h-72 w-72 rounded-full bg-[#003749]/6 blur-3xl"
+          aria-hidden
+        />
+      </section>
+
+      {/* Booking widget — overlaps the bottom of the hero */}
+      <HeroEntrance>
+        <div
+          id="home-booking"
+          className="-mt-1 scroll-mt-24 px-3 pb-6 sm:-mt-2 sm:px-6 sm:pb-8 lg:px-8"
+          dir="rtl"
+        >
+          <div className="mx-auto w-full max-w-[72rem]">
+            <BookingWidget cities={cities} tabFlags={tabFlags} />
+          </div>
         </div>
-      </div>
+      </HeroEntrance>
     </>
   );
 }
