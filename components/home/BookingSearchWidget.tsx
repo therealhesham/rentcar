@@ -1864,18 +1864,35 @@ export function BookingSearchWidget({
                 <button
                   type="submit"
                   disabled={dateCities.length === 0}
-                  className="group relative flex min-h-[52px] w-full items-center justify-center gap-2 overflow-hidden bg-[#7b5822] px-5 py-4 font-extrabold text-white transition-colors hover:bg-[#60400c] disabled:pointer-events-none disabled:opacity-45 sm:min-h-0 sm:rounded-none sm:px-8 sm:py-4 sm:text-[15px]"
+                  className="group relative flex min-h-[52px] w-full items-center justify-center gap-2 overflow-hidden px-5 py-4 font-extrabold text-white transition-all duration-200 disabled:pointer-events-none disabled:opacity-45 sm:min-h-0 sm:rounded-none sm:px-8 sm:py-4 sm:text-[15px]"
+                  style={{
+                    background: "rgba(0, 55, 73, 0.65)",
+                    backdropFilter: "blur(20px)",
+                    WebkitBackdropFilter: "blur(20px)",
+                    borderLeft: "1px solid rgba(156, 206, 223, 0.18)",
+                  }}
                 >
+                  {/* Glass sheen — top-left highlight */}
                   <span
-                    className="cta-shimmer pointer-events-none absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0"
+                    className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/25 via-white/5 to-transparent opacity-70 transition-opacity duration-300 group-hover:opacity-100"
+                    aria-hidden
+                  />
+                  {/* Hover tint overlay */}
+                  <span
+                    className="pointer-events-none absolute inset-0 bg-[#003749]/0 transition-colors duration-200 group-hover:bg-[#003749]/25 group-active:bg-[#003749]/45"
+                    aria-hidden
+                  />
+                  {/* Shimmer sweep */}
+                  <span
+                    className="cta-shimmer pointer-events-none absolute inset-0 bg-gradient-to-r from-white/0 via-white/15 to-white/0"
                     aria-hidden
                   />
                   {isCheckout ? (
-                    <CalendarCheck2 className="size-4 shrink-0" aria-hidden />
+                    <CalendarCheck2 className="relative z-10 size-4 shrink-0 drop-shadow" aria-hidden />
                   ) : (
-                    <Search className="size-4 shrink-0" aria-hidden />
+                    <Search className="relative z-10 size-4 shrink-0 drop-shadow" aria-hidden />
                   )}
-                  <span className="text-[14px] font-extrabold tracking-wide">
+                  <span className="relative z-10 text-[14px] font-extrabold tracking-wide drop-shadow">
                     {isCheckout ? t("continue") : t("searchCars")}
                   </span>
                 </button>
