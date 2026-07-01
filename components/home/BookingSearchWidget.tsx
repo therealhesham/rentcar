@@ -119,6 +119,7 @@ export function BookingSearchWidget({
   variant = "search",
   checkoutModelId,
   combinedPanel = false,
+  onStickyEligibleChange,
 }: {
   cities: BookingCityBranchesOption[];
   /** من `/fleet?pickup=…` — يُطبَّق بعد التحميل */
@@ -130,6 +131,8 @@ export function BookingSearchWidget({
   checkoutModelId?: number;
   /** بطاقة `/fleet` الموحّدة مع الفلاتر */
   combinedPanel?: boolean;
+  /** يُبلَّغ عند تغيّر صلاحية التثبيت (false للشركات/الباقات الشهرية) */
+  onStickyEligibleChange?: (eligible: boolean) => void;
 }) {
   const router = useRouter();
   const t = useTranslations("ReservationForm");
@@ -217,6 +220,13 @@ export function BookingSearchWidget({
     if (!error) return;
     errorRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [error]);
+
+  const stickyEligible =
+    !combinedPanel && !isCheckout && rental !== "monthly_packages" && rental !== "corporate";
+
+  useEffect(() => {
+    onStickyEligibleChange?.(stickyEligible);
+  }, [stickyEligible, onStickyEligibleChange]);
 
   /* eslint-disable react-hooks/set-state-in-effect -- مزامنة rental/mode مع إعدادات الإدارة */
   useEffect(() => {
@@ -980,16 +990,7 @@ export function BookingSearchWidget({
         ref={formRef}
         onSubmit={handleSearch}
         dir={isRtl ? "rtl" : "ltr"}
-        className={`booking-card w-full overflow-visible ${
-          /* Sticky to viewport on the home search page, EXCEPT in monthly_packages
-             & corporate flows (those expand the form and need full scroll access). */
-          !combinedPanel &&
-          !isCheckout &&
-          rental !== "monthly_packages" &&
-          rental !== "corporate"
-            ? "sticky top-[4.5rem] z-30 sm:top-24"
-            : "relative z-0"
-        } ${
+        className={`booking-card relative z-0 w-full overflow-visible ${
           combinedPanel
             ? ""
             : "rounded-3xl bg-white p-4 shadow-[0_4px_32px_rgba(0,0,0,0.08)] sm:p-6"
@@ -1461,7 +1462,13 @@ export function BookingSearchWidget({
             </SubscriptionPackagesInWidget>
           ) : (
             /* ═══ HTML-STYLE SEARCH GRID ═══ */
-            <div className="search-pill grid grid-cols-1 overflow-hidden rounded-2xl bg-[#eeeef0] sm:grid-cols-[minmax(0,2fr)_auto_minmax(0,1.2fr)_minmax(0,0.8fr)_minmax(0,1.2fr)_minmax(0,0.8fr)_minmax(0,1.4fr)]">
+            <div
+              className={`search-pill grid grid-cols-1 overflow-hidden rounded-2xl bg-[#eeeef0] ${
+                mode === "delivery"
+                  ? "sm:grid-cols-[minmax(0,1.3fr)_minmax(0,1.5fr)_auto_minmax(0,1fr)_minmax(0,0.7fr)_minmax(0,1fr)_minmax(0,0.7fr)_minmax(0,1.3fr)]"
+                  : "sm:grid-cols-[minmax(0,2fr)_auto_minmax(0,1.2fr)_minmax(0,0.8fr)_minmax(0,1.2fr)_minmax(0,0.8fr)_minmax(0,1.4fr)]"
+              }`}
+            >
 
               {/* ── 1. موقع الاستلام ── */}
               <div className="relative min-w-0">
