@@ -1,4 +1,3 @@
-import { Sparkles } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { HeroEntrance } from "./HomeMotion";
 
@@ -17,10 +16,11 @@ export function Hero({ leftImageUrl, leftImageAlt }: HeroProps) {
 
   return (
     <section
-      className="relative flex min-h-[560px] flex-col items-center justify-end overflow-hidden pb-0 pt-[4.5rem] sm:min-h-[640px] sm:pt-24"
+      className="relative flex flex-col items-center overflow-hidden pb-6 pt-2 sm:min-h-[640px] sm:justify-end sm:pb-0 sm:pt-24"
       aria-label="Hero"
     >
-      {/* Background image — starts below the fixed navbar so nothing is hidden underneath it */}
+      {/* Background image — a compact banner on mobile (full image, no crop), then
+          a full-bleed absolute background from sm upward, starting below the fixed navbar */}
       {bgUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -29,7 +29,7 @@ export function Hero({ leftImageUrl, leftImageAlt }: HeroProps) {
           aria-hidden
           draggable={false}
           fetchPriority="high"
-          className="pointer-events-none absolute inset-x-0 bottom-0 top-[4.5rem] -z-10 h-[calc(100%-4.5rem)] w-full object-cover opacity-40 sm:top-24 sm:h-[calc(100%-6rem)]"
+          className="pointer-events-none relative z-0 mt-3 aspect-[16/9] w-[calc(100%-2rem)] max-w-sm rounded-2xl object-cover shadow-[0_12px_28px_-14px_rgba(0,55,73,0.35)] sm:absolute sm:inset-x-0 sm:bottom-0 sm:top-24 sm:-z-10 sm:mt-0 sm:aspect-auto sm:h-[calc(100%-6rem)] sm:w-full sm:max-w-none sm:rounded-none sm:object-cover sm:opacity-40 sm:shadow-none"
         />
       ) : (
         <HeroDecorations />
@@ -46,13 +46,8 @@ export function Hero({ leftImageUrl, leftImageAlt }: HeroProps) {
       />
 
       {/* Headline — sits above the booking widget, within the image area */}
-      <HeroEntrance className="relative z-[1] flex w-full flex-col items-center px-4 pb-6 text-center sm:pb-10">
+      <HeroEntrance className="relative z-[1] flex w-full flex-col items-center px-4 pb-6 pt-5 text-center sm:pb-10 sm:pt-0">
         <div className="flex flex-col items-center gap-4 rounded-[1.75rem] bg-white/55 px-6 py-6 shadow-[0_24px_60px_-28px_rgba(0,55,73,0.3)] ring-1 ring-white/60 backdrop-blur-md sm:gap-5 sm:rounded-[2.25rem] sm:px-12 sm:py-9">
-          <span className="inline-flex items-center gap-2 rounded-full border border-[#dbb878]/40 bg-white/70 px-4 py-1.5 text-[10.5px] font-bold uppercase tracking-[0.2em] text-[#8a6d2f] sm:text-[11px] sm:tracking-[0.24em]">
-            <Sparkles className="size-3.5 text-[#dbb878]" aria-hidden />
-            {heroT("description")}
-          </span>
-
           <h1 className="max-w-2xl text-balance text-[1.85rem] font-black leading-[1.15] tracking-tight text-[#003749] sm:text-[2.75rem] lg:max-w-3xl lg:text-[3.25rem]">
             {homeT("title")}
           </h1>

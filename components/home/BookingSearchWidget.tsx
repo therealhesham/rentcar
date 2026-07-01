@@ -943,6 +943,13 @@ export function BookingSearchWidget({
             box-shadow: none;
             opacity: 0.6;
           }
+          /* Solid teal gradient CTA — the translucent glass style is desktop-only */
+          .search-pill .cta-search {
+            background: linear-gradient(135deg, #0e4a5e 0%, #003749 100%) !important;
+            border-left: none !important;
+            box-shadow: 0 14px 30px -14px rgba(0, 55, 73, 0.55);
+            margin-top: 2px;
+          }
         }
         /* ─── Sixt-style elegant pill (desktop only) ───
            Tabs above keep their cream tone; the search bar itself
@@ -1004,12 +1011,12 @@ export function BookingSearchWidget({
             so the pill below remains the visual hero.
         ═══════════════════════════════════════ */}
         {!isFreshRebookFlow ? (
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <div className="mb-4 flex flex-col gap-2.5 sm:mb-5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
             {/* ── Rental-type tabs (left pill) ── */}
             <div
               role="tablist"
               aria-label="نوع الحجز"
-              className="tabs-scroll flex items-center gap-1 overflow-x-auto rounded-xl bg-[#f3f3f6] p-1"
+              className="tabs-scroll flex w-full items-center gap-1 overflow-x-auto rounded-xl bg-[#f5efe3] p-1 sm:w-auto"
             >
               {tabFlagsEff.rentalDaily ? (
                 <HtmlTab
@@ -1059,7 +1066,7 @@ export function BookingSearchWidget({
               <div
                 role="tablist"
                 aria-label="طريقة الاستلام"
-                className="flex items-center gap-1 rounded-xl bg-[#f3f3f6] p-1"
+                className="grid w-full grid-cols-2 gap-1 rounded-xl bg-[#f5efe3] p-1 sm:flex sm:w-auto sm:items-center"
               >
                 {tabFlagsEff.modePickup ? (
                   <HtmlModeChip
@@ -1085,7 +1092,7 @@ export function BookingSearchWidget({
         {/* ═══════════════════════════════════════
             SECTION 2: Form Fields
         ═══════════════════════════════════════ */}
-        <div className="px-3 py-3 sm:px-5 sm:py-4">
+        <div className="px-1 py-2 sm:px-5 sm:py-4">
           {isFreshRebookFlow ? (
             <div className="space-y-4">
               {freshRebookLocationSummaryAr ? (
@@ -1463,7 +1470,7 @@ export function BookingSearchWidget({
           ) : (
             /* ═══ HTML-STYLE SEARCH GRID ═══ */
             <div
-              className={`search-pill grid grid-cols-1 overflow-hidden rounded-2xl bg-[#eeeef0] ${
+              className={`search-pill grid grid-cols-1 gap-2.5 rounded-2xl bg-transparent sm:gap-0 sm:overflow-hidden sm:bg-[#ebe4d3] ${
                 mode === "delivery"
                   ? "sm:grid-cols-[minmax(0,1.3fr)_minmax(0,1.5fr)_auto_minmax(0,1fr)_minmax(0,0.7fr)_minmax(0,1fr)_minmax(0,0.7fr)_minmax(0,1.3fr)]"
                   : "sm:grid-cols-[minmax(0,2fr)_auto_minmax(0,1.2fr)_minmax(0,0.8fr)_minmax(0,1.2fr)_minmax(0,0.8fr)_minmax(0,1.4fr)]"
@@ -1487,7 +1494,7 @@ export function BookingSearchWidget({
                       closeSchedulePopovers();
                     }
                   }}
-                  className="field-trigger relative flex h-full w-full flex-col gap-1 bg-white p-4 pe-9 text-start border-0 sm:border-e sm:border-[#d4d4d8] focus:outline-none cursor-pointer hover:bg-[#fafafa] transition-colors"
+                  className="field-trigger relative flex h-full w-full flex-col gap-1 bg-white p-4 pe-9 text-start border-0 sm:border-e sm:border-[#ebe4d3] focus:outline-none cursor-pointer hover:bg-[#fffdf8] transition-colors"
                 >
                   <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
                     <MapPin className="size-3 text-[#dbb878]" aria-hidden />
@@ -1640,8 +1647,8 @@ export function BookingSearchWidget({
 
               {/* show "return different" toggle inside the bar */}
               {!returnLocationDifferent && (
-                <div className="flex items-center justify-center bg-white px-3 py-2 sm:border-e sm:border-[#d4d4d8]">
-                  <label className="flex cursor-pointer flex-col items-center gap-1.5 text-center text-[10px] font-semibold text-[#40484b] whitespace-nowrap">
+                <div className="flex items-center justify-center bg-transparent px-3 py-0.5 sm:bg-white sm:py-2 sm:border-e sm:border-[#ebe4d3]">
+                  <label className="flex cursor-pointer flex-col items-center gap-1.5 text-center text-[10px] font-semibold text-[#6b5a3b] whitespace-nowrap">
                     <input
                       type="checkbox"
                       checked={returnLocationDifferent}
@@ -1654,7 +1661,7 @@ export function BookingSearchWidget({
               )}
 
               {/* ── 3+4. تاريخ ووقت الاستلام ── */}
-              <div className="grid grid-cols-2 gap-0 sm:contents">
+              <div className="grid grid-cols-2 gap-2.5 sm:gap-0 sm:contents">
               {/* ── 3. تاريخ الاستلام ── */}
               <div className="relative min-w-0">
                 <button
@@ -1674,7 +1681,7 @@ export function BookingSearchWidget({
                     setDropoffTimeOpen(false);
                     setPickupDateOpen((v) => !v);
                   }}
-                  className={`field-trigger relative flex h-full w-full flex-col gap-1 bg-white p-4 pe-9 text-start border-0 sm:border-e sm:border-[#d4d4d8] focus:outline-none hover:bg-[#fafafa] transition-colors ${rental === "daily" && dateRangeOpen && dateRangeAnchor === "pickup" ? "bg-[#fafafa]" : ""}`}
+                  className={`field-trigger relative flex h-full w-full flex-col gap-1 bg-white p-4 pe-9 text-start border-0 sm:border-e sm:border-[#ebe4d3] focus:outline-none hover:bg-[#fffdf8] transition-colors ${rental === "daily" && dateRangeOpen && dateRangeAnchor === "pickup" ? "bg-[#fffdf8]" : ""}`}
                 >
                   <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
                     <CalendarClock className="size-3 text-[#dbb878]" aria-hidden />
@@ -1724,7 +1731,7 @@ export function BookingSearchWidget({
                     setPickupLocOpen(false);
                     setReturnLocOpen(false);
                   }}
-                  className="field-trigger relative flex h-full w-full flex-col gap-1 bg-white p-4 pe-9 text-start border-0 sm:border-e sm:border-[#d4d4d8] focus:outline-none hover:bg-[#fafafa] transition-colors"
+                  className="field-trigger relative flex h-full w-full flex-col gap-1 bg-white p-4 pe-9 text-start border-0 sm:border-e sm:border-[#ebe4d3] focus:outline-none hover:bg-[#fffdf8] transition-colors"
                 >
                   <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
                     <Clock className="size-3 text-[#dbb878]" aria-hidden />
@@ -1762,7 +1769,7 @@ export function BookingSearchWidget({
               </div>
 
               {/* ── 5+6. تاريخ ووقت التسليم ── */}
-              <div className="grid grid-cols-2 gap-0 sm:contents">
+              <div className="grid grid-cols-2 gap-2.5 sm:gap-0 sm:contents">
               {/* ── 5. تاريخ التسليم ── */}
               <div className="relative min-w-0">
                 <button
@@ -1775,7 +1782,7 @@ export function BookingSearchWidget({
                     if (rental !== "daily") return;
                     toggleDateRange("dropoff");
                   }}
-                  className={`field-trigger relative flex h-full w-full flex-col gap-1 bg-white p-4 pe-9 text-start border-0 sm:border-e sm:border-[#d4d4d8] focus:outline-none disabled:opacity-60 hover:bg-[#fafafa] transition-colors ${rental === "daily" && dateRangeOpen && dateRangeAnchor === "dropoff" ? "bg-[#fafafa]" : ""}`}
+                  className={`field-trigger relative flex h-full w-full flex-col gap-1 bg-white p-4 pe-9 text-start border-0 sm:border-e sm:border-[#ebe4d3] focus:outline-none disabled:opacity-60 hover:bg-[#fffdf8] transition-colors ${rental === "daily" && dateRangeOpen && dateRangeAnchor === "dropoff" ? "bg-[#fffdf8]" : ""}`}
                 >
                   <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
                     <CalendarRange className="size-3 text-[#dbb878]" aria-hidden />
@@ -1840,7 +1847,7 @@ export function BookingSearchWidget({
                     setPickupLocOpen(false);
                     setReturnLocOpen(false);
                   }}
-                  className="field-trigger relative flex h-full w-full flex-col gap-1 bg-white p-4 pe-9 text-start border-0 sm:border-e sm:border-[#d4d4d8] focus:outline-none disabled:opacity-60 hover:bg-[#fafafa] transition-colors"
+                  className="field-trigger relative flex h-full w-full flex-col gap-1 bg-white p-4 pe-9 text-start border-0 sm:border-e sm:border-[#ebe4d3] focus:outline-none disabled:opacity-60 hover:bg-[#fffdf8] transition-colors"
                 >
                   <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
                     <Clock className="size-3 text-[#dbb878]" aria-hidden />
@@ -1871,7 +1878,7 @@ export function BookingSearchWidget({
                 <button
                   type="submit"
                   disabled={dateCities.length === 0}
-                  className="group relative flex min-h-[52px] w-full items-center justify-center gap-2 overflow-hidden px-5 py-4 font-extrabold text-white transition-all duration-200 disabled:pointer-events-none disabled:opacity-45 sm:min-h-0 sm:rounded-none sm:px-8 sm:py-4 sm:text-[15px]"
+                  className="cta-search group relative flex min-h-[52px] w-full items-center justify-center gap-2 overflow-hidden rounded-2xl px-5 py-4 font-extrabold text-white transition-all duration-200 disabled:pointer-events-none disabled:opacity-45 sm:min-h-0 sm:rounded-none sm:px-8 sm:py-4 sm:text-[15px]"
                   style={{
                     background: "rgba(0, 55, 73, 0.65)",
                     backdropFilter: "blur(20px)",
@@ -2237,10 +2244,10 @@ function HtmlTab({
       role="tab"
       aria-selected={active}
       onClick={onClick}
-      className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg px-4 py-2 text-[12px] font-bold outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-[#003749]/30 ${
+      className={`flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-4 py-2 text-[12px] font-bold outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-[#003749]/30 sm:flex-none ${
         active
           ? "bg-[#003749] text-white shadow-[0_2px_8px_-2px_rgba(0,55,73,0.40)]"
-          : "bg-transparent text-[#40484b] hover:bg-white/70 hover:text-[#003749]"
+          : "bg-transparent text-[#6b5a3b] hover:bg-white/70 hover:text-[#003749]"
       }`}
     >
       <span aria-hidden>{icon}</span>
@@ -2249,7 +2256,7 @@ function HtmlTab({
   );
 }
 
-/** Mode chip matching the HTML design: grey pill, teal active state with primary-container-like bg */
+/** Mode chip — same active/inactive treatment as HtmlTab for visual consistency */
 function HtmlModeChip({
   active,
   onClick,
@@ -2267,10 +2274,10 @@ function HtmlModeChip({
       role="tab"
       aria-selected={active}
       onClick={onClick}
-      className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg px-4 py-2 text-[12px] font-bold outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-[#003749]/30 ${
+      className={`flex items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-4 py-2 text-[12px] font-bold outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-[#003749]/30 sm:justify-start ${
         active
-          ? "bg-[#00414f] text-[#9ccedf] shadow-[0_2px_8px_-2px_rgba(0,55,73,0.40)]"
-          : "bg-transparent text-[#40484b] hover:bg-white/70 hover:text-[#003749]"
+          ? "bg-[#003749] text-white shadow-[0_2px_8px_-2px_rgba(0,55,73,0.40)]"
+          : "bg-transparent text-[#6b5a3b] hover:bg-white/70 hover:text-[#003749]"
       }`}
     >
       <span aria-hidden>{icon}</span>
