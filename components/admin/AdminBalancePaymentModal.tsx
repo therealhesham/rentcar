@@ -13,7 +13,7 @@ type Props = {
 };
 
 const PAYMENT_METHODS = [
-  { value: "CASH", label: "الدفع عند الفرع" },
+  { value: "CASH", label: "عند الفرع" },
   { value: "MADA", label: "مدى" },
   { value: "CARD", label: "بطاقة ائتمانية" },
   { value: "APPLE_PAY", label: "Apple Pay" },

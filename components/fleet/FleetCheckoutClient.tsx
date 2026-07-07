@@ -1260,7 +1260,7 @@ export function FleetCheckoutClient({
               </section>
 
               {/* Installment Options Banner */}
-              <section>
+              {/* <section>
                 <div className="relative overflow-hidden rounded-2xl border border-[#dbb878]/30 bg-gradient-to-r from-[#003749] to-[#004d63] p-5 shadow-[0_8px_24px_-10px_rgba(0,55,73,0.3)]">
                   <div className="absolute -end-6 -top-6 size-24 rounded-full bg-[#dbb878]/10" />
                   <div className="absolute -bottom-4 end-12 size-16 rounded-full bg-[#dbb878]/8" />
@@ -1278,7 +1278,7 @@ export function FleetCheckoutClient({
                     </div>
                   </div>
                 </div>
-              </section>
+              </section> */}
 
               {/* Customer Details Form */}
               <section className="space-y-4">

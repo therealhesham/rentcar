@@ -85,7 +85,7 @@ function bookingPaymentPillLabel(
   if (k === "REFUNDED") return "مسترد بالكامل";
   if (k === "PARTIAL_REFUND") return "استرداد جزئي";
   if (k === "NO_REFUND") return "بدون استرداد";
-  if (isCashPaymentMethod(paymentMethod)) return "الدفع عند الفرع";
+  if (isCashPaymentMethod(paymentMethod)) return "عند الفرع";
   return "بانتظار الدفع";
 }
 

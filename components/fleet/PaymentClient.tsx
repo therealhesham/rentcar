@@ -157,7 +157,7 @@ const METHOD_OPTIONS: MethodOption[] = [
   },
   {
     id: "CASH",
-    title: "الدفع عند الفرع",
+    title: "عند الفرع",
     hint: "",
     Icon: Banknote,
   },
@@ -304,7 +304,7 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
             : method === "CASH"
               ? (
                   <>
-                    تأكيد الحجز (الدفع عند الفرع) {formatSarAmount(booking.totals.totalInclTax)}{" "}
+                    تأكيد الحجز (عند الفرع) {formatSarAmount(booking.totals.totalInclTax)}{" "}
                     <SarCurrencyGlyph />
                   </>
                 )
@@ -517,10 +517,7 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
               <header className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <h2 className="text-lg font-extrabold text-[#003749]">طرق الدفع</h2>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-[#003749]/5 px-2.5 py-1 text-[11px] font-bold text-[#003749]">
-                    <Lock className="size-3.5 shrink-0" aria-hidden />
-                    وضع تجريبي — جاهز لربط البوابات
-                  </span>
+                 
                 </div>
                 <p className="text-xs text-on-surface-variant">
                   يمكن للعميل الدفع عبر تابي أو تمارا أو بطاقة ائتمانية أو Apple Pay أو استبدال نقاط. الربط
@@ -702,11 +699,11 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
                 </div>
               ) : null}
 
-              <p className="flex items-start gap-2 rounded-lg bg-neutral-50 px-3 py-2 text-[11px] text-on-surface-variant">
+              {/* <p className="flex items-start gap-2 rounded-lg bg-neutral-50 px-3 py-2 text-[11px] text-on-surface-variant">
                 <Shield className="mt-0.5 size-3.5 shrink-0 text-[#003749]" aria-hidden />
                 التأكيد الحالي يحدّث حالة الطلب في النظام للاختبار. ربط تابي وتمارا والبوابة البنكية وApple
                 Pay ونظام النقاط يتم على مستوى الخادم والامتثال (PCI-DSS) عند التشغيل الفعلي.
-              </p>
+              </p> */}
 
               {(clientError || serverError) ? (
                 <div

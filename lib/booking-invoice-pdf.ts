@@ -53,7 +53,7 @@ function paymentMethodLabel(code: string | null | undefined): string {
     case "AMKAN":
       return "إمكان";
     case "CASH":
-      return "الدفع عند الفرع";
+      return "عند الفرع";
     case "APPLE_PAY":
       return "Apple Pay";
     case "POINTS":

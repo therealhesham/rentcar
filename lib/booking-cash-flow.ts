@@ -19,7 +19,7 @@ export function isCashCheckoutSubmitted(booking: {
   return isCashPaymentMethod(booking.paymentMethod);
 }
 
-/** رابط «إتمام الدفع» في حساب العميل — لا يُعرض عند الدفع عند الفرع (يُدفع في الفرع). */
+/** رابط «إتمام الدفع» في حساب العميل — لا يُعرض عند عند الفرع (يُدفع في الفرع). */
 export function shouldShowCompletePaymentLink(booking: {
   kind: string;
   paymentStatus: string;
@@ -68,7 +68,7 @@ export function invoiceEmailHeaderForBooking(booking: BookingPaymentSnapshot): {
         badge: "✓ تم إرجاع المركبة والدفع",
         title: "فاتورة الحجز",
         intro:
-          "شكراً لثقتكم واختياركم روائس. تم تسجيل إرجاع المركبة وتأكيد الدفع عند الفرع. مرفق مع هذه الرسالة نسخة PDF من الفاتورة للطباعة أو الأرشفة.",
+          "شكراً لثقتكم واختياركم روائس. تم تسجيل إرجاع المركبة وتأكيد عند الفرع. مرفق مع هذه الرسالة نسخة PDF من الفاتورة للطباعة أو الأرشفة.",
       };
     }
     const confirmed = booking.status.trim().toUpperCase() === "CONFIRMED";
@@ -81,10 +81,10 @@ export function invoiceEmailHeaderForBooking(booking: BookingPaymentSnapshot): {
       };
     }
     return {
-      badge: "الدفع عند الفرع — تحت المراجعة",
+      badge: "عند الفرع — تحت المراجعة",
       title: "ملخص الحجز",
       intro:
-        "شكراً لثقتكم واختياركم روائس. تم تسجيل طلبكم بالدفع عند الفرع. سيتواصل معكم فريقنا قريباً لتأكيد الحجز هاتفياً.",
+        "شكراً لثقتكم واختياركم روائس. تم تسجيل طلبكم بعند الفرع. سيتواصل معكم فريقنا قريباً لتأكيد الحجز هاتفياً.",
     };
   }
   return {

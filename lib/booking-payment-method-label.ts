@@ -4,7 +4,7 @@ import {
 } from "@/lib/booking-payment-methods";
 
 const LABELS_AR: Record<BookingPaymentMethod, string> = {
-  CASH: "الدفع عند الفرع",
+  CASH: "عند الفرع",
   CARD: "بطاقة ائتمانية",
   MADA: "مدى",
   AMKAN: "إمكان",
