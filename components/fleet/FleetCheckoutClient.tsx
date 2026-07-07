@@ -826,7 +826,7 @@ export function FleetCheckoutClient({
           <BookingStepper currentStep={2} modelId={car.modelId} />
 
           <div className="mb-10 space-y-3">
-            {sp.get("rebook") === "1" ? (
+            {/* {sp.get("rebook") === "1" ? (
               <div className="rounded-2xl border border-[#dbb878]/40 bg-[#fffdf9] px-4 py-3 text-center text-[13px] font-semibold leading-relaxed text-[#5c4d2e]">
                 {isFreshRebookCheckoutBanner ? (
                   <>
@@ -844,7 +844,7 @@ export function FleetCheckoutClient({
               <p className="text-center text-[13px] font-semibold leading-relaxed text-[#6b5a3b]">
                 لتغيير التواريخ أو الفروع: عدّلوا الحقول أدناه ثم «تطبيق التواريخ على الحجز».
               </p>
-            ) : null}
+            ) : null} */}
             <BookingWidget
               cities={bookingCities}
               variant="checkout"
