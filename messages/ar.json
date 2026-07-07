@@ -9,6 +9,9 @@
     "about": "نبذة عنا",
     "contact": "تواصل معنا",
     "login": "تسجيل الدخول",
+    "register": "إنشاء حساب",
+    "userAccount": "حساب المستخدم",
+    "accountOf": "حساب {name}",
     "language": "اللغة"
   },
   "BrandHeader": {
@@ -115,7 +118,7 @@
     "pickUpTime": "وقت الاستلام",
     "deliveryTime": "وقت التوصيل",
     "continue": "متابعة",
-    "searchCars": "بحث",
+    "searchCars": "البحث عن سيارات",
     "daily": "يومي",
     "weekly": "أسبوعي",
     "monthly": "شهري",

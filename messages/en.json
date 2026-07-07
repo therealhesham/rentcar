@@ -9,6 +9,9 @@
     "about": "About Us",
     "contact": "Contact Us",
     "login": "Login",
+    "register": "Register",
+    "userAccount": "User account",
+    "accountOf": "Account of {name}",
     "language": "Language"
   },
   "BrandHeader": {

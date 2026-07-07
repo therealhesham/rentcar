@@ -17,7 +17,6 @@ export function BookingWidget({
   variant = "search",
   checkoutModelId,
   combinedPanel = false,
-  onStickyEligibleChange,
 }: {
   cities: BookingCityBranchesOption[];
   /** من معاملات `/fleet` — تعبئة النموذج عند فتح الصفحة */
@@ -29,8 +28,6 @@ export function BookingWidget({
   checkoutModelId?: number;
   /** داخل بطاقة موحّدة مع فلاتر الأسطول — بدون ظل/حواف خارجية */
   combinedPanel?: boolean;
-  /** يُستدعى عند تغيّر صلاحية "sticky" — false في الشركات/الباقات الشهرية (نموذج طويل يحتاج تمرير كامل) */
-  onStickyEligibleChange?: (eligible: boolean) => void;
 }) {
   return (
     <BookingSearchWidget
@@ -40,7 +37,6 @@ export function BookingWidget({
       variant={variant}
       checkoutModelId={checkoutModelId}
       combinedPanel={combinedPanel}
-      onStickyEligibleChange={onStickyEligibleChange}
     />
   );
 }

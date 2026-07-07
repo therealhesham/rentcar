@@ -48,10 +48,10 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
               leftImageAlt={hero.leftImageAlt}
               rightImageUrl={hero.rightImageUrl}
               rightImageAlt={hero.rightImageAlt}
+              cities={cities}
+              tabFlags={tabFlags}
             />
           }
-          cities={cities}
-          tabFlags={tabFlags}
           fleetCategories={<FleetCategories />}
           promoBanner={<PromoBanner />}
           services={<ServicesSection />}

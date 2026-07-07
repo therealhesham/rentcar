@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 type MeUser = { email: string; name: string | null };
@@ -22,6 +23,7 @@ function getInitials(source: string): string {
 }
 
 export function CustomerNavSlot({ variant = "light" }: { variant?: "light" | "dark" }) {
+  const t = useTranslations("SiteNav");
   const [me, setMe] = useState<MeUser | null | undefined>(undefined);
 
   useEffect(() => {
@@ -59,7 +61,7 @@ export function CustomerNavSlot({ variant = "light" }: { variant?: "light" | "da
         <Link
           href="/account"
           title={me.name?.trim() || me.email}
-          aria-label={`حساب ${displayName}`}
+          aria-label={t("accountOf", { name: displayName })}
           className="flex w-full items-center gap-3 rounded-2xl bg-white/5 p-3 transition-colors hover:bg-white/10 active:bg-white/15 border border-white/10"
         >
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#dbb878] to-[#c9a356] text-sm font-extrabold text-white shadow-sm ring-2 ring-[#dbb878]/30">
@@ -79,7 +81,7 @@ export function CustomerNavSlot({ variant = "light" }: { variant?: "light" | "da
       <Link
         href="/account"
         title={me.name?.trim() || me.email}
-        aria-label={`حساب ${displayName}`}
+        aria-label={t("accountOf", { name: displayName })}
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#dbb878] to-[#c9a356] text-[12.5px] font-extrabold text-white shadow-[0_4px_14px_-4px_rgba(219,184,120,0.45)] outline-none ring-1 ring-[#dbb878]/35 transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-[#163332]/45 sm:h-11 sm:w-11 sm:text-[13px]"
       >
         <span
@@ -99,14 +101,14 @@ export function CustomerNavSlot({ variant = "light" }: { variant?: "light" | "da
           href="/account/login"
           className="flex w-full items-center justify-center rounded-xl bg-[#dbb878] px-4 py-3 text-sm font-bold text-[#2a2520] shadow-[0_4px_16px_rgba(219,184,120,0.2)] transition-transform hover:scale-[1.02] active:scale-[0.98]"
         >
-          Login
+          {t("login")}
         </Link>
-        <Link
+        {/* <Link
           href="/account/register"
           className="flex w-full items-center justify-center rounded-xl border border-white/20 bg-white/5 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-white/10 active:bg-white/15"
         >
-          Register
-        </Link>
+          {t("register")}
+        </Link> */}
       </div>
     );
   }
@@ -114,7 +116,7 @@ export function CustomerNavSlot({ variant = "light" }: { variant?: "light" | "da
   return (
     <div
       role="group"
-      aria-label="حساب المستخدم"
+      aria-label={t("userAccount")}
       dir="ltr"
       className="flex shrink-0 items-center gap-1.5 text-[11px] font-extrabold sm:text-xs"
     >
@@ -122,15 +124,15 @@ export function CustomerNavSlot({ variant = "light" }: { variant?: "light" | "da
         href="/account/login"
         className="rounded-full bg-[#163332] px-3 py-2 text-white shadow-sm outline-none transition-opacity hover:opacity-95 focus-visible:ring-2 focus-visible:ring-[#dbb878]/45 sm:px-4"
       >
-        Login
+        {t("login")}
       </Link>
-      <span className="h-4 w-px bg-[#163332]/25" aria-hidden />
+      {/* <span className="h-4 w-px bg-[#163332]/25" aria-hidden />
       <Link
         href="/account/register"
         className="rounded-full border border-[#163332]/25 bg-white/90 px-3 py-2 text-[#163332] shadow-sm outline-none transition-colors hover:bg-[#163332]/5 focus-visible:ring-2 focus-visible:ring-[#dbb878]/45 sm:px-4"
       >
-        Register
-      </Link>
+        {t("register")}
+      </Link> */}
     </div>
   );
 }
