@@ -228,6 +228,16 @@
     "bags": "Bags",
     "price": "Price"
   },
+  "Branches": {
+    "eyebrow": "Our branches",
+    "title": "Serving you across the Kingdom",
+    "subtitle": "Pick the branch nearest to you and view its location on the map",
+    "call": "Call",
+    "directions": "Directions",
+    "mapTitle": "{name} location on the map",
+    "defaultAddress": "Rawaes car rental branch",
+    "branchesList": "Branches list"
+  },
   "Navigation": {
     "brand": {
       "tagline": "Luxury Car Rental in Saudi Arabia"
