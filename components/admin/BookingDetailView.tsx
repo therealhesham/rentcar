@@ -18,8 +18,7 @@ import type { ReactNode } from "react";
 import { AdminKindBadge, AdminStatusBadge } from "@/components/admin/AdminStatusBadge";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { SarAmountWithSymbol } from "@/components/ui/SarAmountWithSymbol";
-import { formatSarAmount } from "@/lib/booking-checkout-pricing";
-import { BookingAddonsSnapshot } from "@/components/admin/BookingAddonsSnapshot";
+import { computeCheckoutTotals, formatSarAmount } from "@/lib/booking-checkout-pricing";
 import { BookingAttachmentsPanel } from "@/components/admin/BookingAttachmentsPanel";
 import { BookingCancelPanel } from "@/components/admin/BookingCancelPanel";
 import { BookingLifecyclePanel } from "@/components/admin/BookingLifecyclePanel";
@@ -30,6 +29,10 @@ import { isInterBranchPickupReturn } from "@/lib/booking-branches";
 import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
 import { resolveBookingKycForDisplay } from "@/lib/booking-kyc-display";
 import { formatReturnDateAr } from "@/lib/booking-return-schedule";
+import {
+  parseBookingPricingSnapshot,
+  resolveBookingRentalPricePerDayExclTax,
+} from "@/lib/booking-pricing-snapshot";
 import { addDaysToYmd } from "@/lib/direct-booking";
 import { StatementActionsDropdown } from "@/app/admin/(dashboard)/bookings/[id]/statement/StatementActionsDropdown";
 
@@ -124,6 +127,23 @@ export function BookingDetailView({ booking, editActions, cancellation }: Props)
       pickupBranch: booking.pickupBranch,
       returnBranch: booking.returnBranch,
     });
+
+  const { addons, interCityShipping, checkoutOneTimeFees, delayPenalty } =
+    parseBookingPricingSnapshot(booking.addonsJson);
+  const effectiveRentalPrice = booking.carModel
+    ? resolveBookingRentalPricePerDayExclTax(booking.carModel.price, booking.addonsJson)
+    : 0;
+  const shipFee = interCityShipping?.feeExclVatSar ?? 0;
+  const checkoutFeesSum = checkoutOneTimeFees.reduce((s, x) => s + x.feeExclVatSar, 0);
+  const delayFee = delayPenalty?.feeExclVatSar ?? 0;
+  const vatRate = booking.carModel?.vatRatePercent ?? 15;
+  const amountTotals = computeCheckoutTotals(
+    effectiveRentalPrice,
+    booking.numberOfDays,
+    vatRate,
+    addons.map((a) => ({ pricePerDay: a.pricePerDayExclTax })),
+    { oneTimeFeesExclTax: shipFee + checkoutFeesSum + delayFee },
+  );
 
   const headerActions = (
     <div className="flex flex-wrap items-center gap-2">
@@ -315,13 +335,14 @@ export function BookingDetailView({ booking, editActions, cancellation }: Props)
             </BookingDetailSection>
           ) : null}
 
-          {booking.kind === "DIRECT" && booking.addonsJson ? (
+          {booking.kind === "DIRECT" ? (
             <BookingDetailSection
-              icon={Receipt}
-              title="الإضافات والرسوم"
-              description="لقطة الأسعار عند إنشاء الحجز"
+              id="attachments"
+              icon={Package}
+              title="المرفقات"
+              description="صور الهوية / الجواز ورخصة القيادة المرفوعة عند الإتمام"
             >
-              <BookingAddonsSnapshot raw={booking.addonsJson} />
+              <BookingAttachmentsPanel largePreview {...kycAttachments} />
             </BookingDetailSection>
           ) : null}
 
@@ -385,19 +406,66 @@ export function BookingDetailView({ booking, editActions, cancellation }: Props)
                   </span>
                 </div>
               ) : null}
-
-
             </BookingDetailSection>
           ) : null}
 
           {booking.kind === "DIRECT" ? (
             <BookingDetailSection
-              id="attachments"
-              icon={Package}
-              title="المرفقات"
-              description="صور الهوية / الجواز ورخصة القيادة المرفوعة عند الإتمام"
+              icon={Receipt}
+              title="تفاصيل المبلغ"
+              description="لقطة تفصيل السعر عند إنشاء الحجز"
             >
-              <BookingAttachmentsPanel largePreview {...kycAttachments} />
+              <dl className="space-y-3">
+                <DetailRow
+                  label={`أجرة المركبة (${formatSarAmount(effectiveRentalPrice)} × ${booking.numberOfDays} ${booking.numberOfDays === 1 ? "يوم" : "أيام"})`}
+                  mono
+                >
+                  <SarAmountWithSymbol>{formatSarAmount(amountTotals.rentalExclTax)}</SarAmountWithSymbol>
+                </DetailRow>
+                {addons.map((a, i) => (
+                  <DetailRow key={`addon-${i}`} label={a.titleAr} mono>
+                    <SarAmountWithSymbol>{formatSarAmount(a.lineTotalExclTax)}</SarAmountWithSymbol>
+                  </DetailRow>
+                ))}
+                {interCityShipping ? (
+                  <DetailRow label={interCityShipping.labelAr} mono>
+                    <SarAmountWithSymbol>{formatSarAmount(shipFee)}</SarAmountWithSymbol>
+                  </DetailRow>
+                ) : null}
+                {checkoutOneTimeFees.map((f) => (
+                  <DetailRow key={f.slug} label={f.labelAr} mono>
+                    <SarAmountWithSymbol>{formatSarAmount(f.feeExclVatSar)}</SarAmountWithSymbol>
+                  </DetailRow>
+                ))}
+                {delayPenalty ? (
+                  <DetailRow label={delayPenalty.labelAr} mono>
+                    <SarAmountWithSymbol
+                      amountClassName="text-rose-700"
+                      glyphClassName="text-rose-700/70"
+                    >
+                      {formatSarAmount(delayFee)}
+                    </SarAmountWithSymbol>
+                  </DetailRow>
+                ) : null}
+              </dl>
+
+              <div className="mt-4 space-y-2.5 border-t border-outline-variant/20 pt-4">
+                <DetailRow label="الإجمالي غير شامل الضريبة" mono>
+                  <SarAmountWithSymbol>{formatSarAmount(amountTotals.subtotalExclTax)}</SarAmountWithSymbol>
+                </DetailRow>
+                <DetailRow label={`ضريبة القيمة المضافة (${vatRate}%)`} mono>
+                  <SarAmountWithSymbol>{formatSarAmount(amountTotals.vatAmount)}</SarAmountWithSymbol>
+                </DetailRow>
+                <DetailRow label="المجموع الكلي (شامل الضريبة)" mono>
+                  <SarAmountWithSymbol
+                    bold
+                    amountClassName="font-extrabold text-primary"
+                    glyphClassName="text-primary/70"
+                  >
+                    {formatSarAmount(amountTotals.totalInclTax)}
+                  </SarAmountWithSymbol>
+                </DetailRow>
+              </div>
             </BookingDetailSection>
           ) : null}
         </div>

@@ -8,12 +8,14 @@ import {
   Loader2,
   CreditCard,
   ChevronDown,
+  Wand2,
 } from "lucide-react";
 import {
   ADMIN_OFFICE_PAYMENT_METHODS,
   type BookingPaymentMethod,
 } from "@/lib/booking-payment-methods";
 import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
+import { formatSarAmount } from "@/lib/booking-checkout-pricing";
 
 const METHOD_ICONS: Partial<Record<BookingPaymentMethod, string>> = {
   CASH:      "💵",
@@ -29,9 +31,12 @@ const METHOD_ICONS: Partial<Record<BookingPaymentMethod, string>> = {
 export function BookingPaymentPanel({
   bookingId,
   paymentStatus,
+  fullAmountSar,
 }: {
   bookingId: number;
   paymentStatus: string;
+  /** المبلغ الكلي المتبقي على الحجز — يُستخدم لتعبئة الحقل بضغطة واحدة */
+  fullAmountSar?: number | null;
 }) {
   const [state, formAction, isPending] = useActionState(processBookingPayment, null);
   const [method, setMethod] = useState<BookingPaymentMethod>("CASH");
@@ -133,9 +138,24 @@ export function BookingPaymentPanel({
 
           {/* المبلغ */}
           <div>
-            <label htmlFor="pay-amount" className="mb-1.5 block text-sm font-bold text-on-surface">
-              المبلغ المدفوع (ر.س)
-            </label>
+            <div className="mb-1.5 flex items-center justify-between gap-2">
+              <label htmlFor="pay-amount" className="block text-sm font-bold text-on-surface">
+                المبلغ المدفوع (ر.س)
+              </label>
+              {fullAmountSar != null && fullAmountSar > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setAmountValue(String(fullAmountSar))}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary transition-colors hover:bg-primary/15"
+                >
+                  <Wand2 className="h-3.5 w-3.5" aria-hidden />
+                  كامل المبلغ
+                  <span dir="ltr" className="text-primary/70">
+                    ({formatSarAmount(fullAmountSar)})
+                  </span>
+                </button>
+              ) : null}
+            </div>
             <input
               type="number"
               id="pay-amount"
@@ -148,6 +168,12 @@ export function BookingPaymentPanel({
               placeholder="مثال: 850.00"
               className="w-full rounded-xl border border-outline-variant/40 bg-surface-container-lowest px-4 py-2.5 text-sm font-medium text-on-surface outline-none ring-primary/50 transition-all focus:border-primary focus:ring-2"
             />
+            {fullAmountSar != null && fullAmountSar > 0 && amountValue === String(fullAmountSar) ? (
+              <p className="mt-1.5 flex items-center gap-1 text-xs font-semibold text-primary">
+                <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
+                تم تعبئة كامل المبلغ المستحق
+              </p>
+            ) : null}
           </div>
 
           {/* الرقم المرجعي */}

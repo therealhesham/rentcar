@@ -6,8 +6,12 @@ import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { BookingFinanceOperationsPanel } from "@/components/admin/BookingFinanceOperationsPanel";
 import { BookingPaymentPanel } from "@/components/admin/BookingPaymentPanel";
 import { SarAmountWithSymbol } from "@/components/ui/SarAmountWithSymbol";
-import { formatSarAmount } from "@/lib/booking-checkout-pricing";
+import { computeCheckoutTotals, formatSarAmount } from "@/lib/booking-checkout-pricing";
 import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
+import {
+  parseBookingPricingSnapshot,
+  resolveBookingRentalPricePerDayExclTax,
+} from "@/lib/booking-pricing-snapshot";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +60,9 @@ export default async function BookingFinancePage({
       paymentReceivedBy: true,
       cancellationRefundAmountSar: true,
       balanceDueAtBranchSar: true,
+      numberOfDays: true,
+      addonsJson: true,
+      carModel: { select: { price: true, vatRatePercent: true } },
     },
   });
 
@@ -63,6 +70,26 @@ export default async function BookingFinancePage({
 
   const statusKey = booking.paymentStatus.trim().toUpperCase();
   const canPay    = statusKey !== "PAID" && statusKey !== "REFUNDED";
+
+  const { addons, interCityShipping, checkoutOneTimeFees, delayPenalty } =
+    parseBookingPricingSnapshot(booking.addonsJson);
+  const effectiveRentalPrice = booking.carModel
+    ? resolveBookingRentalPricePerDayExclTax(booking.carModel.price, booking.addonsJson)
+    : 0;
+  const oneTimeFeesExclTax =
+    (interCityShipping?.feeExclVatSar ?? 0) +
+    checkoutOneTimeFees.reduce((s, x) => s + x.feeExclVatSar, 0) +
+    (delayPenalty?.feeExclVatSar ?? 0);
+  const vatRate = booking.carModel?.vatRatePercent ?? 15;
+  const totals = computeCheckoutTotals(
+    effectiveRentalPrice,
+    booking.numberOfDays,
+    vatRate,
+    addons.map((a) => ({ pricePerDay: a.pricePerDayExclTax })),
+    { oneTimeFeesExclTax },
+  );
+  const totalAmountSar = totals.totalInclTax;
+  const remainingDueSar = Math.max(0, totalAmountSar - (booking.paidAmountSar ?? 0));
 
   return (
     <div className="mx-auto max-w-4xl space-y-8">
@@ -81,6 +108,7 @@ export default async function BookingFinancePage({
             <BookingPaymentPanel
               bookingId={id}
               paymentStatus={booking.paymentStatus}
+              fullAmountSar={remainingDueSar}
             />
           ) : null}
 
@@ -95,6 +123,39 @@ export default async function BookingFinancePage({
 
         {/* الشريط الجانبي */}
         <aside className="space-y-4">
+          {/* المبلغ الكلي */}
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#003749] to-[#00506b] p-5 shadow-sm">
+            <div
+              className="pointer-events-none absolute -left-8 -top-8 h-28 w-28 rounded-full bg-white/5"
+              aria-hidden
+            />
+            <p className="text-xs font-bold text-white/70">المبلغ الكلي للحجز</p>
+            <div className="mt-1.5">
+              <SarAmountWithSymbol
+                amountClassName="text-3xl font-black text-white"
+                glyphClassName="text-white/70"
+              >
+                {formatSarAmount(totalAmountSar)}
+              </SarAmountWithSymbol>
+            </div>
+            {remainingDueSar > 0 && canPay ? (
+              <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-amber-200">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-300" />
+                متبقٍ للتحصيل:{" "}
+                <SarAmountWithSymbol
+                  amountClassName="font-bold text-amber-200"
+                  glyphClassName="text-amber-200/70"
+                >
+                  {formatSarAmount(remainingDueSar)}
+                </SarAmountWithSymbol>
+              </p>
+            ) : (
+              <p className="mt-3 text-xs font-semibold text-emerald-200">
+                لا يوجد مبلغ متبقٍ للتحصيل
+              </p>
+            )}
+          </div>
+
           {/* ملخص الدفع */}
           <div className="rounded-2xl border border-outline-variant/30 bg-surface-container-lowest p-5 shadow-sm">
             <h3 className="mb-4 text-sm font-bold text-on-surface">ملخص الدفع</h3>
