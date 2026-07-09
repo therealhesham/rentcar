@@ -1,0 +1,298 @@
+<svg viewBox="0 0 1600 860" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="المدينة المنورة عند الغروب — المسجد النبوي وسيارات التأجير">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#eef6f8"/>
+      <stop offset="40%" stop-color="#fae9cd"/>
+      <stop offset="75%" stop-color="#f5d6a3"/>
+      <stop offset="100%" stop-color="#efc98f"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fff6e0"/>
+      <stop offset="55%" stop-color="#fae3b4"/>
+      <stop offset="100%" stop-color="#f2cd8f"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffe9b8" stop-opacity="0.75"/>
+      <stop offset="100%" stop-color="#ffe9b8" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="road" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3a5761"/>
+      <stop offset="100%" stop-color="#203d47"/>
+    </linearGradient>
+    <linearGradient id="domeG" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#55a077"/>
+      <stop offset="100%" stop-color="#2f6a4a"/>
+    </linearGradient>
+    <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f0e2bd"/>
+      <stop offset="100%" stop-color="#e2cc9d"/>
+    </linearGradient>
+
+    <g id="palm">
+      <path d="M0 0 C4 -30 -5 -62 2 -94 L9 -94 C3 -62 11 -30 8 0 Z" fill="#12424e"/>
+      <g fill="#12424e">
+        <path d="M6 -94 Q-26 -104 -46 -89 Q-22 -85 6 -90 Z"/>
+        <path d="M6 -94 Q-22 -122 -43 -118 Q-17 -104 6 -91 Z"/>
+        <path d="M6 -94 Q-2 -132 -15 -143 Q6 -124 10 -94 Z"/>
+        <path d="M8 -94 Q40 -104 58 -89 Q34 -85 8 -90 Z"/>
+        <path d="M8 -94 Q36 -122 56 -115 Q30 -104 8 -91 Z"/>
+        <path d="M8 -94 Q19 -130 34 -136 Q13 -119 6 -94 Z"/>
+      </g>
+      <circle cx="2" cy="-90" r="3" fill="#c9a356"/>
+      <circle cx="10" cy="-88" r="3" fill="#c9a356"/>
+    </g>
+
+    <!-- مئذنة المسجد النبوي -->
+    <g id="mA">
+      <path d="M-11 0 L-8 -240 L8 -240 L11 0 Z" fill="#f5e9d0"/>
+      <rect x="-13" y="-95" width="26" height="8" rx="2" fill="#dbb878"/>
+      <rect x="-13" y="-170" width="26" height="8" rx="2" fill="#dbb878"/>
+      <rect x="-16" y="-250" width="32" height="10" rx="3" fill="#dbb878"/>
+      <rect x="-6" y="-300" width="12" height="50" fill="#f5e9d0"/>
+      <rect x="-9" y="-306" width="18" height="7" rx="2" fill="#dbb878"/>
+      <path d="M-9 -306 L0 -346 L9 -306 Z" fill="url(#domeG)"/>
+      <circle cx="0" cy="-351" r="4" fill="#dbb878"/>
+      <g fill="#e9b95e">
+        <rect x="-3" y="-75" width="6" height="13" rx="2.5"/>
+        <rect x="-3" y="-140" width="6" height="13" rx="2.5"/>
+        <rect x="-3" y="-215" width="6" height="13" rx="2.5"/>
+        <rect x="-3" y="-292" width="6" height="11" rx="2.5"/>
+      </g>
+    </g>
+
+    <!-- مئذنة بيضاء -->
+    <g id="mW">
+      <path d="M-8 0 L-6 -175 L6 -175 L8 0 Z" fill="#fcf8ef"/>
+      <rect x="-11" y="-182" width="22" height="8" rx="2" fill="#dbb878"/>
+      <rect x="-4" y="-215" width="8" height="33" fill="#fcf8ef"/>
+      <path d="M-8 -215 Q0 -242 8 -215 Z" fill="#fcf8ef"/>
+      <circle cx="0" cy="-244" r="3" fill="#dbb878"/>
+      <rect x="-2.5" y="-130" width="5" height="10" rx="2" fill="#e9b95e"/>
+      <rect x="-2.5" y="-80" width="5" height="10" rx="2" fill="#e9b95e"/>
+    </g>
+
+    <!-- مظلة ساحة المسجد -->
+    <g id="umbrella">
+      <rect x="-2.5" y="-42" width="5" height="42" fill="#b99968"/>
+      <path d="M-38 -62 L38 -62 L26 -42 L-26 -42 Z" fill="#fdfbf6"/>
+      <path d="M-38 -62 L38 -62 L26 -42 L-26 -42 Z" stroke="#e3d3ae" stroke-width="2"/>
+      <path d="M0 -62 L0 -42 M-19 -62 L-13 -42 M19 -62 L13 -42" stroke="#e3d3ae" stroke-width="1.5"/>
+    </g>
+
+    <!-- عمود إنارة -->
+    <g id="lamp">
+      <rect x="-3" y="-100" width="6" height="100" rx="2" fill="#2b4750"/>
+      <path d="M-1 -100 Q-1 -114 16 -114 L20 -114" stroke="#2b4750" stroke-width="5" fill="none"/>
+      <circle cx="22" cy="-114" r="6" fill="#ffd98f"/>
+      <circle cx="22" cy="-114" r="14" fill="#ffd98f" opacity="0.25"/>
+    </g>
+  </defs>
+
+  <!-- ═══ السماء ═══ -->
+  <rect x="0" y="0" width="1600" height="580" fill="url(#sky)"/>
+  <circle cx="490" cy="225" r="82" fill="url(#sun)"/>
+  <circle cx="490" cy="225" r="112" stroke="#eec48b" stroke-width="2" stroke-dasharray="2 12" opacity="0.4"/>
+
+  <!-- سحب ممدودة -->
+  <g opacity="0.65">
+    <ellipse cx="270" cy="120" rx="140" ry="16" fill="#f6d6a8"/>
+    <ellipse cx="360" cy="142" rx="90" ry="11" fill="#efc490"/>
+    <ellipse cx="1020" cy="100" rx="170" ry="18" fill="#f6d6a8"/>
+    <ellipse cx="1130" cy="126" rx="110" ry="12" fill="#efc490"/>
+    <ellipse cx="1430" cy="185" rx="120" ry="14" fill="#f6d6a8"/>
+    <ellipse cx="690" cy="70" rx="100" ry="11" fill="#fbe5c2"/>
+    <ellipse cx="820" cy="165" rx="70" ry="8" fill="#efc490" opacity="0.7"/>
+  </g>
+
+  <!-- طيور -->
+  <g stroke="#7a5c46" stroke-width="3" stroke-linecap="round" opacity="0.5">
+    <path d="M880 195 q10 -10 20 0 q10 -10 20 0"/>
+    <path d="M960 165 q8 -8 16 0 q8 -8 16 0"/>
+    <path d="M300 230 q8 -8 16 0 q8 -8 16 0"/>
+  </g>
+
+  <!-- ═══ الجبال ═══ -->
+  <path d="M-20 470 L140 265 L250 330 L350 215 L455 305 L555 470 Z" fill="#b08a6d" opacity="0.4"/>
+  <path d="M-20 470 L80 345 L185 395 L295 255 L390 345 L470 330 L575 470 Z" fill="#8a6b52" opacity="0.75"/>
+
+  <!-- ═══ أفق المدينة بنوافذ مضيئة ═══ -->
+  <g fill="#a3846a" opacity="0.5">
+    <rect x="0" y="395" width="85" height="75"/>
+    <rect x="95" y="415" width="65" height="55"/>
+    <rect x="420" y="405" width="75" height="65"/>
+    <rect x="505" y="385" width="55" height="85"/>
+    <rect x="1185" y="400" width="65" height="70"/>
+    <rect x="1545" y="392" width="55" height="78"/>
+    <rect x="1470" y="418" width="70" height="52"/>
+  </g>
+  <g fill="#ffd98f" opacity="0.8">
+    <rect x="14" y="408" width="7" height="9"/><rect x="34" y="408" width="7" height="9"/>
+    <rect x="54" y="422" width="7" height="9"/><rect x="14" y="436" width="7" height="9"/>
+    <rect x="110" y="426" width="6" height="8"/><rect x="130" y="440" width="6" height="8"/>
+    <rect x="435" y="418" width="6" height="8"/><rect x="455" y="432" width="6" height="8"/>
+    <rect x="518" y="398" width="6" height="8"/><rect x="536" y="412" width="6" height="8"/>
+    <rect x="518" y="428" width="6" height="8"/>
+    <rect x="1198" y="412" width="6" height="8"/><rect x="1218" y="426" width="6" height="8"/>
+    <rect x="1558" y="404" width="6" height="8"/><rect x="1576" y="420" width="6" height="8"/>
+    <rect x="1484" y="430" width="6" height="8"/>
+  </g>
+
+  <!-- ═══ توهج إضاءة المسجد ═══ -->
+  <ellipse cx="870" cy="420" rx="420" ry="170" fill="url(#glow)"/>
+
+  <!-- ═══ المسجد النبوي ═══ -->
+  <g>
+    <!-- السور الخارجي بأقواس -->
+    <rect x="575" y="418" width="590" height="52" fill="#f6ecd6"/>
+    <rect x="575" y="418" width="590" height="7" fill="#dbb878" opacity="0.6"/>
+    <g fill="#e9b95e" opacity="0.7">
+      <path d="M600 462 L600 438 Q608 429 616 438 L616 462 Z"/>
+      <path d="M636 462 L636 438 Q644 429 652 438 L652 462 Z"/>
+      <path d="M672 462 L672 438 Q680 429 688 438 L688 462 Z"/>
+      <path d="M708 462 L708 438 Q716 429 724 438 L724 462 Z"/>
+      <path d="M744 462 L744 438 Q752 429 760 438 L760 462 Z"/>
+      <path d="M980 462 L980 438 Q988 429 996 438 L996 462 Z"/>
+      <path d="M1016 462 L1016 438 Q1024 429 1032 438 L1032 462 Z"/>
+      <path d="M1052 462 L1052 438 Q1060 429 1068 438 L1068 462 Z"/>
+      <path d="M1088 462 L1088 438 Q1096 429 1104 438 L1104 462 Z"/>
+      <path d="M1124 462 L1124 438 Q1132 429 1140 438 L1140 462 Z"/>
+    </g>
+    <!-- بوابة رئيسية -->
+    <rect x="798" y="398" width="144" height="72" fill="#f6ecd6"/>
+    <rect x="798" y="398" width="144" height="8" fill="#dbb878" opacity="0.6"/>
+    <path d="M842 470 L842 428 Q870 404 898 428 L898 470 Z" fill="#c9a356"/>
+    <path d="M850 470 L850 432 Q870 412 890 432 L890 470 Z" fill="#8a6b3a"/>
+    <!-- قاعة الصلاة -->
+    <rect x="640" y="358" width="460" height="60" fill="#f8efd9"/>
+    <rect x="640" y="358" width="460" height="7" fill="#dbb878" opacity="0.5"/>
+    <path d="M690 358 Q708 332 726 358 Z" fill="#fdfbf6"/>
+    <path d="M1014 358 Q1032 332 1050 358 Z" fill="#fdfbf6"/>
+    <!-- القبة الخضراء -->
+    <rect x="818" y="300" width="104" height="58" fill="#f8efd9"/>
+    <rect x="818" y="300" width="104" height="7" fill="#dbb878" opacity="0.5"/>
+    <path d="M814 310 C814 244 838 222 870 218 C902 222 926 244 926 310 Z" fill="url(#domeG)"/>
+    <path d="M826 300 C826 254 846 234 870 230" stroke="#7fc39a" stroke-width="3" opacity="0.55" fill="none"/>
+    <rect x="868" y="194" width="4" height="24" fill="#2f5c42"/>
+    <circle cx="870" cy="189" r="5" fill="#dbb878"/>
+    <!-- المآذن -->
+    <use href="#mA" transform="translate(608 470)"/>
+    <use href="#mA" transform="translate(728 470) scale(0.88)"/>
+    <use href="#mA" transform="translate(1012 470) scale(0.88)"/>
+    <use href="#mA" transform="translate(1132 470)"/>
+    <!-- مظلات الساحة -->
+    <use href="#umbrella" transform="translate(660 512)"/>
+    <use href="#umbrella" transform="translate(756 516) scale(0.92)"/>
+    <use href="#umbrella" transform="translate(984 516) scale(0.92)"/>
+    <use href="#umbrella" transform="translate(1080 512)"/>
+  </g>
+
+  <!-- ═══ المسجد الأبيض ═══ -->
+  <g>
+    <rect x="1265" y="404" width="315" height="66" fill="#fcf8ef"/>
+    <rect x="1265" y="404" width="315" height="6" fill="#dbb878" opacity="0.5"/>
+    <path d="M1368 404 C1368 350 1392 333 1423 329 C1454 333 1478 350 1478 404 Z" fill="#fdfbf6"/>
+    <path d="M1380 404 C1380 362 1398 344 1423 340" stroke="#e8d8b2" stroke-width="2.5" opacity="0.7" fill="none"/>
+    <circle cx="1423" cy="323" r="4" fill="#dbb878"/>
+    <path d="M1303 404 Q1318 382 1333 404 Z" fill="#fdfbf6"/>
+    <path d="M1513 404 Q1528 382 1543 404 Z" fill="#fdfbf6"/>
+    <g fill="#e9b95e" opacity="0.55">
+      <path d="M1310 464 L1310 436 Q1318 428 1326 436 L1326 464 Z"/>
+      <path d="M1348 464 L1348 436 Q1356 428 1364 436 L1364 464 Z"/>
+      <path d="M1482 464 L1482 436 Q1490 428 1498 436 L1498 464 Z"/>
+      <path d="M1520 464 L1520 436 Q1528 428 1536 436 L1536 464 Z"/>
+    </g>
+    <use href="#mW" transform="translate(1285 470)"/>
+    <use href="#mW" transform="translate(1560 470)"/>
+  </g>
+
+  <!-- ═══ الساحة والأرض ═══ -->
+  <rect x="0" y="470" width="1600" height="150" fill="url(#ground)"/>
+  <g stroke="#d9c39a" stroke-width="1.5" opacity="0.6">
+    <path d="M0 505 H1600"/>
+    <path d="M0 545 H1600"/>
+    <path d="M0 585 H1600"/>
+  </g>
+
+  <!-- شريط أخضر (جزيرة وسطى) -->
+  <path d="M0 596 Q400 580 800 592 Q1200 604 1600 590 L1600 632 Q1200 646 800 634 Q400 622 0 638 Z" fill="#9db284" opacity="0.5"/>
+
+  <!-- نخيل الجزيرة -->
+  <use href="#palm" transform="translate(120 622) scale(1.2)"/>
+  <use href="#palm" transform="translate(255 628) scale(1.05)"/>
+  <use href="#palm" transform="translate(390 624) scale(1.25)"/>
+  <use href="#palm" transform="translate(1195 630) scale(-1.1 1.1)"/>
+  <use href="#palm" transform="translate(1330 624) scale(-1.2 1.2)"/>
+  <use href="#palm" transform="translate(1470 630) scale(-1 1)"/>
+
+  <!-- أعمدة إنارة -->
+  <use href="#lamp" transform="translate(560 626)"/>
+  <use href="#lamp" transform="translate(1120 630) scale(-1 1)"/>
+
+  <!-- ═══ الطريق ═══ -->
+  <path d="M0 660 C320 622 640 632 960 662 C1240 688 1460 682 1600 660 L1600 860 L0 860 Z" fill="url(#road)"/>
+  <path d="M0 646 C320 608 640 618 960 648 C1240 674 1460 668 1600 646 L1600 660 C1460 682 1240 688 960 662 C640 632 320 622 0 660 Z" fill="#e0cda4"/>
+  <path d="M0 745 C330 712 660 720 950 746 C1230 770 1440 764 1600 744" stroke="#f8eed9" stroke-width="4" stroke-dasharray="36 30" fill="none" opacity="0.6"/>
+  <path d="M1180 860 Q1310 772 1580 754" stroke="#f8eed9" stroke-width="3" stroke-dasharray="6 18" fill="none" opacity="0.3"/>
+  <path d="M1290 860 Q1395 802 1600 790" stroke="#14303a" stroke-width="10" fill="none" opacity="0.25"/>
+  <path d="M120 860 Q220 810 420 796" stroke="#14303a" stroke-width="8" fill="none" opacity="0.18"/>
+
+  <!-- ═══ السيارتان ═══ -->
+  <!-- دفع رباعي غامق -->
+  <g transform="translate(545 802) scale(1.2)">
+    <ellipse cx="124" cy="5" rx="134" ry="12" fill="#0f2830" opacity="0.3"/>
+    <path d="M10 0 Q0 -2 0 -14 L0 -34 Q0 -42 12 -44 L28 -46 L38 -80 Q40 -86 50 -86 L172 -86 Q182 -86 186 -80 L198 -48 L232 -44 Q246 -42 246 -30 L246 -12 Q246 0 236 0 Z" fill="#1d3a44"/>
+    <path d="M38 -80 Q40 -86 50 -86 L172 -86 Q182 -86 186 -80" stroke="#f3cf8e" stroke-width="2.5" fill="none" opacity="0.8"/>
+    <rect x="42" y="-92" width="140" height="5" rx="2.5" fill="#0f2830"/>
+    <path d="M44 -50 L53 -78 L110 -78 L110 -50 Z" fill="#a9c0c9"/>
+    <path d="M118 -78 L166 -78 L177 -50 L118 -50 Z" fill="#a9c0c9"/>
+    <rect x="112" y="-80" width="4" height="32" fill="#1d3a44"/>
+    <rect x="180" y="-56" width="12" height="5" rx="2.5" fill="#0f2830"/>
+    <rect x="120" y="-42" width="14" height="3.5" rx="1.75" fill="#0f2830"/>
+    <rect x="58" y="-42" width="14" height="3.5" rx="1.75" fill="#0f2830"/>
+    <rect x="10" y="-12" width="228" height="3" fill="#dbb878" opacity="0.4"/>
+    <rect x="236" y="-40" width="10" height="10" rx="2" fill="#ffd98f"/>
+    <rect x="0" y="-38" width="7" height="9" rx="2" fill="#c96e5a"/>
+    <g stroke="#0f2830" stroke-width="2" opacity="0.6">
+      <path d="M114 -46 L114 -6"/>
+      <path d="M180 -46 L182 -6"/>
+    </g>
+    <circle cx="62" cy="-2" r="25" fill="#10242b"/>
+    <circle cx="62" cy="-2" r="12" fill="#cfd6d9"/>
+    <circle cx="62" cy="-2" r="4" fill="#5a6b72"/>
+    <circle cx="192" cy="-2" r="25" fill="#10242b"/>
+    <circle cx="192" cy="-2" r="12" fill="#cfd6d9"/>
+    <circle cx="192" cy="-2" r="4" fill="#5a6b72"/>
+  </g>
+  <!-- سيدان فضية -->
+  <g transform="translate(838 828) scale(1.2)">
+    <ellipse cx="115" cy="5" rx="124" ry="11" fill="#0f2830" opacity="0.3"/>
+    <path d="M8 0 Q0 -2 0 -12 Q0 -26 14 -30 L40 -34 Q62 -60 94 -62 L142 -62 Q168 -60 188 -36 L216 -30 Q230 -26 230 -12 Q230 0 220 0 Z" fill="#d8dde1"/>
+    <path d="M40 -34 Q62 -60 94 -62 L142 -62 Q168 -60 188 -36" stroke="#fff0d2" stroke-width="2.5" fill="none" opacity="0.9"/>
+    <path d="M52 -36 L66 -56 Q68 -58 74 -58 L106 -58 L106 -36 Z" fill="#46626d"/>
+    <path d="M114 -58 L140 -58 Q152 -56 168 -38 L114 -38 Z" fill="#46626d"/>
+    <rect x="168" y="-38" width="11" height="4.5" rx="2.25" fill="#9aa5ab"/>
+    <rect x="118" y="-32" width="13" height="3" rx="1.5" fill="#9aa5ab"/>
+    <rect x="62" y="-32" width="13" height="3" rx="1.5" fill="#9aa5ab"/>
+    <rect x="8" y="-10" width="214" height="2.5" fill="#b9c2c8"/>
+    <rect x="220" y="-28" width="9" height="8" rx="2" fill="#ffd98f"/>
+    <rect x="0" y="-26" width="6" height="8" rx="2" fill="#c96e5a"/>
+    <path d="M108 -36 L108 -6" stroke="#b3bcc2" stroke-width="2" opacity="0.8"/>
+    <circle cx="56" cy="-2" r="22" fill="#10242b"/>
+    <circle cx="56" cy="-2" r="11" fill="#e4e8ea"/>
+    <circle cx="56" cy="-2" r="3.5" fill="#7c878d"/>
+    <circle cx="184" cy="-2" r="22" fill="#10242b"/>
+    <circle cx="184" cy="-2" r="11" fill="#e4e8ea"/>
+    <circle cx="184" cy="-2" r="3.5" fill="#7c878d"/>
+  </g>
+
+  <!-- دبوس موقع -->
+  <g transform="translate(826 694)">
+    <path d="M0 0 C-4 -8 -17 -19 -17 -32 A17 17 0 1 1 17 -32 C17 -19 4 -8 0 0 Z" fill="#dbb878"/>
+    <circle cx="0" cy="-32" r="8" fill="#fdfbf6"/>
+    <circle cx="0" cy="-32" r="3.2" fill="#0f3d47"/>
+  </g>
+
+  <!-- لمعات -->
+  <path d="M1520 738 L1525 751 L1538 756 L1525 761 L1520 774 L1515 761 L1502 756 L1515 751 Z" fill="#dbb878" opacity="0.7"/>
+  <path d="M150 700 L154 710 L164 714 L154 718 L150 728 L146 718 L136 714 L146 710 Z" fill="#f3cf8e" opacity="0.6"/>
+</svg>

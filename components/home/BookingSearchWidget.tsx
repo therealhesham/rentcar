@@ -414,6 +414,22 @@ export function BookingSearchWidget({
       ? pickupBranchEffective
       : returnBranch;
 
+  /* مواعيد الفرع — لعرض الأوقات المسموح بها فقط في منتقي الوقت */
+  const pickupTimeBranchSchedule = useMemo(
+    () =>
+      mode === "pickup" && pickupBranchEffective
+        ? lookupBranchOpeningSchedule(dateCities, pickupBranchEffective)
+        : null,
+    [mode, pickupBranchEffective, dateCities],
+  );
+  const dropoffTimeBranchSchedule = useMemo(
+    () =>
+      returnBranchEffective
+        ? lookupBranchOpeningSchedule(dateCities, returnBranchEffective)
+        : null,
+    [returnBranchEffective, dateCities],
+  );
+
   const freshRebookLocationSummaryAr = useMemo(() => {
     if (!isFreshRebookFlow) return "";
     if (mode === "delivery") {
@@ -1128,7 +1144,7 @@ export function BookingSearchWidget({
                       <span className="text-[13px] font-medium text-[#aaa08e]">{t("selectDate")}</span>
                     )}
                     <ChevronDown
-                      className={`absolute start-3 top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${dateRangeOpen && dateRangeAnchor === "pickup" ? "rotate-180" : ""}`}
+                      className={`absolute end-3 top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${dateRangeOpen && dateRangeAnchor === "pickup" ? "rotate-180" : ""}`}
                       aria-hidden
                     />
                   </button>
@@ -1154,7 +1170,7 @@ export function BookingSearchWidget({
                       {pickupTimeDraft}
                     </span>
                     <ChevronDown
-                      className={`absolute start-3 top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${pickupTimeOpen ? "rotate-180" : ""}`}
+                      className={`absolute end-3 top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${pickupTimeOpen ? "rotate-180" : ""}`}
                       aria-hidden
                     />
                   </button>
@@ -1163,11 +1179,13 @@ export function BookingSearchWidget({
                     onClose={() => setPickupTimeOpen(false)}
                     label={t("pickUpTime")}
                     time={pickupTimeDraft}
+                    schedule={pickupTimeBranchSchedule}
+                    dateDdMmYy={pickupDateDraft}
                     onConfirm={(hm) => {
                       applyPickupTime(hm);
                       setPickupTimeOpen(false);
                       setTimeout(() => {
-                        if (rental === "daily") {
+                        if (rental === "daily" && !dropoffDateDraft) {
                           dropoffDateRef.current?.focus();
                           toggleDateRange("dropoff");
                         } else {
@@ -1198,7 +1216,7 @@ export function BookingSearchWidget({
                       <span className="text-[13px] font-medium text-[#aaa08e]">{t("selectDate")}</span>
                     )}
                     <ChevronDown
-                      className={`absolute start-3 top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${dateRangeOpen && dateRangeAnchor === "dropoff" ? "rotate-180" : ""}`}
+                      className={`absolute end-3 top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${dateRangeOpen && dateRangeAnchor === "dropoff" ? "rotate-180" : ""}`}
                       aria-hidden
                     />
                   </button>
@@ -1242,7 +1260,7 @@ export function BookingSearchWidget({
                       {dropoffTimeDraft}
                     </span>
                     <ChevronDown
-                      className={`absolute start-3 top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${dropoffTimeOpen ? "rotate-180" : ""}`}
+                      className={`absolute end-3 top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${dropoffTimeOpen ? "rotate-180" : ""}`}
                       aria-hidden
                     />
                   </button>
@@ -1251,6 +1269,8 @@ export function BookingSearchWidget({
                     onClose={() => setDropoffTimeOpen(false)}
                     label="وقت التسليم"
                     time={dropoffTimeDraft}
+                    schedule={dropoffTimeBranchSchedule}
+                    dateDdMmYy={dropoffDateDraft}
                     onConfirm={applyDropoffTime}
                     anchorRef={dropoffTimeRef}
                   />
@@ -1516,7 +1536,7 @@ export function BookingSearchWidget({
                       </button>
                     )}
                   </span>
-                  <ChevronDown className={`absolute start-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${pickupLocOpen ? "rotate-180" : ""}`} aria-hidden />
+                  <ChevronDown className={`absolute end-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${pickupLocOpen ? "rotate-180" : ""}`} aria-hidden />
                 </div>
                 <LocationPickerPopover
                   isOpen={pickupLocOpen}
@@ -1616,7 +1636,7 @@ export function BookingSearchWidget({
                         </button>
                       )}
                     </span>
-                    <ChevronDown className={`absolute start-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${returnLocOpen ? "rotate-180" : ""}`} aria-hidden />
+                    <ChevronDown className={`absolute end-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${returnLocOpen ? "rotate-180" : ""}`} aria-hidden />
                   </div>
                   <LocationPickerPopover
                     isOpen={returnLocOpen}
@@ -1690,7 +1710,7 @@ export function BookingSearchWidget({
                     <span className="text-[13px] font-medium text-[#aaa08e]">{t("selectDate")}</span>
                   )}
                   <ChevronDown
-                    className={`absolute start-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${(rental === "daily" ? dateRangeOpen && dateRangeAnchor === "pickup" : pickupDateOpen) ? "rotate-180" : ""}`}
+                    className={`absolute end-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${(rental === "daily" ? dateRangeOpen && dateRangeAnchor === "pickup" : pickupDateOpen) ? "rotate-180" : ""}`}
                     aria-hidden
                   />
                 </button>
@@ -1738,7 +1758,7 @@ export function BookingSearchWidget({
                     {pickupTimeDraft}
                   </span>
                   <ChevronDown
-                    className={`absolute start-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${pickupTimeOpen ? "rotate-180" : ""}`}
+                    className={`absolute end-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${pickupTimeOpen ? "rotate-180" : ""}`}
                     aria-hidden
                   />
                 </button>
@@ -1747,11 +1767,13 @@ export function BookingSearchWidget({
                   onClose={() => setPickupTimeOpen(false)}
                   label={t("pickUpTime")}
                   time={pickupTimeDraft}
+                  schedule={pickupTimeBranchSchedule}
+                  dateDdMmYy={pickupDateDraft}
                   onConfirm={(hm) => {
                     applyPickupTime(hm);
                     setPickupTimeOpen(false);
                     setTimeout(() => {
-                      if (rental === "daily") {
+                      if (rental === "daily" && !dropoffDateDraft) {
                         dropoffDateRef.current?.focus();
                         toggleDateRange("dropoff");
                       } else {
@@ -1794,7 +1816,7 @@ export function BookingSearchWidget({
                     <span className="text-[13px] font-medium text-[#aaa08e]">{t("selectDate")}</span>
                   )}
                   <ChevronDown
-                    className={`absolute start-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${dateRangeOpen && dateRangeAnchor === "dropoff" ? "rotate-180" : ""}`}
+                    className={`absolute end-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${dateRangeOpen && dateRangeAnchor === "dropoff" ? "rotate-180" : ""}`}
                     aria-hidden
                   />
                 </button>
@@ -1805,20 +1827,13 @@ export function BookingSearchWidget({
                     onClose={() => setDateRangeOpen(false)}
                     startDateDdMmYy={pickupDateDraft}
                     endDateDdMmYy={dropoffDateDraft}
-                    onStartChange={(start) => {
-                      applyPickupDateOnly(start);
-                      setDateRangeOpen(false);
-                      setTimeout(() => {
-                        pickupTimeRef.current?.focus();
-                        setPickupTimeOpen(true);
-                      }, 150);
-                    }}
+                    onStartChange={applyPickupDateOnly}
                     onRangeChange={(start, end) => {
                       applyDateRange(start, end);
                       setDateRangeOpen(false);
                       setTimeout(() => {
-                        dropoffTimeRef.current?.focus();
-                        setDropoffTimeOpen(true);
+                        pickupTimeRef.current?.focus();
+                        setPickupTimeOpen(true);
                       }, 150);
                     }}
                     anchorRef={dateRangeActiveRef}
@@ -1854,7 +1869,7 @@ export function BookingSearchWidget({
                     {dropoffTimeDraft}
                   </span>
                   <ChevronDown
-                    className={`absolute start-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${dropoffTimeOpen ? "rotate-180" : ""}`}
+                    className={`absolute end-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${dropoffTimeOpen ? "rotate-180" : ""}`}
                     aria-hidden
                   />
                 </button>
@@ -1864,6 +1879,8 @@ export function BookingSearchWidget({
                   label={t("deliveryTime")}
                   time={dropoffTimeDraft}
                   readOnly={rental !== "daily"}
+                  schedule={dropoffTimeBranchSchedule}
+                  dateDdMmYy={dropoffDateDraft}
                   onConfirm={applyDropoffTime}
                   anchorRef={dropoffTimeRef}
                 />
