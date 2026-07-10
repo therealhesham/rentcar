@@ -21,7 +21,7 @@ export function Hero({ cities, tabFlags }: HeroProps) {
       {/* صورة واقعية للمسجد النبوي — مع طبقة تفتيح لوضوح المحتوى */}
       <div className="pointer-events-none absolute inset-0" aria-hidden>
         <Image
-          src="/hero-madinah.jpg"
+          src="/mol2-2-1.avif"
           alt=""
           fill
           priority
@@ -34,7 +34,7 @@ export function Hero({ cities, tabFlags }: HeroProps) {
 
       <div
         id="home-booking"
-        className="relative z-10 scroll-mt-24 px-3 pt-32 sm:px-6 sm:pt-48 lg:px-8"
+        className="relative z-10 scroll-mt-24 px-3 pt-64 sm:px-6 sm:pt-[26rem] lg:px-8 lg:pt-[30rem]"
         dir="rtl"
       >
         <div className="mx-auto w-full max-w-[72rem]">
@@ -45,7 +45,7 @@ export function Hero({ cities, tabFlags }: HeroProps) {
       </div>
 
       {/* مساحة تُظهر الرسمة أسفل كارت البحث */}
-      <div className="h-56 sm:h-72 lg:h-96" aria-hidden />
+      <div className="h-24 sm:h-28 lg:h-32" aria-hidden />
 
       {/* شريط ذهبي أسفل الهيرو */}
       <div className="relative h-1.5 w-full bg-[#dbb878]" aria-hidden />
