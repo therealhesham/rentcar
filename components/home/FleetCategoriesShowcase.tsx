@@ -47,9 +47,7 @@ export function FleetCategoriesShowcase({ tabs, cities }: Props) {
           <span className="mx-2 inline-block font-light text-[#003749]/35">|</span>
           {t("atTheRightTime")}
         </h2>
-        <p className="mt-4 max-w-2xl text-pretty text-[15px] font-medium leading-relaxed text-[#5c6570] sm:text-base">
-          {/* {t("description")} */}
-        </p>
+     
       </header>
 
       <div className="mb-8 flex justify-center sm:mb-12">
