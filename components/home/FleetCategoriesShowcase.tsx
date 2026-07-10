@@ -48,7 +48,7 @@ export function FleetCategoriesShowcase({ tabs, cities }: Props) {
           {t("atTheRightTime")}
         </h2>
         <p className="mt-4 max-w-2xl text-pretty text-[15px] font-medium leading-relaxed text-[#5c6570] sm:text-base">
-          {t("description")}
+          {/* {t("description")} */}
         </p>
       </header>
 
