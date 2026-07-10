@@ -43,16 +43,27 @@ export function FleetBanner() {
       />
 
       {/* dark overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-[#003749]/85 via-[#003749]/45 to-[#003749]/25" aria-hidden />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#003749]/90 via-[#003749]/50 to-[#003749]/30" aria-hidden />
+
+      {/* خطان ذهبيان رفيعان أعلى وأسفل البانر */}
+      <div className="absolute inset-x-0 top-0 z-10 h-px bg-gradient-to-r from-transparent via-[#dbb878]/70 to-transparent" aria-hidden />
+      <div className="absolute inset-x-0 bottom-0 z-10 h-px bg-gradient-to-r from-transparent via-[#dbb878]/70 to-transparent" aria-hidden />
 
       {/* content */}
       <div className="relative z-10 flex h-full flex-col items-center justify-center gap-4 px-4 text-center">
-        <h2 className="rounded-lg px-6 py-3 text-3xl font-black tracking-wide text-white drop-shadow-lg sm:text-4xl lg:text-5xl">
+        <div className="flex items-center justify-center gap-3">
+          <span className="h-px w-8 bg-gradient-to-l from-[#dbb878] to-transparent sm:w-12" aria-hidden />
+          <span className="text-[11px] font-bold uppercase tracking-[0.24em] text-[#dbb878]">
+            {t("ourFleet")}
+          </span>
+          <span className="h-px w-8 bg-gradient-to-r from-[#dbb878] to-transparent sm:w-12" aria-hidden />
+        </div>
+        <h2 className="text-balance text-3xl font-black tracking-wide text-white drop-shadow-lg sm:text-4xl lg:text-5xl">
           {t("browseOurFleet")}
         </h2>
         <Link
           href="/fleet"
-          className="rounded-full border-2 border-white/30 bg-white/10 px-8 py-3 text-sm font-extrabold text-white backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:border-white hover:bg-white hover:text-[#003749]"
+          className="mt-1 rounded-full bg-[#dbb878] px-8 py-3 text-sm font-extrabold text-[#1a1408] shadow-[0_12px_32px_-8px_rgba(219,184,120,0.55)] transition-all hover:-translate-y-0.5 hover:bg-[#e8c992] hover:shadow-[0_16px_40px_-8px_rgba(219,184,120,0.65)]"
         >
           {t("goToOurFleet")}
         </Link>

@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { useLocale, useTranslations } from "next-intl";
 import {
   BookingWidget,
   type BookingCityBranchesOption,
@@ -16,6 +17,10 @@ export type HeroProps = {
 };
 
 export function Hero({ cities, tabFlags }: HeroProps) {
+  const t = useTranslations("Hero");
+  const locale = useLocale();
+  const isRtl = locale === "ar";
+
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-[#eef6f8] via-white to-[#fdfbf6] pt-[4.5rem] sm:pt-24">
       {/* صورة واقعية للمسجد النبوي — مع طبقة تفتيح لوضوح المحتوى */}
@@ -29,16 +34,39 @@ export function Hero({ cities, tabFlags }: HeroProps) {
           sizes="100vw"
         />
         <div className="absolute inset-0 bg-white/45" />
+        <div className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-white/80 via-white/40 to-transparent sm:h-64" />
         <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-white/70 to-transparent" />
+      </div>
+
+      {/* عنوان الهيرو */}
+      <div
+        className="relative z-10 px-4 pt-6 text-center sm:pt-10"
+        dir={isRtl ? "rtl" : "ltr"}
+      >
+        <HeroEntrance>
+          <div className="mb-4 flex items-center justify-center gap-3">
+            <span className="h-px w-10 bg-gradient-to-l from-[#c9a356] to-transparent sm:w-16" />
+            <span className="text-[11px] font-bold uppercase tracking-[0.24em] text-[#a8874f]">
+              {t("description")}
+            </span>
+            <span className="h-px w-10 bg-gradient-to-r from-[#c9a356] to-transparent sm:w-16" />
+          </div>
+          <h1 className="text-balance text-3xl font-black tracking-tight text-[#003749] [text-shadow:0_1px_28px_rgba(255,255,255,0.9)] sm:text-5xl lg:text-6xl">
+            {t("title")}
+          </h1>
+          <p className="mx-auto mt-3 max-w-xl text-pretty text-sm font-semibold leading-relaxed text-[#0f3d47]/80 [text-shadow:0_1px_18px_rgba(255,255,255,0.9)] sm:mt-4 sm:text-lg">
+            {t("subtitle")}
+          </p>
+        </HeroEntrance>
       </div>
 
       <div
         id="home-booking"
-        className="relative z-10 scroll-mt-24 px-3 pt-64 sm:px-6 sm:pt-[26rem] lg:px-8 lg:pt-[30rem]"
+        className="relative z-10 scroll-mt-24 px-3 pt-36 sm:px-6 sm:pt-[16rem] lg:px-8 lg:pt-[19rem]"
         dir="rtl"
       >
         <div className="mx-auto w-full max-w-[72rem]">
-          <HeroEntrance>
+          <HeroEntrance delay={0.12}>
             <BookingWidget cities={cities} tabFlags={tabFlags} />
           </HeroEntrance>
         </div>
@@ -47,8 +75,11 @@ export function Hero({ cities, tabFlags }: HeroProps) {
       {/* مساحة تُظهر الرسمة أسفل كارت البحث */}
       <div className="h-24 sm:h-28 lg:h-32" aria-hidden />
 
-      {/* شريط ذهبي أسفل الهيرو */}
-      <div className="relative h-1.5 w-full bg-[#dbb878]" aria-hidden />
+      {/* خط ذهبي رفيع أسفل الهيرو */}
+      <div
+        className="relative h-[3px] w-full bg-gradient-to-r from-transparent via-[#dbb878] to-transparent"
+        aria-hidden
+      />
     </section>
   );
 }

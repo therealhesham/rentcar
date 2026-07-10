@@ -50,16 +50,19 @@ export async function BranchesShowcase() {
       <Reveal>
         <div className="mx-auto w-full max-w-screen-xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
           <div className="mb-10 text-center sm:mb-12">
-            <p className="text-sm font-extrabold tracking-widest text-[#dbb878]">
-              {t("eyebrow")}
-            </p>
-            <h2 className="mt-2 text-2xl font-black tracking-tight text-[#003749] sm:text-4xl">
+            <div className="mb-4 flex items-center justify-center gap-3">
+              <span className="h-px w-10 bg-gradient-to-l from-[#dbb878] to-transparent sm:w-14" aria-hidden />
+              <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#dbb878]">
+                {t("eyebrow")}
+              </p>
+              <span className="h-px w-10 bg-gradient-to-r from-[#dbb878] to-transparent sm:w-14" aria-hidden />
+            </div>
+            <h2 className="text-2xl font-black tracking-tight text-[#003749] sm:text-4xl">
               {t("title")}
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-sm font-medium leading-relaxed text-[#8a7752] sm:text-base">
               {t("subtitle")}
             </p>
-            <div className="mx-auto mt-5 h-1 w-16 rounded-full bg-gradient-to-r from-[#dbb878] to-[#c9a356]" aria-hidden />
           </div>
 
           <BranchesMapExplorer groups={groups} />
