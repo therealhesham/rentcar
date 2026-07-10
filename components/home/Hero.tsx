@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { Clock, MapPin, ShieldCheck, Zap } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import {
   BookingWidget,
@@ -72,8 +73,30 @@ export function Hero({ cities, tabFlags }: HeroProps) {
         </div>
       </div>
 
-      {/* مساحة تُظهر الرسمة أسفل كارت البحث */}
-      <div className="h-24 sm:h-28 lg:h-32" aria-hidden />
+      {/* مؤشرات الثقة أسفل كارت البحث */}
+      <div
+        className="relative z-10 flex flex-wrap items-center justify-center gap-2.5 px-4 pb-10 pt-8 sm:gap-4 sm:pb-14 sm:pt-10"
+        dir={isRtl ? "rtl" : "ltr"}
+      >
+        <HeroEntrance delay={0.24}>
+          <ul className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-4">
+            {[
+              { icon: Clock, label: t("trustSupport") },
+              { icon: MapPin, label: t("trustBranches") },
+              { icon: ShieldCheck, label: t("trustPricing") },
+              { icon: Zap, label: t("trustBooking") },
+            ].map(({ icon: Icon, label }) => (
+              <li
+                key={label}
+                className="flex items-center gap-2 rounded-full border border-white/60 bg-white/70 px-4 py-2 text-[12.5px] font-bold text-[#0f3d47] shadow-[0_4px_16px_-6px_rgba(15,61,71,0.15)] backdrop-blur-md sm:text-sm"
+              >
+                <Icon className="size-4 shrink-0 text-[#c9a356]" aria-hidden />
+                {label}
+              </li>
+            ))}
+          </ul>
+        </HeroEntrance>
+      </div>
 
       {/* خط ذهبي رفيع أسفل الهيرو */}
       <div

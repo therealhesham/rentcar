@@ -2,6 +2,7 @@ import {
   BranchesShowcase,
   FleetBanner,
   FleetCategories,
+  FloatingBookCta,
   Hero,
   HomeCtaSection,
   HomeScrollSections,
@@ -59,6 +60,7 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
           branches={<BranchesShowcase />}
           homeCta={<HomeCtaSection />}
         />
+        <FloatingBookCta />
       </main>
       <SiteFooter />
     </div>

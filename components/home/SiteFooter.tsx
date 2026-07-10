@@ -73,6 +73,10 @@ export function SiteFooter() {
 
   return (
     <footer className="w-full text-white" style={{ backgroundColor: FOOTER_BG }}>
+      <div
+        className="h-[3px] w-full bg-gradient-to-r from-transparent via-[#dbb878] to-transparent"
+        aria-hidden
+      />
       <div className="mx-auto grid max-w-screen-xl grid-cols-1 gap-10 px-5 py-10 text-center sm:px-8 sm:py-14 md:grid-cols-3 md:text-right">
         <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center md:justify-self-start">
           <div>
@@ -104,7 +108,7 @@ export function SiteFooter() {
                     className={`text-sm transition-colors ${
                       active
                         ? "font-bold"
-                        : "text-white hover:opacity-90"
+                        : "text-white hover:text-[#dbb878]"
                     }`}
                     style={
                       active
@@ -132,7 +136,7 @@ export function SiteFooter() {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={s.label}
-                className="text-neutral-900 transition-opacity hover:opacity-60"
+                className="text-neutral-900 transition-all hover:-translate-y-0.5 hover:text-[#a8874f]"
               >
                 <s.icon className="h-5 w-5" />
               </a>

@@ -2,6 +2,7 @@ export { BookingWidget } from "./BookingWidget";
 export { BranchesShowcase } from "./BranchesShowcase";
 export { FleetBanner } from "./FleetBanner";
 export { FleetCategories } from "./FleetCategories";
+export { FloatingBookCta } from "./FloatingBookCta";
 export { HomeCtaSection } from "./HomeCtaSection";
 export { PromoBanner } from "./PromoBanner";
 export { FleetShowcase } from "./FleetShowcase";

@@ -27,7 +27,11 @@
     "deliveryTime": "وقت التوصيل",
     "carType": "نوع السيارة",
     "pickupLocation": "موقع الاستلام",
-    "deliveryLocation": "موقع التوصيل"
+    "deliveryLocation": "موقع التوصيل",
+    "trustSupport": "دعم على مدار الساعة",
+    "trustBranches": "فروع في أنحاء المملكة",
+    "trustPricing": "أسعار واضحة بلا مفاجآت",
+    "trustBooking": "حجز فوري أونلاين"
   },
   "FeaturedCars": {
     "title": "سيارات مميزة",

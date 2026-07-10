@@ -17,7 +17,15 @@ type SiteNavProps = {
 
 export function SiteNav({ active = "home" }: SiteNavProps) {
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const t = useTranslations("SiteNav");
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const links: { href: string; key: NavKey; label: string }[] = [
     { href: "/", key: "home", label: t("home") },
@@ -44,7 +52,13 @@ export function SiteNav({ active = "home" }: SiteNavProps) {
 
   return (
     <nav className="fixed left-0 right-0 top-0 z-50">
-      <div className="w-full border-b border-neutral-200 bg-white/95 backdrop-blur">
+      <div
+        className={`w-full border-b bg-white/95 backdrop-blur transition-[box-shadow,border-color] duration-300 ${
+          scrolled
+            ? "border-transparent shadow-[0_8px_30px_-12px_rgba(0,55,73,0.22)]"
+            : "border-neutral-200 shadow-none"
+        }`}
+      >
         <div className="relative mx-auto flex h-16 w-full max-w-screen-xl items-center justify-between px-4 sm:h-24 sm:px-6">
           <Link href="/" aria-label="الصفحة الرئيسية" className="relative z-10">
             <Image

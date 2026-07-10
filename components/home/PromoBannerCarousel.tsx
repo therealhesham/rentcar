@@ -17,6 +17,11 @@ export function PromoBannerCarousel({ slides }: { slides: PromoBannerSlide[] }) 
     [slides.length],
   );
 
+  const stopTimer = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = null;
+  }, []);
+
   const resetTimer = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
@@ -32,6 +37,8 @@ export function PromoBannerCarousel({ slides }: { slides: PromoBannerSlide[] }) 
     };
   }, [slides.length, resetTimer]);
 
+  const touchStartX = useRef<number | null>(null);
+
   if (slides.length === 0) return null;
 
   const slide = slides[current];
@@ -43,6 +50,18 @@ export function PromoBannerCarousel({ slides }: { slides: PromoBannerSlide[] }) 
   function handleNext() {
     goTo(current + 1);
     resetTimer();
+  }
+
+  function handleTouchStart(e: React.TouchEvent) {
+    touchStartX.current = e.touches[0].clientX;
+  }
+  function handleTouchEnd(e: React.TouchEvent) {
+    if (touchStartX.current === null || slides.length < 2) return;
+    const delta = e.changedTouches[0].clientX - touchStartX.current;
+    touchStartX.current = null;
+    if (Math.abs(delta) < 40) return;
+    if (delta < 0) handleNext();
+    else handlePrev();
   }
 
   const img = (
@@ -57,7 +76,13 @@ export function PromoBannerCarousel({ slides }: { slides: PromoBannerSlide[] }) 
   );
 
   return (
-    <div className="relative select-none">
+    <div
+      className="relative select-none"
+      onMouseEnter={slides.length > 1 ? stopTimer : undefined}
+      onMouseLeave={slides.length > 1 ? resetTimer : undefined}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       <style>{`
         @keyframes promo-fade-in {
           from { opacity: 0; transform: translateX(24px); }

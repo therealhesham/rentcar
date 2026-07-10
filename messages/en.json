@@ -27,7 +27,11 @@
     "deliveryTime": "Delivery Time",
     "carType": "Car Type",
     "pickupLocation": "Pickup Location",
-    "deliveryLocation": "Delivery Location"
+    "deliveryLocation": "Delivery Location",
+    "trustSupport": "24/7 support",
+    "trustBranches": "Branches across the Kingdom",
+    "trustPricing": "Transparent pricing",
+    "trustBooking": "Instant online booking"
   },
   "FeaturedCars": {
     "title": "Featured Cars",
