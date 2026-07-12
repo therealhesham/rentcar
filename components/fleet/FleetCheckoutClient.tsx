@@ -28,6 +28,8 @@ import type { BookingWidgetTabFlags } from "@/lib/booking-widget-tabs";
 import { SarCurrencyGlyph } from "@/components/ui/SarCurrencyGlyph";
 import { CarUnavailableModal } from "@/components/fleet/CarUnavailableModal";
 import { BranchOutsideHoursModal } from "@/components/fleet/BranchOutsideHoursModal";
+import { RentalTermsModal } from "@/components/fleet/RentalTermsModal";
+import type { RentalTermDTO } from "@/lib/rental-terms-data";
 import {
   isBranchOutsideHoursBookingError,
   isDirectBookingCapacityMessage,
@@ -120,6 +122,8 @@ type Props = {
   editPrefill: FleetCheckoutEditPrefill | null;
   tabFlags?: BookingWidgetTabFlags | null;
   fleetUrlHydrate?: FleetSearchUrlHydrate | null;
+  /** الشروط والأحكام من قاعدة البيانات — تُعرض داخل نافذة منبثقة عند الضغط على الرابط */
+  rentalTerms?: RentalTermDTO[];
 };
 
 export function FleetCheckoutClient({
@@ -134,6 +138,7 @@ export function FleetCheckoutClient({
   editPrefill,
   tabFlags,
   fleetUrlHydrate,
+  rentalTerms = [],
 }: Props) {
   const sp = useSearchParams();
   const router = useRouter();
@@ -152,6 +157,7 @@ export function FleetCheckoutClient({
   const [branchHoursOpen, setBranchHoursOpen] = useState(false);
   const [branchHoursMessage, setBranchHoursMessage] = useState("");
   const [openAddonInfoId, setOpenAddonInfoId] = useState<number | null>(null);
+  const [termsOpen, setTermsOpen] = useState(false);
 
   /** واجهة: زرّان فقط (مواطن/مقيم معاً) + زائر؛ القيم المُرسَلة للخادم CITIZEN | RESIDENT تُشتق من أول رقم. */
   type IdDocUiKind = "SAUDI_ID" | "VISITOR";
@@ -1439,7 +1445,15 @@ export function FleetCheckoutClient({
                       <Check className="pointer-events-none absolute size-3.5 text-white opacity-0 transition-opacity peer-checked:opacity-100" />
                     </div>
                     <label htmlFor="terms" className="cursor-pointer text-[13px] font-semibold text-[#6b5a3b] select-none">
-                      أوافق على <Link href="/terms" className="text-[#dbb878] hover:underline" target="_blank">الشروط والأحكام</Link> وسياسة التأجير.
+                      أوافق على{" "}
+                      <button
+                        type="button"
+                        onClick={() => setTermsOpen(true)}
+                        className="text-[#dbb878] hover:underline"
+                      >
+                        الشروط والأحكام
+                      </button>{" "}
+                      وسياسة التأجير.
                     </label>
                   </div>
 
@@ -1746,6 +1760,11 @@ export function FleetCheckoutClient({
         onChangeTimes={() => {
           router.replace(`/fleet/checkout?modelId=${car.modelId}`);
         }}
+      />
+      <RentalTermsModal
+        open={termsOpen}
+        onClose={() => setTermsOpen(false)}
+        terms={rentalTerms}
       />
     </div>
   );

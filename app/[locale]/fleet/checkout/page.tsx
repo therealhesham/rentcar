@@ -8,6 +8,7 @@ import { e164ToLocalNine } from "@/lib/normalize-saudi-phone";
 import { getActiveRentalAddons } from "@/lib/rental-addon-data";
 import { getRentalPriceDisplayMode } from "@/lib/site-settings";
 import { getActiveInterCityShippingRules } from "@/lib/inter-city-shipping";
+import { getActiveRentalTerms } from "@/lib/rental-terms-data";
 import { getActiveCheckoutOneTimeFees } from "@/lib/checkout-one-time-fees";
 import { loadFleetCheckoutEditPrefill } from "@/lib/fleet-checkout-edit-prefill";
 import { buildFleetSearchUrlHydrate } from "@/lib/fleet-search-url-hydrate";
@@ -65,6 +66,7 @@ export default async function FleetCheckoutPage({
     interCityShippingRules,
     checkoutOneTimeFees,
     tabFlags,
+    rentalTerms,
   ] = await Promise.all([
     getCarModelForCheckout(modelId, {
       branchSlug: checkoutBranchSlug,
@@ -78,6 +80,7 @@ export default async function FleetCheckoutPage({
     getActiveInterCityShippingRules().catch(() => []),
     getActiveCheckoutOneTimeFees(locale).catch(() => []),
     getBookingWidgetTabFlags(),
+    getActiveRentalTerms(locale),
   ]);
 
   const fleetUrlHydrate = buildFleetSearchUrlHydrate(sp);
@@ -158,6 +161,7 @@ export default async function FleetCheckoutPage({
         editPrefill={editPrefill}
         tabFlags={tabFlags}
         fleetUrlHydrate={fleetUrlHydrate}
+        rentalTerms={rentalTerms}
       />
     </Suspense>
   );
