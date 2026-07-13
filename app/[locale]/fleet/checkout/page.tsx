@@ -1,6 +1,7 @@
 import { redirect } from "@/i18n/routing";
 import { Suspense } from "react";
 import { FleetCheckoutClient } from "@/components/fleet/FleetCheckoutClient";
+import { CarViewTracker } from "@/components/fleet/CarViewTracker";
 import { getCarModelForCheckout } from "@/lib/checkout-car-data";
 import { getActiveBranches, getActiveBookingCitiesWithBranches } from "@/lib/branch-data";
 import { getCustomerProfile } from "@/lib/customer-auth";
@@ -149,6 +150,7 @@ export default async function FleetCheckoutPage({
         </div>
       }
     >
+      <CarViewTracker carModelId={car.modelId} />
       <FleetCheckoutClient
         car={car}
         addons={addons}

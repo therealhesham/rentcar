@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 
-export type ActivityKind = "CUSTOMER_LOGIN" | "ADMIN_LOGIN" | "PAGE_VIEW";
+export type ActivityKind = "CUSTOMER_LOGIN" | "ADMIN_LOGIN" | "PAGE_VIEW" | "CAR_VIEW";
 
 /** استخراج IP ومتصفح الزائر من ترويسات الطلب الحالي (server action / route handler). */
 export async function currentRequestMeta(): Promise<{ ip: string | null; userAgent: string | null }> {
@@ -25,6 +25,7 @@ export async function logActivity(entry: {
   path?: string | null;
   actorLabel?: string | null;
   userId?: number | null;
+  carModelId?: number | null;
   ip?: string | null;
   userAgent?: string | null;
 }): Promise<void> {
@@ -35,6 +36,7 @@ export async function logActivity(entry: {
         path: entry.path?.slice(0, 512) ?? null,
         actorLabel: entry.actorLabel?.slice(0, 255) ?? null,
         userId: entry.userId ?? null,
+        carModelId: entry.carModelId ?? null,
         ip: entry.ip?.slice(0, 64) ?? null,
         userAgent: entry.userAgent?.slice(0, 512) ?? null,
       },

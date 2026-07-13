@@ -33,19 +33,22 @@ model RentalTerm {
 /// سجل النشاط — تسجيلات دخول العملاء والموظفين ومشاهدات الصفحات، يُعرض في /admin/logs.
 model ActivityLog {
   id         Int      @id @default(autoincrement())
-  /// CUSTOMER_LOGIN | ADMIN_LOGIN | PAGE_VIEW
+  /// CUSTOMER_LOGIN | ADMIN_LOGIN | PAGE_VIEW | CAR_VIEW
   kind       String   @db.VarChar(32)
   /// مسار الصفحة لمشاهدات الصفحات
   path       String?  @db.VarChar(512)
   /// وصف بواسطة — اسم/بريد الموظف أو جوال/بريد العميل
   actorLabel String?  @db.VarChar(255)
   userId     Int?
+  /// موديل السيارة لمشاهدات السيارات (CAR_VIEW)
+  carModelId Int?
   ip         String?  @db.VarChar(64)
   userAgent  String?  @db.VarChar(512)
   createdAt  DateTime @default(now())
 
   @@index([kind, createdAt])
   @@index([createdAt])
+  @@index([kind, carModelId])
 }
 
 /// حساب عميل على الموقع العام فقط (تسجيل / دخول / حجز). موظفو الإدارة في `AdminEmployee`.
