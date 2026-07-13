@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { currentRequestMeta, logActivity } from "@/lib/activity-log";
 import { setCustomerSessionCookie } from "@/lib/customer-auth";
 import { verifyAndConsumeCustomerLoginOtp } from "@/lib/customer-login-otp";
 
@@ -27,5 +28,12 @@ export async function POST(request: Request) {
   }
 
   await setCustomerSessionCookie(verified.userId);
+  const meta = await currentRequestMeta();
+  await logActivity({
+    kind: "CUSTOMER_LOGIN",
+    userId: verified.userId,
+    actorLabel: identifier,
+    ...meta,
+  });
   return NextResponse.json({ ok: true });
 }

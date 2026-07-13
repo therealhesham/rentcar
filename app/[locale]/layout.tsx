@@ -1,6 +1,7 @@
 import type { Viewport } from "next";
 import { Cairo } from "next/font/google";
 import { JsonLd } from "@/components/seo/JsonLd";
+import { PageViewTracker } from "@/components/shared/PageViewTracker";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
 import { notFound } from "next/navigation";
@@ -68,6 +69,7 @@ export default async function LocaleLayout({
           <JsonLd
             data={[organizationJsonLd(), webSiteJsonLd(), carRentalJsonLd()]}
           />
+          <PageViewTracker />
           {children}
         </NextIntlClientProvider>
       </body>

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import type { FuelType, Transmission } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 import { clearAdminSessionCookie, setAdminSessionCookie } from "@/lib/admin-auth";
+import { currentRequestMeta, logActivity } from "@/lib/activity-log";
 import { requireSuperAdminForAction } from "@/lib/admin-access";
 import { verifyPassword } from "@/lib/password";
 import { requireGalleryFolderSlug } from "@/lib/gallery-folder";
@@ -63,6 +64,12 @@ export async function loginAdmin(
       displayName: employee.name?.trim() || employee.email,
       permissions,
     });
+    const meta = await currentRequestMeta();
+    await logActivity({
+      kind: "ADMIN_LOGIN",
+      actorLabel: `${employee.name?.trim() || employee.email} <${employee.email}>`,
+      ...meta,
+    });
     return { ok: true };
   }
 
@@ -77,6 +84,12 @@ export async function loginAdmin(
       branchName: null,
       displayName: "مدير النظام",
       permissions: [],
+    });
+    const meta = await currentRequestMeta();
+    await logActivity({
+      kind: "ADMIN_LOGIN",
+      actorLabel: `مدير النظام <${email}>`,
+      ...meta,
     });
     return { ok: true };
   }

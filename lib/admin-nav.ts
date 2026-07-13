@@ -56,6 +56,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     items: [
       { href: "/admin", label: "لوحة التحكم", icon: "layout-dashboard", permission: "DASHBOARD" },
       { href: "/admin/statistics", label: "الإحصائيات", icon: "bar-chart-2", permission: "DASHBOARD" },
+      { href: "/admin/logs", label: "سجل النشاط", icon: "activity", permission: "DASHBOARD" },
       { href: "/admin/financials", label: "الإدارة المالية", icon: "badge-dollar", permission: "FINANCIALS" },
     ],
   },
