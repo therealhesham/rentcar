@@ -6,6 +6,7 @@ import {
   requireAdminForAction,
   requirePermissionForAction,
 } from "@/lib/admin-access";
+import { currentRequestMeta, logActivity } from "@/lib/activity-log";
 import { isBookingPaymentMethod } from "@/lib/booking-payment-methods";
 import { prisma } from "@/lib/prisma";
 
@@ -33,7 +34,6 @@ export async function processBookingRefund(
     return { ok: false, error: "يجب إدخال مبلغ استرداد صالح أكبر من صفر." };
   }
 
-  const isPartial = formData.get("isPartial") === "true";
   const externalRef = String(formData.get("externalRef") || "").trim();
 
   const booking = await prisma.bookingRequest.findUnique({
@@ -66,6 +66,9 @@ export async function processBookingRefund(
     };
   }
 
+  // حالة الدفع النهائية تُشتق من المبالغ لا من الفورم: تغطية كامل المدفوع = REFUNDED.
+  const fullyRefunded = newRefundTotal >= paid - REFUND_EPS;
+
   // قفل تفاؤلي (compare-and-swap): يُحدَّث السجل فقط إذا لم تتغيّر حالة الدفع
   // ولا قيمة الاسترداد منذ القراءة، لمنع الاسترداد المزدوج عند الطلبات المتزامنة.
   const res = await prisma.bookingRequest.updateMany({
@@ -75,7 +78,7 @@ export async function processBookingRefund(
       cancellationRefundAmountSar: booking.cancellationRefundAmountSar,
     },
     data: {
-      paymentStatus: isPartial ? "PARTIAL_REFUND" : "REFUNDED",
+      paymentStatus: fullyRefunded ? "REFUNDED" : "PARTIAL_REFUND",
       cancellationRefundAmountSar: newRefundTotal,
       cancellationRefundExternalRef: externalRef || "MOCK-FINANCE-REFUND",
     },
@@ -87,6 +90,16 @@ export async function processBookingRefund(
       error: "تعذّر تنفيذ الاسترداد — تم تحديث حالة الطلب من عملية أخرى. حدّث الصفحة وحاول مجدداً.",
     };
   }
+
+  const meta = await currentRequestMeta();
+  await logActivity({
+    kind: "BOOKING_REFUND",
+    path: `/admin/bookings/${bookingId}/finance`,
+    actorLabel: `${auth.session.displayName} — استرداد ${amount} ر.س`,
+    userId: auth.session.employeeId,
+    ip: meta.ip,
+    userAgent: meta.userAgent,
+  });
 
   revalidatePath("/admin/financials");
   revalidatePath(`/admin/bookings/${bookingId}`);
@@ -134,36 +147,71 @@ export async function processBookingPayment(
     return { ok: false, error: "تسجيل الدفع متاح للحجوزات المباشرة فقط." };
   }
   if (booking.paymentStatus === "PAID") {
-    if ((booking.balanceDueAtBranchSar ?? 0) <= 0) {
+    const balance = booking.balanceDueAtBranchSar ?? 0;
+    if (balance <= 0) {
       return { ok: false, error: "الحجز مدفوع مسبقاً ولا توجد دفعة متبقية." };
     }
-    
-    // Pay balance
-    const newPaidAmount = (booking.paidAmountSar ?? 0) + amount;
-    const newBalance = (booking.balanceDueAtBranchSar ?? 0) - amount;
+    if (amount > balance + REFUND_EPS) {
+      return {
+        ok: false,
+        error: `مبلغ الدفعة يتجاوز المتبقي المستحق (${balance} ر.س).`,
+      };
+    }
 
-    await prisma.bookingRequest.update({
-      where: { id: bookingId },
+    const newPaidAmount = (booking.paidAmountSar ?? 0) + amount;
+    const newBalance = Math.max(0, Math.round((balance - amount) * 100) / 100);
+
+    // قفل تفاؤلي: يُحدَّث السجل فقط إذا لم يتغيّر المتبقي منذ القراءة،
+    // لمنع تسجيل الدفعة مرتين عند الطلبات المتزامنة.
+    const res = await prisma.bookingRequest.updateMany({
+      where: {
+        id: bookingId,
+        paymentStatus: "PAID",
+        balanceDueAtBranchSar: booking.balanceDueAtBranchSar,
+      },
       data: {
         paidAmountSar: newPaidAmount,
-        balanceDueAtBranchSar: newBalance > 0 ? newBalance : 0,
-        // optionally update paymentMethod, but since they might be different, let's just record it.
+        balanceDueAtBranchSar: newBalance,
+        // لا نُغيّر paymentMethod — وسيلة دفعة الرصيد قد تختلف عن الدفعة الأصلية.
       },
     });
+    if (res.count === 0) {
+      return {
+        ok: false,
+        error: "تعذّر تسجيل الدفعة — تم تحديث الطلب من عملية أخرى. حدّث الصفحة وحاول مجدداً.",
+      };
+    }
   } else {
-    await prisma.bookingRequest.update({
-      where: { id: bookingId },
+    // قفل تفاؤلي: طلب واحد فقط يسجّل الدفعة الأولى.
+    const res = await prisma.bookingRequest.updateMany({
+      where: { id: bookingId, paymentStatus: { not: "PAID" } },
       data: {
         paymentStatus:    "PAID",
         paidAmountSar:    amount,
         paymentMethod:    rawMethod,
         paidAt:           new Date(),
-        ...(externalRef ? { cancellationRefundExternalRef: externalRef } : {}),
+        ...(externalRef ? { paymentExternalRef: externalRef } : {}),
         ...(receivedBy  ? { paymentReceivedBy: receivedBy }             : {}),
         balanceDueAtBranchSar: 0,
       },
     });
+    if (res.count === 0) {
+      return {
+        ok: false,
+        error: "تعذّر تسجيل الدفعة — الحجز مدفوع بالفعل من عملية أخرى. حدّث الصفحة.",
+      };
+    }
   }
+
+  const meta = await currentRequestMeta();
+  await logActivity({
+    kind: "BOOKING_PAYMENT",
+    path: `/admin/bookings/${bookingId}/finance`,
+    actorLabel: `${auth.session.displayName} — دفعة ${amount} ر.س (${rawMethod})`,
+    userId: auth.session.employeeId,
+    ip: meta.ip,
+    userAgent: meta.userAgent,
+  });
 
   revalidatePath("/admin/car-bookings");
   revalidatePath(`/admin/bookings/${bookingId}`);

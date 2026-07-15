@@ -33,7 +33,7 @@ model RentalTerm {
 /// سجل النشاط — تسجيلات دخول العملاء والموظفين ومشاهدات الصفحات، يُعرض في /admin/logs.
 model ActivityLog {
   id         Int      @id @default(autoincrement())
-  /// CUSTOMER_LOGIN | ADMIN_LOGIN | PAGE_VIEW | CAR_VIEW
+  /// CUSTOMER_LOGIN | ADMIN_LOGIN | PAGE_VIEW | CAR_VIEW | BOOKING_PAYMENT | BOOKING_REFUND
   kind       String   @db.VarChar(32)
   /// مسار الصفحة لمشاهدات الصفحات
   path       String?  @db.VarChar(512)
@@ -427,6 +427,8 @@ model BookingRequest {
   cancellationRefundAmountSar Float?
   /// مرجع من بوابة الاسترداد (أو محاكاة MOCK-… حتى ربط البوابات).
   cancellationRefundExternalRef String? @db.VarChar(128)
+  /// مرجع خارجي لعملية الدفع (رقم عملية الشبكة/التحويل) — يُدخله الموظف عند تسجيل الدفع يدوياً.
+  paymentExternalRef String? @db.VarChar(128)
   /// المبلغ الكامل المدفوع بالريال (شامل الضريبة) — يُحفظ لحظة تأكيد الدفع ولا يتغيّر بعدها.
   paidAmountSar Float?
   /// مبلغ مستحق يُحصَّل عند الفرع بعد تعديل/تمديد العميل لحجز مدفوع (فرق السعر). يطالب به الموظف عند تسليم/إرجاع السيارة.

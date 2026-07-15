@@ -58,6 +58,7 @@ export default async function BookingFinancePage({
       paidAmountSar: true,
       paidAt: true,
       paymentReceivedBy: true,
+      paymentExternalRef: true,
       cancellationRefundAmountSar: true,
       balanceDueAtBranchSar: true,
       numberOfDays: true,
@@ -188,6 +189,16 @@ export default async function BookingFinancePage({
                     <SarAmountWithSymbol>
                       {formatSarAmount(booking.paidAmountSar)}
                     </SarAmountWithSymbol>
+                  </dd>
+                </div>
+              ) : null}
+
+              {/* مرجع عملية الدفع */}
+              {booking.paymentExternalRef ? (
+                <div className="flex items-center justify-between gap-2">
+                  <dt className="font-medium text-on-surface-variant">مرجع الدفع</dt>
+                  <dd className="font-bold text-on-surface" dir="ltr">
+                    {booking.paymentExternalRef}
                   </dd>
                 </div>
               ) : null}

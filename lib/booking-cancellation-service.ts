@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { currentRequestMeta, logActivity } from "@/lib/activity-log";
 import {
   computeCancellationRefundBreakdown,
   paymentStatusAfterCancellationRefund,
@@ -201,6 +202,17 @@ export async function cancelBookingWithPolicy(input: {
       });
       refundInclTaxSar = br.refundInclTax;
       paymentMethodOut = row.paymentMethod;
+
+      const meta = await currentRequestMeta();
+      await logActivity({
+        kind: "BOOKING_REFUND",
+        path: `/admin/bookings/${row.id}`,
+        actorLabel: `${
+          input.role === "admin" ? "الإدارة" : "العميل"
+        } — استرداد إلغاء ${br.refundInclTax} ر.س`,
+        ip: meta.ip,
+        userAgent: meta.userAgent,
+      });
     }
   }
 

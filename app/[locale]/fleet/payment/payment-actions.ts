@@ -15,6 +15,10 @@ import {
 } from "@/lib/customer-booking-access";
 import { getCustomerProfile } from "@/lib/customer-auth";
 import { sendBookingCompletionWhatsAppAfterPayment } from "@/lib/evolution-whatsapp";
+import {
+  bookingDaysPriceInputFromSnapshot,
+  bookingTotalInclTaxForDays,
+} from "@/lib/booking-edit";
 import { prisma } from "@/lib/prisma";
 
 export type ConfirmPaymentResult =
@@ -70,6 +74,37 @@ export async function confirmMockPayment(
 
   const isCash = paymentMethod === "CASH";
 
+  // إجمالي الحجز (شامل الضريبة) يُسجَّل في paidAmountSar عند الدفع الإلكتروني —
+  // تعتمد عليه لوحة الإدارة في سقف الاسترداد واحتساب المتبقي.
+  let paidTotalSar: number | null = null;
+  if (!isCash) {
+    const row = await prisma.bookingRequest.findFirst({
+      where: {
+        id,
+        kind: "DIRECT",
+        ...customerBookingOwnershipWhere(profile.id, profile.phone),
+      },
+      select: {
+        snapshotTotalAmountSar: true,
+        numberOfDays: true,
+        addonsJson: true,
+        carModel: { select: { price: true, vatRatePercent: true } },
+      },
+    });
+    paidTotalSar =
+      row?.snapshotTotalAmountSar ??
+      (row?.carModel
+        ? bookingTotalInclTaxForDays(
+            bookingDaysPriceInputFromSnapshot(
+              row.carModel.price,
+              row.carModel.vatRatePercent,
+              row.addonsJson,
+            ),
+            row.numberOfDays,
+          )
+        : null);
+  }
+
   try {
     const updated = await prisma.bookingRequest.updateMany({
       where: {
@@ -90,6 +125,7 @@ export async function confirmMockPayment(
             paymentStatus: "PAID",
             paidAt: new Date(),
             paymentMethod,
+            paidAmountSar: paidTotalSar,
             balanceDueAtBranchSar: null,
           },
     });

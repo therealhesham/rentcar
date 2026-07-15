@@ -1,7 +1,13 @@
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 
-export type ActivityKind = "CUSTOMER_LOGIN" | "ADMIN_LOGIN" | "PAGE_VIEW" | "CAR_VIEW";
+export type ActivityKind =
+  | "CUSTOMER_LOGIN"
+  | "ADMIN_LOGIN"
+  | "PAGE_VIEW"
+  | "CAR_VIEW"
+  | "BOOKING_PAYMENT"
+  | "BOOKING_REFUND";
 
 /** استخراج IP ومتصفح الزائر من ترويسات الطلب الحالي (server action / route handler). */
 export async function currentRequestMeta(): Promise<{ ip: string | null; userAgent: string | null }> {
