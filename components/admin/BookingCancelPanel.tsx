@@ -9,6 +9,7 @@ import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label"
 import {
   type CancellationDeductTier,
   computeCancellationDeductedDays,
+  computePickedUpCancellationDeductDays,
   formatDeductDaysSummaryAr,
   hoursBeforePickup,
 } from "@/lib/cancellation-deduct";
@@ -66,13 +67,23 @@ export function BookingCancelPanel({
 
   const statusKey = status.trim().toUpperCase();
   const paymentKey = paymentStatus.trim().toUpperCase();
-  const isTerminal = statusKey === "CANCELLED" || statusKey === "REJECTED";
+  const isTerminal =
+    statusKey === "CANCELLED" || statusKey === "REJECTED" || statusKey === "RETURNED";
+  const isPickedUp = statusKey === "PICKED_UP";
 
   const previewDeductDays = useMemo(() => {
     if (!cancellationDeductTiers.length) return 0;
-    const h = hoursBeforePickup(new Date(pickupDateIso), new Date());
+    const pickupDate = new Date(pickupDateIso);
+    if (isPickedUp) {
+      return computePickedUpCancellationDeductDays(
+        pickupDate,
+        numberOfDays,
+        cancellationDeductTiers,
+      );
+    }
+    const h = hoursBeforePickup(pickupDate, new Date());
     return computeCancellationDeductedDays(h, cancellationDeductTiers, numberOfDays);
-  }, [numberOfDays, pickupDateIso, cancellationDeductTiers]);
+  }, [numberOfDays, pickupDateIso, cancellationDeductTiers, isPickedUp]);
 
   if (isTerminal && statusKey !== "CANCELLED") {
     return null;
@@ -136,6 +147,12 @@ export function BookingCancelPanel({
               : "بدون مهلة محددة"}
             ). تُطبَّق شرائح خصم الأيام والاسترداد كما في حساب العميل.
           </p>
+
+          {isPickedUp ? (
+            <p className="mb-3 rounded-lg border border-red-300 bg-red-100/90 p-2.5 text-xs font-bold leading-relaxed text-red-950">
+              {"تنبيه: السيارة سُلِّمت للعميل بالفعل. هذا إلغاء مبكر — تُحتجز الأيام المنقضية منذ الاستلام بالكامل، وتُطبَّق شرائح السياسة أيضاً على الأيام المتبقية فقط (لا استرداد كامل تلقائي لبقية المدة)."}
+            </p>
+          ) : null}
 
           {cancellationPolicyAr.trim() ? (
             <div className="mb-3 max-h-44 overflow-y-auto rounded-lg border border-red-200/60 bg-white/80 p-3 text-xs font-semibold leading-relaxed text-red-950 whitespace-pre-wrap">

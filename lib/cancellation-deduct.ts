@@ -55,6 +55,34 @@ export function computeCancellationDeductedDays(
   return 0;
 }
 
+const MS_PER_DAY = 24 * MS_PER_HOUR;
+
+/**
+ * خصم الإلغاء المبكر بعد استلام السيارة (إدارة فقط): الأيام المنقضية منذ
+ * الاستلام تُحتجز بالكامل (الخدمة قُدّمت فعلياً)، وتُطبَّق شرائح السياسة على
+ * الأيام المتبقية فقط بحساب الساعات قبل موعد الإرجاع الأصلي — لا استرداد كامل
+ * تلقائي لبقية المدة. مشتركة بين حساب السيرفر ومعاينة الواجهة حتى لا يفترقا.
+ */
+export function computePickedUpCancellationDeductDays(
+  pickupDate: Date,
+  numberOfDays: number,
+  tiers: CancellationDeductTier[],
+  now: Date = new Date(),
+): number {
+  const elapsedDays = Math.min(
+    numberOfDays,
+    Math.max(0, (now.getTime() - pickupDate.getTime()) / MS_PER_DAY),
+  );
+  const remainingDays = Math.max(0, numberOfDays - elapsedDays);
+  const returnDate = new Date(pickupDate.getTime() + numberOfDays * MS_PER_DAY);
+  const hoursBeforeReturn = hoursBeforePickup(returnDate, now);
+  const remainingTierDeduct =
+    remainingDays > 0
+      ? computeCancellationDeductedDays(hoursBeforeReturn, tiers, remainingDays)
+      : 0;
+  return elapsedDays + remainingTierDeduct;
+}
+
 export function normalizeCancellationDeductTiers(
   raw: unknown,
 ): CancellationDeductTier[] | null {

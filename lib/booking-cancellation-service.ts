@@ -5,7 +5,12 @@ import {
 } from "@/lib/booking-cancellation-refund";
 import { executeCancellationRefundByPaymentMethod } from "@/lib/booking-refund-executor";
 import {
+  BOOKING_STATUS_PICKED_UP,
+  BOOKING_STATUS_RETURNED,
+} from "@/lib/booking-lifecycle";
+import {
   computeCancellationDeductedDays,
+  computePickedUpCancellationDeductDays,
   hoursBeforePickup,
   type CancellationDeductTier,
 } from "@/lib/cancellation-deduct";
@@ -93,6 +98,16 @@ export async function cancelBookingWithPolicy(input: {
   if (TERMINAL_STATUSES.has(st)) {
     return { ok: false, error: "لا يمكن إلغاء طلب في هذه الحالة." };
   }
+  if (st === BOOKING_STATUS_RETURNED) {
+    return { ok: false, error: "لا يمكن إلغاء حجز تم إرجاع السيارة فيه بالفعل." };
+  }
+  const isPickedUp = st === BOOKING_STATUS_PICKED_UP;
+  if (isPickedUp && input.role === "customer") {
+    return {
+      ok: false,
+      error: "لا يمكن للعميل إلغاء حجز تم تسليم السيارة فيه بالفعل. يرجى التواصل مع الدعم.",
+    };
+  }
 
   if (input.role === "customer") {
     const minHours = await getCustomerCancelMinHoursBeforePickup();
@@ -102,12 +117,14 @@ export async function cancelBookingWithPolicy(input: {
 
   const tiers = await getCustomerCancellationDeductTiers();
   const nowCancel = new Date();
-  const hoursBefore = hoursBeforePickup(row.pickupDate, nowCancel);
-  const deductDays = computeCancellationDeductedDays(
-    hoursBefore,
-    tiers,
-    row.numberOfDays,
-  );
+
+  const deductDays = isPickedUp
+    ? computePickedUpCancellationDeductDays(row.pickupDate, row.numberOfDays, tiers, nowCancel)
+    : computeCancellationDeductedDays(
+        hoursBeforePickup(row.pickupDate, nowCancel),
+        tiers,
+        row.numberOfDays,
+      );
 
   const baseData = {
     status: "CANCELLED" as const,
@@ -118,7 +135,10 @@ export async function cancelBookingWithPolicy(input: {
   // مطالبة ذرّية بالإلغاء (compare-and-swap على الحالة): يمرّ طلب واحد فقط،
   // فلا يُنفَّذ الاسترداد مرتين عند وصول طلبَي إلغاء متزامنين.
   const claim = await prisma.bookingRequest.updateMany({
-    where: { id: row.id, status: { notIn: ["CANCELLED", "REJECTED"] } },
+    where: {
+      id: row.id,
+      status: { notIn: ["CANCELLED", "REJECTED", BOOKING_STATUS_RETURNED] },
+    },
     data: baseData,
   });
   if (claim.count === 0) {
@@ -142,6 +162,7 @@ export async function cancelBookingWithPolicy(input: {
       ),
       vatRatePercent: row.carModel.vatRatePercent,
       addonsJson: row.addonsJson,
+      retainOneTimeFeesFully: isPickedUp,
     });
     if (br) {
       const exec = await executeCancellationRefundByPaymentMethod({
@@ -210,19 +231,35 @@ export function buildCancellationFinancePreview(input: {
   tiers: CancellationDeductTier[];
 }): CancellationFinancePreview | null {
   const bookingSt = input.status.trim().toUpperCase();
-  if (bookingSt === "CANCELLED" || bookingSt === "REJECTED") return null;
+  if (
+    bookingSt === "CANCELLED" ||
+    bookingSt === "REJECTED" ||
+    bookingSt === BOOKING_STATUS_RETURNED
+  )
+    return null;
   if (input.kind !== "DIRECT") return null;
   if (input.paymentStatus.trim().toUpperCase() !== "PAID") return null;
   if (input.pricePerDayExclTax == null || input.vatRatePercent == null) return null;
 
-  const h = hoursBeforePickup(input.pickupDate, new Date());
-  const deduct = computeCancellationDeductedDays(h, input.tiers, input.numberOfDays);
+  const deduct =
+    bookingSt === BOOKING_STATUS_PICKED_UP
+      ? computePickedUpCancellationDeductDays(
+          input.pickupDate,
+          input.numberOfDays,
+          input.tiers,
+        )
+      : computeCancellationDeductedDays(
+          hoursBeforePickup(input.pickupDate, new Date()),
+          input.tiers,
+          input.numberOfDays,
+        );
   const br = computeCancellationRefundBreakdown({
     numberOfDays: input.numberOfDays,
     deductDays: deduct,
     pricePerDayExclTax: input.pricePerDayExclTax,
     vatRatePercent: input.vatRatePercent,
     addonsJson: input.addonsJson,
+    retainOneTimeFeesFully: bookingSt === BOOKING_STATUS_PICKED_UP,
   });
   if (!br) return null;
 

@@ -21,6 +21,7 @@ export function computeCancellationRefundBreakdown(input: {
   pricePerDayExclTax: number;
   vatRatePercent: number;
   addonsJson: string | null;
+  retainOneTimeFeesFully?: boolean;
 }): CancellationRefundBreakdown | null {
   const days = Math.max(1, Math.round(input.numberOfDays));
   const price = Number(input.pricePerDayExclTax);
@@ -45,7 +46,11 @@ export function computeCancellationRefundBreakdown(input: {
   const deduct = Math.min(Math.max(0, input.deductDays), days);
   const dailyExcl = totals.rentalExclTax + totals.addonsExclTax;
   const retentionDailyExcl = dailyExcl * (deduct / days);
-  const refundSubExcl = Math.max(0, totals.subtotalExclTax - retentionDailyExcl);
+  const retainedOneTimeFeesExcl = input.retainOneTimeFeesFully ? oneTimeFeesExclTax : 0;
+  const refundSubExcl = Math.max(
+    0,
+    totals.subtotalExclTax - retentionDailyExcl - retainedOneTimeFeesExcl,
+  );
 
   const vatRefund =
     totals.subtotalExclTax > 0
