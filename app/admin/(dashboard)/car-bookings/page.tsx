@@ -6,6 +6,7 @@ import {
   type CarBookingRow,
 } from "@/components/admin/AdminCarBookingsList";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { ReportExportButtons } from "@/components/admin/ReportExportButtons";
 import { adminBranchDisplayName, bookingBranchWhere } from "@/lib/admin-access";
 import { requireAdminPage } from "@/lib/admin-page";
 import { addDaysToYmd, NON_BLOCKING_BOOKING_STATUSES } from "@/lib/direct-booking";
@@ -149,15 +150,19 @@ export default async function AdminCarBookingsPage() {
         backHref="/admin"
         backLabel="لوحة التحكم"
         actions={
-          <div className="flex items-center gap-3">
-            <CarBookingsSettingsModal initialSettings={initialSettings} />
-            <Link
-              href="/admin/direct-booking"
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-on-primary shadow-sm transition-opacity hover:opacity-95"
-            >
-              <CalendarPlus className="size-4" aria-hidden />
-              حجز جديد
-            </Link>
+          <div className="flex flex-col items-end gap-3">
+            <div className="flex items-center gap-3">
+              <CarBookingsSettingsModal initialSettings={initialSettings} />
+              <Link
+                href="/admin/direct-booking"
+                className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-on-primary shadow-sm transition-opacity hover:opacity-95"
+              >
+                <CalendarPlus className="size-4" aria-hidden />
+                حجز جديد
+              </Link>
+            </div>
+            <ReportExportButtons reportId="today-bookings" />
+            <ReportExportButtons reportId="all-bookings-range" withDateRange />
           </div>
         }
       />

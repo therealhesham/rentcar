@@ -1,4 +1,5 @@
-import { requireAdminPage } from "@/lib/admin-page";
+import { requireAdminPagePermission } from "@/lib/admin-page";
+import { ReportExportButtons } from "@/components/admin/ReportExportButtons";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminCard } from "@/components/admin/AdminCard";
 import { AdminStatCard } from "@/components/admin/AdminStatCard";
@@ -16,7 +17,7 @@ export const dynamic = "force-dynamic";
 export default async function FinancialsPage(props: {
   searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const session = await requireAdminPage();
+  const session = await requireAdminPagePermission("FINANCIALS");
   const searchParams = await props.searchParams;
 
   // We'll use 30 days for the overview stats on this page
@@ -227,6 +228,7 @@ export default async function FinancialsPage(props: {
       <AdminPageHeader
         title="الإدارة المالية"
         description="نظرة عامة على الإيرادات ومدفوعات العملاء للاشتراكات والحجوزات."
+        actions={<ReportExportButtons reportId="financial-transactions" withDateRange />}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

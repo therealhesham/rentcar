@@ -115,18 +115,22 @@ export async function cancelBookingWithPolicy(input: {
     cancellationDeductedDays: deductDays > 0 ? deductDays : null,
   };
 
+  // مطالبة ذرّية بالإلغاء (compare-and-swap على الحالة): يمرّ طلب واحد فقط،
+  // فلا يُنفَّذ الاسترداد مرتين عند وصول طلبَي إلغاء متزامنين.
+  const claim = await prisma.bookingRequest.updateMany({
+    where: { id: row.id, status: { notIn: ["CANCELLED", "REJECTED"] } },
+    data: baseData,
+  });
+  if (claim.count === 0) {
+    return { ok: false, error: "الطلب ملغى بالفعل أو في حالة لا تسمح بالإلغاء." };
+  }
+
   let refundInclTaxSar: number | undefined;
   let paymentMethodOut: string | null | undefined;
 
   const ps = row.paymentStatus.trim().toUpperCase();
   const paidEligible =
     row.kind === "DIRECT" && ps === "PAID" && row.carModel != null;
-
-  let paymentPatch: {
-    paymentStatus?: string;
-    cancellationRefundAmountSar?: number | null;
-    cancellationRefundExternalRef?: string | null;
-  } = {};
 
   if (paidEligible && row.carModel) {
     const br = computeCancellationRefundBreakdown({
@@ -145,30 +149,39 @@ export async function cancelBookingWithPolicy(input: {
         paymentMethod: row.paymentMethod,
         refundAmountInclTaxSar: br.refundInclTax,
       });
-      if (exec.ok) {
-        paymentPatch = {
+      if (!exec.ok) {
+        // فشل الاسترداد عبر البوابة: نتراجع عن الإلغاء حتى لا يبقى الحجز ملغى
+        // بلا استرداد بصمت، ونُبلغ المستخدم صراحةً ليعيد المحاولة أو يتواصل معنا.
+        console.error("[cancelBookingWithPolicy] refund failed:", exec.error);
+        await prisma.bookingRequest.update({
+          where: { id: row.id },
+          data: {
+            status: row.status,
+            cancelledAt: null,
+            cancellationDeductedDays: null,
+          },
+        });
+        return {
+          ok: false,
+          error:
+            "تعذّر تنفيذ الاسترداد عبر بوابة الدفع، ولم يتم إلغاء الحجز. يرجى المحاولة لاحقاً أو التواصل مع الدعم.",
+        };
+      }
+      await prisma.bookingRequest.update({
+        where: { id: row.id },
+        data: {
           paymentStatus: paymentStatusAfterCancellationRefund(
             br.paidTotalInclTax,
             br.refundInclTax,
           ),
           cancellationRefundAmountSar: br.refundInclTax,
           cancellationRefundExternalRef: exec.externalRef,
-        };
-        refundInclTaxSar = br.refundInclTax;
-        paymentMethodOut = row.paymentMethod;
-      } else {
-        console.error("[cancelBookingWithPolicy] refund failed:", exec.error);
-      }
+        },
+      });
+      refundInclTaxSar = br.refundInclTax;
+      paymentMethodOut = row.paymentMethod;
     }
   }
-
-  await prisma.bookingRequest.update({
-    where: { id: row.id },
-    data: {
-      ...baseData,
-      ...paymentPatch,
-    },
-  });
 
   return {
     ok: true,

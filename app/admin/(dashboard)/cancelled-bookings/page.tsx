@@ -3,6 +3,7 @@ import { Ban, CircleDollarSign, FileX2 } from "lucide-react";
 import { CancelledBookingsFilters } from "@/components/admin/CancelledBookingsFilters";
 import { CancelledBookingsList } from "@/components/admin/CancelledBookingsList";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { ReportExportButtons } from "@/components/admin/ReportExportButtons";
 import { adminBranchDisplayName } from "@/lib/admin-access";
 import { loadCancelledBookings } from "@/lib/admin-cancelled-bookings";
 import { requireAdminPage } from "@/lib/admin-page";
@@ -77,6 +78,7 @@ export default async function AdminCancelledBookingsPage({
         }
         backHref="/admin"
         backLabel="لوحة التحكم"
+        actions={<ReportExportButtons reportId="cancelled-bookings" q={q} />}
       />
 
       <div className="mb-8 grid gap-4 sm:grid-cols-3">
