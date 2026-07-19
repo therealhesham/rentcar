@@ -187,11 +187,17 @@ export async function updateCustomerBookingDates(
     snapshotTotalAmountSar = Math.round((previousTotal + diff) * 100) / 100;
 
     if (isPaid) {
-      // صافي موقف العميل = المستحق عليه سابقاً − المستحق له سابقاً (غير المُسوَّى) + فرق التعديل
+      // صافي موقف العميل يُشتق من مصدر الحقيقة مباشرةً: إجمالي الحجز بعد التعديل (snapshot)
+      // مقابل المدفوع فعلياً — يصحّح ذاتياً أي رصيد قديم متراكم بشكل غير متسق.
+      // (المدفوع لا ينقص عند تسجيل مستحقات للعميل إلا بعد تسويتها من الإدارة، فالفرق يغطيها تلقائياً.)
       const unsettledCredit =
         booking.refundDueSettledAt == null ? (booking.refundDueToCustomerSar ?? 0) : 0;
       const net =
-        Math.round(((booking.balanceDueAtBranchSar ?? 0) - unsettledCredit + diff) * 100) / 100;
+        typeof booking.paidAmountSar === "number"
+          ? Math.round((snapshotTotalAmountSar - booking.paidAmountSar) * 100) / 100
+          : Math.round(
+              ((booking.balanceDueAtBranchSar ?? 0) - unsettledCredit + diff) * 100,
+            ) / 100;
       if (net > 0.005) {
         balanceDueAtBranchSar = net;
         refundDueToCustomerSar = null;

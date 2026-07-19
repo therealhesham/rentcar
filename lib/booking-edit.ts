@@ -57,7 +57,7 @@ export function bookingDaysPriceInputFromSnapshot(
 /**
  * يعيد بناء لقطة الإضافات (addonsJson) بعدد أيام جديد:
  * - يضبط days وlineTotalExclTax لكل إضافة على عدد الأيام الجديد.
- * - يُبقي رسوم الشحن بين المدن ورسوم الإتمام ولقطة الخصم كما هي.
+ * - يُبقي رسوم الشحن بين المدن ورسوم الإتمام ولقطة الخصم وسعر الإيجار اليومي المجمَّد كما هي.
  * - يُسقط غرامة التأخير ووصف المدة (يُعاد احتسابهما عند الإرجاع).
  */
 export function rebuildAddonsJsonForDays(
@@ -70,6 +70,7 @@ export function rebuildAddonsJsonForDays(
     interCityShipping?: unknown;
     checkoutOneTimeFees?: unknown;
     rentalDiscount?: unknown;
+    rentalPricePerDayExclTax?: unknown;
   };
   try {
     data = JSON.parse(addonsJson);
@@ -90,6 +91,7 @@ export function rebuildAddonsJsonForDays(
     interCityShipping?: unknown;
     checkoutOneTimeFees?: unknown;
     rentalDiscount?: unknown;
+    rentalPricePerDayExclTax?: unknown;
   } = { items };
 
   if (data.interCityShipping) payload.interCityShipping = data.interCityShipping;
@@ -97,12 +99,16 @@ export function rebuildAddonsJsonForDays(
     payload.checkoutOneTimeFees = data.checkoutOneTimeFees;
   }
   if (data.rentalDiscount) payload.rentalDiscount = data.rentalDiscount;
+  if (typeof data.rentalPricePerDayExclTax === "number") {
+    payload.rentalPricePerDayExclTax = data.rentalPricePerDayExclTax;
+  }
 
   const hasAny =
     items.length > 0 ||
     payload.interCityShipping != null ||
     payload.checkoutOneTimeFees != null ||
-    payload.rentalDiscount != null;
+    payload.rentalDiscount != null ||
+    payload.rentalPricePerDayExclTax != null;
 
   return hasAny ? JSON.stringify(payload) : null;
 }

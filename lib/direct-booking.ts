@@ -951,17 +951,8 @@ async function buildBookingAddonsJsonSnapshot(
   const hasDiscount =
     rentalDiscount != null && rentalDiscount.discountPerDayExclTax > 0;
 
-  if (
-    items.length === 0 &&
-    !hasShip &&
-    !hasCheckout &&
-    !hasDelay &&
-    !hasDurationLabel &&
-    !hasDiscount
-  ) {
-    return { ok: true, json: null };
-  }
-
+  // سعر الإيجار اليومي دائماً يُجمَّد في اللقطة — بمعزل عن أي تغيير لاحق في
+  // سعر الموديل الحالي (حتى للحجوزات بلا إضافات/رسوم/خصم إطلاقاً).
   const payload: {
     items: typeof items;
     interCityShipping?: InterCityShippingSnap;
@@ -969,7 +960,8 @@ async function buildBookingAddonsJsonSnapshot(
     delayPenalty?: DelayPenaltySnap;
     tripDurationLabelAr?: string;
     rentalDiscount?: RentalDiscountPriceSnap;
-  } = { items };
+    rentalPricePerDayExclTax: number;
+  } = { items, rentalPricePerDayExclTax: pricePerDayExclTax };
   if (hasShip && interCityShipping) {
     payload.interCityShipping = interCityShipping;
   }
@@ -1209,16 +1201,23 @@ export async function createDirectBooking(
   }
 
   // حساب المبلغ الإجمالي المدفوع (شامل الضريبة) لحفظه لحظة الدفع الإلكتروني
-  const { addons: addonsForTotals, interCityShipping: shipForTotals, checkoutOneTimeFees: feesForTotals } =
-    parseBookingPricingSnapshot(addonsSnap.json);
+  const {
+    addons: addonsForTotals,
+    interCityShipping: shipForTotals,
+    checkoutOneTimeFees: feesForTotals,
+    delayPenalty: delayForTotals,
+  } = parseBookingPricingSnapshot(addonsSnap.json);
   const shipFeeForTotals = shipForTotals?.feeExclVatSar ?? 0;
   const checkoutFeesSum = feesForTotals.reduce((s: number, x: { feeExclVatSar: number }) => s + x.feeExclVatSar, 0);
+  // بند ساعات التأخير/الساعات الإضافية جزء من الإجمالي — إسقاطه كان يجعل
+  // snapshotTotalAmountSar أقل من «تفاصيل المبلغ» المحسوبة حياً.
+  const delayFeeForTotals = delayForTotals?.feeExclVatSar ?? 0;
   const bookingTotals = computeCheckoutTotals(
     effectivePricePerDay,
     days,
     model.vatRatePercent,
     addonsForTotals.map((a: { pricePerDayExclTax: number }) => ({ pricePerDay: a.pricePerDayExclTax })),
-    { oneTimeFeesExclTax: shipFeeForTotals + checkoutFeesSum },
+    { oneTimeFeesExclTax: shipFeeForTotals + checkoutFeesSum + delayFeeForTotals },
   );
 
   const carType = model.category.slug || model.category.title;

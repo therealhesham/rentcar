@@ -74,6 +74,11 @@ export async function cancelAdminBookingWithFullRefund(
     return { ok: false, error: "سبب الاسترداد إلزامي." };
   }
 
+  const channelRaw = String(formData.get("refundChannel") ?? "ORIGINAL").trim().toUpperCase();
+  if (channelRaw !== "ORIGINAL" && channelRaw !== "CASH") {
+    return { ok: false, error: "قناة الاسترداد غير صالحة." };
+  }
+
   const scope = await assertBookingRequestInScope(auth.session, bookingRequestId);
   if (!scope.ok) return { ok: false, error: scope.error };
 
@@ -81,6 +86,7 @@ export async function cancelAdminBookingWithFullRefund(
     bookingRequestId,
     reasonAr,
     actorLabel: auth.session.displayName,
+    refundChannel: channelRaw,
   });
 
   if (!result.ok) return result;

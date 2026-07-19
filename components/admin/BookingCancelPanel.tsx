@@ -75,14 +75,20 @@ export function BookingCancelPanel({
 
   const [fullRefundModalOpen, setFullRefundModalOpen] = useState(false);
   const [fullRefundReason, setFullRefundReason] = useState("");
+  const [fullRefundChannel, setFullRefundChannel] = useState<"ORIGINAL" | "CASH">("ORIGINAL");
   const [fullRefundError, setFullRefundError] = useState<string | null>(null);
   const [fullRefundPending, startFullRefundTransition] = useTransition();
+  const [cancelMenuOpen, setCancelMenuOpen] = useState(false);
 
   const statusKey = status.trim().toUpperCase();
   const paymentKey = paymentStatus.trim().toUpperCase();
   const isTerminal =
     statusKey === "CANCELLED" || statusKey === "REJECTED" || statusKey === "RETURNED";
   const isPickedUp = statusKey === "PICKED_UP";
+
+  // «إلغاء مع استرداد كامل» له معنى فقط لحجز مباشر مدفوع فعلاً بمبلغ قابل للرد.
+  const canFullRefund =
+    kind === "DIRECT" && paymentKey === "PAID" && (paidAmountSar ?? 0) > 0;
 
   const previewDeductDays = useMemo(() => {
     if (!cancellationDeductTiers.length) return 0;
@@ -250,28 +256,84 @@ export function BookingCancelPanel({
           </div>
         </div>
       ) : (
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <button
-            type="button"
-            onClick={() => {
-              setCancelError(null);
-              setCancelOpen(true);
-            }}
-            className="inline-flex flex-1 items-center justify-center rounded-xl border border-red-300 bg-white px-4 py-2.5 text-sm font-bold text-red-800 transition-colors hover:bg-red-50"
-          >
-            إلغاء الحجز (سياسة العميل)
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setFullRefundError(null);
-              setFullRefundReason("");
-              setFullRefundModalOpen(true);
-            }}
-            className="inline-flex flex-1 items-center justify-center rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm font-bold text-amber-900 transition-colors hover:bg-amber-100"
-          >
-            إلغاء مع استرداد كامل
-          </button>
+        <div className="relative">
+          <div className="flex">
+            <button
+              type="button"
+              onClick={() => {
+                setCancelMenuOpen(false);
+                setCancelError(null);
+                setCancelOpen(true);
+              }}
+              className={`inline-flex flex-1 items-center justify-center border border-red-300 bg-white px-4 py-2.5 text-sm font-bold text-red-800 transition-colors hover:bg-red-50 ${
+                canFullRefund ? "rounded-s-xl" : "rounded-xl"
+              }`}
+            >
+              إلغاء الحجز
+            </button>
+            {canFullRefund ? (
+              <button
+                type="button"
+                aria-label="خيارات الإلغاء"
+                aria-expanded={cancelMenuOpen}
+                onClick={() => setCancelMenuOpen((v) => !v)}
+                className="inline-flex w-11 shrink-0 items-center justify-center rounded-e-xl border border-s-0 border-red-300 bg-red-50 text-red-800 transition-colors hover:bg-red-100"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  className={`h-4 w-4 transition-transform ${cancelMenuOpen ? "rotate-180" : ""}`}
+                  aria-hidden
+                >
+                  <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+            ) : null}
+          </div>
+
+          {cancelMenuOpen && canFullRefund ? (
+            <>
+              {/* طبقة شفافة لإغلاق القائمة عند النقر خارجها */}
+              <div
+                className="fixed inset-0 z-30"
+                aria-hidden
+                onClick={() => setCancelMenuOpen(false)}
+              />
+              {/* داخل تدفق الكارت (لا absolute): كروت التفاصيل عليها overflow-hidden فتقصّ أي قائمة طافية. */}
+              <div className="relative z-40 mt-1.5 w-full overflow-hidden rounded-xl border border-outline-variant/40 bg-white shadow-xl">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCancelMenuOpen(false);
+                    setCancelError(null);
+                    setCancelOpen(true);
+                  }}
+                  className="flex w-full flex-col items-start gap-0.5 px-4 py-3 text-start transition-colors hover:bg-red-50"
+                >
+                  <span className="text-sm font-bold text-red-800">إلغاء الحجز (سياسة العميل)</span>
+                  <span className="text-[11px] font-semibold text-on-surface-variant">
+                    تُطبَّق شرائح خصم الأيام والاسترداد حسب السياسة.
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCancelMenuOpen(false);
+                    setFullRefundError(null);
+                    setFullRefundReason("");
+                    setFullRefundChannel("ORIGINAL");
+                    setFullRefundModalOpen(true);
+                  }}
+                  className="flex w-full flex-col items-start gap-0.5 border-t border-outline-variant/30 px-4 py-3 text-start transition-colors hover:bg-amber-50"
+                >
+                  <span className="text-sm font-bold text-amber-900">إلغاء مع استرداد كامل</span>
+                  <span className="text-[11px] font-semibold text-on-surface-variant">
+                    يتجاوز السياسة ويردّ كامل المدفوع — مع اختيار قناة الاسترداد.
+                  </span>
+                </button>
+              </div>
+            </>
+          ) : null}
         </div>
       )}
 
@@ -293,17 +355,67 @@ export function BookingCancelPanel({
               {paymentKey === "PAID" && typeof paidAmountSar === "number" && paidAmountSar > 0 ? (
                 <p className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-extrabold text-emerald-950">
                   سيُسترَد للعميل: <SarAmountInline amount={paidAmountSar} />
-                  {paymentMethod ? (
-                    <span className="mr-1 font-semibold text-emerald-900/80">
-                      عبر {bookingPaymentMethodLabelAr(paymentMethod)}
-                    </span>
-                  ) : null}
+                  <span className="mr-1 font-semibold text-emerald-900/80">
+                    {fullRefundChannel === "CASH"
+                      ? "نقداً في الفرع"
+                      : paymentMethod
+                        ? `عبر ${bookingPaymentMethodLabelAr(paymentMethod)}`
+                        : ""}
+                  </span>
                 </p>
               ) : (
                 <p className="mb-4 rounded-xl border border-outline-variant/40 bg-surface-container-low px-4 py-3 text-sm font-bold text-on-surface">
                   لا يوجد مبلغ مدفوع على هذا الحجز — سيتم إلغاؤه فقط بلا استرداد.
                 </p>
               )}
+
+              <fieldset className="mb-4 space-y-2">
+                <legend className="mb-1 text-sm font-bold text-on-surface">قناة الاسترداد</legend>
+                <label
+                  className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-sm transition-colors ${
+                    fullRefundChannel === "ORIGINAL"
+                      ? "border-[#003749] bg-[#003749]/[0.04] ring-1 ring-[#003749]/30"
+                      : "border-outline-variant/40 hover:bg-surface-container-low"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="fullRefundChannel"
+                    checked={fullRefundChannel === "ORIGINAL"}
+                    onChange={() => setFullRefundChannel("ORIGINAL")}
+                    className="mt-1"
+                  />
+                  <span>
+                    <span className="font-extrabold text-[#003749]">
+                      نفس وسيلة الدفع{paymentMethod ? ` (${bookingPaymentMethodLabelAr(paymentMethod)})` : ""}
+                    </span>
+                    <span className="mt-0.5 block text-xs text-on-surface-variant">
+                      استرداد إلكتروني عبر بوابة الدفع على نفس البطاقة/الوسيلة التي دفع بها العميل.
+                    </span>
+                  </span>
+                </label>
+                <label
+                  className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-sm transition-colors ${
+                    fullRefundChannel === "CASH"
+                      ? "border-[#003749] bg-[#003749]/[0.04] ring-1 ring-[#003749]/30"
+                      : "border-outline-variant/40 hover:bg-surface-container-low"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="fullRefundChannel"
+                    checked={fullRefundChannel === "CASH"}
+                    onChange={() => setFullRefundChannel("CASH")}
+                    className="mt-1"
+                  />
+                  <span>
+                    <span className="font-extrabold text-[#003749]">نقداً (كاش)</span>
+                    <span className="mt-0.5 block text-xs text-on-surface-variant">
+                      تسليم المبلغ للعميل نقداً في الفرع — بلا استرداد إلكتروني.
+                    </span>
+                  </span>
+                </label>
+              </fieldset>
 
               <label className="block text-sm font-bold text-on-surface">
                 سبب الاسترداد <span className="text-red-700">*</span>
@@ -336,6 +448,7 @@ export function BookingCancelPanel({
                       const fd = new FormData();
                       fd.set("bookingRequestId", String(bookingRequestId));
                       fd.set("reasonAr", fullRefundReason.trim());
+                      fd.set("refundChannel", fullRefundChannel);
                       const r = await cancelAdminBookingWithFullRefund(fd);
                       if (!r.ok) {
                         setFullRefundError(r.error ?? "تعذّر تنفيذ الإلغاء والاسترداد.");

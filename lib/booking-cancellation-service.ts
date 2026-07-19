@@ -239,15 +239,20 @@ export type CancelBookingFullRefundResult =
   | { ok: true; refundInclTaxSar: number; paymentMethod: string | null }
   | { ok: false; error: string };
 
+/** قناة الاسترداد الكامل: نفس وسيلة الدفع الأصلية (بوابة) أو نقداً في الفرع. */
+export type FullRefundChannel = "ORIGINAL" | "CASH";
+
 /**
  * إلغاء إداري باسترداد كامل — يتجاوز شرائح خصم السياسة كاملةً (لا خصم أيام)
  * ويردّ كل المبلغ المدفوع. يُستخدم في حالات استثنائية (مثال: عدم توفر السيارة)
  * ويتطلب سبباً إلزامياً يُسجَّل على الحجز وفي سجل النشاط.
+ * قناة الاسترداد يختارها الموظف: عبر نفس وسيلة الدفع (بوابة) أو نقداً في الفرع.
  */
 export async function cancelBookingWithFullRefundByAdmin(input: {
   bookingRequestId: number;
   reasonAr: string;
   actorLabel: string;
+  refundChannel?: FullRefundChannel;
 }): Promise<CancelBookingFullRefundResult> {
   const reason = input.reasonAr.trim();
   if (!reason) {
@@ -301,29 +306,38 @@ export async function cancelBookingWithFullRefundByAdmin(input: {
     return { ok: true, refundInclTaxSar: 0, paymentMethod: null };
   }
 
-  const exec = await executeCancellationRefundByPaymentMethod({
-    bookingRequestId: row.id,
-    paymentMethod: row.paymentMethod,
-    refundAmountInclTaxSar: paidAmount,
-  });
-  if (!exec.ok) {
-    // فشل الاسترداد: نتراجع عن الإلغاء بالكامل حتى لا يبقى الحجز ملغى بلا استرداد بصمت.
-    console.error("[cancelBookingWithFullRefundByAdmin] refund failed:", exec.error);
-    await prisma.bookingRequest.update({
-      where: { id: row.id },
-      data: {
-        status: row.status,
-        cancelledAt: null,
-        cancellationDeductedDays: null,
-        cancellationReasonAr: null,
-        balanceDueAtBranchSar: row.balanceDueAtBranchSar,
-      },
+  const channel: FullRefundChannel = input.refundChannel ?? "ORIGINAL";
+
+  let externalRef: string;
+  if (channel === "CASH") {
+    // تسليم نقدي في الفرع — لا استرداد إلكتروني؛ يُسجَّل بمرجع يدوي.
+    externalRef = `CASH-MANUAL-${row.id}-${Date.now()}`;
+  } else {
+    const exec = await executeCancellationRefundByPaymentMethod({
+      bookingRequestId: row.id,
+      paymentMethod: row.paymentMethod,
+      refundAmountInclTaxSar: paidAmount,
     });
-    return {
-      ok: false,
-      error:
-        "تعذّر تنفيذ الاسترداد عبر بوابة الدفع، ولم يتم إلغاء الحجز. يرجى المحاولة لاحقاً أو التواصل مع الدعم.",
-    };
+    if (!exec.ok) {
+      // فشل الاسترداد: نتراجع عن الإلغاء بالكامل حتى لا يبقى الحجز ملغى بلا استرداد بصمت.
+      console.error("[cancelBookingWithFullRefundByAdmin] refund failed:", exec.error);
+      await prisma.bookingRequest.update({
+        where: { id: row.id },
+        data: {
+          status: row.status,
+          cancelledAt: null,
+          cancellationDeductedDays: null,
+          cancellationReasonAr: null,
+          balanceDueAtBranchSar: row.balanceDueAtBranchSar,
+        },
+      });
+      return {
+        ok: false,
+        error:
+          "تعذّر تنفيذ الاسترداد عبر بوابة الدفع، ولم يتم إلغاء الحجز. يرجى المحاولة لاحقاً أو التواصل مع الدعم.",
+      };
+    }
+    externalRef = exec.externalRef;
   }
 
   await prisma.bookingRequest.update({
@@ -331,7 +345,7 @@ export async function cancelBookingWithFullRefundByAdmin(input: {
     data: {
       paymentStatus: "REFUNDED",
       cancellationRefundAmountSar: paidAmount,
-      cancellationRefundExternalRef: exec.externalRef,
+      cancellationRefundExternalRef: externalRef,
     },
   });
 
@@ -339,12 +353,18 @@ export async function cancelBookingWithFullRefundByAdmin(input: {
   await logActivity({
     kind: "BOOKING_REFUND",
     path: `/admin/bookings/${row.id}`,
-    actorLabel: `${input.actorLabel} — إلغاء باسترداد كامل ${paidAmount} ر.س. السبب: ${reason}`,
+    actorLabel: `${input.actorLabel} — إلغاء باسترداد كامل ${paidAmount} ر.س (${
+      channel === "CASH" ? "نقداً في الفرع" : "نفس وسيلة الدفع"
+    }). السبب: ${reason}`,
     ip: meta.ip,
     userAgent: meta.userAgent,
   });
 
-  return { ok: true, refundInclTaxSar: paidAmount, paymentMethod: row.paymentMethod };
+  return {
+    ok: true,
+    refundInclTaxSar: paidAmount,
+    paymentMethod: channel === "CASH" ? "CASH" : row.paymentMethod,
+  };
 }
 
 export type CancellationFinancePreview = {

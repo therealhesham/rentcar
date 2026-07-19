@@ -356,8 +356,20 @@ export function BookingDetailView({ booking, editActions, cancellation }: Props)
                     {paymentStatusLabelAr(booking.paymentStatus, balanceDueAtBranch)}
                   </span>
                 </DetailRow>
+                {typeof booking.snapshotTotalAmountSar === "number" &&
+                booking.snapshotTotalAmountSar > 0 ? (
+                  <DetailRow label="إجمالي الحجز (شامل الضريبة)" mono>
+                    <SarAmountWithSymbol
+                      bold
+                      amountClassName="font-extrabold text-on-surface"
+                      glyphClassName="text-on-surface-variant"
+                    >
+                      {formatSarAmount(booking.snapshotTotalAmountSar)}
+                    </SarAmountWithSymbol>
+                  </DetailRow>
+                ) : null}
                 {typeof booking.paidAmountSar === "number" && booking.paidAmountSar > 0 ? (
-                  <DetailRow label="إجمالي المستحق" mono>
+                  <DetailRow label="إجمالي المدفوع" mono>
                     <SarAmountWithSymbol
                       bold
                       amountClassName="font-extrabold text-on-surface"
@@ -401,7 +413,7 @@ export function BookingDetailView({ booking, editActions, cancellation }: Props)
                       {formatSarAmount(balanceDueAtBranch)}
                     </SarAmountWithSymbol>{" "}
                     {booking.paymentStatus.trim().toUpperCase() === "PAID"
-                      ? "يُطالَب به نقداً عند تسليم/إرجاع السيارة في الفرع (تمديد بعد الدفع)."
+                      ? "يسدّده العميل أونلاين من صفحة الدفع، أو نقداً عند تسليم/إرجاع السيارة في الفرع (تمديد بعد الدفع)."
                       : "يُحصَّل ضمن إجمالي الحجز عند الاستلام/الإرجاع في الفرع."}
                   </span>
                 </div>

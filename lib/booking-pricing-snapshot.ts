@@ -30,6 +30,11 @@ export type BookingPricingSnapshotV1 = {
   tripDurationLabelAr?: string | null;
   /** لقطة سعر الإيجار بعد الخصم (بدون تفاصيل شرط الخصم). */
   rentalDiscount?: RentalDiscountPriceSnap | null;
+  /**
+   * سعر الإيجار اليومي الفعلي وقت الحجز/آخر تعديل مدة (بعد الخصم إن وُجد)،
+   * غير شامل الضريبة. مُجمَّد بمعزل عن أي تغيير لاحق في سعر الموديل الحالي.
+   */
+  rentalPricePerDayExclTax?: number | null;
 };
 
 function parseDelayPenaltySnap(raw: unknown): DelayPenaltySnap | null {
@@ -70,6 +75,7 @@ export function parseBookingPricingSnapshot(raw: string | null): {
   delayPenalty: DelayPenaltySnap | null;
   tripDurationLabelAr: string | null;
   rentalDiscount: RentalDiscountPriceSnap | null;
+  rentalPricePerDayExclTax: number | null;
 } {
   if (!raw) {
     return {
@@ -79,6 +85,7 @@ export function parseBookingPricingSnapshot(raw: string | null): {
       delayPenalty: null,
       tripDurationLabelAr: null,
       rentalDiscount: null,
+      rentalPricePerDayExclTax: null,
     };
   }
   try {
@@ -156,7 +163,21 @@ export function parseBookingPricingSnapshot(raw: string | null): {
       };
     }
 
-    return { addons, interCityShipping, checkoutOneTimeFees, delayPenalty, tripDurationLabelAr, rentalDiscount };
+    const rawPrice = data.rentalPricePerDayExclTax;
+    const rentalPricePerDayExclTax =
+      typeof rawPrice === "number" && Number.isFinite(rawPrice) && rawPrice >= 0
+        ? Math.round(rawPrice * 100) / 100
+        : null;
+
+    return {
+      addons,
+      interCityShipping,
+      checkoutOneTimeFees,
+      delayPenalty,
+      tripDurationLabelAr,
+      rentalDiscount,
+      rentalPricePerDayExclTax,
+    };
   } catch {
     return {
       addons: [],
@@ -165,16 +186,25 @@ export function parseBookingPricingSnapshot(raw: string | null): {
       delayPenalty: null,
       tripDurationLabelAr: null,
       rentalDiscount: null,
+      rentalPricePerDayExclTax: null,
     };
   }
 }
 
-/** سعر الإيجار اليومي الفعلي المحفوظ في لقطة الحجز (بعد الخصم إن وُجد). */
+/**
+ * سعر الإيجار اليومي الفعلي المجمَّد وقت الحجز/آخر تعديل مدة — لا يتأثر بأي
+ * تغيير لاحق في سعر الموديل الحالي. الأولوية: اللقطة المجمَّدة، ثم لقطة الخصم
+ * القديمة (توافق حجوزات سابقة لهذا التغيير)، وأخيراً سعر الموديل الحالي كملاذ
+ * أخير للحجوزات القديمة جداً التي لا تملك أي لقطة سعر مخزّنة.
+ */
 export function resolveBookingRentalPricePerDayExclTax(
   modelPricePerDayExclTax: number,
   addonsJson: string | null,
 ): number {
-  const { rentalDiscount } = parseBookingPricingSnapshot(addonsJson);
+  const { rentalPricePerDayExclTax, rentalDiscount } = parseBookingPricingSnapshot(addonsJson);
+  if (rentalPricePerDayExclTax != null) {
+    return rentalPricePerDayExclTax;
+  }
   if (
     rentalDiscount &&
     Number.isFinite(rentalDiscount.discountedPricePerDayExclTax) &&
