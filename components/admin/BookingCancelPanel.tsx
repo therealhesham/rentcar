@@ -2,7 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
-import { cancelAdminBooking } from "@/app/admin/booking-cancel-actions";
+import {
+  cancelAdminBooking,
+  cancelAdminBookingWithFullRefund,
+} from "@/app/admin/booking-cancel-actions";
 import { SarCurrencyGlyph } from "@/components/ui/SarCurrencyGlyph";
 import { formatSarAmount } from "@/lib/booking-checkout-pricing";
 import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
@@ -25,6 +28,9 @@ export type BookingCancelPanelProps = {
   cancellationDeductedDays?: number | null;
   cancellationRefundAmountSar?: number | null;
   cancellationRefundExternalRef?: string | null;
+  cancellationReasonAr?: string | null;
+  /** إجمالي المبلغ المدفوع فعلياً — يُعرض في مودال الاسترداد الكامل. */
+  paidAmountSar?: number | null;
   cancellationPolicyAr?: string;
   cancelMinHoursBeforePickup?: number;
   cancellationDeductTiers?: CancellationDeductTier[];
@@ -55,6 +61,8 @@ export function BookingCancelPanel({
   cancellationDeductedDays,
   cancellationRefundAmountSar,
   cancellationRefundExternalRef,
+  cancellationReasonAr,
+  paidAmountSar,
   cancellationPolicyAr = "",
   cancelMinHoursBeforePickup = 0,
   cancellationDeductTiers = [],
@@ -64,6 +72,11 @@ export function BookingCancelPanel({
   const [pending, startTransition] = useTransition();
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
+
+  const [fullRefundModalOpen, setFullRefundModalOpen] = useState(false);
+  const [fullRefundReason, setFullRefundReason] = useState("");
+  const [fullRefundError, setFullRefundError] = useState<string | null>(null);
+  const [fullRefundPending, startFullRefundTransition] = useTransition();
 
   const statusKey = status.trim().toUpperCase();
   const paymentKey = paymentStatus.trim().toUpperCase();
@@ -135,6 +148,12 @@ export function BookingCancelPanel({
           ) : paymentKey === "NO_REFUND" ? (
             <span className="font-bold text-on-surface">: لا يوجد مبلغ مسترد بحسب السياسة.</span>
           ) : null}
+        </p>
+      ) : null}
+
+      {statusKey === "CANCELLED" && cancellationReasonAr?.trim() ? (
+        <p className="rounded-lg border border-outline-variant/40 bg-surface-container-low/60 p-2.5 text-xs font-semibold leading-relaxed text-on-surface">
+          سبب الإلغاء: <span className="font-bold">{cancellationReasonAr.trim()}</span>
         </p>
       ) : null}
 
@@ -231,17 +250,121 @@ export function BookingCancelPanel({
           </div>
         </div>
       ) : (
-        <button
-          type="button"
-          onClick={() => {
-            setCancelError(null);
-            setCancelOpen(true);
-          }}
-          className="w-full rounded-xl border border-red-300 bg-white px-4 py-2.5 text-sm font-bold text-red-800 transition-colors hover:bg-red-50"
-        >
-          إلغاء الحجز (سياسة العميل)
-        </button>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <button
+            type="button"
+            onClick={() => {
+              setCancelError(null);
+              setCancelOpen(true);
+            }}
+            className="inline-flex flex-1 items-center justify-center rounded-xl border border-red-300 bg-white px-4 py-2.5 text-sm font-bold text-red-800 transition-colors hover:bg-red-50"
+          >
+            إلغاء الحجز (سياسة العميل)
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setFullRefundError(null);
+              setFullRefundReason("");
+              setFullRefundModalOpen(true);
+            }}
+            className="inline-flex flex-1 items-center justify-center rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm font-bold text-amber-900 transition-colors hover:bg-amber-100"
+          >
+            إلغاء مع استرداد كامل
+          </button>
+        </div>
       )}
+
+      {fullRefundModalOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+          dir="rtl"
+        >
+          <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="border-b border-outline-variant/20 bg-amber-50 px-6 py-4">
+              <h3 className="text-lg font-extrabold text-amber-950">إلغاء مع استرداد كامل</h3>
+              <p className="mt-1 text-xs font-semibold text-amber-900/80">
+                يتجاوز هذا الخيار سياسة خصم الشرائح ويُعيد للعميل كامل المبلغ المدفوع — لحالات
+                استثنائية فقط.
+              </p>
+            </div>
+
+            <div className="p-6">
+              {paymentKey === "PAID" && typeof paidAmountSar === "number" && paidAmountSar > 0 ? (
+                <p className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-extrabold text-emerald-950">
+                  سيُسترَد للعميل: <SarAmountInline amount={paidAmountSar} />
+                  {paymentMethod ? (
+                    <span className="mr-1 font-semibold text-emerald-900/80">
+                      عبر {bookingPaymentMethodLabelAr(paymentMethod)}
+                    </span>
+                  ) : null}
+                </p>
+              ) : (
+                <p className="mb-4 rounded-xl border border-outline-variant/40 bg-surface-container-low px-4 py-3 text-sm font-bold text-on-surface">
+                  لا يوجد مبلغ مدفوع على هذا الحجز — سيتم إلغاؤه فقط بلا استرداد.
+                </p>
+              )}
+
+              <label className="block text-sm font-bold text-on-surface">
+                سبب الاسترداد <span className="text-red-700">*</span>
+                <textarea
+                  value={fullRefundReason}
+                  onChange={(e) => setFullRefundReason(e.target.value)}
+                  rows={3}
+                  placeholder=""
+                  className="mt-2 w-full rounded-xl border border-outline-variant/40 bg-white px-4 py-3 text-sm focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15"
+                />
+              </label>
+
+              {fullRefundError ? (
+                <p className="mt-3 text-xs font-bold text-red-700" role="alert">
+                  {fullRefundError}
+                </p>
+              ) : null}
+
+              <div className="mt-6 flex gap-3">
+                <button
+                  type="button"
+                  disabled={fullRefundPending}
+                  onClick={() => {
+                    if (!fullRefundReason.trim()) {
+                      setFullRefundError("سبب الاسترداد إلزامي.");
+                      return;
+                    }
+                    setFullRefundError(null);
+                    startFullRefundTransition(async () => {
+                      const fd = new FormData();
+                      fd.set("bookingRequestId", String(bookingRequestId));
+                      fd.set("reasonAr", fullRefundReason.trim());
+                      const r = await cancelAdminBookingWithFullRefund(fd);
+                      if (!r.ok) {
+                        setFullRefundError(r.error ?? "تعذّر تنفيذ الإلغاء والاسترداد.");
+                        return;
+                      }
+                      setFullRefundModalOpen(false);
+                      router.refresh();
+                    });
+                  }}
+                  className="flex-1 rounded-xl bg-red-700 py-3 text-sm font-bold text-white transition-colors hover:opacity-95 disabled:opacity-60"
+                >
+                  {fullRefundPending ? "جاري التنفيذ…" : "تأكيد الإلغاء والاسترداد"}
+                </button>
+                <button
+                  type="button"
+                  disabled={fullRefundPending}
+                  onClick={() => {
+                    setFullRefundModalOpen(false);
+                    setFullRefundError(null);
+                  }}
+                  className="flex-1 rounded-xl border border-outline-variant/40 py-3 text-sm font-bold text-on-surface transition-colors hover:bg-surface-container-low disabled:opacity-60"
+                >
+                  إغلاق
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -520,6 +520,8 @@ export function BookingDetailView({ booking, editActions, cancellation }: Props)
               cancellationDeductedDays={booking.cancellationDeductedDays}
               cancellationRefundAmountSar={booking.cancellationRefundAmountSar}
               cancellationRefundExternalRef={booking.cancellationRefundExternalRef}
+              cancellationReasonAr={booking.cancellationReasonAr}
+              paidAmountSar={booking.paidAmountSar}
               cancellationPolicyAr={cancellation.cancellationPolicyAr}
               cancelMinHoursBeforePickup={cancellation.cancelMinHoursBeforePickup}
               cancellationDeductTiers={cancellation.cancellationDeductTiers}

@@ -48,6 +48,8 @@ async function loadBookingForCancel(bookingRequestId: number) {
       kind: true,
       paymentStatus: true,
       paymentMethod: true,
+      paidAmountSar: true,
+      balanceDueAtBranchSar: true,
       addonsJson: true,
       customerId: true,
       phone: true,
@@ -231,6 +233,118 @@ export async function cancelBookingWithPolicy(input: {
     paymentMethod: paymentMethodOut,
     deductDays,
   };
+}
+
+export type CancelBookingFullRefundResult =
+  | { ok: true; refundInclTaxSar: number; paymentMethod: string | null }
+  | { ok: false; error: string };
+
+/**
+ * إلغاء إداري باسترداد كامل — يتجاوز شرائح خصم السياسة كاملةً (لا خصم أيام)
+ * ويردّ كل المبلغ المدفوع. يُستخدم في حالات استثنائية (مثال: عدم توفر السيارة)
+ * ويتطلب سبباً إلزامياً يُسجَّل على الحجز وفي سجل النشاط.
+ */
+export async function cancelBookingWithFullRefundByAdmin(input: {
+  bookingRequestId: number;
+  reasonAr: string;
+  actorLabel: string;
+}): Promise<CancelBookingFullRefundResult> {
+  const reason = input.reasonAr.trim();
+  if (!reason) {
+    return { ok: false, error: "سبب الاسترداد إلزامي." };
+  }
+
+  const row = await loadBookingForCancel(input.bookingRequestId);
+  if (!row) {
+    return { ok: false, error: "الطلب غير موجود." };
+  }
+
+  const st = row.status.trim().toUpperCase();
+  if (st === "CANCELLED") {
+    return { ok: false, error: "الطلب ملغى بالفعل." };
+  }
+  if (TERMINAL_STATUSES.has(st)) {
+    return { ok: false, error: "لا يمكن إلغاء طلب في هذه الحالة." };
+  }
+  if (st === BOOKING_STATUS_RETURNED) {
+    return { ok: false, error: "لا يمكن إلغاء حجز تم إرجاع السيارة فيه بالفعل." };
+  }
+
+  const nowCancel = new Date();
+  const baseData = {
+    status: "CANCELLED" as const,
+    cancelledAt: nowCancel,
+    // لا خصم أيام — استرداد كامل بلا تطبيق سياسة الشرائح.
+    cancellationDeductedDays: null,
+    cancellationReasonAr: reason,
+    // إلغاء الحجز بالكامل يُسقط أي رصيد كان مستحقاً على العميل (فرق تمديد مثلاً).
+    balanceDueAtBranchSar: 0,
+  };
+
+  // مطالبة ذرّية بالإلغاء — طلب واحد فقط يمرّ، يمنع الاسترداد المزدوج.
+  const claim = await prisma.bookingRequest.updateMany({
+    where: {
+      id: row.id,
+      status: { notIn: ["CANCELLED", "REJECTED", BOOKING_STATUS_RETURNED] },
+    },
+    data: baseData,
+  });
+  if (claim.count === 0) {
+    return { ok: false, error: "الطلب ملغى بالفعل أو في حالة لا تسمح بالإلغاء." };
+  }
+
+  const ps = row.paymentStatus.trim().toUpperCase();
+  const paidAmount = row.paidAmountSar ?? 0;
+  const paidEligible = row.kind === "DIRECT" && ps === "PAID" && paidAmount > 0;
+
+  if (!paidEligible) {
+    return { ok: true, refundInclTaxSar: 0, paymentMethod: null };
+  }
+
+  const exec = await executeCancellationRefundByPaymentMethod({
+    bookingRequestId: row.id,
+    paymentMethod: row.paymentMethod,
+    refundAmountInclTaxSar: paidAmount,
+  });
+  if (!exec.ok) {
+    // فشل الاسترداد: نتراجع عن الإلغاء بالكامل حتى لا يبقى الحجز ملغى بلا استرداد بصمت.
+    console.error("[cancelBookingWithFullRefundByAdmin] refund failed:", exec.error);
+    await prisma.bookingRequest.update({
+      where: { id: row.id },
+      data: {
+        status: row.status,
+        cancelledAt: null,
+        cancellationDeductedDays: null,
+        cancellationReasonAr: null,
+        balanceDueAtBranchSar: row.balanceDueAtBranchSar,
+      },
+    });
+    return {
+      ok: false,
+      error:
+        "تعذّر تنفيذ الاسترداد عبر بوابة الدفع، ولم يتم إلغاء الحجز. يرجى المحاولة لاحقاً أو التواصل مع الدعم.",
+    };
+  }
+
+  await prisma.bookingRequest.update({
+    where: { id: row.id },
+    data: {
+      paymentStatus: "REFUNDED",
+      cancellationRefundAmountSar: paidAmount,
+      cancellationRefundExternalRef: exec.externalRef,
+    },
+  });
+
+  const meta = await currentRequestMeta();
+  await logActivity({
+    kind: "BOOKING_REFUND",
+    path: `/admin/bookings/${row.id}`,
+    actorLabel: `${input.actorLabel} — إلغاء باسترداد كامل ${paidAmount} ر.س. السبب: ${reason}`,
+    ip: meta.ip,
+    userAgent: meta.userAgent,
+  });
+
+  return { ok: true, refundInclTaxSar: paidAmount, paymentMethod: row.paymentMethod };
 }
 
 export type CancellationFinancePreview = {
