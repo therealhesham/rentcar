@@ -262,8 +262,19 @@ export async function confirmMockPayment(
         id,
         kind: "DIRECT",
         paymentStatus: "PENDING",
-        ...(isCash ? { paymentMethod: null } : {}),
-        ...customerBookingOwnershipWhere(profile.id, profile.phone),
+        // ownershipWhere يحمل مفتاح OR الخاص به — نجمع شرط الكاش عبر AND بدل
+        // spread مباشر حتى لا يطغى أحد مفتاحَي OR على الآخر بنفس الاسم.
+        AND: [
+          customerBookingOwnershipWhere(profile.id, profile.phone),
+          // يمنع إعادة معالجة اختيار كاش سابق فقط (متعامل معه صراحة أدناه) —
+          // لا يمنع التحول لكاش بعد محاولة إلكترونية سابقة فشلت (paymentMethod
+          // يبقى مسجَّلاً بوسيلة البطاقة رغم فشل الدفع طالما الحالة لا تزال PENDING).
+          // ملاحظة: `not: "CASH"` وحدها تستبعد الصفوف بقيمة NULL في MySQL
+          // (NULL <> 'CASH' = NULL وليس true) — لازم OR صريح مع null.
+          isCash
+            ? { OR: [{ paymentMethod: null }, { paymentMethod: { not: "CASH" } }] }
+            : {},
+        ],
       },
       data: isCash
         ? {
