@@ -4,6 +4,7 @@ import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminCard } from "@/components/admin/AdminCard";
 import { AdminStatCard } from "@/components/admin/AdminStatCard";
 import { getAdminRevenueStats, formatSar } from "@/lib/admin-statistics";
+import { getCompanyDuesPosition } from "@/lib/company-dues";
 import { prisma } from "@/lib/prisma";
 import { RegisterBookingPaymentModal } from "./RegisterBookingPaymentModal";
 import Link from "next/link";
@@ -108,6 +109,33 @@ export default async function FinancialsPage(props: {
   }
 
   const currentMonthName = new Intl.DateTimeFormat('ar-SA', { month: 'long' }).format(new Date());
+
+  // مستحقات قائمة للعملاء (بعد تعديلات قلّصت حجوزات مدفوعة) — تنبيه بأعلى الصفحة.
+  const customerDuesWhere: any = {
+    refundDueToCustomerSar: { gt: 0 },
+    refundDueSettledAt: null,
+  };
+  if (!session.isSuperAdmin) {
+    customerDuesWhere.OR = [
+      { branchId: session.branchId },
+      { returnBranchId: session.branchId },
+    ];
+  }
+  const customerDuesRows = await prisma.bookingRequest.findMany({
+    where: customerDuesWhere,
+    select: { refundDueToCustomerSar: true },
+  });
+  const customerDuesCount = customerDuesRows.length;
+  const customerDuesTotalSar = customerDuesRows.reduce(
+    (s, r) => s + (r.refundDueToCustomerSar ?? 0),
+    0,
+  );
+
+  // المركز المالي للمستحقات باتجاهين (للشركة على العملاء / على الشركة للعملاء).
+  const duesPosition = await getCompanyDuesPosition({
+    isSuperAdmin: session.isSuperAdmin,
+    branchId: session.branchId,
+  });
 
   // Fetch recent subscription payments
   const recentSubPayments = session.isSuperAdmin
@@ -230,6 +258,51 @@ export default async function FinancialsPage(props: {
         description="نظرة عامة على الإيرادات ومدفوعات العملاء للاشتراكات والحجوزات."
         actions={<ReportExportButtons reportId="financial-transactions" withDateRange />}
       />
+
+      {customerDuesCount > 0 ? (
+        <Link
+          href="/admin/customer-dues"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-sky-300/70 bg-sky-50 px-5 py-4 text-sm font-bold text-sky-950 transition-colors hover:bg-sky-100"
+        >
+          <span>
+            ⚠️ يوجد {customerDuesCount} حجز عليه مستحقات قائمة للعملاء بإجمالي{" "}
+            <span className="tabular-nums" dir="ltr">{formatSar(customerDuesTotalSar)} ر.س</span>
+            {" "}— بانتظار التسوية.
+          </span>
+          <span className="rounded-xl bg-[#003749] px-4 py-2 text-xs font-extrabold text-white">
+            فتح قسم مستحقات للعميل
+          </span>
+        </Link>
+      ) : null}
+
+      <div className="space-y-3">
+        <h2 className="text-sm font-black text-on-surface-variant">المركز المالي للمستحقات</h2>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <AdminStatCard
+            label="مستحقات للشركة"
+            value={`${formatSar(duesPosition.receivables.totalSar)} ر.س`}
+            href="/admin/company-dues"
+            highlight={duesPosition.receivables.totalSar > 0}
+            hint={`${duesPosition.receivables.count} حجز — رصيد يُحصَّل عند الفرع`}
+          />
+          <AdminStatCard
+            label="مستحقات على الشركة"
+            value={`${formatSar(duesPosition.payables.totalSar)} ر.س`}
+            href="/admin/customer-dues"
+            highlight={duesPosition.payables.totalSar > 0}
+            hint={`${duesPosition.payables.count} حجز — استرداد للعملاء بانتظار التسوية`}
+          />
+          <AdminStatCard
+            label="صافي المستحقات"
+            value={`${formatSar(duesPosition.netSar)} ر.س`}
+            hint={
+              duesPosition.netSar >= 0
+                ? "لصالح الشركة (المستحق لها أكبر)"
+                : "على الشركة (المستحق عليها أكبر)"
+            }
+          />
+        </div>
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <AdminStatCard

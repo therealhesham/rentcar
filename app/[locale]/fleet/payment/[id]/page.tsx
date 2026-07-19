@@ -4,6 +4,8 @@ import { PaymentClient } from "@/components/fleet/PaymentClient";
 import { SiteNav } from "@/components/shared/SiteNav";
 import { requireCustomerPaymentPageAccess } from "@/lib/customer-booking-access";
 import { getBookingForPayment } from "@/lib/booking-payment-data";
+import { isGeideaConfigured } from "@/lib/geidea/client";
+import { reconcilePendingGeideaPaymentById } from "@/lib/geidea/mark-paid";
 import { getCheckoutPaymentMethodFlags } from "@/lib/site-settings";
 import { buildPageMetadata } from "@/lib/seo";
 
@@ -26,6 +28,10 @@ export default async function FleetPaymentPage({
 
   await requireCustomerPaymentPageAccess(id);
 
+  // مصالحة: لو العميل عاد من جيديا قبل وصول الـ webhook، تُجلب حالة الدفع
+  // مباشرةً من البوابة ويُعلَّم الحجز مدفوعاً قبل عرض الصفحة.
+  await reconcilePendingGeideaPaymentById(id);
+
   const [booking, paymentMethodFlags] = await Promise.all([
     getBookingForPayment(id),
     getCheckoutPaymentMethodFlags(),
@@ -36,7 +42,11 @@ export default async function FleetPaymentPage({
     <div className="flex min-h-screen flex-col bg-[#fdfbf6] text-on-surface">
       <SiteNav active="fleet" />
       <div className="pt-24 pb-20">
-        <PaymentClient booking={booking} paymentMethodFlags={paymentMethodFlags} />
+        <PaymentClient
+          booking={booking}
+          paymentMethodFlags={paymentMethodFlags}
+          hostedCheckout={isGeideaConfigured()}
+        />
       </div>
       <SiteFooter />
     </div>

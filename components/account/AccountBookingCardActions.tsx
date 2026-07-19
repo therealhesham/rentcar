@@ -40,6 +40,8 @@ export type AccountBookingCardActionsProps = {
     cancellationDeductedDays?: number | null;
     cancellationRefundAmountSar?: number | null;
     cancellationRefundExternalRef?: string | null;
+    /** رصيد مستحق بعد تمديد/تعديل حجز مدفوع — يظهر زر سداده أونلاين قبل موعد الاستلام. */
+    balanceDueAtBranchSar?: number | null;
   };
   /** نص من لوحة الإدارة يُعرض عند تأكيد الإلغاء */
   cancellationPolicyAr?: string;
@@ -116,7 +118,19 @@ export function AccountBookingCardActions({
   const rebookCheckoutHref = hrefFreshRebookCheckoutFromBooking(rebookLike);
 
   const showDirectLinks = b.kind === "DIRECT" && b.carModelId != null && b.carModelId >= 1;
-  const showCompletePayment = shouldShowCompletePaymentLink(b);
+
+  // بدأ موعد استلام الحجز (أو مرّ بالكامل) — من هذه اللحظة لا يُسمح للعميل بأي إجراء
+  // ذاتي عليه (إلغاء / تعديل / إتمام دفع)، بصرف النظر عن حالته في النظام.
+  const bookingStarted = Date.now() >= new Date(b.pickupDateIso).getTime();
+  const showCompletePayment = shouldShowCompletePaymentLink(b) && !bookingStarted;
+
+  // حجز مدفوع نتج عن تعديله فرق تمديد مستحق — زر سداده أونلاين قبل موعد الاستلام.
+  const showPayBalance =
+    b.kind === "DIRECT" &&
+    paymentKey === "PAID" &&
+    (b.balanceDueAtBranchSar ?? 0) > 0 &&
+    !bookingStarted &&
+    !isTerminal;
 
   // إعادة الحجز تظهر فقط بعد انتهاء مدة الإيجار (مرّ موعد الإرجاع) أو إن كان الحجز
   // ملغى/مرفوض — لا تظهر طالما الحجز ما زال قائماً وميعاد الإرجاع لم يحن بعد.
@@ -124,6 +138,7 @@ export function AccountBookingCardActions({
     new Date(b.pickupDateIso).getTime() + b.numberOfDays * 24 * 60 * 60 * 1000;
   const rentalEnded = Date.now() >= rentalEndMs;
   const showRebook = isTerminal || rentalEnded;
+  const noActionsAvailable = bookingStarted && !isTerminal && !showRebook;
 
   const cancelPastDeadline = isSelfCancelPastDeadline(
     b.pickupDateIso,
@@ -259,6 +274,12 @@ export function AccountBookingCardActions({
         </div>
       ) : (
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+          {noActionsAvailable ? (
+            <p className="text-[12px] font-bold leading-relaxed text-on-surface-variant">
+              بدأ موعد استلام هذا الحجز — لا يمكن إجراء أي تعديل أو إلغاء أو دفع عليه من الحساب.
+            </p>
+          ) : null}
+
           {showCompletePayment ? (
             <Link
               href={`/fleet/payment/${b.id}`}
@@ -268,9 +289,19 @@ export function AccountBookingCardActions({
             </Link>
           ) : null}
 
+          {showPayBalance ? (
+            <Link
+              href={`/fleet/payment/${b.id}`}
+              className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-[#ea580c] px-4 py-2.5 text-center text-sm font-extrabold text-white shadow-sm transition-opacity hover:opacity-95 sm:w-auto sm:flex-1"
+            >
+              سداد فرق التمديد{" "}
+              <SarAmountInline amount={b.balanceDueAtBranchSar ?? 0} />
+            </Link>
+          ) : null}
+
           {showDirectLinks ? (
             <>
-              {!rentalEnded && !isTerminal && editData ? (
+              {!bookingStarted && !isTerminal && editData ? (
                 <button
                   type="button"
                   onClick={() => setEditOpen(true)}
@@ -297,7 +328,7 @@ export function AccountBookingCardActions({
             </Link>
           ) : null}
 
-          {rentalEnded ? null : (
+          {bookingStarted ? null : (
             <button
               type="button"
               disabled={cancelPastDeadline || isTerminal}

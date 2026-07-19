@@ -134,8 +134,9 @@ export async function processBookingPayment(
     return { ok: false, error: "طريقة الدفع غير صالحة." };
   }
 
-  const externalRef = String(formData.get("externalRef") ?? "").trim();
-  const receivedBy  = String(formData.get("receivedBy")  ?? "").trim();
+  // المرجع واسم المستلِم يُولَّدان تلقائياً — لا يُدخلهما الموظف يدوياً.
+  const externalRef = `OFFICE-${rawMethod}-${bookingId}-${Date.now()}`;
+  const receivedBy = auth.session.displayName;
 
   const booking = await prisma.bookingRequest.findUnique({
     where: { id: bookingId },
@@ -173,6 +174,8 @@ export async function processBookingPayment(
         paidAmountSar: newPaidAmount,
         balanceDueAtBranchSar: newBalance,
         // لا نُغيّر paymentMethod — وسيلة دفعة الرصيد قد تختلف عن الدفعة الأصلية.
+        ...(externalRef ? { paymentExternalRef: externalRef } : {}),
+        ...(receivedBy ? { paymentReceivedBy: receivedBy } : {}),
       },
     });
     if (res.count === 0) {

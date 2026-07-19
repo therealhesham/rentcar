@@ -13,6 +13,11 @@ export function isBookingReturned(status: string | null | undefined): boolean {
   return status?.trim().toUpperCase() === BOOKING_STATUS_RETURNED;
 }
 
+/** مرّ موعد استلام الحجز (بدأ فعلياً) — من هذه اللحظة لا يُسمح للعميل بأي إجراء ذاتي عليه. */
+export function hasBookingPickupPassed(pickupDate: Date, now: Date = new Date()): boolean {
+  return now.getTime() >= pickupDate.getTime();
+}
+
 /** يمكن تسجيل استلام السيارة من الفرع. */
 export function canRecordPickupFromBranch(booking: {
   kind: string;

@@ -1852,6 +1852,11 @@ export async function updateDirectBookingDates(input: {
   balanceDueAtBranchSar?: number | null;
   /** snapshot الإجمالي الجديد بعد التعديل (شامل الضريبة) — مجمَّد وقت التعديل. */
   snapshotTotalAmountSar?: number | null;
+  /**
+   * مستحقات للعميل بعد التعديل (شامل الضريبة). تمريرها (ولو null) يعيد ضبط
+   * حقول التسوية — القيمة الجديدة تمثل مستحقات قائمة غير مُسوَّاة.
+   */
+  refundDueToCustomerSar?: number | null;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const { bookingRequestId } = input;
   const days = safeBookingDays(input.numberOfDays);
@@ -1944,6 +1949,15 @@ export async function updateDirectBookingDates(input: {
               : {}),
             ...(input.snapshotTotalAmountSar !== undefined
               ? { snapshotTotalAmountSar: input.snapshotTotalAmountSar }
+              : {}),
+            ...(input.refundDueToCustomerSar !== undefined
+              ? {
+                  refundDueToCustomerSar: input.refundDueToCustomerSar,
+                  refundDueSettledAt: null,
+                  refundDueSettledMethod: null,
+                  refundDueSettledRef: null,
+                  refundDueSettledBy: null,
+                }
               : {}),
           },
         });

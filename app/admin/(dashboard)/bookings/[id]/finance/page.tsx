@@ -92,6 +92,16 @@ export default async function BookingFinancePage({
   const totalAmountSar = totals.totalInclTax;
   const remainingDueSar = Math.max(0, totalAmountSar - (booking.paidAmountSar ?? 0));
 
+  // الرصيد لا يُحصَّل في الحالات النهائية (ملغى/مرفوض/مسترد) — وإلا يُعرض متبقياً
+  // بصرف النظر عن حالة الدفع (حجز مدفوع جزئياً بعد تمديد له رصيد قائم).
+  const bookingStatusKey = booking.status.trim().toUpperCase();
+  const bookingTerminal =
+    bookingStatusKey === "CANCELLED" || bookingStatusKey === "REJECTED";
+  const refundedState = statusKey === "REFUNDED" || statusKey === "PARTIAL_REFUND";
+  const outstandingDueSar =
+    bookingTerminal || refundedState ? 0 : Math.round(remainingDueSar * 100) / 100;
+  const isPartiallyPaid = statusKey === "PAID" && outstandingDueSar > 0;
+
   return (
     <div className="mx-auto max-w-4xl space-y-8">
       <AdminPageHeader
@@ -109,7 +119,7 @@ export default async function BookingFinancePage({
             <BookingPaymentPanel
               bookingId={id}
               paymentStatus={booking.paymentStatus}
-              fullAmountSar={remainingDueSar}
+              fullAmountSar={outstandingDueSar}
             />
           ) : null}
 
@@ -139,7 +149,7 @@ export default async function BookingFinancePage({
                 {formatSarAmount(totalAmountSar)}
               </SarAmountWithSymbol>
             </div>
-            {remainingDueSar > 0 && canPay ? (
+            {outstandingDueSar > 0 ? (
               <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-amber-200">
                 <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-300" />
                 متبقٍ للتحصيل:{" "}
@@ -147,7 +157,7 @@ export default async function BookingFinancePage({
                   amountClassName="font-bold text-amber-200"
                   glyphClassName="text-amber-200/70"
                 >
-                  {formatSarAmount(remainingDueSar)}
+                  {formatSarAmount(outstandingDueSar)}
                 </SarAmountWithSymbol>
               </p>
             ) : (
@@ -166,9 +176,13 @@ export default async function BookingFinancePage({
                 <dt className="font-medium text-on-surface-variant">الحالة</dt>
                 <dd>
                   <span
-                    className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold ring-1 ring-inset ${paymentStatusStyles(booking.paymentStatus)}`}
+                    className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold ring-1 ring-inset ${
+                      isPartiallyPaid
+                        ? "bg-amber-50 text-amber-900 ring-amber-200/60"
+                        : paymentStatusStyles(booking.paymentStatus)
+                    }`}
                   >
-                    {paymentStatusLabelAr(booking.paymentStatus)}
+                    {isPartiallyPaid ? "مدفوع جزئياً" : paymentStatusLabelAr(booking.paymentStatus)}
                   </span>
                 </dd>
               </div>

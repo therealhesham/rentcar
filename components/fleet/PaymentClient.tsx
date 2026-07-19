@@ -42,6 +42,8 @@ import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label"
 type Props = {
   booking: BookingPaymentSnapshot;
   paymentMethodFlags: CheckoutPaymentMethodFlags;
+  /** عند التفعيل: البطاقة/مدى/Apple Pay تُحوَّل لصفحة الدفع المستضافة (جيديا) — بلا إدخال بطاقة محلي. */
+  hostedCheckout?: boolean;
 };
 
 export type CheckoutPaymentMethod = CustomerCheckoutPaymentMethod;
@@ -175,18 +177,30 @@ const METHOD_OPTIONS: MethodOption[] = [
   },
 ];
 
-export function PaymentClient({ booking, paymentMethodFlags }: Props) {
+export function PaymentClient({ booking, paymentMethodFlags, hostedCheckout }: Props) {
   const enabledMethods = useMemo(
     () => listEnabledCheckoutPaymentMethods(paymentMethodFlags),
     [paymentMethodFlags],
   );
-  const visibleMethodOptions = useMemo(
-    () => METHOD_OPTIONS.filter((opt) => enabledMethods.includes(opt.id)),
-    [enabledMethods],
-  );
 
   const ps = booking.paymentStatus.trim().toUpperCase();
-  const paymentFinalized = ps !== "PENDING";
+  // وضع «دفع فرق التمديد»: الحجز مدفوع وعليه رصيد بعد تعديل/تمديد — تُعرض
+  // طرق الدفع لسداد الرصيد فقط (بلا كاش؛ النقدي يسجّله موظف الفرع).
+  const balanceDueSar = Math.round((booking.balanceDueAtBranchSar ?? 0) * 100) / 100;
+  const balancePaymentMode = ps === "PAID" && balanceDueSar > 0;
+  const paymentFinalized = ps !== "PENDING" && !balancePaymentMode;
+
+  const visibleMethodOptions = useMemo(
+    () =>
+      METHOD_OPTIONS.filter(
+        (opt) =>
+          enabledMethods.includes(opt.id) &&
+          // في وضع دفع فرق التمديد لا يُعرض «عند الفرع» — الرصيد يُسدَّد أونلاين.
+          !(balancePaymentMode && opt.id === "CASH"),
+      ),
+    [enabledMethods, balancePaymentMode],
+  );
+
   const [state, formAction, pending] = useActionState<ConfirmPaymentResult | null, FormData>(
     confirmMockPayment,
     null,
@@ -211,9 +225,13 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
     if (next) setMethod(next);
   }, [enabledMethods, method]);
 
+  // المبلغ المطلوب سداده الآن: الرصيد فقط في وضع فرق التمديد، وإلا الإجمالي كاملاً.
+  const payableAmountSar = balancePaymentMode ? balanceDueSar : booking.totals.totalInclTax;
+
   const cashSubmitted =
-    isCashCheckoutSubmitted(booking) ||
-    (state?.ok === true && isCashPaymentMethod(state.paymentMethod));
+    !balancePaymentMode &&
+    (isCashCheckoutSubmitted(booking) ||
+      (state?.ok === true && isCashPaymentMethod(state.paymentMethod)));
 
   const underReview =
     cashSubmitted &&
@@ -260,7 +278,7 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     if (checkoutComplete) return;
     setClientError(null);
-    if (!usesCardEntryForm(method)) return;
+    if (!usesCardEntryForm(method) || hostedCheckout) return;
 
     const cardClean = card.replace(/\s+/g, "");
     if (!luhnOk(cardClean)) {
@@ -304,25 +322,25 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
             : method === "CASH"
               ? (
                   <>
-                    تأكيد الحجز (عند الفرع) {formatSarAmount(booking.totals.totalInclTax)}{" "}
+                    تأكيد الحجز (عند الفرع) {formatSarAmount(payableAmountSar)}{" "}
                     <SarCurrencyGlyph />
                   </>
                 )
               : method === "APPLE_PAY"
                 ? (
                     <>
-                      ادفع {formatSarAmount(booking.totals.totalInclTax)} <SarCurrencyGlyph /> عبر Apple Pay
+                      ادفع {formatSarAmount(payableAmountSar)} <SarCurrencyGlyph /> عبر Apple Pay
                     </>
                   )
                 : method === "MADA"
                   ? (
                       <>
-                        ادفع {formatSarAmount(booking.totals.totalInclTax)} <SarCurrencyGlyph /> عبر مدى
+                        ادفع {formatSarAmount(payableAmountSar)} <SarCurrencyGlyph /> عبر مدى
                       </>
                     )
                   : (
                       <>
-                        ادفع {formatSarAmount(booking.totals.totalInclTax)} <SarCurrencyGlyph />
+                        ادفع {formatSarAmount(payableAmountSar)} <SarCurrencyGlyph />
                       </>
                     );
 
@@ -359,7 +377,9 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
                         : resolvedMethodCode
                           ? `تم الدفع عبر ${bookingPaymentMethodLabelAr(resolvedMethodCode)}.`
                           : "تم الدفع بنجاح."
-                  : "اختر طريقة الدفع المناسبة وأكمل الإجراء."}
+                  : balancePaymentMode
+                    ? `تم تعديل حجزك ونتج عنه فرق تمديد مستحق ${formatSarAmount(balanceDueSar)} ر.س — اختر وسيلة الدفع لسداده.`
+                    : "اختر طريقة الدفع المناسبة وأكمل الإجراء."}
         </p>
       </div>
 
@@ -516,14 +536,31 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
 
               <header className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h2 className="text-lg font-extrabold text-[#003749]">طرق الدفع</h2>
-                 
+                  <h2 className="text-lg font-extrabold text-[#003749]">
+                    {balancePaymentMode ? "سداد فرق التمديد" : "طرق الدفع"}
+                  </h2>
+
                 </div>
                 <p className="text-xs text-on-surface-variant">
                   يمكن للعميل الدفع عبر تابي أو تمارا أو بطاقة ائتمانية أو Apple Pay أو استبدال نقاط. الربط
                   الفعلي مع مزوّدي الخدمة يُضاف لاحقاً دون تغيير مسار الحجز.
                 </p>
               </header>
+
+              {balancePaymentMode ? (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+                  <div className="flex items-center justify-between gap-3 font-extrabold">
+                    <span>فرق التمديد المستحق الآن</span>
+                    <span className="tabular-nums" dir="ltr">
+                      {formatSarAmount(balanceDueSar)} <SarCurrencyGlyph className="inline h-[0.85em] w-[0.85em]" />
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs leading-relaxed opacity-90">
+                    حجزك مدفوع سابقاً — المطلوب سداد فرق التعديل/التمديد فقط. يمكنك أيضاً دفعه
+                    نقداً لدى موظف الفرع عند الاستلام.
+                  </p>
+                </div>
+              ) : null}
 
               <div className="grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="طريقة الدفع">
                 {visibleMethodOptions.map((opt) => {
@@ -632,7 +669,7 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
                 </div>
               ) : null}
 
-              {usesCardEntryForm(method) ? (
+              {usesCardEntryForm(method) && !hostedCheckout ? (
                 <div className="space-y-4 border-t border-neutral-100 pt-5">
                   <div className="flex items-center gap-2">
                     <CreditCard className="size-5 text-[#003749]" aria-hidden />
@@ -723,6 +760,11 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
                   <>
                     <Loader2 className="size-4 animate-spin" aria-hidden />
                     جاري المعالجة…
+                  </>
+                ) : hostedCheckout && usesCardEntryForm(method) ? (
+                  <>
+                    المتابعة للدفع الآمن {formatSarAmount(payableAmountSar)}{" "}
+                    <SarCurrencyGlyph />
                   </>
                 ) : (
                   submitLabel
@@ -883,8 +925,19 @@ export function PaymentClient({ booking, paymentMethodFlags }: Props) {
                       {formatSarAmount(booking.totals.totalInclTax)} <SarCurrencyGlyph />
                     </>
                   }
-                  emphasize
+                  emphasize={!balancePaymentMode}
                 />
+                {balancePaymentMode ? (
+                  <Row
+                    label="المستحق الآن (فرق تمديد)"
+                    value={
+                      <>
+                        {formatSarAmount(balanceDueSar)} <SarCurrencyGlyph />
+                      </>
+                    }
+                    emphasize
+                  />
+                ) : null}
               </div>
             </div>
           </div>

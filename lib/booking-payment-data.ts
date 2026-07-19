@@ -49,6 +49,8 @@ export type BookingPaymentSnapshot = {
   /** TABBY | TAMARA | CARD | APPLE_PAY | POINTS — يُسجَّل عند إتمام الدفع التجريبي */
   paymentMethod: string | null;
   status: string;
+  /** رصيد مستحق على العميل بعد تمديد/تعديل حجز مدفوع — يُسدَّد أونلاين من نفس الصفحة أو في الفرع. */
+  balanceDueAtBranchSar: number | null;
   car: {
     modelId: number;
     fullTitle: string;
@@ -145,6 +147,7 @@ export async function getBookingForPayment(
     paidAt: row.paidAt,
     paymentMethod: row.paymentMethod,
     status: row.status,
+    balanceDueAtBranchSar: row.balanceDueAtBranchSar,
     car: {
       modelId: m.id,
       fullTitle: `${brandName} ${modelName}`.trim(),

@@ -200,15 +200,16 @@ export default async function AccountDashboardPage() {
       : 0;
     const isTerminalCard = bookingSt === "CANCELLED" || bookingSt === "REJECTED";
 
+    // التعديل الذاتي متاح فقط قبل موعد الاستلام — بعد بدء الحجز (أو انتهائه) يُقفل تماماً.
     let editData: BookingEditModalData | null = null;
     const nowMs = Date.now();
-    const bookingEndMs = b.pickupDate.getTime() + b.numberOfDays * 24 * 60 * 60 * 1000;
+    const bookingNotStarted = nowMs < b.pickupDate.getTime();
     if (
       b.kind === "DIRECT" &&
       b.carModel &&
       !isTerminalCard &&
       bookingSt !== "COMPLETED" &&
-      nowMs < bookingEndMs
+      bookingNotStarted
     ) {
       const priceInput = bookingDaysPriceInputFromSnapshot(
         b.carModel.price,
@@ -224,7 +225,7 @@ export default async function AccountDashboardPage() {
         branchName: returnBranchName ?? pickupBranchName ?? null,
         paymentStatus: b.paymentStatus,
         paymentMethod: b.paymentMethod,
-        started: b.pickupDate.getTime() <= nowMs,
+        started: false,
         pickupIso: b.pickupDate.toISOString(),
         numberOfDays: b.numberOfDays,
         priceInput,
@@ -386,6 +387,7 @@ export default async function AccountDashboardPage() {
                 cancellationDeductedDays: b.cancellationDeductedDays ?? null,
                 cancellationRefundAmountSar: rowRefund.cancellationRefundAmountSar ?? null,
                 cancellationRefundExternalRef: rowRefund.cancellationRefundExternalRef ?? null,
+                balanceDueAtBranchSar: balanceDue > 0 ? balanceDue : null,
               }}
             />
           </div>

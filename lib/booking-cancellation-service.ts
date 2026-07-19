@@ -8,6 +8,7 @@ import { executeCancellationRefundByPaymentMethod } from "@/lib/booking-refund-e
 import {
   BOOKING_STATUS_PICKED_UP,
   BOOKING_STATUS_RETURNED,
+  hasBookingPickupPassed,
 } from "@/lib/booking-lifecycle";
 import {
   computeCancellationDeductedDays,
@@ -111,6 +112,14 @@ export async function cancelBookingWithPolicy(input: {
   }
 
   if (input.role === "customer") {
+    // بدأ موعد الاستلام (أو مرّ بالكامل) — لا يُسمح للعميل بإلغاء ذاتي بعد هذه اللحظة
+    // بصرف النظر عن حالة الطلب الحالية في النظام.
+    if (hasBookingPickupPassed(row.pickupDate)) {
+      return {
+        ok: false,
+        error: "بدأ موعد استلام هذا الحجز، لا يمكن إلغاؤه ذاتياً. يرجى التواصل مع الدعم.",
+      };
+    }
     const minHours = await getCustomerCancelMinHoursBeforePickup();
     const deadlineErr = checkCustomerCancelDeadline(row.pickupDate, minHours);
     if (deadlineErr) return { ok: false, error: deadlineErr };

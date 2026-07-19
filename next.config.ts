@@ -25,6 +25,8 @@ const spacesHost = spacesImageHostname();
 const nextConfig: NextConfig = {
   /** مطلوب لبناء صورة Docker التي تنسخ `.next/standalone` */
   output: "standalone",
+  /** يسمح بموارد التطوير عبر أنفاق cloudflared (اختبار webhook جيديا محلياً) — لا أثر له في الإنتاج. */
+  allowedDevOrigins: ["*.trycloudflare.com"],
   images: {
     remotePatterns: [
       {

@@ -225,6 +225,11 @@ export function BookingEditModal(props: BookingEditModalProps) {
         return;
       }
       props.onClose();
+      if (r.paymentRedirect) {
+        // نتج عن التعديل مبلغ مستحق — يُوجَّه العميل لصفحة الدفع لسداد الفرق أونلاين.
+        router.push(r.paymentRedirect);
+        return;
+      }
       router.refresh();
     });
   }
@@ -464,12 +469,8 @@ export function BookingEditModal(props: BookingEditModalProps) {
                   </div>
                   <p className="mt-1.5 text-[12px] font-semibold text-emerald-900/90">
                     {isPaid
-                      ? `يُدفع الفرق عند الفرع${
-                          props.paymentMethod
-                            ? ` (وسيلة الدفع: ${bookingPaymentMethodLabelAr(props.paymentMethod)})`
-                            : ""
-                        }.`
-                      : "يُضاف الفرق إلى إجمالي الحجز ويُدفع عند الاستلام."}
+                      ? "بعد حفظ التعديل سيتم تحويلك لصفحة الدفع لسداد الفرق أونلاين."
+                      : "يُضاف الفرق إلى إجمالي الحجز ويُدفع عند إتمام الدفع."}
                   </p>
                 </div>
               ) : (
@@ -479,7 +480,13 @@ export function BookingEditModal(props: BookingEditModalProps) {
                     <span className="text-base font-black"><SarAmount amount={diff} /></span>
                   </div>
                   <p className="mt-1.5 text-[12px] font-semibold text-sky-900/90">
-                    تتم تسوية الفرق عند الفرع حسب سياسة الإيجار.
+                    {isPaid
+                      ? `تُسجَّل مستحقات لك لدى الإدارة ويُرَدّ المبلغ إليك (نقداً في الفرع أو عبر ${
+                          props.paymentMethod
+                            ? bookingPaymentMethodLabelAr(props.paymentMethod)
+                            : "نفس وسيلة الدفع"
+                        }).`
+                      : "يُخفَّض إجمالي الحجز وتدفع الإجمالي الجديد عند إتمام الدفع."}
                   </p>
                 </div>
               )}

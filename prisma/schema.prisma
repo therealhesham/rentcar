@@ -429,10 +429,24 @@ model BookingRequest {
   cancellationRefundExternalRef String? @db.VarChar(128)
   /// مرجع خارجي لعملية الدفع (رقم عملية الشبكة/التحويل) — يُدخله الموظف عند تسجيل الدفع يدوياً.
   paymentExternalRef String? @db.VarChar(128)
+  /// مرجع عملية الدفع الأصلية من بوابة جيديا (orderId) — لازم لتنفيذ الاسترداد الإلكتروني.
+  paymentGatewayRef String? @db.VarChar(128)
+  /// merchantReferenceId لآخر جلسة دفع جيديا — للمصالحة عند عودة العميل قبل وصول الـ webhook.
+  paymentSessionRef String? @db.VarChar(128)
   /// المبلغ الكامل المدفوع بالريال (شامل الضريبة) — يُحفظ لحظة تأكيد الدفع ولا يتغيّر بعدها.
   paidAmountSar Float?
   /// مبلغ مستحق يُحصَّل عند الفرع بعد تعديل/تمديد العميل لحجز مدفوع (فرق السعر). يطالب به الموظف عند تسليم/إرجاع السيارة.
   balanceDueAtBranchSar Float?
+  /// مستحقات للعميل (شامل الضريبة): مبلغ يُرَدّ للعميل بعد تعديل قلّص إجمالي حجز مدفوع. يسوّيه الموظف من لوحة الإدارة (قسم مستحقات للعميل).
+  refundDueToCustomerSar Float?
+  /// وقت تسوية مستحقات العميل من الإدارة. null مع وجود مبلغ = مستحقات قائمة.
+  refundDueSettledAt DateTime?
+  /// وسيلة تسوية المستحقات: CASH أو نفس وسيلة الدفع الأصلية (CARD/MADA/APPLE_PAY/...).
+  refundDueSettledMethod String? @db.VarChar(24)
+  /// مرجع عملية التسوية (مرجع بوابة الاسترداد أو مرجع يدوي للنقدي).
+  refundDueSettledRef String? @db.VarChar(128)
+  /// الموظف الذي نفّذ تسوية المستحقات.
+  refundDueSettledBy String? @db.VarChar(128)
   /// إجمالي الحجز المستحق (شامل الضريبة) — snapshot مجمَّد عند إنشاء الحجز أو آخر تعديل للمدة.
   /// يُستخدم بدلاً من إعادة الحساب من السعر الحالي حتى لو تغيّر سعر الموديل لاحقاً.
   snapshotTotalAmountSar Float?

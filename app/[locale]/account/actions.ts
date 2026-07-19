@@ -12,6 +12,9 @@ import { saudiLocalNineToE164 } from "@/lib/normalize-saudi-phone";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
 import { cancelBookingWithPolicy } from "@/lib/booking-cancellation-service";
+import { hasBookingPickupPassed } from "@/lib/booking-lifecycle";
+import { createNotification } from "@/lib/notification-service";
+import { currentRequestMeta, logActivity } from "@/lib/activity-log";
 import { safeCustomerReturnPath } from "@/lib/customer-booking-access";
 import { updateDirectBookingDates } from "@/lib/direct-booking";
 import {
@@ -62,13 +65,14 @@ export async function cancelCustomerBooking(formData: FormData): Promise<CancelB
 }
 
 export type UpdateBookingDatesResult =
-  | { ok: true }
+  /** paymentRedirect: يُملأ عندما ينتج عن التعديل مبلغ مستحق على العميل — يوجَّه لصفحة الدفع لسداده. */
+  | { ok: true; paymentRedirect?: string }
   | { ok: false; error: string };
 
 /**
- * تعديل تواريخ حجز مباشر من حساب العميل:
- * - إن بدأ الحجز (مرّ موعد الاستلام) يُقفل تاريخ الاستلام ويُسمح بتمديد العودة فقط.
- * - يُعاد فحص التوفر (مع استثناء الطلب نفسه) ويُحدَّث السجل في مكانه؛ فرق السعر يُدفع عند الفرع.
+ * تعديل تواريخ حجز مباشر من حساب العميل — يُسمح به فقط قبل موعد الاستلام.
+ * بعد بدء الحجز (أو انتهائه) لا يمكن للعميل تعديله ذاتياً بأي شكل.
+ * يُعاد فحص التوفر (مع استثناء الطلب نفسه) ويُحدَّث السجل في مكانه؛ فرق السعر يُدفع عند الفرع.
  */
 export async function updateCustomerBookingDates(
   formData: FormData,
@@ -98,6 +102,7 @@ export async function updateCustomerBookingDates(
     select: {
       id: true,
       status: true,
+      fullName: true,
       pickupDate: true,
       numberOfDays: true,
       addonsJson: true,
@@ -105,6 +110,10 @@ export async function updateCustomerBookingDates(
       balanceDueAtBranchSar: true,
       paidAmountSar: true,
       snapshotTotalAmountSar: true,
+      refundDueToCustomerSar: true,
+      refundDueSettledAt: true,
+      branchId: true,
+      returnBranchId: true,
       carModel: { select: { price: true, vatRatePercent: true } },
     },
   });
@@ -118,37 +127,23 @@ export async function updateCustomerBookingDates(
   }
 
   const now = new Date();
-  const rentalEndMs =
-    booking.pickupDate.getTime() + booking.numberOfDays * 24 * 60 * 60 * 1000;
-  if (now.getTime() >= rentalEndMs) {
-    return { ok: false, error: "انتهت مدة هذا الحجز، لا يمكن تعديله." };
+  if (hasBookingPickupPassed(booking.pickupDate, now)) {
+    return { ok: false, error: "بدأ موعد استلام هذا الحجز، لا يمكن تعديله." };
   }
-  const started = booking.pickupDate.getTime() <= now.getTime();
 
-  let pickupDate: Date;
-  if (started) {
-    pickupDate = booking.pickupDate;
-  } else {
-    const d = new Date(pickupRaw);
-    if (!pickupRaw || Number.isNaN(d.getTime())) {
-      return { ok: false, error: "تاريخ الاستلام غير صالح." };
-    }
-    if (d.getTime() < now.getTime() - 60 * 1000) {
-      return { ok: false, error: "تاريخ الاستلام يجب أن يكون في المستقبل." };
-    }
-    pickupDate = d;
+  const d = new Date(pickupRaw);
+  if (!pickupRaw || Number.isNaN(d.getTime())) {
+    return { ok: false, error: "تاريخ الاستلام غير صالح." };
   }
+  if (d.getTime() < now.getTime() - 60 * 1000) {
+    return { ok: false, error: "تاريخ الاستلام يجب أن يكون في المستقبل." };
+  }
+  const pickupDate = d;
 
   if (!Number.isFinite(daysRaw) || daysRaw < 1 || daysRaw > 60) {
     return { ok: false, error: "عدد الأيام يجب أن يكون من 1 إلى 60." };
   }
   const numberOfDays = Math.round(daysRaw);
-  if (started && numberOfDays < booking.numberOfDays) {
-    return {
-      ok: false,
-      error: "بعد بدء الحجز يمكن تمديد العودة فقط (لا يمكن تقليل عدد الأيام).",
-    };
-  }
 
   if (profile.licenseExpiryDate && !Number.isNaN(profile.licenseExpiryDate.getTime())) {
     const expYmd = profile.licenseExpiryDate.toISOString().slice(0, 10);
@@ -163,10 +158,15 @@ export async function updateCustomerBookingDates(
 
   const newAddonsJson = rebuildAddonsJsonForDays(booking.addonsJson, numberOfDays);
 
-  // فرق السعر الناتج عن التمديد/التعديل يُحصَّل عند الفرع وقت الإرجاع.
-  // نراكم الفرق على الرصيد المستحق (لا يقل عن صفر). يُصفَّر تلقائياً عند الدفع أونلاين أو إرجاع السيارة.
+  // تسوية فرق السعر بعد التعديل (حجز مدفوع):
+  // - العميل عليه فلوس (تمديد) → يُسجَّل رصيد مستحق ويُوجَّه لصفحة الدفع لسداده أونلاين.
+  // - العميل له فلوس (تقليص) → تُسجَّل «مستحقات للعميل» وتُسوَّى من لوحة الإدارة (كاش أو نفس وسيلة الدفع).
+  const isPaid = booking.paymentStatus.trim().toUpperCase() === "PAID";
   let balanceDueAtBranchSar: number | null = booking.balanceDueAtBranchSar ?? null;
+  let refundDueToCustomerSar: number | null | undefined;
   let snapshotTotalAmountSar: number | null = null;
+  let redirectToPaymentPage = false;
+  let creditForCustomerSar = 0;
   if (booking.carModel) {
     const priceInput = bookingDaysPriceInputFromSnapshot(
       booking.carModel.price,
@@ -176,20 +176,40 @@ export async function updateCustomerBookingDates(
     const oldTotal = bookingTotalInclTaxForDays(priceInput, booking.numberOfDays);
     const newTotal = bookingTotalInclTaxForDays(priceInput, numberOfDays);
     const diff = newTotal - oldTotal;
-    
+
     // استرجاع الإجمالي السابق (للحجوزات القديمة التي لا تملك snapshot، نستنتجه)
-    const previousTotal = booking.snapshotTotalAmountSar ?? 
-      (booking.paymentStatus.trim().toUpperCase() === "PAID" && typeof booking.paidAmountSar === "number" 
-        ? booking.paidAmountSar + (booking.balanceDueAtBranchSar ?? 0) 
+    const previousTotal = booking.snapshotTotalAmountSar ??
+      (isPaid && typeof booking.paidAmountSar === "number"
+        ? booking.paidAmountSar + (booking.balanceDueAtBranchSar ?? 0)
         : oldTotal);
 
     // snapshot الإجمالي الجديد مجمّد وقت التعديل بإضافة فرق التمديد فقط
     snapshotTotalAmountSar = Math.round((previousTotal + diff) * 100) / 100;
 
-    const base = booking.balanceDueAtBranchSar ?? 0;
-    const next = base + diff;
-    const rounded = Math.max(0, Math.round(next * 100) / 100);
-    balanceDueAtBranchSar = rounded > 0 ? rounded : null;
+    if (isPaid) {
+      // صافي موقف العميل = المستحق عليه سابقاً − المستحق له سابقاً (غير المُسوَّى) + فرق التعديل
+      const unsettledCredit =
+        booking.refundDueSettledAt == null ? (booking.refundDueToCustomerSar ?? 0) : 0;
+      const net =
+        Math.round(((booking.balanceDueAtBranchSar ?? 0) - unsettledCredit + diff) * 100) / 100;
+      if (net > 0.005) {
+        balanceDueAtBranchSar = net;
+        refundDueToCustomerSar = null;
+        redirectToPaymentPage = true;
+      } else if (net < -0.005) {
+        balanceDueAtBranchSar = null;
+        creditForCustomerSar = Math.round(-net * 100) / 100;
+        refundDueToCustomerSar = creditForCustomerSar;
+      } else {
+        balanceDueAtBranchSar = null;
+        refundDueToCustomerSar = null;
+      }
+    } else {
+      // غير مدفوع: الإجمالي الجديد يُدفع كاملاً عند إتمام الدفع — لا رصيد ولا مستحقات.
+      const base = booking.balanceDueAtBranchSar ?? 0;
+      const rounded = Math.max(0, Math.round((base + diff) * 100) / 100);
+      balanceDueAtBranchSar = rounded > 0 ? rounded : null;
+    }
   }
 
   const result = await updateDirectBookingDates({
@@ -201,16 +221,39 @@ export async function updateCustomerBookingDates(
     addonsJson: newAddonsJson,
     balanceDueAtBranchSar,
     snapshotTotalAmountSar,
+    refundDueToCustomerSar,
   });
   if (!result.ok) return result;
+
+  if (creditForCustomerSar > 0) {
+    // تنبيه لوحة الإدارة: مستحقات جديدة للعميل تُسوَّى من قسم «مستحقات للعميل».
+    await createNotification(
+      { branchId: booking.branchId ?? booking.returnBranchId },
+      "مستحقات للعميل بعد تعديل حجز",
+      `الحجز #${id} (${booking.fullName}) عُدِّل وأصبح للعميل مستحقات ${creditForCustomerSar} ر.س — تُسوَّى من قسم «مستحقات للعميل».`,
+    );
+    const meta = await currentRequestMeta();
+    await logActivity({
+      kind: "BOOKING_REFUND",
+      path: `/admin/customer-dues`,
+      actorLabel: `العميل — تعديل الحجز #${id} أنشأ مستحقات ${creditForCustomerSar} ر.س`,
+      ip: meta.ip,
+      userAgent: meta.userAgent,
+    });
+  }
 
   revalidatePath("/account");
   revalidatePath(`/account/bookings/${id}/edit`);
   revalidatePath("/admin");
   revalidatePath("/admin/car-bookings");
+  revalidatePath("/admin/customer-dues");
   revalidatePath(`/admin/bookings/${id}`);
+  revalidatePath(`/fleet/payment/${id}`);
 
-  return { ok: true };
+  return {
+    ok: true,
+    ...(redirectToPaymentPage ? { paymentRedirect: `/fleet/payment/${id}` } : {}),
+  };
 }
 
 export async function registerCustomer(
