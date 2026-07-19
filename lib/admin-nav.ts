@@ -33,6 +33,7 @@ export type AdminNavItem = {
     | "user-cog"
     | "corner-down-left"
     | "ban"
+    | "calendar-x"
     | "credit-card"
     | "file-text";
   external?: boolean;
@@ -67,6 +68,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     label: "الحجوزات والعملاء",
     items: [
       { href: "/admin/car-bookings", label: "حجوزات السيارات", icon: "clipboard-list", permission: "BOOKINGS", hidden: true },
+      { href: "/admin/missed-bookings", label: "حجوزات فائتة", icon: "calendar-x", permission: "BOOKINGS", hidden: true },
       { href: "/admin/cancelled-bookings", label: "الحجوزات الملغاة", icon: "ban", permission: "BOOKINGS", hidden: true },
       { href: "/admin/branch-returns", label: "التسليم الى الفرع", icon: "corner-down-left", permission: "BOOKINGS" },
       { href: "/admin/customers", label: "العملاء", icon: "users", permission: "BOOKINGS" },

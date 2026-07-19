@@ -10,6 +10,7 @@ import { ReportExportButtons } from "@/components/admin/ReportExportButtons";
 import { adminBranchDisplayName, bookingBranchWhere } from "@/lib/admin-access";
 import { requireAdminPage } from "@/lib/admin-page";
 import { addDaysToYmd, NON_BLOCKING_BOOKING_STATUSES } from "@/lib/direct-booking";
+import { missedPickupCondition } from "@/lib/admin-missed-bookings";
 import { prisma } from "@/lib/prisma";
 import { CarBookingsSettingsModal } from "./CarBookingsSettingsModal";
 import { getCarBookingsNotificationSettings } from "./car-bookings-settings-actions";
@@ -82,7 +83,9 @@ export default async function AdminCarBookingsPage() {
     where: bookingBranchWhere(session, {
       kind: "DIRECT",
       carModelId: { not: null },
-      NOT: { status: { in: [...NON_BLOCKING_BOOKING_STATUSES] } },
+      status: { notIn: [...NON_BLOCKING_BOOKING_STATUSES] },
+      // الحجوزات الفائتة (لم تُستلم ومرّ موعدها) تخرج من النشطة إلى صفحة الفائتة.
+      NOT: missedPickupCondition(),
     }),
     include: {
       carModel: { include: { brand: true, category: true } },

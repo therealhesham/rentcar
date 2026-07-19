@@ -18,6 +18,7 @@ import {
   XCircle,
   Search,
   Banknote,
+  CalendarX2,
 } from "lucide-react";
 import { AdminCard } from "@/components/admin/AdminCard";
 import {
@@ -28,6 +29,7 @@ import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminStatCard } from "@/components/admin/AdminStatCard";
 import { adminBranchDisplayName, bookingBranchWhere } from "@/lib/admin-access";
 import { requireAdminPage } from "@/lib/admin-page";
+import { missedPickupCondition } from "@/lib/admin-missed-bookings";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -65,6 +67,12 @@ export default async function AdminDashboardPage(props: {
         { balanceDueAtBranchSar: { gt: 0 } },
       ],
     };
+  } else if (statusParam === "missed") {
+    statusWhere = {
+      kind: "DIRECT",
+      carModelId: { not: null },
+      ...missedPickupCondition(),
+    };
   }
 
   const qFilter: any = qParam
@@ -98,6 +106,7 @@ export default async function AdminDashboardPage(props: {
     countReturnedCompleted,
     countCancelledRejected,
     countUnpaid,
+    countMissed,
 
     bookingRequests,
     bookableModelsRaw,
@@ -160,6 +169,15 @@ export default async function AdminDashboardPage(props: {
           { paymentStatus: "PENDING", kind: "DIRECT" },
           { balanceDueAtBranchSar: { gt: 0 } },
         ],
+        ...qFilter,
+      },
+    }),
+    prisma.bookingRequest.count({
+      where: {
+        ...branchScope(),
+        kind: "DIRECT",
+        carModelId: { not: null },
+        ...missedPickupCondition(),
         ...qFilter,
       },
     }),
@@ -274,6 +292,9 @@ export default async function AdminDashboardPage(props: {
   } else if (statusParam === "unpaid") {
     cardTitle = "مبالغ مستحقة (غير مدفوعة)";
     cardDescription = "حجوزات نشطة أو مكتملة بانتظار الدفع أو يوجد عليها رصيد إضافي مستحق للفرع.";
+  } else if (statusParam === "missed") {
+    cardTitle = "الحجوزات الفائتة";
+    cardDescription = "حجوزات لم تُستلَم سياراتها ومرّ على موعد الاستلام أكثر من 12 ساعة.";
   }
 
   const tabs = [
@@ -281,6 +302,7 @@ export default async function AdminDashboardPage(props: {
     { id: "new", label: "جديد وتحت المراجعة", count: countNewUnderReview, icon: AlertCircle },
     { id: "confirmed", label: "مؤكد", count: countConfirmed, icon: CalendarCheck },
     { id: "picked_up", label: "مستلم", count: countPickedUp, icon: KeyRound },
+    { id: "missed", label: "فائتة", count: countMissed, icon: CalendarX2 },
     { id: "returned_completed", label: "مسلّم/مكتمل", count: countReturnedCompleted, icon: CheckCircle },
     { id: "unpaid", label: "مبالغ مستحقة", count: countUnpaid, icon: Banknote },
     { id: "cancelled_rejected", label: "ملغي/مرفوض", count: countCancelledRejected, icon: XCircle },
