@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const LINKS: { href: string; label: string; exact?: boolean }[] = [
   { href: "/admin/statistics", label: "نظرة عامة", exact: true },
   { href: "/admin/statistics/bookings", label: "الحجوزات" },
+  { href: "/admin/statistics/branches", label: "الفروع" },
   { href: "/admin/statistics/fleet", label: "الأسطول" },
   { href: "/admin/statistics/revenue", label: "الإيرادات" },
 ];

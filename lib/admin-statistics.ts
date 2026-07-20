@@ -555,6 +555,483 @@ export async function getAdminRevenueStats(
   };
 }
 
+export type AdminBranchStatRow = {
+  branchId: number;
+  name: string;
+  cityName: string | null;
+  /** حجوزات الفترة (فرع الاستلام) */
+  bookingsInPeriod: number;
+  bookingsPrevPeriod: number;
+  paidInPeriod: number;
+  /** المقبوضات الإجمالية خلال الفترة (بتاريخ الدفع، شاملة الضريبة) قبل خصم الاستردادات */
+  grossSar: number;
+  /** صافي إيراد الفترة: المقبوضات (بتاريخ الدفع) − استردادات الإلغاء (بتاريخ الإلغاء)، شامل الضريبة */
+  revenueSar: number;
+  /** استردادات إلغاء نُفّذت خلال الفترة (شاملة الضريبة) */
+  refundsSar: number;
+  /** سيارات مُسلَّمة للعملاء الآن (استُلمت ولم تُرجَع) */
+  activeNow: number;
+  fleetUnits: number;
+  /** نسبة التشغيل الآن = قيد التشغيل ÷ وحدات الأسطول */
+  utilizationPct: number;
+  /** الموديل الأكثر حجزاً في الفترة */
+  topModelLabel: string | null;
+  topModelCount: number;
+};
+
+export type AdminBranchStats = {
+  periodDays: AdminStatsPeriod;
+  /** مرتّبة تنازلياً حسب حجوزات الفترة (الأكثر تشغيلاً أولاً) */
+  rows: AdminBranchStatRow[];
+  totals: {
+    bookings: number;
+    paid: number;
+    grossSar: number;
+    revenueSar: number;
+    refundsSar: number;
+    activeNow: number;
+    fleetUnits: number;
+  };
+  /** حجوزات فترة بدون فرع استلام (توصيل/استفسارات قديمة) */
+  unassignedBookings: number;
+  /** توزيع حجوزات الفترة على الفروع (للأشرطة) */
+  bookingsSplit: LabelCount[];
+  /** توزيع إيراد الفترة على الفروع */
+  revenueSplit: LabelCount[];
+};
+
+export async function getAdminBranchStats(
+  days: AdminStatsPeriod,
+  onlyBranchId?: number | null,
+): Promise<AdminBranchStats> {
+  const start = periodStart(days);
+  const prevStart = new Date(start);
+  prevStart.setDate(prevStart.getDate() - days);
+
+  const [
+    branches,
+    byBranch,
+    byBranchPrev,
+    paidByBranch,
+    revenueByBranch,
+    refundsByBranch,
+    activeByBranch,
+    fleetByBranch,
+    unassignedBookings,
+    periodModelRows,
+  ] = await Promise.all([
+    prisma.branch.findMany({
+      where: { isActive: true },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      select: { id: true, name: true, city: { select: { name: true } } },
+    }),
+    prisma.bookingRequest.groupBy({
+      by: ["branchId"],
+      where: { createdAt: { gte: start }, branchId: { not: null } },
+      _count: { _all: true },
+    }),
+    prisma.bookingRequest.groupBy({
+      by: ["branchId"],
+      where: { createdAt: { gte: prevStart, lt: start }, branchId: { not: null } },
+      _count: { _all: true },
+    }),
+    prisma.bookingRequest.groupBy({
+      by: ["branchId"],
+      where: {
+        createdAt: { gte: start },
+        branchId: { not: null },
+        paymentStatus: "PAID",
+      },
+      _count: { _all: true },
+    }),
+    prisma.bookingRequest.groupBy({
+      by: ["branchId"],
+      where: {
+        paidAt: { gte: start },
+        branchId: { not: null },
+        paidAmountSar: { not: null },
+      },
+      _sum: { paidAmountSar: true },
+    }),
+    // استردادات الإلغاء المنفَّذة خلال الفترة (بتاريخ الإلغاء) — تُخصم من الإيراد
+    prisma.bookingRequest.groupBy({
+      by: ["branchId"],
+      where: {
+        cancelledAt: { gte: start },
+        branchId: { not: null },
+        cancellationRefundAmountSar: { not: null },
+      },
+      _sum: { cancellationRefundAmountSar: true },
+    }),
+    prisma.bookingRequest.groupBy({
+      by: ["branchId"],
+      where: {
+        branchId: { not: null },
+        vehiclePickedUpAt: { not: null },
+        vehicleReturnedAt: null,
+        status: { notIn: ["CANCELLED"] },
+      },
+      _count: { _all: true },
+    }),
+    prisma.fleet.groupBy({
+      by: ["branchId"],
+      _sum: { quantity: true },
+    }),
+    prisma.bookingRequest.count({
+      where: { createdAt: { gte: start }, branchId: null },
+    }),
+    prisma.bookingRequest.findMany({
+      where: {
+        createdAt: { gte: start },
+        branchId: { not: null },
+        carModelId: { not: null },
+      },
+      select: {
+        branchId: true,
+        carModel: { select: { name: true, year: true, brand: { select: { name: true } } } },
+      },
+    }),
+  ]);
+
+  const countOf = (
+    rows: { branchId: number | null; _count: { _all: number } }[],
+    id: number,
+  ) => rows.find((r) => r.branchId === id)?._count._all ?? 0;
+
+  // الموديل الأكثر حجزاً لكل فرع
+  const topModelByBranch = new Map<number, { label: string; count: number }>();
+  {
+    const perBranch = new Map<number, Map<string, number>>();
+    for (const r of periodModelRows) {
+      if (r.branchId == null || !r.carModel) continue;
+      const label = `${r.carModel.brand.name} ${r.carModel.name} ${r.carModel.year}`;
+      let m = perBranch.get(r.branchId);
+      if (!m) {
+        m = new Map();
+        perBranch.set(r.branchId, m);
+      }
+      m.set(label, (m.get(label) ?? 0) + 1);
+    }
+    for (const [branchId, m] of perBranch) {
+      let bestLabel: string | null = null;
+      let bestCount = 0;
+      for (const [label, count] of m) {
+        if (count > bestCount) {
+          bestLabel = label;
+          bestCount = count;
+        }
+      }
+      if (bestLabel) topModelByBranch.set(branchId, { label: bestLabel, count: bestCount });
+    }
+  }
+
+  const visibleBranches =
+    onlyBranchId != null ? branches.filter((b) => b.id === onlyBranchId) : branches;
+
+  const rows: AdminBranchStatRow[] = visibleBranches
+    .map((b) => {
+      const fleetUnits = fleetByBranch.find((f) => f.branchId === b.id)?._sum.quantity ?? 0;
+      const activeNow = countOf(activeByBranch, b.id);
+      const top = topModelByBranch.get(b.id) ?? null;
+      const grossSar =
+        revenueByBranch.find((r) => r.branchId === b.id)?._sum.paidAmountSar ?? 0;
+      const refundsSar =
+        refundsByBranch.find((r) => r.branchId === b.id)?._sum.cancellationRefundAmountSar ?? 0;
+      return {
+        branchId: b.id,
+        name: b.name,
+        cityName: b.city?.name ?? null,
+        bookingsInPeriod: countOf(byBranch, b.id),
+        bookingsPrevPeriod: countOf(byBranchPrev, b.id),
+        paidInPeriod: countOf(paidByBranch, b.id),
+        grossSar: Math.round(grossSar * 100) / 100,
+        revenueSar: Math.round((grossSar - refundsSar) * 100) / 100,
+        refundsSar: Math.round(refundsSar * 100) / 100,
+        activeNow,
+        fleetUnits,
+        utilizationPct: fleetUnits > 0 ? Math.round((activeNow / fleetUnits) * 100) : 0,
+        topModelLabel: top?.label ?? null,
+        topModelCount: top?.count ?? 0,
+      };
+    })
+    .sort((a, b) => b.bookingsInPeriod - a.bookingsInPeriod || b.revenueSar - a.revenueSar);
+
+  const totals = {
+    bookings: rows.reduce((s, r) => s + r.bookingsInPeriod, 0),
+    paid: rows.reduce((s, r) => s + r.paidInPeriod, 0),
+    grossSar: Math.round(rows.reduce((s, r) => s + r.grossSar, 0) * 100) / 100,
+    revenueSar: Math.round(rows.reduce((s, r) => s + r.revenueSar, 0) * 100) / 100,
+    refundsSar: Math.round(rows.reduce((s, r) => s + r.refundsSar, 0) * 100) / 100,
+    activeNow: rows.reduce((s, r) => s + r.activeNow, 0),
+    fleetUnits: rows.reduce((s, r) => s + r.fleetUnits, 0),
+  };
+
+  const bookingsSplit = toLabelCounts(
+    rows
+      .filter((r) => r.bookingsInPeriod > 0)
+      .map((r) => ({ key: r.name, count: r.bookingsInPeriod })),
+  );
+  const revenueTotal = totals.revenueSar || 1;
+  const revenueSplit = rows
+    .filter((r) => r.revenueSar > 0)
+    .map((r) => ({
+      label: r.name,
+      count: Math.round(r.revenueSar),
+      pct: Math.round((r.revenueSar / revenueTotal) * 100),
+    }));
+
+  return {
+    periodDays: days,
+    rows,
+    totals,
+    unassignedBookings,
+    bookingsSplit,
+    revenueSplit,
+  };
+}
+
+export type AdminBranchDetailStats = {
+  periodDays: AdminStatsPeriod;
+  branch: { id: number; name: string; cityName: string | null; slug: string };
+  bookingsInPeriod: number;
+  bookingsPrevPeriod: number;
+  paidInPeriod: number;
+  /** المقبوضات الإجمالية خلال الفترة قبل خصم الاستردادات */
+  grossSar: number;
+  /** صافي إيراد الفترة (المقبوضات − استردادات الإلغاء) شامل الضريبة */
+  revenueSar: number;
+  /** استردادات إلغاء نُفّذت خلال الفترة */
+  refundsSar: number;
+  activeNow: number;
+  /** إرجاعات استُلمت في هذا الفرع خلال الفترة */
+  returnsInPeriod: number;
+  fleetUnits: number;
+  utilizationPct: number;
+  trend: DayCount[];
+  byStatus: LabelCount[];
+  byPayment: LabelCount[];
+  topModels: LabelCount[];
+  /** تشكيلة أسطول الفرع: الكمية والسعر الفعلي (تجاوز الفرع إن وُجد) */
+  fleetModels: {
+    modelId: number;
+    label: string;
+    quantity: number;
+    priceExclTax: number;
+    hasBranchPrice: boolean;
+  }[];
+  recentBookings: {
+    id: number;
+    fullName: string;
+    createdAt: Date;
+    statusLabel: string;
+    paymentLabel: string;
+    carModelLabel: string | null;
+    totalSar: number | null;
+  }[];
+};
+
+const PAYMENT_LABELS: Record<string, string> = {
+  PAID: "مدفوع",
+  PENDING: "قيد الدفع",
+  REFUNDED: "مسترد",
+  PARTIAL_REFUND: "استرداد جزئي",
+  NO_REFUND: "بدون استرداد",
+};
+
+export async function getAdminBranchDetailStats(
+  branchId: number,
+  days: AdminStatsPeriod,
+): Promise<AdminBranchDetailStats | null> {
+  const branch = await prisma.branch.findFirst({
+    where: { id: branchId, isActive: true },
+    select: { id: true, name: true, slug: true, city: { select: { name: true } } },
+  });
+  if (!branch) return null;
+
+  const start = periodStart(days);
+  const prevStart = new Date(start);
+  prevStart.setDate(prevStart.getDate() - days);
+  const inPeriod = { branchId, createdAt: { gte: start } } as const;
+
+  const [
+    bookingsInPeriod,
+    bookingsPrevPeriod,
+    paidInPeriod,
+    revenueAgg,
+    refundsAgg,
+    activeNow,
+    returnsInPeriod,
+    fleetRows,
+    trendRows,
+    byStatusRaw,
+    byPaymentRaw,
+    topModelsRaw,
+    recentRows,
+  ] = await Promise.all([
+    prisma.bookingRequest.count({ where: inPeriod }),
+    prisma.bookingRequest.count({
+      where: { branchId, createdAt: { gte: prevStart, lt: start } },
+    }),
+    prisma.bookingRequest.count({ where: { ...inPeriod, paymentStatus: "PAID" } }),
+    prisma.bookingRequest.aggregate({
+      where: { branchId, paidAt: { gte: start }, paidAmountSar: { not: null } },
+      _sum: { paidAmountSar: true },
+    }),
+    prisma.bookingRequest.aggregate({
+      where: {
+        branchId,
+        cancelledAt: { gte: start },
+        cancellationRefundAmountSar: { not: null },
+      },
+      _sum: { cancellationRefundAmountSar: true },
+    }),
+    prisma.bookingRequest.count({
+      where: {
+        branchId,
+        vehiclePickedUpAt: { not: null },
+        vehicleReturnedAt: null,
+        status: { notIn: ["CANCELLED"] },
+      },
+    }),
+    prisma.bookingRequest.count({
+      where: { returnBranchId: branchId, vehicleReturnedAt: { gte: start } },
+    }),
+    prisma.fleet.findMany({
+      where: { branchId },
+      select: {
+        modelId: true,
+        quantity: true,
+        pricePerDayExclTax: true,
+        model: {
+          select: { name: true, year: true, price: true, brand: { select: { name: true } } },
+        },
+      },
+      orderBy: { quantity: "desc" },
+    }),
+    prisma.bookingRequest.findMany({
+      where: inPeriod,
+      select: { createdAt: true },
+    }),
+    prisma.bookingRequest.groupBy({
+      by: ["status"],
+      where: inPeriod,
+      _count: { _all: true },
+    }),
+    prisma.bookingRequest.groupBy({
+      by: ["paymentStatus"],
+      where: inPeriod,
+      _count: { _all: true },
+    }),
+    prisma.bookingRequest.groupBy({
+      by: ["carModelId"],
+      where: { ...inPeriod, carModelId: { not: null } },
+      _count: { _all: true },
+      orderBy: { _count: { carModelId: "desc" } },
+      take: 8,
+    }),
+    prisma.bookingRequest.findMany({
+      where: { branchId },
+      orderBy: { createdAt: "desc" },
+      take: 8,
+      select: {
+        id: true,
+        fullName: true,
+        createdAt: true,
+        status: true,
+        paymentStatus: true,
+        paidAmountSar: true,
+        snapshotTotalAmountSar: true,
+        carModel: { select: { name: true, year: true, brand: { select: { name: true } } } },
+      },
+    }),
+  ]);
+
+  // أسماء موديلات الأكثر طلباً
+  const topModelIds = topModelsRaw
+    .map((r) => r.carModelId)
+    .filter((id): id is number => id != null);
+  const topModelNames = topModelIds.length
+    ? await prisma.carModel.findMany({
+        where: { id: { in: topModelIds } },
+        select: { id: true, name: true, year: true, brand: { select: { name: true } } },
+      })
+    : [];
+  const topModels = toLabelCounts(
+    topModelsRaw
+      .filter((r) => r.carModelId != null)
+      .map((r) => {
+        const m = topModelNames.find((x) => x.id === r.carModelId);
+        return {
+          key: m ? `${m.brand.name} ${m.name} ${m.year}` : `موديل #${r.carModelId}`,
+          count: r._count._all,
+        };
+      }),
+  );
+
+  const fleetUnits = fleetRows.reduce((s, r) => s + r.quantity, 0);
+  const grossSar = Math.round((revenueAgg._sum.paidAmountSar ?? 0) * 100) / 100;
+  const refundsSar =
+    Math.round((refundsAgg._sum.cancellationRefundAmountSar ?? 0) * 100) / 100;
+  const revenueSar = Math.round((grossSar - refundsSar) * 100) / 100;
+
+  return {
+    periodDays: days,
+    branch: {
+      id: branch.id,
+      name: branch.name,
+      cityName: branch.city?.name ?? null,
+      slug: branch.slug,
+    },
+    bookingsInPeriod,
+    bookingsPrevPeriod,
+    paidInPeriod,
+    grossSar,
+    revenueSar,
+    refundsSar,
+    activeNow,
+    returnsInPeriod,
+    fleetUnits,
+    utilizationPct: fleetUnits > 0 ? Math.round((activeNow / fleetUnits) * 100) : 0,
+    trend: fillDayBuckets(
+      buildDayBuckets(days),
+      trendRows.map((r) => r.createdAt),
+    ),
+    byStatus: toLabelCounts(
+      byStatusRaw.map((r) => ({
+        key: STATUS_LABELS[r.status] ?? r.status,
+        count: r._count._all,
+      })),
+    ),
+    byPayment: toLabelCounts(
+      byPaymentRaw.map((r) => ({
+        key: PAYMENT_LABELS[r.paymentStatus] ?? r.paymentStatus,
+        count: r._count._all,
+      })),
+    ),
+    topModels,
+    fleetModels: fleetRows
+      .filter((r) => r.quantity > 0 || r.pricePerDayExclTax != null)
+      .map((r) => ({
+        modelId: r.modelId,
+        label: `${r.model.brand.name} ${r.model.name} ${r.model.year}`,
+        quantity: r.quantity,
+        priceExclTax: r.pricePerDayExclTax ?? r.model.price,
+        hasBranchPrice: r.pricePerDayExclTax != null,
+      })),
+    recentBookings: recentRows.map((r) => ({
+      id: r.id,
+      fullName: r.fullName,
+      createdAt: r.createdAt,
+      statusLabel: STATUS_LABELS[r.status] ?? r.status,
+      paymentLabel: PAYMENT_LABELS[r.paymentStatus] ?? r.paymentStatus,
+      carModelLabel: r.carModel
+        ? `${r.carModel.brand.name} ${r.carModel.name} ${r.carModel.year}`
+        : null,
+      totalSar: r.paidAmountSar ?? r.snapshotTotalAmountSar ?? null,
+    })),
+  };
+}
+
 export function formatSar(n: number): string {
   return new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 0 }).format(n);
 }
