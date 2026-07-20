@@ -277,6 +277,8 @@ model Fleet {
   branchId   Int
   branch     Branch    @relation(fields: [branchId], references: [id], onDelete: Cascade)
   quantity   Int       @default(0)
+  /// سعر يومي خاص بالفرع (دون ضريبة) — يتجاوز `CarModel.price` عند تحديده. null = السعر الأساسي للموديل.
+  pricePerDayExclTax Float?
 
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt

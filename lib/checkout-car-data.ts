@@ -1,4 +1,8 @@
 import { prisma } from "@/lib/prisma";
+import {
+  minBranchBasePriceForModel,
+  resolveBranchBasePriceForModel,
+} from "@/lib/fleet-branch-stock";
 import { resolveRentalDiscountForModel } from "@/lib/rental-discount";
 
 const PLACEHOLDER_IMG =
@@ -58,7 +62,12 @@ export async function getCarModelForCheckout(
     branchId = branch?.id ?? null;
   }
 
-  const resolved = await resolveRentalDiscountForModel(m.price, {
+  // سعر الفرع المحدّد إن وُجد، وإلا أدنى سعر بين الفروع المتاحة (متوافق مع «يبدأ من» في الأسطول)
+  const basePrice = branchId
+    ? await resolveBranchBasePriceForModel(m.id, branchId, m.price)
+    : (await minBranchBasePriceForModel(m.id, m.price)).minPrice;
+
+  const resolved = await resolveRentalDiscountForModel(basePrice, {
     brandId: m.brandId,
     carModelId: m.id,
     branchId,
@@ -67,7 +76,7 @@ export async function getCarModelForCheckout(
 
   const brandName = m.brand.name.trim();
   const modelName = m.name.trim();
-  const effectivePrice = resolved?.discountedPricePerDayExclTax ?? m.price;
+  const effectivePrice = resolved?.discountedPricePerDayExclTax ?? basePrice;
 
   return {
     modelId: m.id,
@@ -78,7 +87,7 @@ export async function getCarModelForCheckout(
     fullTitle: `${brandName} ${modelName}`.trim(),
     categoryTitle: m.category.title.trim(),
     pricePerDayExclTax: effectivePrice,
-    originalPricePerDayExclTax: resolved?.originalPricePerDayExclTax ?? m.price,
+    originalPricePerDayExclTax: resolved?.originalPricePerDayExclTax ?? basePrice,
     discountLabelAr: resolved?.displayLabelAr ?? null,
     vatRatePercent: m.vatRatePercent,
     image: m.image?.trim() || PLACEHOLDER_IMG,

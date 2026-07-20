@@ -128,6 +128,7 @@ export default async function AdminVehiclesPage() {
     transmission: v.transmission,
     image: v.image,
     quantity: v.quantity, // Branch quantity
+    branchPricePerDayExclTax: v.branchPricePerDayExclTax ?? null,
     bookingCount: bookingsByModel.get(v.id) ?? 0,
   }));
 

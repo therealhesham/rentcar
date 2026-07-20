@@ -22,6 +22,22 @@ export async function updateBranchFleetQuantity(
     return { ok: false, error: "الكمية يجب أن تكون بين 0 و 500." };
   }
 
+  // سعر الفرع اليومي (دون ضريبة): حقل اختياري — فارغ = مسح التجاوز والرجوع لسعر الموديل.
+  const priceRaw = formData.get("branchPrice");
+  let pricePerDayExclTax: number | null | undefined = undefined;
+  if (priceRaw != null) {
+    const trimmed = String(priceRaw).trim();
+    if (trimmed === "") {
+      pricePerDayExclTax = null;
+    } else {
+      const parsed = Number(trimmed);
+      if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100000) {
+        return { ok: false, error: "سعر الفرع اليومي غير صالح." };
+      }
+      pricePerDayExclTax = parsed;
+    }
+  }
+
   let branchId: number | null = null;
   if (auth.session.isSuperAdmin) {
     const raw = Number(formData.get("branchId"));
@@ -46,6 +62,7 @@ export async function updateBranchFleetQuantity(
     branchId,
     modelId,
     quantity: Math.round(quantity),
+    pricePerDayExclTax,
   });
 
   revalidatePath("/admin/vehicles");

@@ -146,6 +146,11 @@ export function FleetCarCard({
             <p className="text-[12px] text-gray-400">{car.priceUi.footnoteAr}</p>
           )}
           <div className="mt-0.5 flex items-baseline gap-1.5">
+            {car.priceUi.prefixLabelAr ? (
+              <span className="text-[12px] font-semibold text-gray-500">
+                {car.priceUi.prefixLabelAr}
+              </span>
+            ) : null}
             {car.priceUi.originalPrimaryAmount ? (
               <span className="flex items-baseline gap-0.5 text-sm text-gray-400 line-through">
                 {car.priceUi.originalPrimaryAmount}

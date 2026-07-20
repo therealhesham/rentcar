@@ -33,7 +33,8 @@ const IMPORT_FIELDS: { key: keyof FieldMapping; label: string; hint: string }[] 
   { key: "fuel",           label: "نوع الوقود",          hint: "افتراضي: بنزين" },
   { key: "price",          label: "السعر/يوم (ريال)",    hint: "مطلوب لإنشاء السجل" },
   { key: "vatRatePercent", label: "نسبة الضريبة %",      hint: "افتراضي: 15" },
-  { key: "quantity",       label: "الكمية في الفرع",     hint: "افتراضي: 1" },
+  { key: "quantity",       label: "الكمية في الفرع",     hint: "افتراضي: كل صف = وحدة" },
+  { key: "branch",         label: "الفرع (لكل صف)",       hint: "يفعّل تسعير الفروع" },
   { key: "alt",            label: "وصف الصورة (alt)",    hint: "اختياري" },
   { key: "badge",          label: "شارة (badge)",         hint: "اختياري" },
   { key: "image",          label: "رابط الصورة",         hint: "URL اختياري" },
@@ -54,6 +55,7 @@ function autoDetect(headers: string[]): Record<string, string> {
     ["price",          ["price", "سعر", "السعر", "rate", "pricepd", "سعراليوم", "dailyprice"]],
     ["vatRatePercent", ["vat", "ضريبة", "tax", "vatrate", "نسبةالضريبة"]],
     ["quantity",       ["quantity", "كمية", "الكمية", "qty", "stock", "count"]],
+    ["branch",         ["branch", "فرع", "الفرع", "location", "site", "معرض"]],
     ["alt",            ["alt", "alttext", "imagealt", "وصفالصورة"]],
     ["badge",          ["badge", "شارة", "tag", "label"]],
     ["image",          ["image", "img", "photo", "صورة", "الصورة", "imageurl", "imgurl", "url"]],
@@ -397,24 +399,36 @@ export function VehicleImportClient({ categories, branches }: Props) {
                 </span>
               </label>
 
-              <label className="block text-sm font-medium">
-                الفرع (للكميات)
-                <select
-                  value={branchId}
-                  onChange={(e) => setBranchId(e.target.value)}
-                  className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container px-3 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
-                >
-                  <option value="">— بدون تسجيل كمية في فرع —</option>
-                  {branches.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.name}
-                    </option>
-                  ))}
-                </select>
-                <span className="mt-1 block text-[11px] leading-snug text-on-surface-variant">
-                  اختياري: بدون اختيار لن تُسجَّل كميات في أي فرع
-                </span>
-              </label>
+              {mapping.branch ? (
+                <div className="rounded-xl border border-primary/30 bg-primary/5 px-4 py-3">
+                  <p className="text-sm font-bold text-primary">وضع تسعير الفروع مُفعَّل</p>
+                  <p className="mt-1 text-[11px] leading-snug text-on-surface-variant">
+                    عمود «الفرع» مربوط — كل صف يُسجَّل في فرعه بسعره الخاص. السعر الأساسي
+                    للموديل = الأكثر تكراراً، وأي فرع يختلف سعره يُحفظ كتجاوز. الصفوف بفرع غير
+                    معروف (ورشة/تأمين) تُتخطّى.
+                  </p>
+                </div>
+              ) : (
+                <label className="block text-sm font-medium">
+                  الفرع (للكميات)
+                  <select
+                    value={branchId}
+                    onChange={(e) => setBranchId(e.target.value)}
+                    className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container px-3 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+                  >
+                    <option value="">— بدون تسجيل كمية في فرع —</option>
+                    {branches.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="mt-1 block text-[11px] leading-snug text-on-surface-variant">
+                    اختياري: بدون اختيار لن تُسجَّل كميات في أي فرع. لتسعير مختلف لكل فرع اربط
+                    عمود «الفرع» في جدول الربط.
+                  </span>
+                </label>
+              )}
             </div>
           </div>
 

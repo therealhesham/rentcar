@@ -20,13 +20,19 @@ export type AdminFleetVehicleListRow = {
   transmission: Transmission;
   /** كمية فرع واحد أو المجموع */
   quantity: number;
+  /** سعر خاص بفرع الموظف (null = سعر الموديل الأساسي) — لعرض موظف الفرع فقط */
+  branchPricePerDayExclTax?: number | null;
   image: string | null;
 };
 
 export type AdminFleetVehicleSuperRow = AdminFleetVehicleListRow & {
   totalQuantity: number;
-  /** كمية لكل فرع نشط (بالترتيب) */
-  branchQuantities: { branchId: number; quantity: number }[];
+  /** كمية وسعر خاص لكل فرع نشط (بالترتيب) — السعر null = سعر الموديل الأساسي */
+  branchQuantities: {
+    branchId: number;
+    quantity: number;
+    pricePerDayExclTax: number | null;
+  }[];
 };
 
 /** مركبات الكتالوج مع كمية فرع موظف الفرع */
@@ -48,7 +54,11 @@ export async function listFleetVehiclesForAdmin(
     const qty = branchId
       ? (r.fleetItems[0]?.quantity ?? 0)
       : r.fleetItems.reduce((s, f) => s + f.quantity, 0);
+    const branchPricePerDayExclTax = branchId
+      ? (r.fleetItems[0]?.pricePerDayExclTax ?? null)
+      : null;
     return {
+      branchPricePerDayExclTax,
       id: r.id,
       brandName: r.brand.name.trim(),
       modelName: r.name.trim(),
@@ -89,18 +99,21 @@ export async function listFleetVehiclesForSuperAdmin(): Promise<{
     include: {
       brand: true,
       category: { select: { id: true, title: true } },
-      fleetItems: { select: { branchId: true, quantity: true } },
+      fleetItems: {
+        select: { branchId: true, quantity: true, pricePerDayExclTax: true },
+      },
     },
   });
 
-  const qtyByBranchId = (items: { branchId: number; quantity: number }[], branchId: number) =>
-    items.find((f) => f.branchId === branchId)?.quantity ?? 0;
-
   const vehicles: AdminFleetVehicleSuperRow[] = rows.map((r) => {
-    const branchQuantities = branches.map((b) => ({
-      branchId: b.id,
-      quantity: qtyByBranchId(r.fleetItems, b.id),
-    }));
+    const branchQuantities = branches.map((b) => {
+      const item = r.fleetItems.find((f) => f.branchId === b.id);
+      return {
+        branchId: b.id,
+        quantity: item?.quantity ?? 0,
+        pricePerDayExclTax: item?.pricePerDayExclTax ?? null,
+      };
+    });
     const totalQuantity = branchQuantities.reduce((s, x) => s + x.quantity, 0);
     return {
       id: r.id,

@@ -41,8 +41,19 @@ export async function upsertBranchFleetQuantity(input: {
   branchId: number;
   modelId: number;
   quantity: number;
+  /** undefined = لا تغيير؛ null = مسح سعر الفرع (يرجع لسعر الموديل)؛ رقم = سعر خاص بالفرع دون ضريبة. */
+  pricePerDayExclTax?: number | null;
 }): Promise<void> {
   const qty = Math.max(0, Math.round(input.quantity));
+  const pricePatch =
+    input.pricePerDayExclTax === undefined
+      ? {}
+      : {
+          pricePerDayExclTax:
+            input.pricePerDayExclTax == null
+              ? null
+              : Math.max(0, Math.round(input.pricePerDayExclTax * 100) / 100),
+        };
   await prisma.fleet.upsert({
     where: {
       modelId_branchId: {
@@ -54,9 +65,43 @@ export async function upsertBranchFleetQuantity(input: {
       modelId: input.modelId,
       branchId: input.branchId,
       quantity: qty,
+      ...pricePatch,
     },
-    update: { quantity: qty },
+    update: { quantity: qty, ...pricePatch },
   });
+}
+
+/** السعر اليومي الأساسي (دون ضريبة) للموديل في فرع محدّد: تجاوز الفرع إن وُجد وإلا سعر الموديل. */
+export async function resolveBranchBasePriceForModel(
+  modelId: number,
+  branchId: number | null,
+  modelPriceExclTax: number,
+): Promise<number> {
+  if (!branchId) return modelPriceExclTax;
+  const row = await prisma.fleet.findUnique({
+    where: { modelId_branchId: { modelId, branchId } },
+    select: { pricePerDayExclTax: true },
+  });
+  return row?.pricePerDayExclTax ?? modelPriceExclTax;
+}
+
+/** أدنى سعر أساسي بين الفروع النشطة ذات المخزون — لعرض «يبدأ من» قبل اختيار الفرع. */
+export async function minBranchBasePriceForModel(
+  modelId: number,
+  modelPriceExclTax: number,
+): Promise<{ minPrice: number; variesAcrossBranches: boolean }> {
+  const rows = await prisma.fleet.findMany({
+    where: { modelId, quantity: { gt: 0 }, branch: { isActive: true } },
+    select: { pricePerDayExclTax: true },
+  });
+  if (rows.length === 0) {
+    return { minPrice: modelPriceExclTax, variesAcrossBranches: false };
+  }
+  const prices = rows.map((r) => r.pricePerDayExclTax ?? modelPriceExclTax);
+  const minPrice = Math.min(...prices);
+  // فروق أقل من ريال غير مرئية بعد تقريب العرض
+  const variesAcrossBranches = new Set(prices.map((p) => Math.round(p))).size > 1;
+  return { minPrice, variesAcrossBranches };
 }
 
 export type BranchFleetQuantityRow = {

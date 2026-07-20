@@ -70,7 +70,13 @@ export type AdminVehicleRow = {
   /** Quantity displayed in the main column (Total for super admin, branch quantity for branch admin) */
   quantity: number;
   /** Quantities per active branch (Super admin only) */
-  branchQuantities?: { branchId: number; quantity: number }[];
+  branchQuantities?: {
+    branchId: number;
+    quantity: number;
+    pricePerDayExclTax?: number | null;
+  }[];
+  /** سعر خاص بفرع الموظف (Branch admin only) — null = سعر الموديل الأساسي */
+  branchPricePerDayExclTax?: number | null;
   /** Booking count in this branch (Branch admin only) */
   bookingCount?: number;
 };
@@ -374,11 +380,19 @@ export function AdminVehiclesTable({
                                                     {bq.quantity}
                                                   </strong>
                                                 </span>
+                                                <span className="text-[10px] font-semibold text-on-surface-variant">
+                                                  سعر الفرع:{" "}
+                                                  <strong className="text-primary font-black tabular-nums">
+                                                    {bq.pricePerDayExclTax ?? `${v.price} (الأساسي)`}
+                                                  </strong>
+                                                </span>
                                               </div>
                                               <BranchFleetQuantityForm
                                                 modelId={v.id}
                                                 branchId={bq.branchId}
                                                 defaultQuantity={bq.quantity}
+                                                defaultPrice={bq.pricePerDayExclTax ?? null}
+                                                basePrice={v.price}
                                                 compact
                                               />
                                             </div>
@@ -409,6 +423,8 @@ export function AdminVehiclesTable({
                                           modelId={v.id}
                                           branchId={branchId}
                                           defaultQuantity={v.quantity}
+                                          defaultPrice={v.branchPricePerDayExclTax ?? null}
+                                          basePrice={v.price}
                                         />
                                       )}
                                     </div>

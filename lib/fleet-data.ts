@@ -39,12 +39,38 @@ type FleetRowWithModel = Awaited<
   >
 >[number];
 
+/** السعر الأساسي للصف: تجاوز الفرع إن وُجد وإلا سعر الموديل. */
+function rowBasePrice(row: FleetRowWithModel): number {
+  return row.pricePerDayExclTax ?? row.model.price;
+}
+
+/** السعر الفعلي للصف بعد الخصم (لاختيار أرخص فرع للعرض). */
+function rowEffectivePrice(
+  row: FleetRowWithModel,
+  discountRules: ReadonlyArray<RentalDiscountRule>,
+  referenceDate?: Date | null,
+): number {
+  const base = rowBasePrice(row);
+  const resolved = resolveBestRentalDiscount(
+    discountRules,
+    {
+      brandId: row.model.brandId,
+      carModelId: row.model.id,
+      branchId: row.branchId,
+      referenceDate,
+    },
+    base,
+  );
+  return resolved?.discountedPricePerDayExclTax ?? base;
+}
+
 function mapFleetRowToFleetCar(
   row: FleetRowWithModel,
   priceMode: RentalPriceDisplayMode,
   discountRules: ReadonlyArray<RentalDiscountRule>,
   referenceDate?: Date | null,
-  locale: string = "ar"
+  locale: string = "ar",
+  startingFrom: boolean = false,
 ): FleetCar {
   const m = row.model;
   const brandName = m.brand.name.trim();
@@ -52,6 +78,7 @@ function mapFleetRowToFleetCar(
   const fullTitle = `${brandName} ${modelName}`.trim();
   const subtitle = `${m.year} • ${locale === "en" ? m.fuel : FUEL_AR[m.fuel]} • ${locale === "en" ? m.transmission : TRANS_AR[m.transmission]}`;
 
+  const basePrice = rowBasePrice(row);
   const resolved = resolveBestRentalDiscount(
     discountRules,
     {
@@ -60,12 +87,13 @@ function mapFleetRowToFleetCar(
       branchId: row.branchId,
       referenceDate,
     },
-    m.price,
+    basePrice,
   );
-  const effectivePrice = resolved?.discountedPricePerDayExclTax ?? m.price;
+  const effectivePrice = resolved?.discountedPricePerDayExclTax ?? basePrice;
   const priceUi = buildFleetCardPriceParts(effectivePrice, m.vatRatePercent, priceMode, {
     originalPriceExclTaxSar: resolved?.originalPricePerDayExclTax,
     discountLabelAr: resolved?.displayLabelAr,
+    startingFrom,
   });
   /** غير مخزّن في قاعدة البيانات — تقدير بسيط للعرض حسب حجم المركبة */
   const displayDoors = m.chairs >= 7 ? 5 : 4;
@@ -111,20 +139,66 @@ export async function getFleetCarMapByModelIds(
       quantity: { gt: 0 },
       modelId: { in: unique },
       ...(opts?.branchId != null ? { branchId: opts.branchId } : {}),
+      branch: { isActive: true },
     },
     include: fleetModelInclude,
     orderBy: { id: "desc" },
   });
 
-  for (const row of rows) {
-    if (map.has(row.modelId)) continue;
+  for (const [modelId, pick] of pickCheapestRowPerModel(
+    rows,
+    discountRules,
+    opts?.referenceDate,
+  )) {
     map.set(
-      row.modelId,
-      mapFleetRowToFleetCar(row, priceMode, discountRules, opts?.referenceDate, opts?.locale),
+      modelId,
+      mapFleetRowToFleetCar(
+        pick.row,
+        priceMode,
+        discountRules,
+        opts?.referenceDate,
+        opts?.locale,
+        opts?.branchId == null && pick.pricesVary,
+      ),
     );
   }
 
   return map;
+}
+
+/**
+ * يختار لكل موديل صف الفرع الأرخص (بعد الخصم) ويحدد ما إذا كان السعر يختلف
+ * بين الفروع — لعرض «يبدأ من» قبل اختيار الفرع.
+ */
+function pickCheapestRowPerModel(
+  rows: FleetRowWithModel[],
+  discountRules: ReadonlyArray<RentalDiscountRule>,
+  referenceDate?: Date | null,
+): Map<number, { row: FleetRowWithModel; pricesVary: boolean }> {
+  const byModel = new Map<
+    number,
+    { row: FleetRowWithModel; price: number; prices: Set<number> }
+  >();
+  for (const row of rows) {
+    const price = rowEffectivePrice(row, discountRules, referenceDate);
+    // فروق أقل من ريال غير مرئية بعد تقريب العرض — لا تستحق «يبدأ من»
+    const displayPrice = Math.round(price);
+    const cur = byModel.get(row.modelId);
+    if (!cur) {
+      byModel.set(row.modelId, { row, price, prices: new Set([displayPrice]) });
+    } else {
+      cur.prices.add(displayPrice);
+      if (price < cur.price) {
+        cur.row = row;
+        cur.price = price;
+      }
+    }
+  }
+  const out = new Map<number, { row: FleetRowWithModel; pricesVary: boolean }>();
+  for (const [modelId, v] of byModel) {
+    out.set(modelId, { row: v.row, pricesVary: v.prices.size > 1 });
+  }
+  return out;
 }
 
 export type FleetDisplayFilters = {
@@ -162,19 +236,32 @@ export async function getFleetCarsForDisplay(
   ]);
 
   const modelWhere =
-    categorySlug || brandId != null || maxPriceExclTax != null
+    categorySlug || brandId != null
       ? {
           model: {
             ...(categorySlug ? { category: { slug: categorySlug } } : {}),
             ...(brandId != null ? { brandId } : {}),
-            ...(maxPriceExclTax != null ? { price: { lte: maxPriceExclTax } } : {}),
           },
+        }
+      : {};
+
+  // فلتر الحد الأقصى للسعر: سعر الفرع إن وُجد وإلا سعر الموديل (COALESCE).
+  const maxPriceWhere =
+    maxPriceExclTax != null
+      ? {
+          OR: [
+            { pricePerDayExclTax: { lte: maxPriceExclTax } },
+            {
+              pricePerDayExclTax: null,
+              model: { price: { lte: maxPriceExclTax } },
+            },
+          ],
         }
       : {};
 
   const branchFilter = branchSlug?.trim()
     ? fleetWhereForBranchSlug(branchSlug)
-    : { quantity: { gt: 0 } as const };
+    : { quantity: { gt: 0 } as const, branch: { isActive: true } };
 
   const rows = await prisma.fleet.findMany({
     where: {
@@ -183,17 +270,35 @@ export async function getFleetCarsForDisplay(
         ? { modelId: { in: modelIds } }
         : {}),
       ...modelWhere,
+      ...maxPriceWhere,
     },
     include: fleetModelInclude,
     orderBy: { id: "desc" },
   });
 
-  const seenModelIds = new Set<number>();
+  const hasBranchFilter = Boolean(branchSlug?.trim());
   const cars: FleetCar[] = [];
+  const orderSeen: number[] = [];
+  const picks = pickCheapestRowPerModel(rows, discountRules, pickupDate);
+  const seenModelIds = new Set<number>();
   for (const row of rows) {
     if (seenModelIds.has(row.modelId)) continue;
     seenModelIds.add(row.modelId);
-    cars.push(mapFleetRowToFleetCar(row, priceMode, discountRules, pickupDate, locale));
+    orderSeen.push(row.modelId);
+  }
+  for (const modelId of orderSeen) {
+    const pick = picks.get(modelId);
+    if (!pick) continue;
+    cars.push(
+      mapFleetRowToFleetCar(
+        pick.row,
+        priceMode,
+        discountRules,
+        pickupDate,
+        locale,
+        !hasBranchFilter && pick.pricesVary,
+      ),
+    );
   }
   return cars;
 }
@@ -227,17 +332,22 @@ export async function getFleetBrandsForFilter(): Promise<FleetBrandFilterOption[
   });
 }
 
-/** أدنى وأعلى سعر يومي (دون ضريبة) للمركبات المعروضة */
+/** أدنى وأعلى سعر يومي (دون ضريبة) للمركبات المعروضة — يراعي تجاوزات أسعار الفروع. */
 export async function getFleetPriceBounds(): Promise<FleetPriceBounds> {
-  const agg = await prisma.carModel.aggregate({
-    where: { fleetItems: { some: { quantity: { gt: 0 } } } },
-    _min: { price: true },
-    _max: { price: true },
-  });
-  const min = agg._min.price ?? 0;
-  const max = agg._max.price ?? 5000;
+  // COALESCE(سعر الفرع, سعر الموديل) على صفوف الأسطول المتاحة في فروع نشطة.
+  const rows = await prisma.$queryRaw<{ minPrice: number | null; maxPrice: number | null }[]>`
+    SELECT
+      MIN(COALESCE(f.pricePerDayExclTax, m.price)) AS minPrice,
+      MAX(COALESCE(f.pricePerDayExclTax, m.price)) AS maxPrice
+    FROM Fleet f
+    JOIN CarModel m ON m.id = f.modelId
+    JOIN Branch b ON b.id = f.branchId
+    WHERE f.quantity > 0 AND b.isActive = true
+  `;
+  const min = Number(rows[0]?.minPrice ?? 0);
+  const max = Number(rows[0]?.maxPrice ?? 5000);
   return {
-    min: Math.max(0, min),
-    max: Math.max(min, max),
+    min: Math.max(0, Math.floor(min)),
+    max: Math.max(min, Math.ceil(max)),
   };
 }

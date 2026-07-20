@@ -54,6 +54,8 @@ export type FleetCardPriceParts = {
   originalPrimaryAmount?: string | null;
   /** عبارة مختصرة للعميل: «خصم ١٠٪» أو «وفّرت ٥٠ ر.س» */
   discountLabelAr?: string | null;
+  /** «يبدأ من» — عندما يختلف السعر بين الفروع ولم يُحدَّد فرع بعد */
+  prefixLabelAr?: string | null;
 };
 
 /** أجزاء عرض السعر في بطاقة الأسطول (المبالغ منسّقة بـ en-US). */
@@ -64,6 +66,8 @@ export function buildFleetCardPriceParts(
   opts?: {
     originalPriceExclTaxSar?: number;
     discountLabelAr?: string | null;
+    /** true = السعر يختلف بين الفروع → إظهار «يبدأ من» */
+    startingFrom?: boolean;
   },
 ): FleetCardPriceParts {
   const ex = Math.max(0, Math.round(priceExclTaxSar));
@@ -87,6 +91,7 @@ export function buildFleetCardPriceParts(
     : null;
 
   const discountLabelAr = hasDiscount ? (opts?.discountLabelAr ?? null) : null;
+  const prefixLabelAr = opts?.startingFrom ? "يبدأ من" : null;
 
   if (mode === "INCLUSIVE") {
     return {
@@ -97,6 +102,7 @@ export function buildFleetCardPriceParts(
       footnoteAr: `شامل ضريبة القيمة المضافة (${vatRatePercent}٪)`,
       originalPrimaryAmount,
       discountLabelAr,
+      prefixLabelAr,
     };
   }
 
@@ -111,6 +117,7 @@ export function buildFleetCardPriceParts(
         ? Math.round(originalEx!).toLocaleString("en-US")
         : null,
       discountLabelAr,
+      prefixLabelAr,
     };
   }
 
@@ -122,5 +129,6 @@ export function buildFleetCardPriceParts(
     footnoteAr: FLEET_CARD_TAX_LINE_AR,
     originalPrimaryAmount,
     discountLabelAr,
+    prefixLabelAr,
   };
 }

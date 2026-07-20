@@ -25,7 +25,10 @@ import {
   branchIdsFromReturnSlug,
   resolveBranchIdsFromSlugs,
 } from "@/lib/booking-branches";
-import { sumFleetQuantityForModelAtBranch } from "@/lib/fleet-branch-stock";
+import {
+  resolveBranchBasePriceForModel,
+  sumFleetQuantityForModelAtBranch,
+} from "@/lib/fleet-branch-stock";
 import {
   addDaysToYmd,
   dateOnlyYmd,
@@ -1172,14 +1175,20 @@ export async function createDirectBooking(
     select: { id: true },
   });
 
-  const rentalDiscountResolved = await resolveRentalDiscountForModel(model.price, {
+  // سعر الفرع (فرع الإرجاع — نفس فرع تسعير الخصومات وصفحة الإتمام) وإلا سعر الموديل
+  const branchBasePrice = await resolveBranchBasePriceForModel(
+    model.id,
+    returnBranchRow?.id ?? null,
+    model.price,
+  );
+  const rentalDiscountResolved = await resolveRentalDiscountForModel(branchBasePrice, {
     brandId: model.brandId,
     carModelId: model.id,
     branchId: returnBranchRow?.id ?? null,
     referenceDate: commonNormalized.pickupDate,
   });
   const effectivePricePerDay =
-    rentalDiscountResolved?.discountedPricePerDayExclTax ?? model.price;
+    rentalDiscountResolved?.discountedPricePerDayExclTax ?? branchBasePrice;
   const rentalDiscountSnap = rentalDiscountResolved
     ? rentalDiscountSnapFromResolved(rentalDiscountResolved)
     : null;
