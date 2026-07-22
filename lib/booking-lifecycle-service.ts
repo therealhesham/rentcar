@@ -5,12 +5,100 @@ import {
   canRecordReturnToBranch,
 } from "@/lib/booking-lifecycle";
 import { isCashPaymentMethod } from "@/lib/booking-cash-flow";
+import {
+  computeDelayPenaltyExclTax,
+  computeLateReturnHours,
+  DELAY_PENALTY_FREE_HOURS,
+  type DelayPenaltySnap,
+} from "@/lib/booking-delay-penalty";
+import { computeBookingReturnAt } from "@/lib/booking-return-schedule";
 import { sendBookingInvoiceEmailAfterPayment } from "@/lib/booking-invoice-email";
 import { prisma } from "@/lib/prisma";
 import { computeCheckoutTotals } from "@/lib/booking-checkout-pricing";
 import { parseBookingPricingSnapshot, resolveBookingRentalPricePerDayExclTax } from "@/lib/booking-pricing-snapshot";
 
 export type LifecycleActionResult = { ok: true } | { ok: false; error: string };
+
+/** تفاصيل تأخير الإرجاع الفعلي — لعرضها في مودال قرار الغرامة. */
+export type LateReturnInfo = {
+  /** إجمالي ساعات التأخير عن الموعد الأساسي (المعلَن وقت الحجز محسوب ضمنها). */
+  totalLateHours: number;
+  scheduledReturnAtIso: string;
+  actualReturnAtIso: string;
+  /** غرامة السياسة على إجمالي الساعات (دون ضريبة). */
+  policyFeeExclTax: number;
+  /** بند الساعات المعلنة المدفوع مسبقاً وقت الحجز (دون ضريبة). */
+  prepaidDelayFeeExclTax: number;
+  /** صافي الغرامة الجديدة = السياسة − المدفوع مسبقاً (دون ضريبة). */
+  netPenaltyExclTax: number;
+  /** صافي الغرامة شامل الضريبة — هذا ما سيُحصَّل من العميل. */
+  netPenaltyInclTax: number;
+  vatRatePercent: number;
+  policyKind: "hourly" | "full_day";
+  billableHours: number;
+};
+
+export type ReturnLifecycleResult =
+  | { ok: true }
+  | { ok: false; error: string }
+  | { ok: false; needsLateDecision: true; lateInfo: LateReturnInfo };
+
+export type LatePenaltyDecision = "APPLY" | "WAIVE";
+
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
+type LoadedBooking = NonNullable<Awaited<ReturnType<typeof loadDirectBooking>>>;
+
+/** يحسب تفاصيل التأخير عند الإرجاع؛ null = داخل السماحية (ساعتان) أو تعذّر الحساب. */
+function computeLateReturnInfo(booking: LoadedBooking, now: Date): LateReturnInfo | null {
+  if (!booking.carModel) return null;
+  const lateHours = computeLateReturnHours(booking.pickupDate, booking.numberOfDays, now);
+  if (lateHours <= DELAY_PENALTY_FREE_HOURS) return null;
+
+  const price = resolveBookingRentalPricePerDayExclTax(
+    booking.carModel.price,
+    booking.addonsJson,
+  );
+  const vat = booking.carModel.vatRatePercent;
+  const policy = computeDelayPenaltyExclTax(price, lateHours);
+  if (policy.kind === "none") return null;
+
+  const prepaid =
+    parseBookingPricingSnapshot(booking.addonsJson).delayPenalty?.feeExclVatSar ?? 0;
+  const net = Math.max(0, round2(policy.feeExclVatSar - prepaid));
+
+  return {
+    totalLateHours: Math.round(lateHours * 10) / 10,
+    scheduledReturnAtIso: computeBookingReturnAt(
+      booking.pickupDate,
+      booking.numberOfDays,
+    ).toISOString(),
+    actualReturnAtIso: now.toISOString(),
+    policyFeeExclTax: policy.feeExclVatSar,
+    prepaidDelayFeeExclTax: round2(prepaid),
+    netPenaltyExclTax: net,
+    netPenaltyInclTax: round2(net * (1 + vat / 100)),
+    vatRatePercent: vat,
+    policyKind: policy.kind,
+    billableHours: policy.billableHours,
+  };
+}
+
+/** يستبدل لقطة غرامة التأخير في addonsJson بالإجمالي الجديد (مع الحفاظ على بقية اللقطة). */
+function addonsJsonWithDelaySnap(addonsJson: string | null, snap: DelayPenaltySnap): string {
+  let data: Record<string, unknown> = { items: [] };
+  if (addonsJson?.trim()) {
+    try {
+      data = JSON.parse(addonsJson) as Record<string, unknown>;
+    } catch {
+      data = { items: [] };
+    }
+  }
+  data.delayPenalty = snap;
+  return JSON.stringify(data);
+}
 
 async function loadDirectBooking(bookingRequestId: number) {
   return prisma.bookingRequest.findUnique({
@@ -66,10 +154,15 @@ export async function recordBookingPickupFromBranch(
   return { ok: true };
 }
 
-/** تسجيل إرجاع السيارة إلى الفرع — الحالة RETURNED؛ للكاش: تأكيد الدفع وإرسال الفاتورة. */
+/**
+ * تسجيل إرجاع السيارة إلى الفرع — الحالة RETURNED؛ للكاش: تأكيد الدفع وإرسال الفاتورة.
+ * عند تأخير يتجاوز السماحية وبغرامة صافية > 0: يتطلب قرار الموظف (تطبيق/إعفاء) —
+ * بدون قرار يُرجع `needsLateDecision` مع التفاصيل ليعرضها المودال.
+ */
 export async function recordBookingReturnToBranch(
   bookingRequestId: number,
-): Promise<LifecycleActionResult> {
+  opts?: { latePenaltyDecision?: LatePenaltyDecision; decidedBy?: string | null },
+): Promise<ReturnLifecycleResult> {
   const booking = await loadDirectBooking(bookingRequestId);
   if (!booking) return { ok: false, error: "الطلب غير موجود." };
   if (!canRecordReturnToBranch(booking)) {
@@ -79,6 +172,30 @@ export async function recordBookingReturnToBranch(
   const now = new Date();
   const cash = isCashPaymentMethod(booking.paymentMethod);
   const extraDue = booking.balanceDueAtBranchSar ?? 0;
+
+  // ─── فحص الإرجاع المتأخر وقرار الغرامة ──────────────────────────────────────
+  const lateInfo = computeLateReturnInfo(booking, now);
+  const penaltyDue = lateInfo != null && lateInfo.netPenaltyExclTax > 0;
+  if (penaltyDue && !opts?.latePenaltyDecision) {
+    return { ok: false, needsLateDecision: true, lateInfo };
+  }
+  const applyPenalty = penaltyDue && opts?.latePenaltyDecision === "APPLY";
+  const waivePenalty = penaltyDue && opts?.latePenaltyDecision === "WAIVE";
+
+  // لقطة الغرامة الجديدة على إجمالي الساعات (تستبدل بند الساعات المعلنة إن وُجد)
+  const appliedSnap: DelayPenaltySnap | null =
+    applyPenalty && lateInfo
+      ? {
+          kind: lateInfo.policyKind,
+          lateHours: lateInfo.totalLateHours,
+          billableHours: lateInfo.billableHours,
+          feeExclVatSar: lateInfo.policyFeeExclTax,
+          labelAr: "ساعات تأخير",
+          scheduledReturnAt: lateInfo.scheduledReturnAtIso,
+          actualDropoffAt: lateInfo.actualReturnAtIso,
+        }
+      : null;
+  const penaltyInclTax = applyPenalty && lateInfo ? lateInfo.netPenaltyInclTax : 0;
 
   // ─── حساب paidAmountSar النهائي ─────────────────────────────────────────────
   // كاش: نستخدم snapshotTotalAmountSar المجمّد وقت الحجز/التمديد (لا يتأثر بتغيير الأسعار).
@@ -104,10 +221,20 @@ export async function recordBookingReturnToBranch(
       );
       finalPaidAmountSar = Math.round(totals.totalInclTax * 100) / 100;
     }
+    // الكاش يسدّد كل شيء عند الإرجاع — الغرامة المطبقة تدخل في التحصيل النهائي
+    if (finalPaidAmountSar !== null && penaltyInclTax > 0) {
+      finalPaidAmountSar = round2(finalPaidAmountSar + penaltyInclTax);
+    }
   } else if (!cash && extraDue > 0 && typeof booking.paidAmountSar === "number") {
     // مدفوع مسبقاً + فرق مدّد في الفرع
     finalPaidAmountSar = Math.round((booking.paidAmountSar + extraDue) * 100) / 100;
   }
+
+  // إجمالي الحجز المجمّد يرتفع بصافي الغرامة المطبقة (تظهر في الفاتورة وكشف الحساب)
+  const newSnapshotTotal =
+    penaltyInclTax > 0 && typeof booking.snapshotTotalAmountSar === "number"
+      ? round2(booking.snapshotTotalAmountSar + penaltyInclTax)
+      : undefined;
 
   const updated = await prisma.bookingRequest.updateMany({
     where: {
@@ -118,7 +245,24 @@ export async function recordBookingReturnToBranch(
     data: {
       status: BOOKING_STATUS_RETURNED,
       vehicleReturnedAt: now,
-      balanceDueAtBranchSar: null,
+      // مدفوع أونلاين + غرامة مطبقة: تبقى الغرامة رصيداً مستحقاً يتابَع من صفحة الاستلامات المتأخرة
+      balanceDueAtBranchSar: !cash && penaltyInclTax > 0 ? penaltyInclTax : null,
+      ...(appliedSnap
+        ? {
+            addonsJson: addonsJsonWithDelaySnap(booking.addonsJson, appliedSnap),
+            ...(newSnapshotTotal !== undefined
+              ? { snapshotTotalAmountSar: newSnapshotTotal }
+              : {}),
+          }
+        : {}),
+      ...(lateInfo
+        ? {
+            lateReturnHours: lateInfo.totalLateHours,
+            lateReturnPenaltyExclTaxSar: applyPenalty ? lateInfo.netPenaltyExclTax : 0,
+            lateReturnPenaltyWaived: waivePenalty,
+            lateReturnDecidedBy: penaltyDue ? (opts?.decidedBy?.trim() || null) : null,
+          }
+        : {}),
       ...(cash
         ? {
             paymentStatus: "PAID",

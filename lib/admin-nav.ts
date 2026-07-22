@@ -71,6 +71,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/admin/missed-bookings", label: "حجوزات فائتة", icon: "calendar-x", permission: "BOOKINGS", hidden: true },
       { href: "/admin/cancelled-bookings", label: "الحجوزات الملغاة", icon: "ban", permission: "BOOKINGS", hidden: true },
       { href: "/admin/branch-returns", label: "التسليم الى الفرع", icon: "corner-down-left", permission: "BOOKINGS" },
+      { href: "/admin/late-returns", label: "الاستلامات المتأخرة", icon: "calendar-x", permission: "BOOKINGS" },
       { href: "/admin/customers", label: "العملاء", icon: "users", permission: "BOOKINGS" },
       { href: "/admin/direct-booking", label: "حجز مباشر (مكتب)", icon: "calendar-plus", permission: "BOOKINGS", hidden: true },
       { href: "/admin/corporate-leads", label: "حجز الشركات", icon: "briefcase", permission: "CORPORATE_LEADS" },

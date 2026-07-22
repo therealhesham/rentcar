@@ -1,10 +1,11 @@
 "use client";
 
-import { useActionState } from "react";
-import { CarFront, CheckCircle2, RotateCcw } from "lucide-react";
+import { useActionState, useEffect, useState } from "react";
+import { AlarmClock, CarFront, CheckCircle2, RotateCcw } from "lucide-react";
 import {
   recordPickupFromBranchAction,
   recordReturnToBranchAction,
+  type ReturnToBranchActionResult,
 } from "@/app/admin/booking-lifecycle-actions";
 import {
   canRecordPickupFromBranch,
@@ -13,6 +14,19 @@ import {
   isBookingReturned,
 } from "@/lib/booking-lifecycle";
 import { bookingStatusLabelAr } from "@/lib/booking-display-labels";
+
+function fmtSarNum(n: number): string {
+  return n.toLocaleString("en-US", {
+    minimumFractionDigits: n % 1 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+function needsLateDecision(
+  s: ReturnToBranchActionResult | null,
+): s is Extract<ReturnToBranchActionResult, { needsLateDecision: true }> {
+  return s != null && !s.ok && "needsLateDecision" in s && s.needsLateDecision;
+}
 
 type Props = {
   bookingRequestId: number;
@@ -53,6 +67,13 @@ export function BookingLifecyclePanel({
     recordReturnToBranchAction,
     null,
   );
+  // إخفاء مودال قرار الغرامة عند «إلغاء» — يُعاد الفتح تلقائياً مع نتيجة جديدة
+  const [dismissedLateState, setDismissedLateState] = useState<object | null>(null);
+  useEffect(() => {
+    setDismissedLateState(null);
+  }, [returnState]);
+  const showLateModal =
+    needsLateDecision(returnState) && dismissedLateState !== returnState;
 
   if (kind !== "DIRECT") return null;
 
@@ -144,7 +165,7 @@ export function BookingLifecyclePanel({
             <RotateCcw className="h-4 w-4" aria-hidden />
             {returnPending ? "جاري التسجيل…" : "تسجيل تسليم السيارة إلى الفرع"}
           </button>
-          {returnState && !returnState.ok ? (
+          {returnState && !returnState.ok && !needsLateDecision(returnState) ? (
             <p className="mt-2 text-xs font-bold text-red-700">{returnState.error}</p>
           ) : null}
           {returnState?.ok ? (
@@ -154,6 +175,94 @@ export function BookingLifecyclePanel({
                 ? " وإرسال الفاتورة إلى بريد العميل (إن وُجد)."
                 : "."}
             </p>
+          ) : null}
+
+          {/* مودال قرار غرامة الإرجاع المتأخر */}
+          {showLateModal && needsLateDecision(returnState) ? (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+              <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+                <div className="mb-4 flex items-start gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+                    <AlarmClock className="h-5 w-5" aria-hidden />
+                  </span>
+                  <div>
+                    <h3 className="text-base font-extrabold text-gray-900">
+                      تم استرجاع السيارة متأخراً عن موعد الحجز
+                    </h3>
+                    <p className="mt-1 text-xs font-medium text-gray-500">
+                      هل تود تطبيق غرامة تأخير حسب سياسة النظام؟
+                    </p>
+                  </div>
+                </div>
+
+                <dl className="mb-5 space-y-2 rounded-xl bg-gray-50 p-4 text-sm">
+                  <div className="flex justify-between gap-3">
+                    <dt className="font-bold text-gray-500">موعد الإرجاع المجدول</dt>
+                    <dd className="font-bold text-gray-900" dir="ltr">
+                      {new Date(returnState.lateInfo.scheduledReturnAtIso).toLocaleString(
+                        "ar-SA",
+                        { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Riyadh" },
+                      )}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="font-bold text-gray-500">إجمالي التأخير</dt>
+                    <dd className="font-extrabold text-amber-700">
+                      {returnState.lateInfo.totalLateHours} ساعة
+                      {returnState.lateInfo.policyKind === "full_day"
+                        ? " — غرامة يوم كامل"
+                        : " — غرامة بالساعة"}
+                    </dd>
+                  </div>
+                  {returnState.lateInfo.prepaidDelayFeeExclTax > 0 ? (
+                    <div className="flex justify-between gap-3">
+                      <dt className="font-bold text-gray-500">
+                        مدفوع مسبقاً (ساعات معلنة عند الحجز)
+                      </dt>
+                      <dd className="font-bold text-emerald-700" dir="ltr">
+                        −{fmtSarNum(returnState.lateInfo.prepaidDelayFeeExclTax)} ر.س
+                      </dd>
+                    </div>
+                  ) : null}
+                  <div className="flex justify-between gap-3 border-t border-gray-200 pt-2">
+                    <dt className="font-black text-gray-900">
+                      الغرامة المستحقة (شاملة الضريبة {returnState.lateInfo.vatRatePercent}٪)
+                    </dt>
+                    <dd className="font-black text-red-700" dir="ltr">
+                      {fmtSarNum(returnState.lateInfo.netPenaltyInclTax)} ر.س
+                    </dd>
+                  </div>
+                </dl>
+
+                <div className="flex flex-col gap-2">
+                  <button
+                    type="submit"
+                    name="latePenaltyDecision"
+                    value="APPLY"
+                    disabled={returnPending}
+                    className="w-full rounded-xl bg-red-600 px-4 py-3 text-sm font-extrabold text-white transition-opacity hover:opacity-95 disabled:opacity-60"
+                  >
+                    {returnPending ? "جاري التسجيل…" : "تطبيق الغرامة وتسجيل الإرجاع"}
+                  </button>
+                  <button
+                    type="submit"
+                    name="latePenaltyDecision"
+                    value="WAIVE"
+                    disabled={returnPending}
+                    className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-extrabold text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-60"
+                  >
+                    إعفاء العميل وتسجيل الإرجاع بدون غرامة
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDismissedLateState(returnState)}
+                    className="w-full rounded-xl px-4 py-2 text-xs font-bold text-gray-400 hover:text-gray-600"
+                  >
+                    إلغاء (لن يُسجَّل الإرجاع)
+                  </button>
+                </div>
+              </div>
+            </div>
           ) : null}
         </form>
       ) : null}

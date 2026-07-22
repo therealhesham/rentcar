@@ -454,6 +454,14 @@ model BookingRequest {
   /// إجمالي الحجز المستحق (شامل الضريبة) — snapshot مجمَّد عند إنشاء الحجز أو آخر تعديل للمدة.
   /// يُستخدم بدلاً من إعادة الحساب من السعر الحالي حتى لو تغيّر سعر الموديل لاحقاً.
   snapshotTotalAmountSar Float?
+  /// إجمالي ساعات التأخير عن موعد الإرجاع الأساسي عند تسجيل الإرجاع (يُسجَّل فقط عند تجاوز السماحية).
+  lateReturnHours Float?
+  /// غرامة الإرجاع المتأخر المطبقة (دون ضريبة) بعد خصم بند الساعات المدفوع مسبقاً. 0 = مغطاة أو معفاة.
+  lateReturnPenaltyExclTaxSar Float?
+  /// أعفى الموظف العميل من غرامة الإرجاع المتأخر.
+  lateReturnPenaltyWaived Boolean @default(false)
+  /// الموظف الذي قرر تطبيق/إعفاء غرامة الإرجاع المتأخر.
+  lateReturnDecidedBy String? @db.VarChar(128)
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
 
