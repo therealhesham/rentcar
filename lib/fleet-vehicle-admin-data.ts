@@ -16,12 +16,16 @@ export type AdminFleetVehicleListRow = {
   year: number;
   chairs: number;
   price: number;
+  /** السعر الشهري الأساسي للموديل — null = لا يوجد عرض شهري */
+  priceMonthlyExclTax: number | null;
   fuel: FuelType;
   transmission: Transmission;
   /** كمية فرع واحد أو المجموع */
   quantity: number;
   /** سعر خاص بفرع الموظف (null = سعر الموديل الأساسي) — لعرض موظف الفرع فقط */
   branchPricePerDayExclTax?: number | null;
+  /** سعر شهري خاص بفرع الموظف (null = السعر الشهري الأساسي) — لعرض موظف الفرع فقط */
+  branchPriceMonthlyExclTax?: number | null;
   image: string | null;
 };
 
@@ -32,6 +36,7 @@ export type AdminFleetVehicleSuperRow = AdminFleetVehicleListRow & {
     branchId: number;
     quantity: number;
     pricePerDayExclTax: number | null;
+    priceMonthlyExclTax: number | null;
   }[];
 };
 
@@ -57,8 +62,12 @@ export async function listFleetVehiclesForAdmin(
     const branchPricePerDayExclTax = branchId
       ? (r.fleetItems[0]?.pricePerDayExclTax ?? null)
       : null;
+    const branchPriceMonthlyExclTax = branchId
+      ? (r.fleetItems[0]?.priceMonthlyExclTax ?? null)
+      : null;
     return {
       branchPricePerDayExclTax,
+      branchPriceMonthlyExclTax,
       id: r.id,
       brandName: r.brand.name.trim(),
       modelName: r.name.trim(),
@@ -67,6 +76,7 @@ export async function listFleetVehiclesForAdmin(
       year: r.year,
       chairs: r.chairs,
       price: r.price,
+      priceMonthlyExclTax: r.priceMonthlyExclTax,
       fuel: r.fuel,
       transmission: r.transmission,
       quantity: qty,
@@ -100,7 +110,12 @@ export async function listFleetVehiclesForSuperAdmin(): Promise<{
       brand: true,
       category: { select: { id: true, title: true } },
       fleetItems: {
-        select: { branchId: true, quantity: true, pricePerDayExclTax: true },
+        select: {
+          branchId: true,
+          quantity: true,
+          pricePerDayExclTax: true,
+          priceMonthlyExclTax: true,
+        },
       },
     },
   });
@@ -112,6 +127,7 @@ export async function listFleetVehiclesForSuperAdmin(): Promise<{
         branchId: b.id,
         quantity: item?.quantity ?? 0,
         pricePerDayExclTax: item?.pricePerDayExclTax ?? null,
+        priceMonthlyExclTax: item?.priceMonthlyExclTax ?? null,
       };
     });
     const totalQuantity = branchQuantities.reduce((s, x) => s + x.quantity, 0);
@@ -124,6 +140,7 @@ export async function listFleetVehiclesForSuperAdmin(): Promise<{
       year: r.year,
       chairs: r.chairs,
       price: r.price,
+      priceMonthlyExclTax: r.priceMonthlyExclTax,
       fuel: r.fuel,
       transmission: r.transmission,
       quantity: totalQuantity,

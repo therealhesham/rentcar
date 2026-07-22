@@ -43,6 +43,8 @@ export async function upsertBranchFleetQuantity(input: {
   quantity: number;
   /** undefined = لا تغيير؛ null = مسح سعر الفرع (يرجع لسعر الموديل)؛ رقم = سعر خاص بالفرع دون ضريبة. */
   pricePerDayExclTax?: number | null;
+  /** undefined = لا تغيير؛ null = مسح السعر الشهري الخاص بالفرع؛ رقم = سعر شهري خاص بالفرع دون ضريبة. */
+  priceMonthlyExclTax?: number | null;
 }): Promise<void> {
   const qty = Math.max(0, Math.round(input.quantity));
   const pricePatch =
@@ -53,6 +55,15 @@ export async function upsertBranchFleetQuantity(input: {
             input.pricePerDayExclTax == null
               ? null
               : Math.max(0, Math.round(input.pricePerDayExclTax * 100) / 100),
+        };
+  const monthlyPatch =
+    input.priceMonthlyExclTax === undefined
+      ? {}
+      : {
+          priceMonthlyExclTax:
+            input.priceMonthlyExclTax == null
+              ? null
+              : Math.max(0, Math.round(input.priceMonthlyExclTax * 100) / 100),
         };
   await prisma.fleet.upsert({
     where: {
@@ -66,8 +77,9 @@ export async function upsertBranchFleetQuantity(input: {
       branchId: input.branchId,
       quantity: qty,
       ...pricePatch,
+      ...monthlyPatch,
     },
-    update: { quantity: qty, ...pricePatch },
+    update: { quantity: qty, ...pricePatch, ...monthlyPatch },
   });
 }
 
@@ -100,6 +112,40 @@ export async function minBranchBasePriceForModel(
   const prices = rows.map((r) => r.pricePerDayExclTax ?? modelPriceExclTax);
   const minPrice = Math.min(...prices);
   // فروق أقل من ريال غير مرئية بعد تقريب العرض
+  const variesAcrossBranches = new Set(prices.map((p) => Math.round(p))).size > 1;
+  return { minPrice, variesAcrossBranches };
+}
+
+/** السعر الشهري الأساسي (دون ضريبة) للموديل في فرع محدّد: تجاوز الفرع إن وُجد وإلا سعر الموديل الشهري. null = لا يوجد عرض شهري. */
+export async function resolveBranchMonthlyPriceForModel(
+  modelId: number,
+  branchId: number | null,
+  modelMonthlyPriceExclTax: number | null,
+): Promise<number | null> {
+  if (!branchId) return modelMonthlyPriceExclTax;
+  const row = await prisma.fleet.findUnique({
+    where: { modelId_branchId: { modelId, branchId } },
+    select: { priceMonthlyExclTax: true },
+  });
+  return row?.priceMonthlyExclTax ?? modelMonthlyPriceExclTax;
+}
+
+/** أدنى سعر شهري بين الفروع النشطة ذات المخزون — لعرض «يبدأ من» قبل اختيار الفرع. null = لا يوجد عرض شهري لهذا الموديل في أي فرع. */
+export async function minBranchMonthlyPriceForModel(
+  modelId: number,
+  modelMonthlyPriceExclTax: number | null,
+): Promise<{ minPrice: number | null; variesAcrossBranches: boolean }> {
+  const rows = await prisma.fleet.findMany({
+    where: { modelId, quantity: { gt: 0 }, branch: { isActive: true } },
+    select: { priceMonthlyExclTax: true },
+  });
+  const prices = rows
+    .map((r) => r.priceMonthlyExclTax ?? modelMonthlyPriceExclTax)
+    .filter((p): p is number => p != null);
+  if (prices.length === 0) {
+    return { minPrice: modelMonthlyPriceExclTax, variesAcrossBranches: false };
+  }
+  const minPrice = Math.min(...prices);
   const variesAcrossBranches = new Set(prices.map((p) => Math.round(p))).size > 1;
   return { minPrice, variesAcrossBranches };
 }

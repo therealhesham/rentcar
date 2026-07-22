@@ -27,6 +27,7 @@ export default async function AdminVehiclesPage() {
       year: v.year,
       chairs: v.chairs,
       price: v.price,
+      priceMonthlyExclTax: v.priceMonthlyExclTax,
       fuel: v.fuel,
       transmission: v.transmission,
       image: v.image,
@@ -124,11 +125,13 @@ export default async function AdminVehiclesPage() {
     year: v.year,
     chairs: v.chairs,
     price: v.price,
+    priceMonthlyExclTax: v.priceMonthlyExclTax,
     fuel: v.fuel,
     transmission: v.transmission,
     image: v.image,
     quantity: v.quantity, // Branch quantity
     branchPricePerDayExclTax: v.branchPricePerDayExclTax ?? null,
+    branchPriceMonthlyExclTax: v.branchPriceMonthlyExclTax ?? null,
     bookingCount: bookingsByModel.get(v.id) ?? 0,
   }));
 

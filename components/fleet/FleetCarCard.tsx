@@ -161,6 +161,11 @@ export function FleetCarCard({
               {car.priceUi.primaryAmount}
             </span>
             <SarCurrencyGlyph className="h-4 w-4 shrink-0 text-gray-700" />
+            {car.priceUi.periodLabelAr && car.priceUi.primaryLabelAr !== car.priceUi.periodLabelAr ? (
+              <span className="text-[12px] font-semibold text-gray-500">
+                / {car.priceUi.periodLabelAr}
+              </span>
+            ) : null}
           </div>
           {car.priceUi.secondaryAmount && (
             <p className="mt-0.5 flex items-baseline gap-1 text-[11px] text-gray-500">

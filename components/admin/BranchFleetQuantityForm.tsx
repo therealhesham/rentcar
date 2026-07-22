@@ -11,6 +11,10 @@ type Props = {
   defaultPrice?: number | null;
   /** سعر الموديل الأساسي — يُعرض placeholder عند غياب سعر خاص للفرع */
   basePrice?: number;
+  /** سعر الفرع الشهري دون ضريبة — null = السعر الشهري الأساسي للموديل (أو لا يوجد عرض شهري) */
+  defaultMonthlyPrice?: number | null;
+  /** السعر الشهري الأساسي للموديل — يُعرض placeholder عند غياب سعر خاص للفرع؛ null = لا يوجد عرض شهري */
+  baseMonthlyPrice?: number | null;
   /** عرض مضغوط داخل جدول السوبر أدمن */
   compact?: boolean;
 };
@@ -21,6 +25,8 @@ export function BranchFleetQuantityForm({
   defaultQuantity,
   defaultPrice,
   basePrice,
+  defaultMonthlyPrice,
+  baseMonthlyPrice,
   compact = false,
 }: Props) {
   const [state, formAction, pending] = useActionState(updateBranchFleetQuantity, null);
@@ -62,6 +68,20 @@ export function BranchFleetQuantityForm({
           defaultValue={defaultPrice ?? ""}
           placeholder={basePrice != null ? String(basePrice) : "سعر الموديل"}
           title="فارغ = سعر الموديل الأساسي"
+          className={inputClass}
+          dir="ltr"
+        />
+      </label>
+      <label className={compact ? "flex flex-col gap-0.5" : "flex items-center gap-1"}>
+        <span className="text-[9px] font-bold text-on-surface-variant">سعر الشهر (ر.س)</span>
+        <input
+          type="number"
+          name="branchMonthlyPrice"
+          min={0}
+          step="0.01"
+          defaultValue={defaultMonthlyPrice ?? ""}
+          placeholder={baseMonthlyPrice != null ? String(baseMonthlyPrice) : "لا يوجد"}
+          title="فارغ = السعر الشهري الأساسي للموديل (أو لا يوجد عرض شهري)"
           className={inputClass}
           dir="ltr"
         />

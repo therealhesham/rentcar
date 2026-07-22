@@ -55,6 +55,7 @@ export default async function FleetPage({
 
   const pickupRaw = qFirst(params.pickup);
   const dropoffRaw = qFirst(params.dropoff);
+  const rentalRaw = qFirst(params.rental);
 
   /** undefined = لا فلترة بالتوفر؛ مصفوفة (قد تكون فارغة) = نتيجة بحث */
   let availabilityModelIds: number[] | undefined;
@@ -87,7 +88,6 @@ export default async function FleetPage({
       dropoffDate.getTime() >= pickupDate.getTime()
     ) {
       const days = computeBookingDays(pickupDate, dropoffDate);
-      const rentalRaw = qFirst(params.rental);
       const durationLabel =
         rentalRaw === "daily" || rentalRaw == null || rentalRaw === ""
           ? (formatDailyBookingDurationFromIso(pickupRaw, dropoffRaw) ?? `${days} يوم`)
@@ -195,6 +195,7 @@ export default async function FleetPage({
     pickupDate: fleetPickupDate,
     priceDisplayMode: priceMode,
     locale,
+    rentalTab: rentalRaw,
   });
 
   return (

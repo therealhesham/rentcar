@@ -27,6 +27,7 @@ import {
 } from "@/lib/booking-branches";
 import {
   resolveBranchBasePriceForModel,
+  resolveBranchMonthlyPriceForModel,
   sumFleetQuantityForModelAtBranch,
 } from "@/lib/fleet-branch-stock";
 import {
@@ -1181,17 +1182,35 @@ export async function createDirectBooking(
     returnBranchRow?.id ?? null,
     model.price,
   );
-  const rentalDiscountResolved = await resolveRentalDiscountForModel(branchBasePrice, {
-    brandId: model.brandId,
-    carModelId: model.id,
-    branchId: returnBranchRow?.id ?? null,
-    referenceDate: commonNormalized.pickupDate,
-  });
-  const effectivePricePerDay =
-    rentalDiscountResolved?.discountedPricePerDayExclTax ?? branchBasePrice;
-  const rentalDiscountSnap = rentalDiscountResolved
-    ? rentalDiscountSnapFromResolved(rentalDiscountResolved)
-    : null;
+
+  // تبويب «شهري»: سعر شهري ثابت (منفصل عن نظام خصومات اليومي) — يُحوَّل لسعر يومي
+  // مكافئ (السعر الشهري ÷ عدد الأيام) بحيث يبقى الإجمالي = السعر الشهري بالضبط
+  // دون تغيير معادلة computeCheckoutTotals نفسها.
+  const branchMonthlyPrice = await resolveBranchMonthlyPriceForModel(
+    model.id,
+    returnBranchRow?.id ?? null,
+    model.priceMonthlyExclTax,
+  );
+  const isMonthlyBooking =
+    commonNormalized.rentalTab?.trim().toLowerCase() === "monthly" && branchMonthlyPrice != null;
+
+  let effectivePricePerDay: number;
+  let rentalDiscountSnap: ReturnType<typeof rentalDiscountSnapFromResolved> | null;
+  if (isMonthlyBooking) {
+    effectivePricePerDay = branchMonthlyPrice! / days;
+    rentalDiscountSnap = null;
+  } else {
+    const rentalDiscountResolved = await resolveRentalDiscountForModel(branchBasePrice, {
+      brandId: model.brandId,
+      carModelId: model.id,
+      branchId: returnBranchRow?.id ?? null,
+      referenceDate: commonNormalized.pickupDate,
+    });
+    effectivePricePerDay = rentalDiscountResolved?.discountedPricePerDayExclTax ?? branchBasePrice;
+    rentalDiscountSnap = rentalDiscountResolved
+      ? rentalDiscountSnapFromResolved(rentalDiscountResolved)
+      : null;
+  }
 
   const addonsSnap = await buildBookingAddonsJsonSnapshot(
     addonIds,

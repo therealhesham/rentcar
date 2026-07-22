@@ -64,6 +64,8 @@ export type AdminVehicleRow = {
   year: number;
   chairs: number;
   price: number;
+  /** السعر الشهري الأساسي للموديل — null = لا يوجد عرض شهري */
+  priceMonthlyExclTax?: number | null;
   fuel: FuelType;
   transmission: Transmission;
   image: string | null;
@@ -74,9 +76,12 @@ export type AdminVehicleRow = {
     branchId: number;
     quantity: number;
     pricePerDayExclTax?: number | null;
+    priceMonthlyExclTax?: number | null;
   }[];
   /** سعر خاص بفرع الموظف (Branch admin only) — null = سعر الموديل الأساسي */
   branchPricePerDayExclTax?: number | null;
+  /** سعر شهري خاص بفرع الموظف (Branch admin only) — null = السعر الشهري الأساسي */
+  branchPriceMonthlyExclTax?: number | null;
   /** Booking count in this branch (Branch admin only) */
   bookingCount?: number;
 };
@@ -386,6 +391,15 @@ export function AdminVehiclesTable({
                                                     {bq.pricePerDayExclTax ?? `${v.price} (الأساسي)`}
                                                   </strong>
                                                 </span>
+                                                <span className="text-[10px] font-semibold text-on-surface-variant">
+                                                  السعر الشهري:{" "}
+                                                  <strong className="text-primary font-black tabular-nums">
+                                                    {bq.priceMonthlyExclTax ??
+                                                      (v.priceMonthlyExclTax != null
+                                                        ? `${v.priceMonthlyExclTax} (الأساسي)`
+                                                        : "لا يوجد")}
+                                                  </strong>
+                                                </span>
                                               </div>
                                               <BranchFleetQuantityForm
                                                 modelId={v.id}
@@ -393,6 +407,8 @@ export function AdminVehiclesTable({
                                                 defaultQuantity={bq.quantity}
                                                 defaultPrice={bq.pricePerDayExclTax ?? null}
                                                 basePrice={v.price}
+                                                defaultMonthlyPrice={bq.priceMonthlyExclTax ?? null}
+                                                baseMonthlyPrice={v.priceMonthlyExclTax ?? null}
                                                 compact
                                               />
                                             </div>
@@ -425,6 +441,8 @@ export function AdminVehiclesTable({
                                           defaultQuantity={v.quantity}
                                           defaultPrice={v.branchPricePerDayExclTax ?? null}
                                           basePrice={v.price}
+                                          defaultMonthlyPrice={v.branchPriceMonthlyExclTax ?? null}
+                                          baseMonthlyPrice={v.priceMonthlyExclTax ?? null}
                                         />
                                       )}
                                     </div>

@@ -489,8 +489,15 @@ export function FleetCheckoutClient({
     );
   }, [rentalTab, trip.pickupIso, trip.dropoffIso, trip.days]);
 
+  // تبويب «شهري»: سعر شهري ثابت — يُحوَّل لسعر يومي مكافئ (السعر الشهري ÷ الأيام)
+  // بحيث يطابق الإجمالي المعروض هنا ما سيُحتسب فعلياً عند إنشاء الحجز.
+  const effectiveRentalPricePerDay =
+    rentalTab === "monthly" && car.pricePerMonthExclTax != null
+      ? car.pricePerMonthExclTax / trip.days
+      : car.pricePerDayExclTax;
+
   const totals = computeCheckoutTotals(
-    car.pricePerDayExclTax,
+    effectiveRentalPricePerDay,
     trip.days,
     car.vatRatePercent,
     selectedRows.map((a) => ({ pricePerDay: a.pricePerDay })),
@@ -1586,6 +1593,18 @@ export function FleetCheckoutClient({
                         <span className="text-[#8a7752]">(غير شامل الضريبة)</span>
                       </p>
                     )}
+                    {rentalTab === "monthly" && car.pricePerMonthExclTax != null ? (
+                      <p dir="ltr" className="mt-2 border-t border-[#ebe4d3] pt-2 text-end">
+                        السعر الشهري:{" "}
+                        <span className="font-extrabold text-[#003749]">
+                          {formatSarAmount(
+                            dailyRentalInclTaxSar(car.pricePerMonthExclTax, car.vatRatePercent),
+                          )}{" "}
+                          <SarCurrencyGlyph />
+                        </span>{" "}
+                        <span className="text-[#8a7752]">(شامل الضريبة {car.vatRatePercent}%)</span>
+                      </p>
+                    ) : null}
                   </div>
 
                   <div className="mt-6 space-y-5">

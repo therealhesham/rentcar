@@ -38,6 +38,22 @@ export async function updateBranchFleetQuantity(
     }
   }
 
+  // سعر الفرع الشهري (دون ضريبة): حقل اختياري — فارغ = مسح التجاوز والرجوع للسعر الشهري الأساسي.
+  const monthlyPriceRaw = formData.get("branchMonthlyPrice");
+  let priceMonthlyExclTax: number | null | undefined = undefined;
+  if (monthlyPriceRaw != null) {
+    const trimmed = String(monthlyPriceRaw).trim();
+    if (trimmed === "") {
+      priceMonthlyExclTax = null;
+    } else {
+      const parsed = Number(trimmed);
+      if (!Number.isFinite(parsed) || parsed < 0 || parsed > 1000000) {
+        return { ok: false, error: "سعر الفرع الشهري غير صالح." };
+      }
+      priceMonthlyExclTax = parsed;
+    }
+  }
+
   let branchId: number | null = null;
   if (auth.session.isSuperAdmin) {
     const raw = Number(formData.get("branchId"));
@@ -63,6 +79,7 @@ export async function updateBranchFleetQuantity(
     modelId,
     quantity: Math.round(quantity),
     pricePerDayExclTax,
+    priceMonthlyExclTax,
   });
 
   revalidatePath("/admin/vehicles");

@@ -56,6 +56,8 @@ export type FleetCardPriceParts = {
   discountLabelAr?: string | null;
   /** «يبدأ من» — عندما يختلف السعر بين الفروع ولم يُحدَّد فرع بعد */
   prefixLabelAr?: string | null;
+  /** «شهرياً» — يُعرض عند بناء البطاقة بالسعر الشهري بدل اليومي */
+  periodLabelAr?: string | null;
 };
 
 /** أجزاء عرض السعر في بطاقة الأسطول (المبالغ منسّقة بـ en-US). */
@@ -68,6 +70,8 @@ export function buildFleetCardPriceParts(
     discountLabelAr?: string | null;
     /** true = السعر يختلف بين الفروع → إظهار «يبدأ من» */
     startingFrom?: boolean;
+    /** «شهرياً» عند بناء البطاقة بالسعر الشهري — يحل محل تسمية «في اليوم» الافتراضية */
+    periodLabelAr?: string | null;
   },
 ): FleetCardPriceParts {
   const ex = Math.max(0, Math.round(priceExclTaxSar));
@@ -92,17 +96,19 @@ export function buildFleetCardPriceParts(
 
   const discountLabelAr = hasDiscount ? (opts?.discountLabelAr ?? null) : null;
   const prefixLabelAr = opts?.startingFrom ? "يبدأ من" : null;
+  const periodLabelAr = opts?.periodLabelAr ?? null;
 
   if (mode === "INCLUSIVE") {
     return {
       primaryAmount: inclFmt,
-      primaryLabelAr: "في اليوم",
+      primaryLabelAr: periodLabelAr ?? "في اليوم",
       secondaryAmount: null,
       secondaryLabelAr: null,
       footnoteAr: `شامل ضريبة القيمة المضافة (${vatRatePercent}٪)`,
       originalPrimaryAmount,
       discountLabelAr,
       prefixLabelAr,
+      periodLabelAr,
     };
   }
 
@@ -118,6 +124,7 @@ export function buildFleetCardPriceParts(
         : null,
       discountLabelAr,
       prefixLabelAr,
+      periodLabelAr,
     };
   }
 
@@ -130,5 +137,6 @@ export function buildFleetCardPriceParts(
     originalPrimaryAmount,
     discountLabelAr,
     prefixLabelAr,
+    periodLabelAr,
   };
 }

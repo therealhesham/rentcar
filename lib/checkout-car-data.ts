@@ -1,7 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import {
   minBranchBasePriceForModel,
+  minBranchMonthlyPriceForModel,
   resolveBranchBasePriceForModel,
+  resolveBranchMonthlyPriceForModel,
 } from "@/lib/fleet-branch-stock";
 import { resolveRentalDiscountForModel } from "@/lib/rental-discount";
 
@@ -22,6 +24,8 @@ export type CheckoutCarDTO = {
   originalPricePerDayExclTax: number;
   /** وفّرت X ر.س أو خصم X٪ — للعرض فقط */
   discountLabelAr: string | null;
+  /** سعر الإيجار الشهري الأساسي دون ضريبة (عرض إعلامي فقط حالياً) — null = لا يوجد عرض شهري لهذا الموديل. */
+  pricePerMonthExclTax: number | null;
   vatRatePercent: number;
   image: string;
   alt: string;
@@ -67,6 +71,10 @@ export async function getCarModelForCheckout(
     ? await resolveBranchBasePriceForModel(m.id, branchId, m.price)
     : (await minBranchBasePriceForModel(m.id, m.price)).minPrice;
 
+  const monthlyPrice = branchId
+    ? await resolveBranchMonthlyPriceForModel(m.id, branchId, m.priceMonthlyExclTax)
+    : (await minBranchMonthlyPriceForModel(m.id, m.priceMonthlyExclTax)).minPrice;
+
   const resolved = await resolveRentalDiscountForModel(basePrice, {
     brandId: m.brandId,
     carModelId: m.id,
@@ -89,6 +97,7 @@ export async function getCarModelForCheckout(
     pricePerDayExclTax: effectivePrice,
     originalPricePerDayExclTax: resolved?.originalPricePerDayExclTax ?? basePrice,
     discountLabelAr: resolved?.displayLabelAr ?? null,
+    pricePerMonthExclTax: monthlyPrice,
     vatRatePercent: m.vatRatePercent,
     image: m.image?.trim() || PLACEHOLDER_IMG,
     alt: m.alt?.trim() || `${brandName} ${modelName}`,
