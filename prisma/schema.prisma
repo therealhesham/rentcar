@@ -258,6 +258,8 @@ model CarModel {
   ctaEn         String?
   badge         String?
   badgeEn       String?
+  /// ترتيب العرض في صفحة الأسطول — الأصغر يظهر أولاً. يُطبَّق على العميل والأدمن معاً.
+  displayOrder  Int             @default(0)
 
   fleetItems         Fleet[]
   bookingRequests    BookingRequest[]
@@ -283,6 +285,10 @@ model Fleet {
   pricePerDayExclTax Float?
   /// سعر شهري خاص بالفرع (دون ضريبة) — يتجاوز `CarModel.priceMonthlyExclTax` عند تحديده. null = السعر الأساسي للموديل.
   priceMonthlyExclTax Float?
+  /// هل تظهر هذه المركبة للعملاء في صفحة الأسطول (يمكن إخفاؤها حتى لو متاحة)
+  isVisible    Boolean  @default(true)
+  /// ترتيب العرض في صفحة الأسطول — الأصغر يظهر أولاً (0 = افتراضي)
+  displayOrder Int      @default(0)
 
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
@@ -290,6 +296,7 @@ model Fleet {
   @@unique([modelId, branchId])
   @@index([branchId])
   @@index([modelId])
+  @@index([isVisible, displayOrder])
 }
 
 /// إضافات اختيارية للتأجير (يومية، غير شامل الضريبة) — تُعرض في صفحة إتمام الحجز.

@@ -151,13 +151,14 @@ export async function getFleetCarMapByModelIds(
 
   const rows = await prisma.fleet.findMany({
     where: {
+      isVisible: true,
       quantity: { gt: 0 },
       modelId: { in: unique },
       ...(opts?.branchId != null ? { branchId: opts.branchId } : {}),
       branch: { isActive: true },
     },
     include: fleetModelInclude,
-    orderBy: { id: "desc" },
+    orderBy: [{ model: { displayOrder: "asc" } }, { id: "asc" }],
   });
 
   for (const [modelId, pick] of pickCheapestRowPerModel(
@@ -310,6 +311,7 @@ export async function getFleetCarsForDisplay(
 
   const rows = await prisma.fleet.findMany({
     where: {
+      isVisible: true,
       ...branchFilter,
       ...(modelIds !== undefined && modelIds !== null
         ? { modelId: { in: modelIds } }
@@ -318,7 +320,7 @@ export async function getFleetCarsForDisplay(
       ...maxPriceWhere,
     },
     include: fleetModelInclude,
-    orderBy: { id: "desc" },
+    orderBy: [{ model: { displayOrder: "asc" } }, { id: "asc" }],
   });
 
   const hasBranchFilter = Boolean(branchSlug?.trim());

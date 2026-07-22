@@ -467,6 +467,7 @@ export async function listAvailableCarModelIds(input: {
   const branchSlug = input.branchSlug.trim().toLowerCase();
   const rows = await prisma.fleet.findMany({
     where: {
+      isVisible: true,
       quantity: { gt: 0 },
       branch: { slug: branchSlug, isActive: true },
     },
