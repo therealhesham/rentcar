@@ -10,6 +10,7 @@ import {
   recordBookingReturnToBranch,
   type LateReturnInfo,
 } from "@/lib/booking-lifecycle-service";
+import { logBookingEvent } from "@/lib/booking-audit";
 
 export async function recordPickupFromBranchAction(
   _prev: { ok: boolean; error?: string } | null,
@@ -28,6 +29,14 @@ export async function recordPickupFromBranchAction(
 
   const result = await recordBookingPickupFromBranch(bookingRequestId);
   if (!result.ok) return result;
+
+  await logBookingEvent({
+    bookingId: bookingRequestId,
+    event: "VEHICLE_PICKED_UP",
+    actorKind: "ADMIN",
+    actorName: auth.session.displayName,
+    toStatus: "PICKED_UP",
+  });
 
   revalidatePath("/admin");
   revalidatePath("/admin/car-bookings");
@@ -68,6 +77,19 @@ export async function recordReturnToBranchAction(
     decidedBy: auth.session.displayName,
   });
   if (!result.ok) return result;
+
+  await logBookingEvent({
+    bookingId: bookingRequestId,
+    event: "VEHICLE_RETURNED",
+    actorKind: "ADMIN",
+    actorName: auth.session.displayName,
+    toStatus: "RETURNED",
+    notes: latePenaltyDecision === "APPLY"
+      ? "تم تطبيق غرامة التأخير"
+      : latePenaltyDecision === "WAIVE"
+        ? "تم إعفاء العميل من غرامة التأخير"
+        : undefined,
+  });
 
   revalidatePath("/admin");
   revalidatePath("/admin/car-bookings");

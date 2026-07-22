@@ -9,6 +9,7 @@ import {
 import { currentRequestMeta, logActivity } from "@/lib/activity-log";
 import { isBookingPaymentMethod } from "@/lib/booking-payment-methods";
 import { prisma } from "@/lib/prisma";
+import { logBookingEvent } from "@/lib/booking-audit";
 
 /** هامش تقريب للمقارنات المالية (كسور الهللة). */
 const REFUND_EPS = 0.01;
@@ -99,6 +100,14 @@ export async function processBookingRefund(
     userId: auth.session.employeeId,
     ip: meta.ip,
     userAgent: meta.userAgent,
+  });
+
+  await logBookingEvent({
+    bookingId,
+    event: "REFUND_PROCESSED",
+    actorKind: "ADMIN",
+    actorName: auth.session.displayName,
+    notes: `${amount} ر.س${externalRef ? ` — مرجع: ${externalRef}` : ""}`,
   });
 
   revalidatePath("/admin/financials");
@@ -214,6 +223,14 @@ export async function processBookingPayment(
     userId: auth.session.employeeId,
     ip: meta.ip,
     userAgent: meta.userAgent,
+  });
+
+  await logBookingEvent({
+    bookingId,
+    event: "PAYMENT_CONFIRMED",
+    actorKind: "ADMIN",
+    actorName: auth.session.displayName,
+    notes: `${rawMethod} — ${amount} ر.س`,
   });
 
   revalidatePath("/admin/car-bookings");

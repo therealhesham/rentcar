@@ -475,6 +475,7 @@ model BookingRequest {
   lateReturnDecidedBy String? @db.VarChar(128)
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
+  logs          BookingLog[]
 
   @@index([status, createdAt])
   @@index([branchId])
@@ -482,6 +483,30 @@ model BookingRequest {
   @@index([kind, createdAt])
   @@index([carModelId])
   @@index([customerId])
+}
+
+/// سجل أحداث الحجز — يُدوَّن تلقائياً عند كل حدث يغيّر حالة الحجز أو بياناته.
+model BookingLog {
+  id          Int             @id @default(autoincrement())
+  booking     BookingRequest  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingId   Int
+  /// كود الحدث: BOOKING_CREATED | STATUS_CHANGED | PAYMENT_RECORDED | VEHICLE_PICKED_UP | ...
+  event       String          @db.VarChar(64)
+  /// من نفّذ الحدث: CUSTOMER | ADMIN | SYSTEM
+  actorKind   String          @db.VarChar(16)
+  /// اسم المنفّذ (اسم الموظف أو العميل أو "System")
+  actorName   String?         @db.VarChar(128)
+  /// حالة الحجز قبل الحدث (للأحداث التي تغيّر الحالة)
+  fromStatus  String?         @db.VarChar(32)
+  /// حالة الحجز بعد الحدث
+  toStatus    String?         @db.VarChar(32)
+  /// ملاحظة بشرية بالعربية (سبب الإلغاء، رقم مرجع الدفع...)
+  notes       String?         @db.VarChar(500)
+  /// JSON لبيانات إضافية مرتبطة بالحدث
+  metaJson    String?         @db.Text
+  createdAt   DateTime        @default(now())
+
+  @@index([bookingId, createdAt])
 }
 
 /// رمز تحقق لمرة واحدة عند إتمام الحجز المباشر — الوجهة `phone:+9665…` أو `email:…`.

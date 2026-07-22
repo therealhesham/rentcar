@@ -19,6 +19,7 @@ import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/lib/notification-service";
 import { computeCheckoutTotals } from "@/lib/booking-checkout-pricing";
 import { parseBookingPricingSnapshot, resolveBookingRentalPricePerDayExclTax } from "@/lib/booking-pricing-snapshot";
+import { logBookingEvent } from "@/lib/booking-audit";
 
 export async function convertInquiryToDirect(
   _prev: { ok: boolean; error?: string } | null,
@@ -44,6 +45,13 @@ export async function convertInquiryToDirect(
   if (!result.ok) {
     return { ok: false, error: result.error };
   }
+
+  await logBookingEvent({
+    bookingId: bookingRequestId,
+    event: "CONVERTED_TO_DIRECT",
+    actorKind: "ADMIN",
+    actorName: auth.session.displayName,
+  });
 
   const booking = await prisma.bookingRequest.findUnique({ where: { id: bookingRequestId } });
   if (booking) {
@@ -81,6 +89,13 @@ export async function revertDirectToInquiry(
   if (!result.ok) {
     return { ok: false, error: result.error };
   }
+
+  await logBookingEvent({
+    bookingId: bookingRequestId,
+    event: "REVERTED_TO_INQUIRY",
+    actorKind: "ADMIN",
+    actorName: auth.session.displayName,
+  });
 
   revalidatePath("/admin");
   revalidatePath("/fleet");
@@ -222,6 +237,15 @@ export async function quickUpdateBookingStatus(
     data: { status: statusUpper }
   });
 
+  await logBookingEvent({
+    bookingId: bookingRequestId,
+    event: "STATUS_CHANGED",
+    actorKind: "ADMIN",
+    actorName: auth.session.displayName,
+    fromStatus: beforeUpdate.status,
+    toStatus: statusUpper,
+  });
+
   const wasNotConfirmed = beforeUpdate.status.trim().toUpperCase() !== "CONFIRMED";
   const cashDirect = beforeUpdate.kind === "DIRECT" && isCashPaymentMethod(beforeUpdate.paymentMethod);
 
@@ -343,6 +367,14 @@ export async function processAdminQuickPayment(
     }
   }
 
+  await logBookingEvent({
+    bookingId: bookingRequestId,
+    event: "PAYMENT_RECORDED",
+    actorKind: "ADMIN",
+    actorName: auth.session.displayName,
+    notes: `${paymentMethod} — ${paidAmountSar != null ? paidAmountSar + " ر.س" : ""}`.trim(),
+  });
+
   revalidatePath("/admin");
   revalidatePath("/fleet");
   revalidatePath("/admin/car-bookings");
@@ -382,8 +414,16 @@ export async function processAdminBalancePayment(
     data: {
       paidAmountSar: newPaidAmount,
       balanceDueAtBranchSar: 0,
-      // Optional: we leave paymentStatus as PAID. 
+      // Optional: we leave paymentStatus as PAID.
     },
+  });
+
+  await logBookingEvent({
+    bookingId: bookingRequestId,
+    event: "BALANCE_PAID",
+    actorKind: "ADMIN",
+    actorName: auth.session.displayName,
+    notes: `${paymentMethod} — ${booking.balanceDueAtBranchSar} ر.س`,
   });
 
   revalidatePath("/admin");

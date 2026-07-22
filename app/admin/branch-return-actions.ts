@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAdminForAction } from "@/lib/admin-access";
 import { confirmInterBranchReturn } from "@/lib/branch-return-transfer";
+import { logBookingEvent } from "@/lib/booking-audit";
 
 export async function confirmInterBranchReturnAction(
   _prev: { ok: boolean; error?: string } | null,
@@ -30,6 +31,14 @@ export async function confirmInterBranchReturnAction(
     console.error(e);
     return { ok: false, error: "تعذّر تأكيد الاستلام." };
   }
+
+  await logBookingEvent({
+    bookingId: bookingRequestId,
+    event: "INTER_BRANCH_RETURN",
+    actorKind: "ADMIN",
+    actorName: auth.session.displayName,
+    notes: auth.session.branchName ?? undefined,
+  });
 
   revalidatePath("/admin/branch-returns");
   revalidatePath("/admin/vehicles");

@@ -48,6 +48,7 @@ import {
 } from "@/lib/rental-discount";
 import { computeCheckoutTotals } from "@/lib/booking-checkout-pricing";
 import { parseBookingPricingSnapshot } from "@/lib/booking-pricing-snapshot";
+import { logBookingEvent } from "@/lib/booking-audit";
 
 export { addDaysToYmd, lastInclusiveBookingDayYmd } from "@/lib/booking-calendar-ymd";
 
@@ -1393,6 +1394,15 @@ export async function createDirectBooking(
   } catch (err) {
     console.error("[createDirectBooking] Notification trigger error:", err);
   }
+
+  await logBookingEvent({
+    bookingId: bookingRequestId,
+    event: "BOOKING_CREATED",
+    actorKind: customerId ? "CUSTOMER" : "ADMIN",
+    actorName: common.fullName,
+    toStatus: payNow ? "CONFIRMED" : "NEW",
+    notes: payNow ? `${paymentMethodStored}${cashPayNow ? " (كاش)" : ""}` : undefined,
+  });
 
   return { ok: true, bookingRequestId };
 }

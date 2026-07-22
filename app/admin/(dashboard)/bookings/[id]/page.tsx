@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { BookingDetailEditActions } from "@/components/admin/BookingDetailEditActions";
 import { BookingDetailView } from "@/components/admin/BookingDetailView";
+import { BookingAuditLog } from "@/components/admin/BookingAuditLog";
 import { assertBookingRequestInScope } from "@/lib/admin-access";
 import { loadAdminBookingCancellationContext } from "@/lib/admin-booking-cancellation";
 import {
@@ -11,6 +12,8 @@ import {
 } from "@/lib/admin-booking-detail";
 import { toEditableBookingRow } from "@/lib/admin-booking-edit-map";
 import { requireAdminPage } from "@/lib/admin-page";
+import { prisma } from "@/lib/prisma";
+import { Logs } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -45,9 +48,23 @@ export default async function AdminBookingDetailPage({
     );
   }
 
-  const [booking, editContext] = await Promise.all([
+  const [booking, editContext, logs] = await Promise.all([
     loadAdminBookingDetail(id),
     loadAdminBookingEditContext(),
+    prisma.bookingLog.findMany({
+      where: { bookingId: id },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        event: true,
+        actorKind: true,
+        actorName: true,
+        fromStatus: true,
+        toStatus: true,
+        notes: true,
+        createdAt: true,
+      },
+    }),
   ]);
   if (!booking) notFound();
 
@@ -66,10 +83,24 @@ export default async function AdminBookingDetailPage({
   );
 
   return (
-    <BookingDetailView
-      booking={booking}
-      editActions={editActions}
-      cancellation={cancellation}
-    />
+    <>
+      <BookingDetailView
+        booking={booking}
+        editActions={editActions}
+        cancellation={cancellation}
+      />
+      <section className="mx-auto mt-8 max-w-screen-xl px-4 sm:px-6 lg:px-8">
+        <div className="rounded-2xl border border-outline-variant/30 bg-surface-container-low p-5 md:p-6">
+          <h2 className="mb-5 flex items-center gap-2 text-base font-bold text-on-surface">
+            <span className="text-lg"><Logs/></span>
+            سجل الأحداث
+            <span className="mr-auto rounded-full bg-surface-container px-2 py-0.5 text-xs font-bold text-on-surface-variant">
+              {logs.length} حدث
+            </span>
+          </h2>
+          <BookingAuditLog logs={logs} />
+        </div>
+      </section>
+    </>
   );
 }

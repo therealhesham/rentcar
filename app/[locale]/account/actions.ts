@@ -12,6 +12,7 @@ import { saudiLocalNineToE164 } from "@/lib/normalize-saudi-phone";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
 import { cancelBookingWithPolicy } from "@/lib/booking-cancellation-service";
+import { logBookingEvent } from "@/lib/booking-audit";
 import { hasBookingPickupPassed } from "@/lib/booking-lifecycle";
 import { createNotification } from "@/lib/notification-service";
 import { currentRequestMeta, logActivity } from "@/lib/activity-log";
@@ -50,6 +51,17 @@ export async function cancelCustomerBooking(formData: FormData): Promise<CancelB
   });
 
   if (!result.ok) return result;
+
+  await logBookingEvent({
+    bookingId: id,
+    event: "CUSTOMER_CANCELLED",
+    actorKind: "CUSTOMER",
+    actorName: profile.name ?? profile.phone ?? undefined,
+    toStatus: "CANCELLED",
+    notes: result.refundInclTaxSar
+      ? `استرداد ${result.refundInclTaxSar} ر.س`
+      : undefined,
+  });
 
   revalidatePath("/account");
   revalidatePath("/admin");

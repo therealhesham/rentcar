@@ -10,6 +10,7 @@ import {
   cancelBookingWithFullRefundByAdmin,
   cancelBookingWithPolicy,
 } from "@/lib/booking-cancellation-service";
+import { logBookingEvent } from "@/lib/booking-audit";
 
 export type AdminCancelBookingResult =
   | { ok: true; refundInclTaxSar?: number; paymentMethod?: string | null }
@@ -36,6 +37,17 @@ export async function cancelAdminBooking(
   });
 
   if (!result.ok) return result;
+
+  await logBookingEvent({
+    bookingId: bookingRequestId,
+    event: "BOOKING_CANCELLED",
+    actorKind: "ADMIN",
+    actorName: auth.session.displayName,
+    toStatus: "CANCELLED",
+    notes: result.refundInclTaxSar
+      ? `استرداد ${result.refundInclTaxSar} ر.س — ${result.paymentMethod ?? ""}`
+      : undefined,
+  });
 
   revalidatePath("/admin");
   revalidatePath("/admin/car-bookings");
@@ -90,6 +102,15 @@ export async function cancelAdminBookingWithFullRefund(
   });
 
   if (!result.ok) return result;
+
+  await logBookingEvent({
+    bookingId: bookingRequestId,
+    event: "BOOKING_CANCELLED",
+    actorKind: "ADMIN",
+    actorName: auth.session.displayName,
+    toStatus: "CANCELLED",
+    notes: `استرداد كامل: ${result.refundInclTaxSar} ر.س — ${reasonAr}`,
+  });
 
   revalidatePath("/admin");
   revalidatePath("/admin/car-bookings");
