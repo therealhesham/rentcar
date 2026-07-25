@@ -396,13 +396,14 @@ export async function getFleetBrandsForFilter(locale: string = "ar"): Promise<Fl
         some: { fleetItems: { some: { quantity: { gt: 0 } } } },
       },
     },
-    orderBy: { name: "asc" },
     select: { id: true, name: true, nameEn: true },
   });
-  return brands.map((b) => ({
+  const mapped = brands.map((b) => ({
     id: b.id,
     name: localizeDbField(b, "name", locale),
   }));
+  mapped.sort((a, b) => a.name.localeCompare(b.name, locale));
+  return mapped;
 }
 
 /** أدنى وأعلى سعر يومي (دون ضريبة) للمركبات المعروضة — يراعي تجاوزات أسعار الفروع. */
