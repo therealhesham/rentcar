@@ -157,7 +157,7 @@ export function BookingLifecyclePanel({
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-on-primary transition-opacity hover:opacity-95"
         >
           <CheckCircle2 className="h-4 w-4" aria-hidden />
-          تسجيل تسليم السيارة للعميل (فتح مودال اللوحة)
+          تسجيل تسليم السيارة للعميل
         </button>
       ) : null}
 

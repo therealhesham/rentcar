@@ -9,9 +9,13 @@ import {
 import { Reveal } from "./HomeMotion";
 import { getLocale } from "next-intl/server";
 
+/** عدد الفئات المعروضة في قسم الرئيسية — الأولى حسب sortOrder (يتحكم فيها الأدمن). */
+const HOME_CATEGORY_LIMIT = 5;
+
 export async function FleetCategories() {
   const locale = await getLocale();
-  const categories = await getFleetCategoriesForHome(locale).catch(() => []);
+  const categories = (await getFleetCategoriesForHome(locale).catch(() => []))
+    .slice(0, HOME_CATEGORY_LIMIT);
 
   if (categories.length === 0) {
     return null;

@@ -152,24 +152,6 @@ export function VehiclePlateHandoverModal({
             )}
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-on-surface-variant mb-1.5">
-              أو اكتب رقم اللوحة يدوياً (اختياري)
-            </label>
-            <div className="relative">
-              <input
-                type="text"
-                value={customPlate}
-                onChange={(e) => {
-                  setCustomPlate(e.target.value);
-                  if (selectedUnitId) setSelectedUnitId("");
-                }}
-                placeholder="مثال: أ ب ج 1234 أو 1234 ABC"
-                className="w-full rounded-xl border border-outline-variant/40 bg-white p-2.5 text-xs font-bold text-on-surface outline-none focus:border-primary"
-              />
-              <Hash className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-outline" />
-            </div>
-          </div>
 
           <div className="pt-2 flex gap-2.5">
             <button
