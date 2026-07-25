@@ -170,13 +170,13 @@ function BranchCard({
 
       {/* Branch name and map pin */}
       <div className="flex items-start justify-between gap-2 pe-6">
-        <span className="flex items-center gap-2">
+        <span className="flex min-w-0 flex-1 items-center gap-2.5">
           <span className={`flex size-8 shrink-0 items-center justify-center rounded-full ${isSelected ? "bg-[#dbb878]/20 shadow-inner" : "bg-[#f5f0e8] group-hover:bg-[#dbb878]/15"} transition-all duration-300`}>
             {hasCoords
               ? <MapPin className={`size-4 ${isSelected ? "text-[#c9a356]" : "text-[#8a7752]"}`} />
               : <Building2 className={`size-4 ${isSelected ? "text-[#c9a356]" : "text-[#8a7752]"}`} />}
           </span>
-          <span className={`text-[14px] font-bold leading-snug ${isSelected ? "text-[#003749]" : "text-[#1a1a1a] group-hover:text-[#003749]"} transition-colors duration-300`}>
+          <span className={`min-w-0 flex-1 text-[14px] font-bold leading-snug whitespace-normal break-words ${isSelected ? "text-[#003749]" : "text-[#1a1a1a] group-hover:text-[#003749]"} transition-colors duration-300`}>
             {branch.name}
           </span>
         </span>
@@ -280,9 +280,9 @@ function CityAccordion({
         />
       </button>
 
-      {/* Accordion body — branch cards grid */}
+      {/* Accordion body — branch cards list */}
       {isExpanded && (
-        <div className="grid grid-cols-1 gap-2.5 px-4 pb-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-2.5 px-4 pb-4">
           {city.branches.map((branch) => (
             <BranchCard
               key={branch.slug}

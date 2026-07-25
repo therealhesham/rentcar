@@ -3,6 +3,7 @@
 import { CalendarClock, CalendarRange, Clock, MapPin, ChevronDown, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useLocale } from "next-intl";
 import { DateRangePickerPopover } from "@/components/home/DateRangePickerPopover";
 import { LocationPickerPopover } from "@/components/home/LocationPickerPopover";
 import { TimePickerPopover } from "@/components/home/TimePickerPopover";
@@ -57,6 +58,9 @@ export function FleetBookNowHintModal({
   allowHolidayBooking = false,
   availableBranchSlugs,
 }: Props) {
+  const locale = useLocale();
+  const isRTL = locale === "ar";
+
   const dateCities = useMemo(() => {
     const valid = cities.filter((c) => c.branches.length > 0);
     if (!availableBranchSlugs || availableBranchSlugs.length === 0) {
@@ -99,7 +103,7 @@ export function FleetBookNowHintModal({
   function branchLabel(slug: string): string {
     for (const city of dateCities) {
       const found = city.branches.find((b) => b.slug === slug);
-      if (found) return `${city.name}، ${found.name}`;
+      if (found) return `${city.name}, ${found.name}`;
     }
     return "";
   }
@@ -186,12 +190,16 @@ export function FleetBookNowHintModal({
     setError(null);
 
     if (!hasBranches || !branchValue) {
-      setError("يرجى اختيار فرع الاستلام.");
+      setError(isRTL ? "يرجى اختيار فرع الاستلام." : "Please select a pickup branch.");
       return;
     }
 
     if (!pickupDateDraft.trim() || !dropoffDateDraft.trim()) {
-      setError("يرجى تحديد تاريخ ووقت الاستلام والتسليم.");
+      setError(
+        isRTL
+          ? "يرجى تحديد تاريخ ووقت الاستلام والتسليم."
+          : "Please select pickup and return date and time.",
+      );
       return;
     }
 
@@ -200,37 +208,57 @@ export function FleetBookNowHintModal({
     const pickup = pickupYmd ? composeDatetimeLocal(pickupYmd, pickupTimeDraft) : null;
     const dropoff = dropoffYmd ? composeDatetimeLocal(dropoffYmd, dropoffTimeDraft) : null;
     if (!pickup || !dropoff) {
-      setError("صيغة التاريخ/الوقت غير صالحة.");
+      setError(isRTL ? "صيغة التاريخ/الوقت غير صالحة." : "Invalid date or time format.");
       return;
     }
 
     const pickupDate = new Date(pickup);
     const dropoffDate = new Date(dropoff);
     if (Number.isNaN(pickupDate.getTime()) || Number.isNaN(dropoffDate.getTime())) {
-      setError("صيغة التاريخ/الوقت غير صالحة.");
+      setError(isRTL ? "صيغة التاريخ/الوقت غير صالحة." : "Invalid date or time format.");
       return;
     }
     if (dropoffDate.getTime() < pickupDate.getTime()) {
-      setError("وقت التسليم يجب أن يكون بعد وقت الاستلام.");
+      setError(
+        isRTL
+          ? "وقت التسليم يجب أن يكون بعد وقت الاستلام."
+          : "Return time must be after pickup time.",
+      );
       return;
     }
 
     // فحص مواعيد الفرع (يُتخطَّى إذا كان الأدمن قد سمح بالحجز في الإجازات)
     if (!allowHolidayBooking && selectedBranchSchedule) {
       if (isBranchClosedOnDate(pickupDate, selectedBranchSchedule)) {
-        setError("الفرع مغلق في يوم الاستلام. يرجى اختيار يوم عمل آخر.");
+        setError(
+          isRTL
+            ? "الفرع مغلق في يوم الاستلام. يرجى اختيار يوم عمل آخر."
+            : "Branch is closed on pickup date. Please choose another working day.",
+        );
         return;
       }
       if (isBranchClosedOnDate(dropoffDate, selectedBranchSchedule)) {
-        setError("الفرع مغلق في يوم التسليم. يرجى اختيار يوم عمل آخر.");
+        setError(
+          isRTL
+            ? "الفرع مغلق في يوم التسليم. يرجى اختيار يوم عمل آخر."
+            : "Branch is closed on return date. Please choose another working day.",
+        );
         return;
       }
       if (!isDateTimeWithinBranchSchedule(pickupDate, selectedBranchSchedule)) {
-        setError("وقت الاستلام خارج مواعيد عمل الفرع. يرجى اختيار وقت ضمن ساعات العمل.");
+        setError(
+          isRTL
+            ? "وقت الاستلام خارج مواعيد عمل الفرع. يرجى اختيار وقت ضمن ساعات العمل."
+            : "Pickup time is outside branch operating hours.",
+        );
         return;
       }
       if (!isDateTimeWithinBranchSchedule(dropoffDate, selectedBranchSchedule)) {
-        setError("وقت التسليم خارج مواعيد عمل الفرع. يرجى اختيار وقت ضمن ساعات العمل.");
+        setError(
+          isRTL
+            ? "وقت التسليم خارج مواعيد عمل الفرع. يرجى اختيار وقت ضمن ساعات العمل."
+            : "Return time is outside branch operating hours.",
+        );
         return;
       }
     }
@@ -240,8 +268,11 @@ export function FleetBookNowHintModal({
 
   if (!open || typeof document === "undefined") return null;
 
-  const fieldTriggerBase =
-    "field-trigger relative flex w-full flex-col gap-1 rounded-xl border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-right outline-none transition-[border-color,box-shadow,background-color] hover:border-[#dbb878]/55 hover:bg-[#fffdf8] focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25";
+  const fieldTriggerBase = `field-trigger relative flex w-full flex-col gap-1 rounded-xl border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 ${
+    isRTL ? "pe-9 text-right" : "ps-9 text-left"
+  } outline-none transition-[border-color,box-shadow,background-color] hover:border-[#dbb878]/55 hover:bg-[#fffdf8] focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25`;
+
+  const closeLabel = isRTL ? "إغلاق" : "Close";
 
   const modal = (
     <div
@@ -255,7 +286,7 @@ export function FleetBookNowHintModal({
       <button
         type="button"
         className="absolute inset-0 bg-[#0f1923]/45 backdrop-blur-[3px] transition-opacity"
-        aria-label="إغلاق"
+        aria-label={closeLabel}
         onClick={onClose}
       />
 
@@ -264,12 +295,12 @@ export function FleetBookNowHintModal({
           type="button"
           onClick={onClose}
           className="absolute end-4 top-4 z-10 rounded-full bg-white/80 p-1.5 text-[#aaa08e] backdrop-blur-sm transition-colors hover:bg-[#fdfbf6] hover:text-[#003749]"
-          aria-label="إغلاق"
+          aria-label={closeLabel}
         >
           <X className="size-5" aria-hidden />
         </button>
 
-        <div className="px-5 pb-6 pt-8 sm:px-8 sm:pb-8 sm:pt-10" dir="rtl">
+        <div className="px-5 pb-6 pt-8 sm:px-8 sm:pb-8 sm:pt-10" dir={isRTL ? "rtl" : "ltr"}>
           <div
             className="mx-auto mb-4 flex size-[4rem] items-center justify-center rounded-2xl shadow-inner"
             style={{
@@ -284,16 +315,18 @@ export function FleetBookNowHintModal({
             id="fleet-book-hint-title"
             className="text-center text-[1.35rem] font-extrabold tracking-tight text-[#003749] sm:text-2xl"
           >
-            أكمل بيانات الحجز
+            {isRTL ? "أكمل بيانات الحجز" : "Complete Booking Details"}
           </h2>
           <p
             id="fleet-book-hint-desc"
             className="mt-2 text-center text-[14px] font-medium leading-relaxed text-[#4b5563]"
           >
-            حدّد موقع الاستلام ووقت الاستلام والتسليم وسنكمل مباشرة إلى صفحة إتمام الحجز.
+            {isRTL
+              ? "حدّد موقع الاستلام ووقت الاستلام والتسليم وسنكمل مباشرة إلى صفحة إتمام الحجز."
+              : "Select pickup location, pickup & return date and time to proceed directly to checkout."}
           </p>
 
-          <form className="mt-5 space-y-2.5 text-start" onSubmit={handleSubmit}>
+          <form className={`mt-5 space-y-2.5 ${isRTL ? "text-right" : "text-left"}`} onSubmit={handleSubmit}>
             {/* ── موقع الاستلام (نفس منتقي الـ widget) ── */}
             <div className="relative min-w-0">
               <button
@@ -311,17 +344,23 @@ export function FleetBookNowHintModal({
               >
                 <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
                   <MapPin className="size-3 text-[#dbb878]" aria-hidden />
-                  موقع الاستلام
+                  {isRTL ? "موقع الاستلام" : "Pickup Location"}
                 </span>
                 <span className="truncate text-[13px] font-bold text-[#0f1923]">
                   {branchLabel(branchValue) || (
                     <span className="font-medium text-[#aaa08e]">
-                      {hasBranches ? "اختر الفرع" : "لا توجد فروع"}
+                      {hasBranches
+                        ? isRTL
+                          ? "اختر الفرع"
+                          : "Select Branch"
+                        : isRTL
+                          ? "لا توجد فروع"
+                          : "No Branches"}
                     </span>
                   )}
                 </span>
                 <ChevronDown
-                  className={`absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${pickupLocOpen ? "rotate-180" : ""}`}
+                  className={`absolute ${isRTL ? "left-3" : "right-3"} top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${pickupLocOpen ? "rotate-180" : ""}`}
                   aria-hidden
                 />
               </button>
@@ -335,7 +374,7 @@ export function FleetBookNowHintModal({
                   setBranch(slug);
                 }}
                 anchorRef={pickupLocRef}
-                label="موقع الاستلام"
+                label={isRTL ? "موقع الاستلام" : "Pickup Location"}
               />
             </div>
 
@@ -352,15 +391,17 @@ export function FleetBookNowHintModal({
                 >
                   <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
                     <CalendarClock className="size-3 text-[#dbb878]" aria-hidden />
-                    تاريخ الاستلام
+                    {isRTL ? "تاريخ الاستلام" : "Pickup Date"}
                   </span>
                   {pickupDateDraft ? (
                     <span className="text-[13px] font-bold text-[#0f1923]">{pickupDateDraft}</span>
                   ) : (
-                    <span className="text-[13px] font-medium text-[#aaa08e]">اختر التاريخ</span>
+                    <span className="text-[13px] font-medium text-[#aaa08e]">
+                      {isRTL ? "اختر التاريخ" : "Select Date"}
+                    </span>
                   )}
                   <ChevronDown
-                    className={`absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${dateRangeOpen && dateRangeAnchor === "pickup" ? "rotate-180" : ""}`}
+                    className={`absolute ${isRTL ? "left-3" : "right-3"} top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${dateRangeOpen && dateRangeAnchor === "pickup" ? "rotate-180" : ""}`}
                     aria-hidden
                   />
                 </button>
@@ -382,20 +423,20 @@ export function FleetBookNowHintModal({
                 >
                   <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
                     <Clock className="size-3 text-[#dbb878]" aria-hidden />
-                    وقت الاستلام
+                    {isRTL ? "وقت الاستلام" : "Pickup Time"}
                   </span>
                   <span className="text-[13px] font-bold text-[#0f1923]" dir="ltr">
                     {pickupTimeDraft}
                   </span>
                   <ChevronDown
-                    className={`absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${pickupTimeOpen ? "rotate-180" : ""}`}
+                    className={`absolute ${isRTL ? "left-3" : "right-3"} top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${pickupTimeOpen ? "rotate-180" : ""}`}
                     aria-hidden
                   />
                 </button>
                 <TimePickerPopover
                   isOpen={pickupTimeOpen}
                   onClose={() => setPickupTimeOpen(false)}
-                  label="وقت الاستلام"
+                  label={isRTL ? "وقت الاستلام" : "Pickup Time"}
                   time={pickupTimeDraft}
                   onConfirm={applyPickupTime}
                   anchorRef={pickupTimeRef}
@@ -413,15 +454,17 @@ export function FleetBookNowHintModal({
                 >
                   <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
                     <CalendarRange className="size-3 text-[#dbb878]" aria-hidden />
-                    تاريخ التسليم
+                    {isRTL ? "تاريخ التسليم" : "Return Date"}
                   </span>
                   {dropoffDateDraft ? (
                     <span className="text-[13px] font-bold text-[#0f1923]">{dropoffDateDraft}</span>
                   ) : (
-                    <span className="text-[13px] font-medium text-[#aaa08e]">اختر التاريخ</span>
+                    <span className="text-[13px] font-medium text-[#aaa08e]">
+                      {isRTL ? "اختر التاريخ" : "Select Date"}
+                    </span>
                   )}
                   <ChevronDown
-                    className={`absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${dateRangeOpen && dateRangeAnchor === "dropoff" ? "rotate-180" : ""}`}
+                    className={`absolute ${isRTL ? "left-3" : "right-3"} top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${dateRangeOpen && dateRangeAnchor === "dropoff" ? "rotate-180" : ""}`}
                     aria-hidden
                   />
                 </button>
@@ -457,20 +500,20 @@ export function FleetBookNowHintModal({
                 >
                   <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
                     <Clock className="size-3 text-[#dbb878]" aria-hidden />
-                    وقت التسليم
+                    {isRTL ? "وقت التسليم" : "Return Time"}
                   </span>
                   <span className="text-[13px] font-bold text-[#0f1923]" dir="ltr">
                     {dropoffTimeDraft}
                   </span>
                   <ChevronDown
-                    className={`absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${dropoffTimeOpen ? "rotate-180" : ""}`}
+                    className={`absolute ${isRTL ? "left-3" : "right-3"} top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${dropoffTimeOpen ? "rotate-180" : ""}`}
                     aria-hidden
                   />
                 </button>
                 <TimePickerPopover
                   isOpen={dropoffTimeOpen}
                   onClose={() => setDropoffTimeOpen(false)}
-                  label="وقت التسليم"
+                  label={isRTL ? "وقت التسليم" : "Return Time"}
                   time={dropoffTimeDraft}
                   onConfirm={applyDropoffTime}
                   anchorRef={dropoffTimeRef}
@@ -492,7 +535,7 @@ export function FleetBookNowHintModal({
                   background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)`,
                 }}
               >
-                متابعة الحجز
+                {isRTL ? "متابعة الحجز" : "Continue Booking"}
               </button>
             </div>
           </form>
@@ -503,7 +546,7 @@ export function FleetBookNowHintModal({
               onClick={onClose}
               className="w-full rounded-2xl border-2 border-[#003749]/18 bg-white py-3.5 text-[14px] font-extrabold text-[#003749] transition-colors hover:border-[#dbb878]/45 hover:bg-[#fdfbf6]"
             >
-              إلغاء
+              {isRTL ? "إلغاء" : "Cancel"}
             </button>
           </div>
         </div>

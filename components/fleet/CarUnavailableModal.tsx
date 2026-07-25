@@ -3,6 +3,7 @@
 import { CalendarOff, MapPinOff, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect } from "react";
+import { useLocale } from "next-intl";
 
 const GOLD = "#dbb878";
 const GOLD_DARK = "#c9a356";
@@ -16,6 +17,9 @@ type Props = {
 };
 
 export function CarUnavailableModal({ open, onClose, onChangeDates, fleetUnits }: Props) {
+  const locale = useLocale();
+  const isRTL = locale === "ar";
+
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
@@ -29,6 +33,21 @@ export function CarUnavailableModal({ open, onClose, onChangeDates, fleetUnits }
 
   const isNoFleet = fleetUnits === 0;
 
+  const title = isNoFleet
+    ? isRTL ? "غير متوفرة بالفرع" : "Unavailable at Branch"
+    : isRTL ? "غير متاح" : "Unavailable";
+
+  const message = isNoFleet
+    ? isRTL ? "هذه السيارة غير متوفرة في الفرع المختار." : "This vehicle is not available at the selected branch."
+    : isRTL ? "خلال هذه الفترة (جميع السيارات محجوزة)" : "For these dates (fully booked)";
+
+  const primaryBtnText = isNoFleet
+    ? isRTL ? "تغيير الفرع / البيانات" : "Change Branch / Dates"
+    : isRTL ? "اختيار تواريخ أخرى" : "Choose Other Dates";
+
+  const secondaryBtnText = isRTL ? "تصفح الأسطول" : "Browse Fleet";
+  const closeLabel = isRTL ? "إغلاق" : "Close";
+
   return (
     <div
       className="fixed inset-0 z-[120] flex items-center justify-center p-4 sm:p-6"
@@ -39,7 +58,7 @@ export function CarUnavailableModal({ open, onClose, onChangeDates, fleetUnits }
       <button
         type="button"
         className="absolute inset-0 bg-[#0f1923]/45 backdrop-blur-[3px] transition-opacity"
-        aria-label="إغلاق"
+        aria-label={closeLabel}
         onClick={onClose}
       />
 
@@ -48,12 +67,12 @@ export function CarUnavailableModal({ open, onClose, onChangeDates, fleetUnits }
           type="button"
           onClick={onClose}
           className="absolute end-4 top-4 rounded-full p-1.5 text-[#aaa08e] transition-colors hover:bg-[#fdfbf6] hover:text-[#003749]"
-          aria-label="إغلاق"
+          aria-label={closeLabel}
         >
           <X className="size-5" aria-hidden />
         </button>
 
-        <div className="px-8 pb-8 pt-10 text-center" dir="rtl">
+        <div className="px-8 pb-8 pt-10 text-center" dir={isRTL ? "rtl" : "ltr"}>
           <div
             className="mx-auto mb-5 flex size-[4.25rem] items-center justify-center rounded-2xl shadow-inner"
             style={{
@@ -69,12 +88,10 @@ export function CarUnavailableModal({ open, onClose, onChangeDates, fleetUnits }
           </div>
 
           <h2 id="car-unavailable-title" className="text-[1.35rem] font-extrabold tracking-tight text-[#003749] sm:text-2xl">
-            {isNoFleet ? "غير متوفرة بالفرع" : "غير متاح"}
+            {title}
           </h2>
           <p className="mt-2 text-[15px] font-medium leading-relaxed text-[#6b7280]">
-            {isNoFleet
-              ? "هذه السيارة غير متوفرة في الفرع المختار."
-              : "خلال هذه الفترة (جميع السيارات محجوزة)"}
+            {message}
           </p>
 
           <div className="mt-8 flex flex-col gap-3">
@@ -89,14 +106,14 @@ export function CarUnavailableModal({ open, onClose, onChangeDates, fleetUnits }
                 background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)`,
               }}
             >
-              {isNoFleet ? "تغيير الفرع / البيانات" : "اختيار تواريخ أخرى"}
+              {primaryBtnText}
             </button>
             <Link
               href="/fleet"
               onClick={onClose}
               className="w-full rounded-2xl border-2 border-[#003749]/18 bg-white py-3.5 text-center text-[14px] font-extrabold text-[#003749] transition-colors hover:border-[#dbb878]/45 hover:bg-[#fdfbf6]"
             >
-              تصفح الأسطول
+              {secondaryBtnText}
             </Link>
           </div>
         </div>
