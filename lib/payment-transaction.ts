@@ -18,6 +18,7 @@ export type PaymentTxnKind =
   | "BALANCE_PAYMENT" // سداد فرق تمديد/تعديل
   | "LATE_PENALTY" // تحصيل غرامة إرجاع متأخر
   | "REFUND" // استرداد (إلغاء أو استرداد يدوي)
+  | "REFUND_REVERSAL" // عكس/تصحيح استرداد خاطئ (إرجاع المبلغ للشركة)
   | "CUSTOMER_SETTLEMENT"; // تسوية مستحقات مستحقة للعميل
 
 export type PaymentTxnStatus = "PENDING" | "COMPLETED" | "FAILED" | "REVERSED";
@@ -109,16 +110,107 @@ export type PaymentTxnListItem = Prisma.PaymentTransactionGetPayload<{
   include: { booking: { select: { fullName: true; phone: true; status: true } } };
 }>;
 
-/** أحدث حركات الدفتر ضمن النطاق، مع بيانات الحجز المختصرة للعرض. */
+/** فلاتر استعلام الدفتر: الاتجاه + مدى التاريخ + الفرع. */
+export type PaymentTxnQueryFilters = {
+  filter?: PaymentTxnDirectionFilter;
+  /** حدّ زمني أدنى (شامل) على createdAt. */
+  from?: Date;
+  /** حدّ زمني أعلى (شامل) على createdAt. */
+  to?: Date;
+  /** فرع محدّد (استلام أو إرجاع) — يُطبَّق لسوبر أدمن؛ موظف الفرع مقيّد بنطاقه أصلاً. */
+  branchId?: number | null;
+};
+
+/** تاريخ بصيغة YYYY-MM-DD بتوقيت الرياض. */
+export function riyadhDateStr(d: Date): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Riyadh" }).format(d);
+}
+
+/** الوسائط الخام لفلاتر الدفتر من searchParams. */
+export type LedgerFilterParams = {
+  dir?: string;
+  period?: string;
+  from?: string;
+  to?: string;
+  branch?: string;
+};
+
+/**
+ * يحوّل وسائط الرابط إلى فلاتر جاهزة — مشترك بين صفحة الدفتر وتصدير Excel
+ * ليضمن تطابق التصدير مع المعروض. الأزرار السريعة (today/month) لها الأولوية.
+ */
+export function ledgerFiltersFromParams(sp: LedgerFilterParams): {
+  filter: PaymentTxnDirectionFilter;
+  from?: Date;
+  to?: Date;
+  branchId?: number;
+  fromStr: string;
+  toStr: string;
+  today: string;
+  monthStart: string;
+  isToday: boolean;
+  isMonth: boolean;
+} {
+  const filter: PaymentTxnDirectionFilter =
+    sp.dir === "credit" || sp.dir === "debit" ? sp.dir : "all";
+  const today = riyadhDateStr(new Date());
+  const monthStart = `${today.slice(0, 8)}01`;
+  let fromStr = sp.from?.trim() || "";
+  let toStr = sp.to?.trim() || "";
+  if (sp.period === "today") {
+    fromStr = today;
+    toStr = today;
+  } else if (sp.period === "month") {
+    fromStr = monthStart;
+    toStr = today;
+  }
+  const from = /^\d{4}-\d{2}-\d{2}$/.test(fromStr)
+    ? new Date(`${fromStr}T00:00:00+03:00`)
+    : undefined;
+  const to = /^\d{4}-\d{2}-\d{2}$/.test(toStr)
+    ? new Date(`${toStr}T23:59:59.999+03:00`)
+    : undefined;
+  const branchId = sp.branch && /^\d+$/.test(sp.branch) ? Number(sp.branch) : undefined;
+  return {
+    filter,
+    from,
+    to,
+    branchId,
+    fromStr,
+    toStr,
+    today,
+    monthStart,
+    isToday: fromStr === today && toStr === today,
+    isMonth: fromStr === monthStart && toStr === today,
+  };
+}
+
+/** يبني شرط الاستعلام من النطاق + الفلاتر — مشترك بين القائمة والملخّص. */
+function buildTxnWhere(
+  scope: PaymentTxnScope,
+  f: PaymentTxnQueryFilters,
+): Prisma.PaymentTransactionWhereInput {
+  const where: Prisma.PaymentTransactionWhereInput = { ...txnScopeWhere(scope) };
+  if (f.filter === "credit") where.direction = "CREDIT";
+  else if (f.filter === "debit") where.direction = "DEBIT";
+  if (f.from || f.to) {
+    where.createdAt = {};
+    if (f.from) where.createdAt.gte = f.from;
+    if (f.to) where.createdAt.lte = f.to;
+  }
+  if (f.branchId != null && (scope.isSuperAdmin || scope.branchId == null)) {
+    where.booking = { OR: [{ branchId: f.branchId }, { returnBranchId: f.branchId }] };
+  }
+  return where;
+}
+
+/** أحدث حركات الدفتر ضمن النطاق والفلاتر، مع بيانات الحجز المختصرة للعرض. */
 export async function getPaymentTransactions(
   scope: PaymentTxnScope,
-  opts?: { filter?: PaymentTxnDirectionFilter; limit?: number },
+  opts?: PaymentTxnQueryFilters & { limit?: number },
 ): Promise<PaymentTxnListItem[]> {
-  const filter = opts?.filter ?? "all";
-  const directionWhere: Prisma.PaymentTransactionWhereInput =
-    filter === "credit" ? { direction: "CREDIT" } : filter === "debit" ? { direction: "DEBIT" } : {};
   return prisma.paymentTransaction.findMany({
-    where: { ...txnScopeWhere(scope), ...directionWhere },
+    where: buildTxnWhere(scope, opts ?? {}),
     include: { booking: { select: { fullName: true, phone: true, status: true } } },
     orderBy: { createdAt: "desc" },
     take: opts?.limit ?? 200,
@@ -144,13 +236,14 @@ export type PaymentTxnSummary = {
   count: number;
 };
 
-/** ملخّص الاتجاهين للحركات المكتملة ضمن النطاق. */
+/** ملخّص الاتجاهين للحركات المكتملة ضمن النطاق والفلاتر. */
 export async function getPaymentTransactionsSummary(
   scope: PaymentTxnScope,
+  filters?: PaymentTxnQueryFilters,
 ): Promise<PaymentTxnSummary> {
   const grouped = await prisma.paymentTransaction.groupBy({
     by: ["direction"],
-    where: { ...txnScopeWhere(scope), status: "COMPLETED" },
+    where: { ...buildTxnWhere(scope, filters ?? {}), status: "COMPLETED" },
     _sum: { amountSar: true },
     _count: true,
   });

@@ -22,6 +22,7 @@ const TXN_KIND_UI: Record<string, { label: string; className: string }> = {
   BALANCE_PAYMENT: { label: "سداد فرق", className: "bg-teal-50 text-teal-700 ring-teal-200/60" },
   LATE_PENALTY: { label: "غرامة تأخير", className: "bg-purple-50 text-purple-700 ring-purple-200/60" },
   REFUND: { label: "استرداد", className: "bg-red-50 text-red-700 ring-red-200/60" },
+  REFUND_REVERSAL: { label: "عكس استرداد", className: "bg-sky-50 text-sky-700 ring-sky-200/60" },
   CUSTOMER_SETTLEMENT: { label: "تسوية للعميل", className: "bg-orange-50 text-orange-700 ring-orange-200/60" },
 };
 

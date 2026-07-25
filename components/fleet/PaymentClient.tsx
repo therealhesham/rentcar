@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  Banknote,
+  Apple,
   Check,
   CheckCircle2,
   CreditCard,
@@ -10,6 +10,7 @@ import {
   Lock,
   Mail,
   Shield,
+  Store,
   Wallet,
 } from "lucide-react";
 import Image from "next/image";
@@ -161,13 +162,13 @@ const METHOD_OPTIONS: MethodOption[] = [
     id: "CASH",
     title: "عند الفرع",
     hint: "",
-    Icon: Banknote,
+    Icon: Store,
   },
   {
     id: "APPLE_PAY",
     title: "Apple Pay",
     hint: "دفع سريع من محفظة آبل — يُفعَّل عند ربط البوابة (مثل Stripe أو مزوّد محلي)",
-    Icon: Wallet,
+    Icon: Apple,
   },
   {
     id: "POINTS",
@@ -602,10 +603,18 @@ export function PaymentClient({ booking, paymentMethodFlags, hostedCheckout }: P
                           </span>
                         ) : (
                           <>
-                            <opt.Icon
-                              className={`size-6 shrink-0 ${on ? "text-[#003749]" : "text-neutral-500"}`}
-                              aria-hidden
-                            />
+                            <span
+                              className={`grid size-10 shrink-0 place-items-center rounded-xl ring-1 transition-colors ${
+                                on
+                                  ? "bg-[#003749]/[0.06] ring-[#dbb878]/40"
+                                  : "bg-neutral-50 ring-black/[0.06]"
+                              }`}
+                            >
+                              <opt.Icon
+                                className={`size-5 ${on ? "text-[#003749]" : "text-neutral-500"}`}
+                                aria-hidden
+                              />
+                            </span>
                             <span className="font-extrabold text-[#003749]">{opt.title}</span>
                           </>
                         )}

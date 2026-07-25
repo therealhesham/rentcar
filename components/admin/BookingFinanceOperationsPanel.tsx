@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useActionState } from "react";
-import { processBookingRefund } from "@/app/admin/booking-finance-actions";
-import { AlertCircle, CheckCircle2, Loader2, ArrowLeftRight } from "lucide-react";
+import { processBookingRefund, reverseBookingRefund } from "@/app/admin/booking-finance-actions";
+import { AlertCircle, CheckCircle2, Loader2, ArrowLeftRight, Undo2 } from "lucide-react";
 
 export function BookingFinanceOperationsPanel({
   bookingId,
@@ -17,6 +17,8 @@ export function BookingFinanceOperationsPanel({
 }) {
   const [isPartial, setIsPartial] = useState(false);
   const [state, formAction, isPending] = useActionState(processBookingRefund, null);
+  const [revState, revAction, revPending] = useActionState(reverseBookingRefund, null);
+  const [reverseAmount, setReverseAmount] = useState<string>(String(currentRefundAmount || ""));
 
   const statusKey = paymentStatus.trim().toUpperCase();
 
@@ -169,6 +171,64 @@ export function BookingFinanceOperationsPanel({
           </button>
         </form>
       )}
+
+      {/* تصحيح استرداد خاطئ — يظهر متى وُجد استرداد مسجّل */}
+      {currentRefundAmount > 0 ? (
+        <form
+          action={revAction}
+          className="mt-5 space-y-3 rounded-xl border border-sky-200 bg-sky-50/60 p-4"
+        >
+          <input type="hidden" name="bookingId" value={bookingId} />
+          <div className="flex items-center gap-2 text-sm font-bold text-sky-900">
+            <Undo2 className="h-4 w-4" />
+            تصحيح استرداد خاطئ
+          </div>
+          <p className="text-xs leading-relaxed text-sky-800">
+            استردَّيت بالخطأ؟ اعكس المبلغ ليعود الحجز إلى حالته الصحيحة (مدفوع). يصحّح
+            سجل النظام فقط — لا يعيد التحصيل من بطاقة العميل.
+          </p>
+
+          {revState?.error ? (
+            <div className="flex items-center gap-2 rounded-lg bg-error-container/50 p-2.5 text-xs font-semibold text-error">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{revState.error}</span>
+            </div>
+          ) : null}
+          {revState?.ok ? (
+            <div className="flex items-center gap-2 rounded-lg bg-emerald-50 p-2.5 text-xs font-semibold text-emerald-900">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              <span>تم عكس الاسترداد بنجاح.</span>
+            </div>
+          ) : null}
+
+          <div>
+            <label htmlFor="reverseAmount" className="mb-1 block text-xs font-bold text-sky-900">
+              مبلغ العكس (ر.س) — الأقصى {currentRefundAmount}
+            </label>
+            <input
+              type="number"
+              id="reverseAmount"
+              name="amount"
+              required
+              step="0.01"
+              min="0.01"
+              max={currentRefundAmount}
+              value={reverseAmount}
+              onChange={(e) => setReverseAmount(e.target.value)}
+              className="w-full rounded-lg border-sky-200 bg-white px-3 py-2 text-sm font-medium text-on-surface outline-none ring-sky-300/50 transition-all focus:border-sky-400 focus:ring-2"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={revPending}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-sky-700 px-4 py-2.5 text-sm font-bold text-white transition-opacity hover:opacity-95 disabled:opacity-70"
+          >
+            {revPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Undo2 className="h-4 w-4" />}
+            {revPending ? "جاري العكس..." : "عكس الاسترداد"}
+          </button>
+        </form>
+      ) : null}
     </div>
   );
 }

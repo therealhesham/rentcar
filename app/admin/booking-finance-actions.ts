@@ -145,6 +145,114 @@ export async function processBookingRefund(
   return { ok: true };
 }
 
+/**
+ * عكس/تصحيح استرداد خاطئ: يُنقص المبلغ المسترد المسجّل ويعيد حالة الدفع
+ * (PAID عند العكس الكامل، وإلا PARTIAL_REFUND)، ويدوّن سطر REFUND_REVERSAL في الدفتر.
+ * يصحّح سجل النظام لاسترداد سُجِّل بالخطأ — لا يعيد تحصيل بطاقة العميل.
+ */
+export async function reverseBookingRefund(
+  _prev: { ok: boolean; error?: string } | null,
+  formData: FormData,
+): Promise<{ ok: boolean; error?: string }> {
+  const auth = await requirePermissionForAction("FINANCIALS");
+  if (!auth.ok) return { ok: false, error: auth.error };
+
+  const bookingId = Number(formData.get("bookingId"));
+  if (!Number.isInteger(bookingId) || bookingId < 1) {
+    return { ok: false, error: "معرّف الطلب غير صالح." };
+  }
+
+  const scope = await assertBookingRequestInScope(auth.session, bookingId);
+  if (!scope.ok) return { ok: false, error: scope.error };
+
+  const booking = await prisma.bookingRequest.findUnique({
+    where: { id: bookingId },
+    select: { cancellationRefundAmountSar: true },
+  });
+  if (!booking) return { ok: false, error: "الطلب غير موجود." };
+
+  const currentRefund = booking.cancellationRefundAmountSar ?? 0;
+  if (currentRefund <= 0) {
+    return { ok: false, error: "لا يوجد استرداد مسجّل لعكسه." };
+  }
+
+  // مبلغ العكس: محدَّد من الفورم، أو كامل المسترد المسجّل افتراضياً.
+  const amountRaw = String(formData.get("amount") ?? "").trim();
+  const amount = amountRaw ? Number(amountRaw) : currentRefund;
+  if (isNaN(amount) || amount <= 0) {
+    return { ok: false, error: "مبلغ العكس غير صالح." };
+  }
+  if (amount > currentRefund + REFUND_EPS) {
+    return {
+      ok: false,
+      error: `مبلغ العكس يتجاوز الاسترداد المسجّل (${currentRefund} ر.س).`,
+    };
+  }
+
+  const newRefundTotal = Math.max(0, Math.round((currentRefund - amount) * 100) / 100);
+  const backToPaid = newRefundTotal <= REFUND_EPS;
+
+  // قفل تفاؤلي: يمرّ طلب واحد؛ سطر العكس يُدرَج ذرّياً مع تصحيح الحالة.
+  const applied = await prisma.$transaction(async (tx) => {
+    const res = await tx.bookingRequest.updateMany({
+      where: {
+        id: bookingId,
+        cancellationRefundAmountSar: booking.cancellationRefundAmountSar,
+      },
+      data: {
+        cancellationRefundAmountSar: backToPaid ? null : newRefundTotal,
+        paymentStatus: backToPaid ? "PAID" : "PARTIAL_REFUND",
+        ...(backToPaid ? { cancellationRefundExternalRef: null } : {}),
+      },
+    });
+    if (res.count === 0) return false;
+    await recordPaymentTransaction(
+      {
+        bookingId,
+        kind: "REFUND_REVERSAL",
+        direction: "CREDIT",
+        amountSar: amount,
+        actorKind: "ADMIN",
+        actorName: auth.session.displayName,
+        notes: "عكس/تصحيح استرداد خاطئ",
+      },
+      tx,
+    );
+    return true;
+  });
+
+  if (!applied) {
+    return {
+      ok: false,
+      error: "تعذّر عكس الاسترداد — تم تحديث الطلب من عملية أخرى. حدّث الصفحة وحاول مجدداً.",
+    };
+  }
+
+  const meta = await currentRequestMeta();
+  await logActivity({
+    kind: "BOOKING_REFUND",
+    path: `/admin/bookings/${bookingId}/finance`,
+    actorLabel: `${auth.session.displayName} — عكس استرداد ${amount} ر.س`,
+    userId: auth.session.employeeId,
+    ip: meta.ip,
+    userAgent: meta.userAgent,
+  });
+
+  await logBookingEvent({
+    bookingId,
+    event: "REFUND_PROCESSED",
+    actorKind: "ADMIN",
+    actorName: auth.session.displayName,
+    notes: `عكس استرداد ${amount} ر.س`,
+  });
+
+  revalidatePath("/admin/financials");
+  revalidatePath(`/admin/bookings/${bookingId}`);
+  revalidatePath(`/admin/bookings/${bookingId}/finance`);
+
+  return { ok: true };
+}
+
 export async function processBookingPayment(
   _prev: { ok: boolean; error?: string } | null,
   formData: FormData,

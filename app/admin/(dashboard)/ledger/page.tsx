@@ -6,9 +6,11 @@ import { AdminStatCard } from "@/components/admin/AdminStatCard";
 import { formatSarAmount } from "@/lib/booking-checkout-pricing";
 import { bookingStatusLabelAr } from "@/lib/booking-display-labels";
 import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
+import { prisma } from "@/lib/prisma";
 import {
   getPaymentTransactions,
   getPaymentTransactionsSummary,
+  ledgerFiltersFromParams,
   type PaymentTxnDirectionFilter,
 } from "@/lib/payment-transaction";
 
@@ -30,6 +32,7 @@ const KIND_UI: Record<string, { label: string; className: string }> = {
   BALANCE_PAYMENT: { label: "سداد فرق", className: "bg-teal-50 text-teal-700 ring-1 ring-teal-200" },
   LATE_PENALTY: { label: "غرامة تأخير", className: "bg-purple-50 text-purple-700 ring-1 ring-purple-200" },
   REFUND: { label: "استرداد", className: "bg-red-50 text-red-700 ring-1 ring-red-200" },
+  REFUND_REVERSAL: { label: "عكس استرداد", className: "bg-sky-50 text-sky-700 ring-1 ring-sky-200" },
   CUSTOMER_SETTLEMENT: { label: "تسوية للعميل", className: "bg-orange-50 text-orange-700 ring-1 ring-orange-200" },
 };
 
@@ -51,22 +54,42 @@ const FILTERS: { key: PaymentTxnDirectionFilter; label: string }[] = [
   { key: "debit", label: "مستردات" },
 ];
 
-function parseFilter(raw: string | undefined): PaymentTxnDirectionFilter {
-  return raw === "credit" || raw === "debit" ? raw : "all";
-}
-
-type Props = { searchParams: Promise<{ dir?: string }> };
+type Props = {
+  searchParams: Promise<{
+    dir?: string;
+    period?: string;
+    from?: string;
+    to?: string;
+    branch?: string;
+  }>;
+};
 
 export default async function LedgerPage({ searchParams }: Props) {
   const session = await requireAdminPagePermission("FINANCIALS");
   const scope = { isSuperAdmin: session.isSuperAdmin, branchId: session.branchId };
   const sp = await searchParams;
-  const filter = parseFilter(sp.dir);
+
+  const { filter, from, to, branchId, fromStr, toStr, isToday, isMonth } =
+    ledgerFiltersFromParams(sp);
+  const filters = { filter, from, to, branchId };
+
+  const branches = scope.isSuperAdmin
+    ? await prisma.branch.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } })
+    : [];
 
   const [summary, items] = await Promise.all([
-    getPaymentTransactionsSummary(scope),
-    getPaymentTransactions(scope, { filter }),
+    getPaymentTransactionsSummary(scope, filters),
+    getPaymentTransactions(scope, filters),
   ]);
+
+  // رابط التصدير يحمل نفس الفلاتر المطبَّقة (بالتواريخ الصريحة لمطابقة المعروض).
+  const exportParams = new URLSearchParams();
+  if (filter !== "all") exportParams.set("dir", filter);
+  if (fromStr) exportParams.set("from", fromStr);
+  if (toStr) exportParams.set("to", toStr);
+  if (branchId != null) exportParams.set("branch", String(branchId));
+  const exportQuery = exportParams.toString();
+  const exportHref = `/api/admin/ledger/export${exportQuery ? `?${exportQuery}` : ""}`;
 
   return (
     <div className="space-y-8">
@@ -103,24 +126,110 @@ export default async function LedgerPage({ searchParams }: Props) {
         title="الحركات"
         description="أحدث 200 حركة ضمن نطاقك. المبلغ الأخضر (+) مقبوض للشركة، والأحمر (−) مسترد."
       >
-        <div className="mb-5 flex flex-wrap gap-2">
-          {FILTERS.map((f) => {
-            const active = filter === f.key;
-            return (
-              <Link
-                key={f.key}
-                href={f.key === "all" ? "/admin/ledger" : `/admin/ledger?dir=${f.key}`}
-                className={`rounded-full px-4 py-2 text-xs font-bold transition-colors ${
-                  active
-                    ? "bg-primary text-on-primary"
-                    : "bg-surface-container text-on-surface-variant ring-1 ring-outline-variant/30 hover:bg-primary-container/30"
-                }`}
+        <form
+          method="get"
+          action="/admin/ledger"
+          className="mb-5 flex flex-wrap items-end gap-3 rounded-2xl border border-outline-variant/25 bg-surface-container-lowest p-4"
+        >
+          {/* أزرار سريعة */}
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              name="period"
+              value="today"
+              className={`rounded-full px-4 py-2 text-xs font-bold transition-colors ${
+                isToday
+                  ? "bg-primary text-on-primary"
+                  : "bg-surface-container text-on-surface-variant ring-1 ring-outline-variant/30 hover:bg-primary-container/30"
+              }`}
+            >
+              اليوم
+            </button>
+            <button
+              type="submit"
+              name="period"
+              value="month"
+              className={`rounded-full px-4 py-2 text-xs font-bold transition-colors ${
+                isMonth
+                  ? "bg-primary text-on-primary"
+                  : "bg-surface-container text-on-surface-variant ring-1 ring-outline-variant/30 hover:bg-primary-container/30"
+              }`}
+            >
+              الشهر
+            </button>
+          </div>
+
+          <label className="flex flex-col gap-1 text-[11px] font-bold text-on-surface-variant">
+            من
+            <input
+              type="date"
+              name="from"
+              defaultValue={fromStr}
+              className="rounded-lg border border-outline-variant/40 bg-white px-3 py-1.5 text-xs text-on-surface outline-none focus:border-primary"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-[11px] font-bold text-on-surface-variant">
+            إلى
+            <input
+              type="date"
+              name="to"
+              defaultValue={toStr}
+              className="rounded-lg border border-outline-variant/40 bg-white px-3 py-1.5 text-xs text-on-surface outline-none focus:border-primary"
+            />
+          </label>
+
+          <label className="flex flex-col gap-1 text-[11px] font-bold text-on-surface-variant">
+            النوع
+            <select
+              name="dir"
+              defaultValue={filter}
+              className="rounded-lg border border-outline-variant/40 bg-white px-3 py-1.5 text-xs text-on-surface outline-none focus:border-primary"
+            >
+              {FILTERS.map((f) => (
+                <option key={f.key} value={f.key}>
+                  {f.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {scope.isSuperAdmin ? (
+            <label className="flex flex-col gap-1 text-[11px] font-bold text-on-surface-variant">
+              الفرع
+              <select
+                name="branch"
+                defaultValue={branchId ?? ""}
+                className="rounded-lg border border-outline-variant/40 bg-white px-3 py-1.5 text-xs text-on-surface outline-none focus:border-primary"
               >
-                {f.label}
-              </Link>
-            );
-          })}
-        </div>
+                <option value="">كل الفروع</option>
+                {branches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+
+          <button
+            type="submit"
+            className="rounded-lg bg-[#003749] px-4 py-2 text-xs font-extrabold text-white hover:opacity-95"
+          >
+            تطبيق
+          </button>
+          <Link
+            href="/admin/ledger"
+            className="rounded-lg px-3 py-2 text-xs font-bold text-on-surface-variant hover:underline"
+          >
+            إعادة تعيين
+          </Link>
+          <a
+            href={exportHref}
+            className="ms-auto inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-extrabold text-white hover:opacity-95"
+          >
+            ⬇ تصدير Excel
+          </a>
+        </form>
 
         <div className="overflow-x-auto">
           <table className="w-full text-right text-sm">
