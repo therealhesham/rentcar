@@ -13,6 +13,10 @@ import {
   parseDdMmYyToYmd,
 } from "@/lib/booking-search-shared";
 import { OVERLAY_BACKDROP_Z } from "@/lib/overlay-z-index";
+import {
+  isBranchClosedOnDate,
+  isDateTimeWithinBranchSchedule,
+} from "@/lib/branch-opening-hours";
 
 const GOLD = "#dbb878";
 const GOLD_DARK = "#c9a356";
@@ -26,6 +30,10 @@ type Props = {
   initialDropoff: string;
   onConfirm: (draft: { branch: string; pickup: string; dropoff: string }) => void;
   onClose: () => void;
+  /** إذا كان true يُسمح بالحجز في أيام الإجازة (يُتخطَّى فحص المواعيد) */
+  allowHolidayBooking?: boolean;
+  /** الفروع المتاح فيها هذا الموديل فعلياً بكمية أكبر من صفر */
+  availableBranchSlugs?: string[];
 };
 
 function localNowPlusHours(hours: number): string {
@@ -46,11 +54,22 @@ export function FleetBookNowHintModal({
   initialDropoff,
   onConfirm,
   onClose,
+  allowHolidayBooking = false,
+  availableBranchSlugs,
 }: Props) {
-  const dateCities = useMemo(
-    () => cities.filter((c) => c.branches.length > 0),
-    [cities],
-  );
+  const dateCities = useMemo(() => {
+    const valid = cities.filter((c) => c.branches.length > 0);
+    if (!availableBranchSlugs || availableBranchSlugs.length === 0) {
+      return valid;
+    }
+    const slugSet = new Set(availableBranchSlugs.map((s) => s.toLowerCase()));
+    return valid
+      .map((c) => ({
+        ...c,
+        branches: c.branches.filter((b) => slugSet.has(b.slug.toLowerCase())),
+      }))
+      .filter((c) => c.branches.length > 0);
+  }, [cities, availableBranchSlugs]);
   const defaultBranchSlug = dateCities[0]?.branches[0]?.slug ?? "";
   const hasBranches = dateCities.length > 0;
 
@@ -153,6 +172,15 @@ export function FleetBookNowHintModal({
     setDropoffTimeDraft(hm);
   }
 
+  // جدول مواعيد الفرع المختار حالياً
+  const selectedBranchSchedule = useMemo(() => {
+    for (const city of dateCities) {
+      const found = city.branches.find((b) => b.slug === branchValue);
+      if (found) return found.openingHours ?? null;
+    }
+    return null;
+  }, [dateCities, branchValue]);
+
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
@@ -185,6 +213,26 @@ export function FleetBookNowHintModal({
     if (dropoffDate.getTime() < pickupDate.getTime()) {
       setError("وقت التسليم يجب أن يكون بعد وقت الاستلام.");
       return;
+    }
+
+    // فحص مواعيد الفرع (يُتخطَّى إذا كان الأدمن قد سمح بالحجز في الإجازات)
+    if (!allowHolidayBooking && selectedBranchSchedule) {
+      if (isBranchClosedOnDate(pickupDate, selectedBranchSchedule)) {
+        setError("الفرع مغلق في يوم الاستلام. يرجى اختيار يوم عمل آخر.");
+        return;
+      }
+      if (isBranchClosedOnDate(dropoffDate, selectedBranchSchedule)) {
+        setError("الفرع مغلق في يوم التسليم. يرجى اختيار يوم عمل آخر.");
+        return;
+      }
+      if (!isDateTimeWithinBranchSchedule(pickupDate, selectedBranchSchedule)) {
+        setError("وقت الاستلام خارج مواعيد عمل الفرع. يرجى اختيار وقت ضمن ساعات العمل.");
+        return;
+      }
+      if (!isDateTimeWithinBranchSchedule(dropoffDate, selectedBranchSchedule)) {
+        setError("وقت التسليم خارج مواعيد عمل الفرع. يرجى اختيار وقت ضمن ساعات العمل.");
+        return;
+      }
     }
 
     onConfirm({ branch: branchValue, pickup: pickup.trim(), dropoff: dropoff.trim() });
@@ -389,6 +437,8 @@ export function FleetBookNowHintModal({
                 onRangeChange={applyDateRange}
                 anchorRef={dateRangeActiveRef}
                 extraAnchorRefs={[pickupDateRef, dropoffDateRef]}
+                schedule={allowHolidayBooking ? null : selectedBranchSchedule}
+                allowHolidayBooking={allowHolidayBooking}
               />
 
               <div className="relative min-w-0">

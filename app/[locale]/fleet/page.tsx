@@ -94,16 +94,17 @@ export default async function FleetPage({
         rentalRaw === "daily" || rentalRaw == null || rentalRaw === ""
           ? (formatDailyBookingDurationFromIso(pickupRaw, dropoffRaw) ?? t("daysCount", { days }))
           : t("daysCount", { days });
-      const returnBranch =
-        qFirst(params.returnBranch)?.toLowerCase() ??
-        qFirst(params.pickupBranch)?.toLowerCase() ??
-        qFirst(params.branch)?.toLowerCase() ??
-        "jeddah";
-      availabilityModelIds = await listAvailableCarModelIds({
-        pickupDate,
-        numberOfDays: days,
-        branchSlug: returnBranch,
-      });
+      const targetBranch =
+        qFirst(params.returnBranch)?.toLowerCase() ||
+        qFirst(params.pickupBranch)?.toLowerCase() ||
+        qFirst(params.branch)?.toLowerCase();
+      if (targetBranch) {
+        availabilityModelIds = await listAvailableCarModelIds({
+          pickupDate,
+          numberOfDays: days,
+          branchSlug: targetBranch,
+        });
+      }
 
       const modeLabel = qFirst(params.mode) === "delivery" ? t("deliveryMode") : t("pickupMode");
       const rental =
@@ -299,7 +300,7 @@ export default async function FleetPage({
               </p>
             </div>
           ) : (
-            <FleetCarGrid cars={cars} cities={cities} />
+            <FleetCarGrid cars={cars} cities={cities} allowHolidayBooking={tabFlags.allowHolidayBooking ?? false} />
           )}
         </main>
       </div>

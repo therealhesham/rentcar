@@ -12,6 +12,8 @@ export type BookingWidgetTabFlags = {
   modeDelivery: boolean;
   /** السماح بالحجز في أيام إجازات الفروع (الافتراضي: false = عدم السماح، أي تعطيل الأيام في التقويم) */
   allowHolidayBooking: boolean;
+  /** السماح بالحجز عند اكتمال العدد بدون تقييد بالمخزون والتداخلات (الافتراضي: false = تقييد محكم بالمخزون) */
+  allowOverbooking: boolean;
 };
 
 export const DEFAULT_BOOKING_WIDGET_TAB_FLAGS: BookingWidgetTabFlags = {
@@ -23,6 +25,7 @@ export const DEFAULT_BOOKING_WIDGET_TAB_FLAGS: BookingWidgetTabFlags = {
   modePickup: true,
   modeDelivery: true,
   allowHolidayBooking: false,
+  allowOverbooking: false,
 };
 
 function asBool(v: unknown, fallback: boolean): boolean {
@@ -49,6 +52,10 @@ export function normalizeBookingWidgetTabFlags(raw: unknown): BookingWidgetTabFl
     allowHolidayBooking: asBool(
       o.allowHolidayBooking,
       DEFAULT_BOOKING_WIDGET_TAB_FLAGS.allowHolidayBooking,
+    ),
+    allowOverbooking: asBool(
+      o.allowOverbooking,
+      DEFAULT_BOOKING_WIDGET_TAB_FLAGS.allowOverbooking,
     ),
   };
 

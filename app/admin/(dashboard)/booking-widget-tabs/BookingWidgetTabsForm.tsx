@@ -102,6 +102,28 @@ export function BookingWidgetTabsForm({ flags }: Props) {
         </label>
       </fieldset>
 
+      <fieldset className="space-y-3">
+        <legend className="text-base font-extrabold text-on-surface">تقييد المخزون وتوفر السيارات (Capacity Restriction)</legend>
+        <p className="text-sm text-on-surface-variant">
+          التحكم في التقييد بمخزون السيارات المتاحة بالفرع والحجوزات المتداخلة.
+        </p>
+        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-outline-variant/40 bg-surface-container-lowest px-4 py-3 hover:border-outline-variant">
+          <input
+            type="checkbox"
+            name="allowOverbooking"
+            defaultChecked={flags.allowOverbooking}
+            className="mt-0.5 size-4 accent-primary"
+          />
+          <span>
+            <span className="block font-bold text-on-surface">السماح بالحجز بدون تقييد بمخزون السيارات؟ (Overbooking)</span>
+            <span className="mt-0.5 block text-xs text-on-surface-variant">
+              عند ترك هذا الخيار <strong>غير مفعّل (الافتراضي - التقييد محكم)</strong>: يمنع النظام الحجز إذا اكتمل عدد السيارات أو إذا كانت الكمية صفر وتظهر رسالة <strong>«غير متاح خلال هذه الفترة»</strong>.
+              عند تفعيله: يلغى التقييد بالكمية المتاحة والتداخلات ويُسمح للعملاء بالحجز دائماً دون إغلاق الموديلات.
+            </span>
+          </span>
+        </label>
+      </fieldset>
+
       {state?.error ? (
         <p className="rounded-lg bg-error-container/30 px-3 py-2 text-sm font-bold text-error">{state.error}</p>
       ) : null}

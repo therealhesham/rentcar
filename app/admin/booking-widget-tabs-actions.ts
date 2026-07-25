@@ -29,6 +29,7 @@ export async function updateBookingWidgetTabs(
     modePickup: readCheckbox(formData, "modePickup"),
     modeDelivery: readCheckbox(formData, "modeDelivery"),
     allowHolidayBooking: readCheckbox(formData, "allowHolidayBooking"),
+    allowOverbooking: readCheckbox(formData, "allowOverbooking"),
   };
 
   const anyRental =

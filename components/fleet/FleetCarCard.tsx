@@ -44,9 +44,11 @@ function BookmarkIcon() {
 export function FleetCarCard({
   car,
   cities,
+  allowHolidayBooking = false,
 }: {
   car: FleetCar;
   cities?: BookingCityBranchesOption[];
+  allowHolidayBooking?: boolean;
 }) {
   const locale = useLocale();
   const t = useTranslations("FleetCard");
@@ -209,6 +211,8 @@ export function FleetCarCard({
             modelId={car.modelId}
             cities={cities}
             carName={`${car.brand} ${car.name}`}
+            allowHolidayBooking={allowHolidayBooking}
+            availableBranchSlugs={car.availableBranchSlugs}
           />
         </div>
       </div>

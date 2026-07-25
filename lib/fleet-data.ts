@@ -43,6 +43,7 @@ const fleetModelInclude = {
   model: {
     include: { brand: true, category: true },
   },
+  branch: { select: { slug: true } },
 } as const;
 
 type FleetRowWithModel = Awaited<
@@ -89,6 +90,7 @@ function mapFleetRowToFleetCar(
   locale: string = "ar",
   startingFrom: boolean = false,
   monthlyOverride?: { price: number; varies: boolean } | null,
+  availableBranchSlugs?: string[],
 ): FleetCar {
   const m = row.model;
   const brandName = localizeDbField(m.brand, "name", locale).trim();
@@ -149,6 +151,7 @@ function mapFleetRowToFleetCar(
       { icon: "airline_seat_recline_extra", value: String(m.chairs) },
       { icon: "luggage", value: String(displayLuggage) },
     ],
+    availableBranchSlugs,
   };
 }
 
@@ -179,6 +182,15 @@ export async function getFleetCarMapByModelIds(
     orderBy: [{ model: { displayOrder: "asc" } }, { id: "asc" }],
   });
 
+  const availableSlugsMap = new Map<number, string[]>();
+  for (const r of rows) {
+    if (r.quantity > 0 && r.branch?.slug) {
+      const list = availableSlugsMap.get(r.modelId) ?? [];
+      if (!list.includes(r.branch.slug)) list.push(r.branch.slug);
+      availableSlugsMap.set(r.modelId, list);
+    }
+  }
+
   for (const [modelId, pick] of pickCheapestRowPerModel(
     rows,
     discountRules,
@@ -193,6 +205,8 @@ export async function getFleetCarMapByModelIds(
         opts?.referenceDate,
         opts?.locale,
         opts?.branchId == null && pick.pricesVary,
+        null,
+        availableSlugsMap.get(modelId),
       ),
     );
   }
@@ -353,6 +367,23 @@ export async function getFleetCarsForDisplay(
     seenModelIds.add(row.modelId);
     orderSeen.push(row.modelId);
   }
+  const availableSlugsRows = await prisma.fleet.findMany({
+    where: {
+      modelId: { in: orderSeen },
+      quantity: { gt: 0 },
+      branch: { isActive: true },
+    },
+    select: { modelId: true, branch: { select: { slug: true } } },
+  });
+  const availableSlugsMap = new Map<number, string[]>();
+  for (const r of availableSlugsRows) {
+    if (r.branch?.slug) {
+      const list = availableSlugsMap.get(r.modelId) ?? [];
+      if (!list.includes(r.branch.slug)) list.push(r.branch.slug);
+      availableSlugsMap.set(r.modelId, list);
+    }
+  }
+
   for (const modelId of orderSeen) {
     const pick = picks.get(modelId);
     if (!pick) continue;
@@ -366,6 +397,7 @@ export async function getFleetCarsForDisplay(
         locale,
         !hasBranchFilter && pick.pricesVary,
         monthly ? { price: monthly.price, varies: !hasBranchFilter && monthly.varies } : null,
+        availableSlugsMap.get(modelId),
       ),
     );
   }

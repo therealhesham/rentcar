@@ -394,7 +394,7 @@ export function FleetCheckoutClient({
     setPostCapacityModal(false);
     setBranchHoursOpen(false);
     setBranchHoursMessage("");
-  }, [trip.pickupIso, trip.days, car.modelId]);
+  }, [trip.pickupIso, trip.days, trip.branchSlug, car.modelId]);
 
   const branchOptions = useMemo(
     () => Object.entries(branchBySlug).map(([slug, name]) => ({ slug, name })),
@@ -551,7 +551,7 @@ export function FleetCheckoutClient({
       }
     })();
     return () => ctrl.abort();
-  }, [car.modelId, trip.pickupIso, trip.days, excludeBookingRequestIdFromUrl]);
+  }, [car.modelId, trip.pickupIso, trip.days, trip.branchSlug, excludeBookingRequestIdFromUrl]);
 
   function toggleAddon(id: number) {
     const addon = addons.find((a) => a.id === id);
@@ -1764,6 +1764,7 @@ export function FleetCheckoutClient({
 
       <CarUnavailableModal
         open={showCarUnavailableModal}
+        fleetUnits={availability && !availability.loading ? availability.fleetUnits : undefined}
         onClose={() => {
           setUnavailableDismissed(true);
           setPostCapacityModal(false);

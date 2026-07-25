@@ -15,9 +15,9 @@ export type FleetCategoryTab = {
   cars: FleetCar[];
 };
 
-type Props = { tabs: FleetCategoryTab[]; cities?: BookingCityBranchesOption[] };
+type Props = { tabs: FleetCategoryTab[]; cities?: BookingCityBranchesOption[]; allowHolidayBooking?: boolean };
 
-export function FleetCategoriesShowcase({ tabs, cities }: Props) {
+export function FleetCategoriesShowcase({ tabs, cities, allowHolidayBooking = false }: Props) {
   const firstWithCars = tabs.findIndex((t) => t.cars.length > 0);
   const [active, setActive] = useState(() => (firstWithCars >= 0 ? firstWithCars : 0));
 
@@ -96,7 +96,7 @@ export function FleetCategoriesShowcase({ tabs, cities }: Props) {
           className="grid grid-cols-1 gap-6 sm:gap-8 md:grid-cols-2 lg:grid-cols-3"
         >
           {cars.map((car) => (
-            <FleetCarCard key={`${current.slug}-${car.modelId}`} car={car} cities={cities} />
+            <FleetCarCard key={`${current.slug}-${car.modelId}`} car={car} cities={cities} allowHolidayBooking={allowHolidayBooking} />
           ))}
         </div>
       ) : (

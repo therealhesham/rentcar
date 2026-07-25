@@ -432,10 +432,18 @@ export async function getDirectBookingAvailability(input: {
   /** فرع الإرجاع (مطلوب لاحتساب مخزون الفرع والحجوزات المتزامنة) */
   branchSlug: string;
 }): Promise<DirectAvailabilityResult> {
+  const { getBookingWidgetTabFlags } = await import("@/lib/site-settings");
+  const tabFlags = await getBookingWidgetTabFlags();
+
   const branchSlug = input.branchSlug.trim().toLowerCase();
   const fleetUnits = await sumFleetQuantityForModelAtBranch(prisma, input.carModelId, {
     branchSlug,
   });
+
+  if (tabFlags.allowOverbooking) {
+    return { available: true, fleetUnits: Math.max(1, fleetUnits), overlapping: 0 };
+  }
+
   if (fleetUnits <= 0) {
     return { available: false, fleetUnits: 0, overlapping: 0 };
   }
@@ -464,8 +472,24 @@ export async function listAvailableCarModelIds(input: {
   /** فرع الإرجاع — يُعرض فقط الموديلات المتوفرة في هذا الفرع */
   branchSlug: string;
 }): Promise<number[]> {
+  const { getBookingWidgetTabFlags } = await import("@/lib/site-settings");
+  const tabFlags = await getBookingWidgetTabFlags();
+
   const safeDays = safeBookingDays(input.numberOfDays);
   const branchSlug = input.branchSlug.trim().toLowerCase();
+
+  if (tabFlags.allowOverbooking) {
+    const allRows = await prisma.fleet.findMany({
+      where: {
+        isVisible: true,
+        branch: { slug: branchSlug, isActive: true },
+      },
+      select: { modelId: true },
+      distinct: ["modelId"],
+    });
+    return allRows.map((r) => r.modelId);
+  }
+
   const rows = await prisma.fleet.findMany({
     where: {
       isVisible: true,
@@ -1261,31 +1285,36 @@ export async function createDirectBooking(
   const runOnce = () =>
     prisma.$transaction(
       async (tx) => {
-        const fleetUnits = await sumFleetQuantityForModelAtBranch(tx, carModelId, {
-          branchSlug: returnBranchSlug,
-        });
-        if (fleetUnits <= 0) {
-          throw new DirectBookingCapacityError(
-            "NO_FLEET",
-            "لا توجد وحدات لهذا الموديل في فرع الإرجاع.",
-            0,
-            0,
+        const { getBookingWidgetTabFlags } = await import("@/lib/site-settings");
+        const tabFlags = await getBookingWidgetTabFlags();
+
+        if (!tabFlags.allowOverbooking) {
+          const fleetUnits = await sumFleetQuantityForModelAtBranch(tx, carModelId, {
+            branchSlug: returnBranchSlug,
+          });
+          if (fleetUnits <= 0) {
+            throw new DirectBookingCapacityError(
+              "NO_FLEET",
+              "لا توجد وحدات لهذا الموديل في فرع الإرجاع.",
+              0,
+              0,
+            );
+          }
+          const rows = await loadBlockingDirectBookings(
+            tx,
+            carModelId,
+            verifiedExcludeBlockingId,
+            returnBranchSlug,
           );
-        }
-        const rows = await loadBlockingDirectBookings(
-          tx,
-          carModelId,
-          verifiedExcludeBlockingId,
-          returnBranchSlug,
-        );
-        const overlapping = countOverlapsFromRows(rows, commonNormalized.pickupDate, days);
-        if (overlapping >= fleetUnits) {
-          throw new DirectBookingCapacityError(
-            "SLOT_FULL",
-            "الفترة ممتلئة بالنسبة لعدد العربيات في الأسطول.",
-            fleetUnits,
-            overlapping,
-          );
+          const overlapping = countOverlapsFromRows(rows, commonNormalized.pickupDate, days);
+          if (overlapping >= fleetUnits) {
+            throw new DirectBookingCapacityError(
+              "SLOT_FULL",
+              "الفترة ممتلئة بالنسبة لعدد العربيات في الأسطول.",
+              fleetUnits,
+              overlapping,
+            );
+          }
         }
         const pickupSlugForStore =
           commonNormalized.pickupMode === "BRANCH"

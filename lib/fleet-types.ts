@@ -23,4 +23,6 @@ export type FleetCar = {
   alt: string;
   badge?: string | null;
   specs: FleetCarSpec[];
+  /** المعرفات النصية (slugs) للفروع التي تحتوي كمية متاحة (> 0) من هذا الموديل */
+  availableBranchSlugs?: string[];
 };

@@ -77,6 +77,8 @@ type FleetBookNowButtonProps = {
   modelId: number;
   cities?: BookingCityBranchesOption[];
   carName: string;
+  allowHolidayBooking?: boolean;
+  availableBranchSlugs?: string[];
 };
 
 function formatAsDatetimeLocal(raw: string | null): string {
@@ -103,21 +105,28 @@ const FALLBACK_CITIES: BookingCityBranchesOption[] = [
   },
 ];
 
-function firstBranchSlug(cities: BookingCityBranchesOption[]): string {
+function firstBranchSlug(cities: BookingCityBranchesOption[], availableBranchSlugs?: string[]): string {
+  const allowedSet = availableBranchSlugs && availableBranchSlugs.length > 0
+    ? new Set(availableBranchSlugs.map(s => s.toLowerCase()))
+    : null;
   for (const c of cities) {
-    if (c.branches.length > 0) return c.branches[0]!.slug;
+    for (const b of c.branches) {
+      if (!allowedSet || allowedSet.has(b.slug.toLowerCase())) {
+        return b.slug;
+      }
+    }
   }
   return "";
 }
 
-function FleetBookNowButtonInner({ modelId, cities = FALLBACK_CITIES, carName }: FleetBookNowButtonProps) {
+function FleetBookNowButtonInner({ modelId, cities = FALLBACK_CITIES, carName, allowHolidayBooking = false, availableBranchSlugs }: FleetBookNowButtonProps) {
   const router = useRouter();
   const sp = useSearchParams();
   const extra = sp.toString();
   const href = `/fleet/checkout?modelId=${modelId}${extra ? `&${extra}` : ""}`;
   const [orSimilarOpen, setOrSimilarOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-  const [draftBranch, setDraftBranch] = useState(() => firstBranchSlug(cities));
+  const [draftBranch, setDraftBranch] = useState(() => firstBranchSlug(cities, availableBranchSlugs));
   const [draftPickup, setDraftPickup] = useState("");
   const [draftDropoff, setDraftDropoff] = useState("");
 
@@ -185,6 +194,8 @@ function FleetBookNowButtonInner({ modelId, cities = FALLBACK_CITIES, carName }:
         initialBranch={draftBranch}
         initialPickup={draftPickup}
         initialDropoff={draftDropoff}
+        allowHolidayBooking={allowHolidayBooking}
+        availableBranchSlugs={availableBranchSlugs}
         onConfirm={handleConfirmModal}
         onClose={() => setModalOpen(false)}
       />
@@ -196,17 +207,19 @@ function FleetBookNowButtonFallback({
   modelId,
   cities = FALLBACK_CITIES,
   carName,
+  allowHolidayBooking = false,
+  availableBranchSlugs,
 }: FleetBookNowButtonProps) {
   const router = useRouter();
   const [orSimilarOpen, setOrSimilarOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-  const [draftBranch, setDraftBranch] = useState(() => firstBranchSlug(cities));
+  const [draftBranch, setDraftBranch] = useState(() => firstBranchSlug(cities, availableBranchSlugs));
   const [draftPickup, setDraftPickup] = useState("");
   const [draftDropoff, setDraftDropoff] = useState("");
 
   useEffect(() => {
-    setDraftBranch(firstBranchSlug(cities));
-  }, [cities]);
+    setDraftBranch(firstBranchSlug(cities, availableBranchSlugs));
+  }, [cities, availableBranchSlugs]);
 
   function onBookClick(e: React.MouseEvent<HTMLAnchorElement>) {
     e.preventDefault();
@@ -249,6 +262,8 @@ function FleetBookNowButtonFallback({
         initialBranch={draftBranch}
         initialPickup={draftPickup}
         initialDropoff={draftDropoff}
+        allowHolidayBooking={allowHolidayBooking}
+        availableBranchSlugs={availableBranchSlugs}
         onConfirm={handleConfirmModal}
         onClose={() => setModalOpen(false)}
       />
@@ -256,10 +271,10 @@ function FleetBookNowButtonFallback({
   );
 }
 
-export function FleetBookNowButton({ modelId, cities = FALLBACK_CITIES, carName }: FleetBookNowButtonProps) {
+export function FleetBookNowButton({ modelId, cities = FALLBACK_CITIES, carName, allowHolidayBooking = false, availableBranchSlugs }: FleetBookNowButtonProps) {
   return (
-    <Suspense fallback={<FleetBookNowButtonFallback modelId={modelId} cities={cities} carName={carName} />}>
-      <FleetBookNowButtonInner modelId={modelId} cities={cities} carName={carName} />
+    <Suspense fallback={<FleetBookNowButtonFallback modelId={modelId} cities={cities} carName={carName} allowHolidayBooking={allowHolidayBooking} availableBranchSlugs={availableBranchSlugs} />}>
+      <FleetBookNowButtonInner modelId={modelId} cities={cities} carName={carName} allowHolidayBooking={allowHolidayBooking} availableBranchSlugs={availableBranchSlugs} />
     </Suspense>
   );
 }

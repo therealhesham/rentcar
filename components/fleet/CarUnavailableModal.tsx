@@ -1,7 +1,6 @@
 "use client";
 
-/** */
-import { CalendarOff, X } from "lucide-react";
+import { CalendarOff, MapPinOff, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect } from "react";
 
@@ -13,9 +12,10 @@ type Props = {
   open: boolean;
   onClose: () => void;
   onChangeDates: () => void;
+  fleetUnits?: number;
 };
 
-export function CarUnavailableModal({ open, onClose, onChangeDates }: Props) {
+export function CarUnavailableModal({ open, onClose, onChangeDates, fleetUnits }: Props) {
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
@@ -26,6 +26,8 @@ export function CarUnavailableModal({ open, onClose, onChangeDates }: Props) {
   }, [open]);
 
   if (!open) return null;
+
+  const isNoFleet = fleetUnits === 0;
 
   return (
     <div
@@ -59,13 +61,21 @@ export function CarUnavailableModal({ open, onClose, onChangeDates }: Props) {
               color: TEAL,
             }}
           >
-            <CalendarOff className="size-9" strokeWidth={1.75} aria-hidden />
+            {isNoFleet ? (
+              <MapPinOff className="size-9" strokeWidth={1.75} aria-hidden />
+            ) : (
+              <CalendarOff className="size-9" strokeWidth={1.75} aria-hidden />
+            )}
           </div>
 
           <h2 id="car-unavailable-title" className="text-[1.35rem] font-extrabold tracking-tight text-[#003749] sm:text-2xl">
-            غير متاح
+            {isNoFleet ? "غير متوفرة بالفرع" : "غير متاح"}
           </h2>
-          <p className="mt-2 text-[15px] font-medium leading-relaxed text-[#6b7280]">خلال هذه الفترة</p>
+          <p className="mt-2 text-[15px] font-medium leading-relaxed text-[#6b7280]">
+            {isNoFleet
+              ? "هذه السيارة غير متوفرة في الفرع المختار."
+              : "خلال هذه الفترة (جميع السيارات محجوزة)"}
+          </p>
 
           <div className="mt-8 flex flex-col gap-3">
             <button
@@ -79,7 +89,7 @@ export function CarUnavailableModal({ open, onClose, onChangeDates }: Props) {
                 background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)`,
               }}
             >
-              اختيار تواريخ أخرى
+              {isNoFleet ? "تغيير الفرع / البيانات" : "اختيار تواريخ أخرى"}
             </button>
             <Link
               href="/fleet"

@@ -1,7 +1,7 @@
 import { getActiveBookingCitiesWithBranches } from "@/lib/branch-data";
 import { getFleetCategoriesForHome } from "@/lib/fleet-category-data";
 import { getFleetCarMapByModelIds } from "@/lib/fleet-data";
-import { getRentalPriceDisplayMode } from "@/lib/site-settings";
+import { getBookingWidgetTabFlags, getRentalPriceDisplayMode } from "@/lib/site-settings";
 import {
   FleetCategoriesShowcase,
   type FleetCategoryTab,
@@ -19,9 +19,10 @@ export async function FleetCategories() {
 
   const allModelIds = categories.flatMap((c) => c.models.map((m) => m.id));
   const priceMode = await getRentalPriceDisplayMode();
-  const [carByModel, cities] = await Promise.all([
+  const [carByModel, cities, tabFlags] = await Promise.all([
     getFleetCarMapByModelIds(allModelIds, priceMode, { locale }),
     getActiveBookingCitiesWithBranches(locale).catch(() => []),
+    getBookingWidgetTabFlags(),
   ]);
 
   const tabs: FleetCategoryTab[] = categories.map((cat) => ({
@@ -51,7 +52,7 @@ export async function FleetCategories() {
       <div className="pointer-events-none absolute -end-[16rem] bottom-0 h-[32rem] w-[32rem] rounded-full bg-gradient-to-bl from-[#003749]/10 to-transparent blur-3xl" />
 
       <Reveal className="relative z-[1]">
-        <FleetCategoriesShowcase tabs={tabs} cities={cities} />
+        <FleetCategoriesShowcase tabs={tabs} cities={cities} allowHolidayBooking={tabFlags.allowHolidayBooking ?? false} />
       </Reveal>
     </section>
   );
