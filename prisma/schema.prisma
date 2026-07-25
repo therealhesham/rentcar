@@ -224,6 +224,7 @@ model GalleryFolder {
 model Brand {
   id        Int        @id @default(autoincrement())
   name      String     @unique
+  nameEn    String?
   models    CarModel[]
   rentalDiscounts RentalDiscount[]
   createdAt DateTime   @default(now())

@@ -91,7 +91,7 @@ function mapFleetRowToFleetCar(
   monthlyOverride?: { price: number; varies: boolean } | null,
 ): FleetCar {
   const m = row.model;
-  const brandName = m.brand.name.trim();
+  const brandName = localizeDbField(m.brand, "name", locale).trim();
   const modelName = localizeDbField(m, "name", locale).trim();
   const fullTitle = `${brandName} ${modelName}`.trim();
   const fuelText = locale === "en" ? FUEL_EN[m.fuel] : FUEL_AR[m.fuel];
@@ -389,16 +389,20 @@ export async function getFleetCategoriesForFilter(locale: string = "ar"): Promis
 }
 
 /** ماركات لها مركبات متاحة في الأسطول */
-export async function getFleetBrandsForFilter(): Promise<FleetBrandFilterOption[]> {
-  return prisma.brand.findMany({
+export async function getFleetBrandsForFilter(locale: string = "ar"): Promise<FleetBrandFilterOption[]> {
+  const brands = await prisma.brand.findMany({
     where: {
       models: {
         some: { fleetItems: { some: { quantity: { gt: 0 } } } },
       },
     },
     orderBy: { name: "asc" },
-    select: { id: true, name: true },
+    select: { id: true, name: true, nameEn: true },
   });
+  return brands.map((b) => ({
+    id: b.id,
+    name: localizeDbField(b, "name", locale),
+  }));
 }
 
 /** أدنى وأعلى سعر يومي (دون ضريبة) للمركبات المعروضة — يراعي تجاوزات أسعار الفروع. */

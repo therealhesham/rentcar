@@ -10,6 +10,7 @@ import type {
 } from "@/lib/fleet-data";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 
 const DEFAULT_DAILY_PRICE_LABEL: ReactNode = (
   <>السعر اليومي (<SarCurrencyGlyph />، غير شامل الضريبة)</>
@@ -40,6 +41,7 @@ export function FleetFilters({
   dailyPriceLabel = DEFAULT_DAILY_PRICE_LABEL,
   variant = "standalone",
 }: FleetFiltersProps) {
+  const t = useTranslations("FleetPage");
   const embedded = variant === "embedded";
   const router = useRouter();
   const pathname = usePathname();
@@ -143,7 +145,7 @@ export function FleetFilters({
                 htmlFor="fleet-filter-category"
                 className={labelClass}
               >
-                التصنيف
+                {t("category")}
               </label>
               <select
                 id="fleet-filter-category"
@@ -151,9 +153,8 @@ export function FleetFilters({
                 value={appliedCategory}
                 disabled={isPending}
                 onChange={(e) => pushFilters({ category: e.target.value })}
-                dir="rtl"
               >
-                <option value="all">كل التصنيفات</option>
+                <option value="all">{t("allCategories")}</option>
                 {categories.map((c) => (
                   <option key={c.slug} value={c.slug}>
                     {c.title}
@@ -167,7 +168,7 @@ export function FleetFilters({
                 htmlFor="fleet-filter-brand"
                 className={labelClass}
               >
-                الماركة
+                {t("brand")}
               </label>
               <select
                 id="fleet-filter-brand"
@@ -175,9 +176,8 @@ export function FleetFilters({
                 value={appliedBrandId}
                 disabled={isPending}
                 onChange={(e) => pushFilters({ brandId: e.target.value })}
-                dir="rtl"
               >
-                <option value="all">كل الماركات</option>
+                <option value="all">{t("allBrands")}</option>
                 {brands.map((b) => (
                   <option key={b.id} value={String(b.id)}>
                     {b.name}
@@ -202,7 +202,7 @@ export function FleetFilters({
                         : "text-[10px] font-semibold text-on-surface-variant"
                     }
                   >
-                    جاري التحديث…
+                    {t("updating")}
                   </span>
                 ) : null}
               </div>
@@ -214,7 +214,7 @@ export function FleetFilters({
                       : "text-[10px] font-semibold text-on-surface-variant"
                   }
                 >
-                  حتى
+                  {t("upTo")}
                 </span>{" "}
                 <SarAmountWithSymbol
                   bold
@@ -248,12 +248,7 @@ export function FleetFilters({
                   aria-valuemin={priceBounds.min}
                   aria-valuemax={priceBounds.max}
                   aria-valuenow={sliderPrice}
-                  aria-valuetext={
-                    atMaxBound
-                      ? `${formatPrice(priceBounds.max)} ريال وأكثر`
-                      : `${formatPrice(sliderPrice)} ريال`
-                  }
-                  aria-label="حد أقصى للسعر اليومي"
+                  aria-label={t("dailyPriceExclVat", { currency: "SAR" })}
                 />
                 <span
                   className="shrink-0 text-xs font-medium tabular-nums text-on-surface-variant"
@@ -270,7 +265,7 @@ export function FleetFilters({
     return (
       <div className="border-t border-[#f0ebe4] bg-gradient-to-b from-[#fdfbf6]/70 to-white px-3 py-4 sm:px-5 sm:py-5">
         <p className="mb-3 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-[#6b5a3b] sm:mb-4">
-          تصفية النتائج
+          {t("filterResults")}
         </p>
         {filtersGrid}
       </div>

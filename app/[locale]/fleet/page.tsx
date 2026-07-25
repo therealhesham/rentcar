@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Suspense } from "react";
+import { getTranslations } from "next-intl/server";
 import { FleetCarGrid, FleetFilters } from "@/components/fleet";
 import { BookingWidget } from "@/components/home";
 import { SiteFooter } from "@/components/home/SiteFooter";
@@ -47,6 +48,7 @@ export default async function FleetPage({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await routeParams;
+  const t = await getTranslations("FleetPage");
   const params = searchParams ? await searchParams : {};
   const fleetUrlHydrate = buildFleetSearchUrlHydrate(params);
   const categoryRaw = qFirst(params.category);
@@ -67,7 +69,7 @@ export default async function FleetPage({
     getBookingWidgetTabFlags(),
     getRentalPriceDisplayMode(),
     getFleetCategoriesForFilter(locale),
-    getFleetBrandsForFilter(),
+    getFleetBrandsForFilter(locale),
     getFleetPriceBounds(),
   ]);
 
@@ -90,8 +92,8 @@ export default async function FleetPage({
       const days = computeBookingDays(pickupDate, dropoffDate);
       const durationLabel =
         rentalRaw === "daily" || rentalRaw == null || rentalRaw === ""
-          ? (formatDailyBookingDurationFromIso(pickupRaw, dropoffRaw) ?? `${days} يوم`)
-          : `${days} يوم/أيام`;
+          ? (formatDailyBookingDurationFromIso(pickupRaw, dropoffRaw) ?? t("daysCount", { days }))
+          : t("daysCount", { days });
       const returnBranch =
         qFirst(params.returnBranch)?.toLowerCase() ??
         qFirst(params.pickupBranch)?.toLowerCase() ??
@@ -103,18 +105,18 @@ export default async function FleetPage({
         branchSlug: returnBranch,
       });
 
-      const modeLabel = qFirst(params.mode) === "delivery" ? "توصيل" : "استلام من الفرع";
+      const modeLabel = qFirst(params.mode) === "delivery" ? t("deliveryMode") : t("pickupMode");
       const rental =
         rentalRaw === "weekly"
-          ? "أسبوعي"
+          ? t("weeklyRental")
           : rentalRaw === "monthly"
-            ? "شهري"
+            ? t("monthlyRental")
             : rentalRaw === "monthly_packages"
-              ? "باقات شهرية"
-              : "يومي";
+              ? t("monthlyPackagesRental")
+              : t("dailyRental");
 
       searchBanner = (
-        <div className="mb-8 overflow-hidden rounded-2xl border border-[#003749]/15 bg-gradient-to-l from-[#003749]/5 via-white to-[#003749]/5 shadow-sm" dir="rtl">
+        <div className="mb-8 overflow-hidden rounded-2xl border border-[#003749]/15 bg-gradient-to-l from-[#003749]/5 via-white to-[#003749]/5 shadow-sm">
           <div className="flex items-start gap-4 px-5 py-4 sm:px-6 sm:py-5">
             <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#003749]/10 text-[#003749]">
               <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" aria-hidden>
@@ -122,15 +124,15 @@ export default async function FleetPage({
               </svg>
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-extrabold text-[#003749]">نتائج البحث</p>
+              <p className="text-sm font-extrabold text-[#003749]">{t("searchResults")}</p>
               <div className="mt-1.5 flex flex-wrap gap-2">
                 {[
-                  { label: "النوع", value: rental },
-                  { label: "المدة", value: durationLabel },
-                  { label: "الاستلام", value: modeLabel },
-                  qFirst(params.returnBranch) ? { label: "الفرع", value: resolveBranchName(qFirst(params.returnBranch)!) } : null,
+                  { label: t("type"), value: rental },
+                  { label: t("duration"), value: durationLabel },
+                  { label: t("pickup"), value: modeLabel },
+                  qFirst(params.returnBranch) ? { label: t("branch"), value: resolveBranchName(qFirst(params.returnBranch)!) } : null,
                   qFirst(params.mode) === "delivery" && qFirst(params.daddr)
-                    ? { label: "عنوان التوصيل", value: qFirst(params.daddr)! }
+                    ? { label: t("deliveryAddress"), value: qFirst(params.daddr)! }
                     : null,
                 ]
                   .filter(Boolean)
@@ -141,14 +143,14 @@ export default async function FleetPage({
                     >
                       <span className="text-[#775927]">{item!.label}</span>
                       <span className="text-[#003749]/40">·</span>
-                      <span dir={item!.label === "الفرع" || item!.label === "عنوان التوصيل" ? "rtl" : undefined}>
+                      <span>
                         {item!.value}
                       </span>
                     </span>
                   ))}
               </div>
               <p className="mt-2 text-[11px] text-neutral-500">
-                تُعرض المركبات المتاحة للحجز المباشر في هذه الفترة · اضغط «احجز الآن» لإتمام الطلب
+                {t("searchBannerNote")}
               </p>
             </div>
           </div>
@@ -204,7 +206,6 @@ export default async function FleetPage({
       <div className="pt-28">
         <section
           className="border-b border-outline-variant/60 bg-surface-container-low/90 shadow-[0_8px_28px_-8px_rgba(15,61,71,0.12)] backdrop-blur-md"
-          dir="rtl"
         >
           <div className="mx-auto max-w-screen-2xl px-4 py-4 sm:px-6 sm:py-5 lg:px-8">
             
@@ -234,13 +235,13 @@ export default async function FleetPage({
                   categories={categories}
                   brands={brands}
                   priceBounds={priceBounds}
-                  dailyPriceLabel={fleetDailyPriceFilterLabel(priceMode)}
+                  dailyPriceLabel={fleetDailyPriceFilterLabel(priceMode, locale)}
                 />
               </Suspense>
             </div>
           </div>
         </section>
-        <main id="fleet-results" className="mx-auto max-w-screen-2xl scroll-mt-24 px-4 py-12 sm:px-6 sm:py-16 lg:px-8" dir="rtl">
+        <main id="fleet-results" className="mx-auto max-w-screen-2xl scroll-mt-24 px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
           {searchBanner}
 
           {/* رأس قسم النتائج */}
@@ -248,13 +249,12 @@ export default async function FleetPage({
             <div className="mb-8 flex flex-wrap items-end justify-between gap-4 border-b border-neutral-200/70 pb-6">
               <div>
                 <h2 className="text-2xl font-extrabold tracking-tight text-[#003749]">
-                  {availabilityModelIds !== undefined ? "المركبات المتاحة" : "أسطولنا"}
+                  {availabilityModelIds !== undefined ? t("availableVehicles") : t("ourFleet")}
                 </h2>
                 <p className="mt-1 text-sm text-neutral-500">
-                  {cars.length === 1
-                    ? "مركبة واحدة متاحة"
-                    : `${cars.length} مركبات`}
-                  {availabilityModelIds !== undefined ? " للحجز المباشر في الفترة المحددة" : " في الأسطول"}
+                  {availabilityModelIds !== undefined
+                    ? (cars.length === 1 ? t("singleAvailableForBooking") : t("availableForBooking", { count: cars.length }))
+                    : (cars.length === 1 ? t("singleVehicleInFleet") : t("vehiclesInFleet", { count: cars.length }))}
                 </p>
               </div>
               <span className="inline-flex items-center gap-2 rounded-full bg-[#003749]/8 px-4 py-2 text-[13px] font-bold text-[#003749]">
@@ -268,7 +268,7 @@ export default async function FleetPage({
                     <span className="inline-flex h-2.5 w-2.5 rounded-full bg-[#dbb878]" />
                   )}
                 </span>
-                {availabilityModelIds !== undefined ? "متاح للحجز الآن" : "تصفح الأسطول"}
+                {availabilityModelIds !== undefined ? t("availableNow") : t("browseFleet")}
               </span>
             </div>
           ) : null}
@@ -281,9 +281,9 @@ export default async function FleetPage({
                   <path d="M12 12v4M12 12l-2-2M12 12l2-2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                 </svg>
               </div>
-              <p className="text-lg font-extrabold text-[#003749]">لا توجد مركبات متاحة</p>
+              <p className="text-lg font-extrabold text-[#003749]">{t("noAvailableTitle")}</p>
               <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-neutral-500">
-                جرّب تغيير التواريخ أو تصفح الأسطول كاملاً بدون فلترة التوفر.
+                {t("noAvailableSub")}
               </p>
             </div>
           ) : cars.length === 0 ? (
@@ -293,9 +293,9 @@ export default async function FleetPage({
                   <path d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
-              <p className="text-lg font-extrabold text-[#003749]">لا توجد مركبات بهذه الفلاتر</p>
+              <p className="text-lg font-extrabold text-[#003749]">{t("noMatchingTitle")}</p>
               <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-neutral-500">
-                غيّر التصنيف أو الماركة أو نطاق السعر وستُحدَّث النتائج تلقائياً.
+                {t("noMatchingSub")}
               </p>
             </div>
           ) : (
