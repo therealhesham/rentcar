@@ -41,7 +41,7 @@ import {
   resolveBookingRentalPricePerDayExclTax,
 } from "@/lib/booking-pricing-snapshot";
 import { addDaysToYmd } from "@/lib/direct-booking";
-import { StatementActionsDropdown } from "@/app/admin/(dashboard)/bookings/[id]/statement/StatementActionsDropdown";
+import { BookingHeaderGearMenu } from "@/components/admin/BookingHeaderGearMenu";
 import { VehiclePlateHandoverModal } from "@/components/admin/VehiclePlateHandoverModal";
 
 function paymentStatusLabelAr(ps: string, balanceDue?: number): string {
@@ -164,17 +164,7 @@ export function BookingDetailView({ booking, editActions, cancellation }: Props)
     { oneTimeFeesExclTax: oneTimeFeesTotal },
   );
 
-  const headerActions = editActions ?? (
-    <div className="flex items-center gap-2">
-      <Link
-        href={`/admin/bookings/${booking.id}?edit=1`}
-        className="inline-flex items-center gap-1.5 rounded-xl border border-outline-variant/40 bg-surface-container-low px-3.5 py-2 text-xs font-bold text-on-surface hover:bg-surface-container-high transition-colors"
-      >
-        <Settings className="h-3.5 w-3.5 text-on-surface-variant" aria-hidden />
-        تعديل الحجز
-      </Link>
-    </div>
-  );
+
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -193,21 +183,12 @@ export function BookingDetailView({ booking, editActions, cancellation }: Props)
           </span>
         }
         actions={
-          <div className="flex items-center gap-2">
-            {headerActions}
-            {booking.kind === "DIRECT" ? (
-              <>
-                <Link
-                  href={`/admin/bookings/${booking.id}/finance`}
-                  className="inline-flex items-center gap-2 rounded-xl border border-outline-variant/40 bg-white px-4 py-2 text-sm font-extrabold text-[#003749] shadow-xs transition-colors hover:bg-surface-container-low"
-                >
-                  <Receipt className="size-4 text-emerald-600" />
-                  <span>العمليات المالية</span>
-                </Link>
-                <StatementActionsDropdown bookingId={booking.id} printViaNavigation={true} />
-              </>
-            ) : null}
-          </div>
+          <BookingHeaderGearMenu
+            bookingId={booking.id}
+            kind={booking.kind}
+            currentPlateNumber={booking.vehiclePlateNumber}
+            onOpenPlateModal={() => setUpdatePlateModalOpen(true)}
+          />
         }
       />
 
