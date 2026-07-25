@@ -12,8 +12,25 @@ import {
   parseBookingPricingSnapshot,
   resolveBookingRentalPricePerDayExclTax,
 } from "@/lib/booking-pricing-snapshot";
+import { getBookingPaymentTransactions } from "@/lib/payment-transaction";
 
 export const dynamic = "force-dynamic";
+
+/** تسمية عربية ولون لكل نوع حركة في دفتر الحجز. */
+const TXN_KIND_UI: Record<string, { label: string; className: string }> = {
+  INITIAL_PAYMENT: { label: "دفعة أولى", className: "bg-emerald-50 text-emerald-700 ring-emerald-200/60" },
+  BALANCE_PAYMENT: { label: "سداد فرق", className: "bg-teal-50 text-teal-700 ring-teal-200/60" },
+  LATE_PENALTY: { label: "غرامة تأخير", className: "bg-purple-50 text-purple-700 ring-purple-200/60" },
+  REFUND: { label: "استرداد", className: "bg-red-50 text-red-700 ring-red-200/60" },
+  CUSTOMER_SETTLEMENT: { label: "تسوية للعميل", className: "bg-orange-50 text-orange-700 ring-orange-200/60" },
+};
+
+const TXN_ACTOR_LABEL: Record<string, string> = {
+  CUSTOMER: "العميل",
+  ADMIN: "موظف",
+  GATEWAY: "بوابة الدفع",
+  SYSTEM: "النظام",
+};
 
 function paymentStatusLabelAr(ps: string): string {
   const k = ps.trim().toUpperCase();
@@ -68,6 +85,8 @@ export default async function BookingFinancePage({
   });
 
   if (!booking) notFound();
+
+  const ledger = await getBookingPaymentTransactions(id);
 
   const statusKey = booking.paymentStatus.trim().toUpperCase();
   const canPay    = statusKey !== "PAID" && statusKey !== "REFUNDED";
@@ -273,6 +292,81 @@ export default async function BookingFinancePage({
             </div>
           )}
         </aside>
+      </div>
+
+      {/* دفتر الحجز — كل حركة مالية على هذا الحجز كسطر مستقل */}
+      <div className="rounded-2xl border border-outline-variant/30 bg-surface-container-lowest p-5 shadow-sm">
+        <div className="mb-4 flex items-center justify-between gap-2">
+          <h3 className="text-sm font-bold text-on-surface">دفتر الحجز</h3>
+          <span className="text-xs text-on-surface-variant">
+            {ledger.length} حركة
+          </span>
+        </div>
+        {ledger.length === 0 ? (
+          <p className="py-6 text-center text-xs text-on-surface-variant">
+            لا توجد حركات مسجّلة لهذا الحجز بعد.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-right text-sm">
+              <thead>
+                <tr className="border-b border-outline-variant/30 text-[11px] font-black uppercase tracking-wider text-on-surface-variant">
+                  <th className="pb-3">النوع</th>
+                  <th className="pb-3">المبلغ (ر.س)</th>
+                  <th className="pb-3">الوسيلة</th>
+                  <th className="pb-3">المنفّذ</th>
+                  <th className="pb-3">المرجع</th>
+                  <th className="pb-3">التاريخ</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-outline-variant/20">
+                {ledger.map((t) => {
+                  const ui =
+                    TXN_KIND_UI[t.kind] ?? {
+                      label: t.kind,
+                      className: "bg-surface-container text-on-surface-variant ring-outline-variant/30",
+                    };
+                  const isDebit = t.direction === "DEBIT";
+                  const ref = t.externalRef || t.gatewayRef || "—";
+                  const actor = TXN_ACTOR_LABEL[t.actorKind] ?? t.actorKind;
+                  return (
+                    <tr key={t.id}>
+                      <td className="py-3">
+                        <span
+                          className={`inline-block whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-black ring-1 ring-inset ${ui.className}`}
+                        >
+                          {ui.label}
+                        </span>
+                      </td>
+                      <td
+                        className={`py-3 font-extrabold tabular-nums ${isDebit ? "text-error" : "text-emerald-700"}`}
+                        dir="ltr"
+                      >
+                        {isDebit ? "−" : "+"}
+                        {formatSarAmount(t.amountSar)}
+                      </td>
+                      <td className="py-3 text-xs text-on-surface-variant">
+                        {bookingPaymentMethodLabelAr(t.method)}
+                      </td>
+                      <td className="py-3 text-xs">
+                        <span className="font-bold text-on-surface">{actor}</span>
+                        {t.actorName ? (
+                          <div className="text-[11px] text-on-surface-variant">{t.actorName}</div>
+                        ) : null}
+                      </td>
+                      <td className="py-3 text-[11px] text-on-surface-variant" dir="ltr">
+                        {ref}
+                      </td>
+                      <td className="py-3 text-xs text-on-surface-variant">
+                        {t.createdAt.toLocaleString("ar-SA", { timeZone: "Asia/Riyadh" })}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

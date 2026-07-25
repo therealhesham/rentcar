@@ -475,7 +475,8 @@ model BookingRequest {
   lateReturnDecidedBy String? @db.VarChar(128)
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
-  logs          BookingLog[]
+  logs                BookingLog[]
+  paymentTransactions PaymentTransaction[]
 
   @@index([status, createdAt])
   @@index([branchId])
@@ -483,6 +484,44 @@ model BookingRequest {
   @@index([kind, createdAt])
   @@index([carModelId])
   @@index([customerId])
+}
+
+/// عملية مالية مرتبطة بحجز — كل دفعة أو استرداد يُسجَّل هنا بدلاً من الكتابة المباشرة على BookingRequest.
+model PaymentTransaction {
+  id        Int            @id @default(autoincrement())
+  bookingId Int
+  booking   BookingRequest @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+
+  /// نوع العملية: INITIAL_PAYMENT | BALANCE_PAYMENT | LATE_PENALTY | REFUND | CUSTOMER_SETTLEMENT
+  kind      String  @db.VarChar(32)
+  /// PENDING | COMPLETED | FAILED | REVERSED
+  status    String  @default("COMPLETED") @db.VarChar(24)
+  /// اتجاه المبلغ: CREDIT = داخل للشركة | DEBIT = خارج من الشركة
+  direction String  @db.VarChar(8)
+
+  /// المبلغ بالريال — دائماً موجب، الاتجاه يُحدَّد بـ direction
+  amountSar Float
+  /// CASH | CARD | MADA | APPLE_PAY | TABBY | TAMARA | AMKAN | POINTS
+  method    String? @db.VarChar(24)
+
+  /// من نفّذ العملية: CUSTOMER | ADMIN | GATEWAY | SYSTEM
+  actorKind  String  @db.VarChar(16)
+  actorName  String? @db.VarChar(128)
+
+  /// مرجع بوابة الدفع (orderId جيديا)
+  gatewayRef  String? @db.VarChar(128)
+  /// مرجع جلسة الدفع (merchantReferenceId جيديا) — للمصالحة
+  sessionRef  String? @db.VarChar(128)
+  /// مرجع يدوي من الموظف (رقم تحويل / عملية شبكة)
+  externalRef String? @db.VarChar(128)
+
+  notes     String?  @db.VarChar(500)
+  createdAt DateTime @default(now())
+
+  @@index([bookingId, createdAt])
+  @@index([gatewayRef])
+  @@index([sessionRef])
+  @@index([kind, status, createdAt])
 }
 
 /// سجل أحداث الحجز — يُدوَّن تلقائياً عند كل حدث يغيّر حالة الحجز أو بياناته.

@@ -10,6 +10,7 @@ import { currentRequestMeta, logActivity } from "@/lib/activity-log";
 import { isBookingPaymentMethod } from "@/lib/booking-payment-methods";
 import { prisma } from "@/lib/prisma";
 import { logBookingEvent } from "@/lib/booking-audit";
+import { recordPaymentTransaction } from "@/lib/payment-transaction";
 
 /** هامش تقريب للمقارنات المالية (كسور الهللة). */
 const REFUND_EPS = 0.01;
@@ -72,20 +73,42 @@ export async function processBookingRefund(
 
   // قفل تفاؤلي (compare-and-swap): يُحدَّث السجل فقط إذا لم تتغيّر حالة الدفع
   // ولا قيمة الاسترداد منذ القراءة، لمنع الاسترداد المزدوج عند الطلبات المتزامنة.
-  const res = await prisma.bookingRequest.updateMany({
-    where: {
-      id: bookingId,
-      paymentStatus: { not: "REFUNDED" },
-      cancellationRefundAmountSar: booking.cancellationRefundAmountSar,
-    },
-    data: {
-      paymentStatus: fullyRefunded ? "REFUNDED" : "PARTIAL_REFUND",
-      cancellationRefundAmountSar: newRefundTotal,
-      cancellationRefundExternalRef: externalRef || "MOCK-FINANCE-REFUND",
-    },
+  // سطر الاسترداد يُدرَج في الدفتر ذرّياً مع التحديث.
+  // مرجع الموظف اليدوي أولاً؛ وإلا مرجع داخلي متتبّع (لا نستخدم بادئة MOCK لعملية حقيقية).
+  const refundRef = externalRef || `OFFICE-REFUND-${bookingId}-${Date.now()}`;
+  const applied = await prisma.$transaction(async (tx) => {
+    const res = await tx.bookingRequest.updateMany({
+      where: {
+        id: bookingId,
+        paymentStatus: { not: "REFUNDED" },
+        cancellationRefundAmountSar: booking.cancellationRefundAmountSar,
+      },
+      data: {
+        paymentStatus: fullyRefunded ? "REFUNDED" : "PARTIAL_REFUND",
+        cancellationRefundAmountSar: newRefundTotal,
+        cancellationRefundExternalRef: refundRef,
+        // الاسترداد الكامل يُلغي المعاملة: يُصفّى أي رصيد فرعي معلّق حتى لا يظهر
+        // الحجز المسترَدّ كمستحق للشركة. الاسترداد الجزئي يُبقي الرصيد (قد يبقى مديناً).
+        ...(fullyRefunded ? { balanceDueAtBranchSar: null } : {}),
+      },
+    });
+    if (res.count === 0) return false;
+    await recordPaymentTransaction(
+      {
+        bookingId,
+        kind: "REFUND",
+        amountSar: amount,
+        actorKind: "ADMIN",
+        actorName: auth.session.displayName,
+        externalRef: refundRef,
+        notes: fullyRefunded ? "استرداد كامل" : "استرداد جزئي",
+      },
+      tx,
+    );
+    return true;
   });
 
-  if (res.count === 0) {
+  if (!applied) {
     return {
       ok: false,
       error: "تعذّر تنفيذ الاسترداد — تم تحديث حالة الطلب من عملية أخرى. حدّث الصفحة وحاول مجدداً.",
@@ -172,42 +195,75 @@ export async function processBookingPayment(
     const newBalance = Math.max(0, Math.round((balance - amount) * 100) / 100);
 
     // قفل تفاؤلي: يُحدَّث السجل فقط إذا لم يتغيّر المتبقي منذ القراءة،
-    // لمنع تسجيل الدفعة مرتين عند الطلبات المتزامنة.
-    const res = await prisma.bookingRequest.updateMany({
-      where: {
-        id: bookingId,
-        paymentStatus: "PAID",
-        balanceDueAtBranchSar: booking.balanceDueAtBranchSar,
-      },
-      data: {
-        paidAmountSar: newPaidAmount,
-        balanceDueAtBranchSar: newBalance,
-        // لا نُغيّر paymentMethod — وسيلة دفعة الرصيد قد تختلف عن الدفعة الأصلية.
-        ...(externalRef ? { paymentExternalRef: externalRef } : {}),
-        ...(receivedBy ? { paymentReceivedBy: receivedBy } : {}),
-      },
+    // لمنع تسجيل الدفعة مرتين عند الطلبات المتزامنة. سطر الدفعة يُدرَج ذرّياً.
+    const applied = await prisma.$transaction(async (tx) => {
+      const res = await tx.bookingRequest.updateMany({
+        where: {
+          id: bookingId,
+          paymentStatus: "PAID",
+          balanceDueAtBranchSar: booking.balanceDueAtBranchSar,
+        },
+        data: {
+          paidAmountSar: newPaidAmount,
+          balanceDueAtBranchSar: newBalance,
+          // لا نُغيّر paymentMethod — وسيلة دفعة الرصيد قد تختلف عن الدفعة الأصلية.
+          ...(externalRef ? { paymentExternalRef: externalRef } : {}),
+          ...(receivedBy ? { paymentReceivedBy: receivedBy } : {}),
+        },
+      });
+      if (res.count === 0) return false;
+      await recordPaymentTransaction(
+        {
+          bookingId,
+          kind: "BALANCE_PAYMENT",
+          amountSar: amount,
+          method: rawMethod,
+          actorKind: "ADMIN",
+          actorName: receivedBy,
+          externalRef,
+          notes: "سداد فرق تمديد بالفرع",
+        },
+        tx,
+      );
+      return true;
     });
-    if (res.count === 0) {
+    if (!applied) {
       return {
         ok: false,
         error: "تعذّر تسجيل الدفعة — تم تحديث الطلب من عملية أخرى. حدّث الصفحة وحاول مجدداً.",
       };
     }
   } else {
-    // قفل تفاؤلي: طلب واحد فقط يسجّل الدفعة الأولى.
-    const res = await prisma.bookingRequest.updateMany({
-      where: { id: bookingId, paymentStatus: { not: "PAID" } },
-      data: {
-        paymentStatus:    "PAID",
-        paidAmountSar:    amount,
-        paymentMethod:    rawMethod,
-        paidAt:           new Date(),
-        ...(externalRef ? { paymentExternalRef: externalRef } : {}),
-        ...(receivedBy  ? { paymentReceivedBy: receivedBy }             : {}),
-        balanceDueAtBranchSar: 0,
-      },
+    // قفل تفاؤلي: طلب واحد فقط يسجّل الدفعة الأولى. سطر الدفعة يُدرَج ذرّياً.
+    const applied = await prisma.$transaction(async (tx) => {
+      const res = await tx.bookingRequest.updateMany({
+        where: { id: bookingId, paymentStatus: { not: "PAID" } },
+        data: {
+          paymentStatus:    "PAID",
+          paidAmountSar:    amount,
+          paymentMethod:    rawMethod,
+          paidAt:           new Date(),
+          ...(externalRef ? { paymentExternalRef: externalRef } : {}),
+          ...(receivedBy  ? { paymentReceivedBy: receivedBy }             : {}),
+          balanceDueAtBranchSar: 0,
+        },
+      });
+      if (res.count === 0) return false;
+      await recordPaymentTransaction(
+        {
+          bookingId,
+          kind: "INITIAL_PAYMENT",
+          amountSar: amount,
+          method: rawMethod,
+          actorKind: "ADMIN",
+          actorName: receivedBy,
+          externalRef,
+        },
+        tx,
+      );
+      return true;
     });
-    if (res.count === 0) {
+    if (!applied) {
       return {
         ok: false,
         error: "تعذّر تسجيل الدفعة — الحجز مدفوع بالفعل من عملية أخرى. حدّث الصفحة.",

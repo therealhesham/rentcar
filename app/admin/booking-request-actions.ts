@@ -20,6 +20,7 @@ import { createNotification } from "@/lib/notification-service";
 import { computeCheckoutTotals } from "@/lib/booking-checkout-pricing";
 import { parseBookingPricingSnapshot, resolveBookingRentalPricePerDayExclTax } from "@/lib/booking-pricing-snapshot";
 import { logBookingEvent } from "@/lib/booking-audit";
+import { recordPaymentTransaction } from "@/lib/payment-transaction";
 
 export async function convertInquiryToDirect(
   _prev: { ok: boolean; error?: string } | null,
@@ -335,15 +336,29 @@ export async function processAdminQuickPayment(
 
   const { sendBookingInvoiceEmailAfterPayment } = await import("@/lib/booking-invoice-email");
 
-  await prisma.bookingRequest.update({
-    where: { id: bookingRequestId },
-    data: {
-      paymentStatus: "PAID",
-      paymentMethod,
-      paidAt: new Date(),
-      balanceDueAtBranchSar: null,
-      paidAmountSar,
-    },
+  // تحديث الدفع + سطر INITIAL_PAYMENT في الدفتر ذرّياً.
+  await prisma.$transaction(async (tx) => {
+    await tx.bookingRequest.update({
+      where: { id: bookingRequestId },
+      data: {
+        paymentStatus: "PAID",
+        paymentMethod,
+        paidAt: new Date(),
+        balanceDueAtBranchSar: null,
+        paidAmountSar,
+      },
+    });
+    await recordPaymentTransaction(
+      {
+        bookingId: bookingRequestId,
+        kind: "INITIAL_PAYMENT",
+        amountSar: paidAmountSar ?? 0,
+        method: paymentMethod,
+        actorKind: "ADMIN",
+        actorName: auth.session.displayName,
+      },
+      tx,
+    );
   });
 
   try {
@@ -408,14 +423,30 @@ export async function processAdminBalancePayment(
   }
 
   const newPaidAmount = (booking.paidAmountSar ?? 0) + (booking.balanceDueAtBranchSar ?? 0);
+  const balancePaid = booking.balanceDueAtBranchSar ?? 0;
 
-  await prisma.bookingRequest.update({
-    where: { id: bookingRequestId },
-    data: {
-      paidAmountSar: newPaidAmount,
-      balanceDueAtBranchSar: 0,
-      // Optional: we leave paymentStatus as PAID.
-    },
+  // تحديث الرصيد + سطر BALANCE_PAYMENT في الدفتر ذرّياً.
+  await prisma.$transaction(async (tx) => {
+    await tx.bookingRequest.update({
+      where: { id: bookingRequestId },
+      data: {
+        paidAmountSar: newPaidAmount,
+        balanceDueAtBranchSar: 0,
+        // Optional: we leave paymentStatus as PAID.
+      },
+    });
+    await recordPaymentTransaction(
+      {
+        bookingId: bookingRequestId,
+        kind: "BALANCE_PAYMENT",
+        amountSar: balancePaid,
+        method: paymentMethod,
+        actorKind: "ADMIN",
+        actorName: auth.session.displayName,
+        notes: "سداد فرق تمديد بالفرع",
+      },
+      tx,
+    );
   });
 
   await logBookingEvent({

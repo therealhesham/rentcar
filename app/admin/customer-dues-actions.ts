@@ -8,6 +8,7 @@ import {
 import { currentRequestMeta, logActivity } from "@/lib/activity-log";
 import { executeCancellationRefundByPaymentMethod } from "@/lib/booking-refund-executor";
 import { prisma } from "@/lib/prisma";
+import { recordPaymentTransaction } from "@/lib/payment-transaction";
 
 export type SettleCustomerDueResult = { ok: boolean; error?: string };
 
@@ -102,15 +103,31 @@ export async function settleCustomerDue(
   }
 
   // المدفوع الفعلي ينخفض بقيمة المبلغ المُعاد — يحافظ على سقف الاسترداد لاحقاً.
-  await prisma.bookingRequest.update({
-    where: { id: bookingId },
-    data: {
-      refundDueSettledRef: externalRef,
-      paidAmountSar: Math.max(
-        0,
-        Math.round(((booking.paidAmountSar ?? 0) - amount) * 100) / 100,
-      ),
-    },
+  // سطر التسوية يُدرَج في الدفتر ذرّياً مع التحديث النهائي.
+  await prisma.$transaction(async (tx) => {
+    await tx.bookingRequest.update({
+      where: { id: bookingId },
+      data: {
+        refundDueSettledRef: externalRef,
+        paidAmountSar: Math.max(
+          0,
+          Math.round(((booking.paidAmountSar ?? 0) - amount) * 100) / 100,
+        ),
+      },
+    });
+    await recordPaymentTransaction(
+      {
+        bookingId,
+        kind: "CUSTOMER_SETTLEMENT",
+        amountSar: amount,
+        method: settledMethod,
+        actorKind: "ADMIN",
+        actorName: auth.session.displayName,
+        externalRef,
+        notes: settleMode === "CASH" ? "تسوية نقدية بالفرع" : "استرداد إلكتروني",
+      },
+      tx,
+    );
   });
 
   const meta = await currentRequestMeta();

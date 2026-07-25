@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { sendBookingCompletionWhatsAppAfterPayment } from "@/lib/evolution-whatsapp";
 import { computeCheckoutTotals } from "@/lib/booking-checkout-pricing";
 import { parseBookingPricingSnapshot, resolveBookingRentalPricePerDayExclTax } from "@/lib/booking-pricing-snapshot";
+import { recordPaymentTransaction } from "@/lib/payment-transaction";
 
 export async function markBookingAsPaid(_prev: any, formData: FormData) {
   const auth = await requireAdminForAction();
@@ -21,6 +22,7 @@ export async function markBookingAsPaid(_prev: any, formData: FormData) {
         select: {
           status: true,
           kind: true,
+          paymentStatus: true,
           numberOfDays: true,
           addonsJson: true,
           carModel: { select: { price: true, vatRatePercent: true } },
@@ -44,16 +46,35 @@ export async function markBookingAsPaid(_prev: any, formData: FormData) {
         paidAmountSar = totals.totalInclTax;
       }
 
-      await prisma.bookingRequest.update({
-        where: { id: bookingId },
-        data: {
-          paymentStatus: "PAID",
-          paymentMethod: method,
-          paidAt: new Date(),
-          paymentReceivedBy: auth.session.displayName,
-          status: "CONFIRMED",
-          paidAmountSar,
-        },
+      const wasAlreadyPaid =
+        beforeUpdate?.paymentStatus.trim().toUpperCase() === "PAID";
+
+      await prisma.$transaction(async (tx) => {
+        await tx.bookingRequest.update({
+          where: { id: bookingId },
+          data: {
+            paymentStatus: "PAID",
+            paymentMethod: method,
+            paidAt: new Date(),
+            paymentReceivedBy: auth.session.displayName,
+            status: "CONFIRMED",
+            paidAmountSar,
+          },
+        });
+        // لا نُكرّر سطر الدفعة إذا كان الحجز مدفوعاً مسبقاً (إعادة تأكيد فقط).
+        if (!wasAlreadyPaid) {
+          await recordPaymentTransaction(
+            {
+              bookingId,
+              kind: "INITIAL_PAYMENT",
+              amountSar: paidAmountSar ?? 0,
+              method,
+              actorKind: "ADMIN",
+              actorName: auth.session.displayName,
+            },
+            tx,
+          );
+        }
       });
 
       const wasNotConfirmed = beforeUpdate?.status.trim().toUpperCase() !== "CONFIRMED";

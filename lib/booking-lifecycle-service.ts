@@ -16,6 +16,7 @@ import { sendBookingInvoiceEmailAfterPayment } from "@/lib/booking-invoice-email
 import { prisma } from "@/lib/prisma";
 import { computeCheckoutTotals } from "@/lib/booking-checkout-pricing";
 import { parseBookingPricingSnapshot, resolveBookingRentalPricePerDayExclTax } from "@/lib/booking-pricing-snapshot";
+import { recordPaymentTransaction } from "@/lib/payment-transaction";
 
 export type LifecycleActionResult = { ok: true } | { ok: false; error: string };
 
@@ -236,46 +237,100 @@ export async function recordBookingReturnToBranch(
       ? round2(booking.snapshotTotalAmountSar + penaltyInclTax)
       : undefined;
 
-  const updated = await prisma.bookingRequest.updateMany({
-    where: {
-      id: bookingRequestId,
-      kind: "DIRECT",
-      status: BOOKING_STATUS_PICKED_UP,
-    },
-    data: {
-      status: BOOKING_STATUS_RETURNED,
-      vehicleReturnedAt: now,
-      // مدفوع أونلاين + غرامة مطبقة: تبقى الغرامة رصيداً مستحقاً يتابَع من صفحة الاستلامات المتأخرة
-      balanceDueAtBranchSar: !cash && penaltyInclTax > 0 ? penaltyInclTax : null,
-      ...(appliedSnap
-        ? {
-            addonsJson: addonsJsonWithDelaySnap(booking.addonsJson, appliedSnap),
-            ...(newSnapshotTotal !== undefined
-              ? { snapshotTotalAmountSar: newSnapshotTotal }
-              : {}),
-          }
-        : {}),
-      ...(lateInfo
-        ? {
-            lateReturnHours: lateInfo.totalLateHours,
-            lateReturnPenaltyExclTaxSar: applyPenalty ? lateInfo.netPenaltyExclTax : 0,
-            lateReturnPenaltyWaived: waivePenalty,
-            lateReturnDecidedBy: penaltyDue ? (opts?.decidedBy?.trim() || null) : null,
-          }
-        : {}),
-      ...(cash
-        ? {
-            paymentStatus: "PAID",
-            paidAt: now,
-            paidAmountSar: finalPaidAmountSar,
-          }
-        : {
-            // للمدفوع أونلاين: نضيف فرق التمديد إلى المدفوع المسجّل
-            ...(finalPaidAmountSar !== null ? { paidAmountSar: finalPaidAmountSar } : {}),
-          }),
-    },
+  // تحديث الحجز + إدراج سطور الدفتر ذرّياً في transaction واحد.
+  const actorName = opts?.decidedBy?.trim() || null;
+  const applied = await prisma.$transaction(async (tx) => {
+    const updated = await tx.bookingRequest.updateMany({
+      where: {
+        id: bookingRequestId,
+        kind: "DIRECT",
+        status: BOOKING_STATUS_PICKED_UP,
+      },
+      data: {
+        status: BOOKING_STATUS_RETURNED,
+        vehicleReturnedAt: now,
+        // مدفوع أونلاين + غرامة مطبقة: تبقى الغرامة رصيداً مستحقاً يتابَع من صفحة الاستلامات المتأخرة
+        balanceDueAtBranchSar: !cash && penaltyInclTax > 0 ? penaltyInclTax : null,
+        ...(appliedSnap
+          ? {
+              addonsJson: addonsJsonWithDelaySnap(booking.addonsJson, appliedSnap),
+              ...(newSnapshotTotal !== undefined
+                ? { snapshotTotalAmountSar: newSnapshotTotal }
+                : {}),
+            }
+          : {}),
+        ...(lateInfo
+          ? {
+              lateReturnHours: lateInfo.totalLateHours,
+              lateReturnPenaltyExclTaxSar: applyPenalty ? lateInfo.netPenaltyExclTax : 0,
+              lateReturnPenaltyWaived: waivePenalty,
+              lateReturnDecidedBy: penaltyDue ? actorName : null,
+            }
+          : {}),
+        ...(cash
+          ? {
+              paymentStatus: "PAID",
+              paidAt: now,
+              paidAmountSar: finalPaidAmountSar,
+            }
+          : {
+              // للمدفوع أونلاين: نضيف فرق التمديد إلى المدفوع المسجّل
+              ...(finalPaidAmountSar !== null ? { paidAmountSar: finalPaidAmountSar } : {}),
+            }),
+      },
+    });
+    if (updated.count === 0) return false;
+
+    if (cash) {
+      // الكاش يسدّد كل شيء عند الإرجاع: أصل الإيجار سطر INITIAL_PAYMENT،
+      // والغرامة المطبقة (إن وُجدت) سطر LATE_PENALTY مستقل.
+      const basePortion =
+        finalPaidAmountSar !== null ? round2(finalPaidAmountSar - penaltyInclTax) : 0;
+      if (basePortion > 0) {
+        await recordPaymentTransaction(
+          {
+            bookingId: bookingRequestId,
+            kind: "INITIAL_PAYMENT",
+            amountSar: basePortion,
+            method: booking.paymentMethod ?? "CASH",
+            actorKind: "ADMIN",
+            actorName,
+            notes: "تحصيل نقدي عند الإرجاع",
+          },
+          tx,
+        );
+      }
+      if (penaltyInclTax > 0) {
+        await recordPaymentTransaction(
+          {
+            bookingId: bookingRequestId,
+            kind: "LATE_PENALTY",
+            amountSar: penaltyInclTax,
+            method: booking.paymentMethod ?? "CASH",
+            actorKind: "ADMIN",
+            actorName,
+            notes: "غرامة تأخير محصّلة نقداً عند الإرجاع",
+          },
+          tx,
+        );
+      }
+    } else if (finalPaidAmountSar !== null && extraDue > 0) {
+      // مدفوع أونلاين + فرق تمديد حُصِّل عند الإرجاع.
+      await recordPaymentTransaction(
+        {
+          bookingId: bookingRequestId,
+          kind: "BALANCE_PAYMENT",
+          amountSar: extraDue,
+          actorKind: "ADMIN",
+          actorName,
+          notes: "فرق تمديد محصّل عند الإرجاع",
+        },
+        tx,
+      );
+    }
+    return true;
   });
-  if (updated.count === 0) {
+  if (!applied) {
     return { ok: false, error: "تعذّر تسجيل الإرجاع. حدّث الصفحة." };
   }
 
@@ -308,6 +363,10 @@ export async function syncLifecycleFromAdminStatusChange(
     paymentStatus?: string;
     paidAt?: Date;
   } = {};
+
+  // مبالغ محصّلة عند الإرجاع تُدرَج في الدفتر مع التحديث النهائي.
+  let cashCollectedSar: number | null = null;
+  let balanceCollectedSar: number | null = null;
 
   if (next === BOOKING_STATUS_PICKED_UP && prev !== BOOKING_STATUS_PICKED_UP) {
     data.vehiclePickedUpAt = now;
@@ -342,6 +401,8 @@ export async function syncLifecycleFromAdminStatusChange(
         (data as Record<string, unknown>).paidAmountSar = totals.totalInclTax;
         // إزالة المبلغ المستحق عند الفرع بعد التسجيل
         (data as Record<string, unknown>).balanceDueAtBranchSar = null;
+        // كامل الإجمالي حُصِّل نقداً عند الإرجاع.
+        cashCollectedSar = round2(totals.totalInclTax);
       }
     } else {
       // مدفوع مسبقاً (أونلاين/كارد): نضيف فرق التمديد إلى paidAmountSar
@@ -354,6 +415,8 @@ export async function syncLifecycleFromAdminStatusChange(
         (data as Record<string, unknown>).paidAmountSar =
           Math.round((brOnline.paidAmountSar + extraDue) * 100) / 100;
         (data as Record<string, unknown>).balanceDueAtBranchSar = null;
+        // فرق تمديد حُصِّل عند الإرجاع.
+        balanceCollectedSar = round2(extraDue);
       } else if (brOnline?.balanceDueAtBranchSar) {
         (data as Record<string, unknown>).balanceDueAtBranchSar = null;
       }
@@ -361,9 +424,36 @@ export async function syncLifecycleFromAdminStatusChange(
   }
 
   if (Object.keys(data).length > 0) {
-    await prisma.bookingRequest.update({
-      where: { id: bookingRequestId },
-      data,
+    await prisma.$transaction(async (tx) => {
+      await tx.bookingRequest.update({
+        where: { id: bookingRequestId },
+        data,
+      });
+      if (cashCollectedSar != null && cashCollectedSar > 0) {
+        await recordPaymentTransaction(
+          {
+            bookingId: bookingRequestId,
+            kind: "INITIAL_PAYMENT",
+            amountSar: cashCollectedSar,
+            method: paymentMethod ?? "CASH",
+            actorKind: "ADMIN",
+            notes: "تحصيل نقدي عند تغيير الحالة إلى إرجاع",
+          },
+          tx,
+        );
+      }
+      if (balanceCollectedSar != null && balanceCollectedSar > 0) {
+        await recordPaymentTransaction(
+          {
+            bookingId: bookingRequestId,
+            kind: "BALANCE_PAYMENT",
+            amountSar: balanceCollectedSar,
+            actorKind: "ADMIN",
+            notes: "فرق تمديد محصّل عند تغيير الحالة إلى إرجاع",
+          },
+          tx,
+        );
+      }
     });
   }
 

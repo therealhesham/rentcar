@@ -27,6 +27,7 @@ import {
   bookingTotalInclTaxForDays,
 } from "@/lib/booking-edit";
 import { prisma } from "@/lib/prisma";
+import { recordPaymentTransaction } from "@/lib/payment-transaction";
 
 export type ConfirmPaymentResult =
   | { ok: true; paymentMethod: string; underReview?: boolean }
@@ -155,18 +156,35 @@ export async function confirmMockPayment(
       redirect(redirectUrl);
     }
 
-    // بلا بوابة (محاكاة/وسائل غير مربوطة): تُسجَّل دفعة الرصيد مباشرةً بقفل تفاؤلي.
-    const res = await prisma.bookingRequest.updateMany({
-      where: {
-        id,
-        paymentStatus: "PAID",
-        balanceDueAtBranchSar: bookingGate.balanceDueAtBranchSar,
-        ...customerBookingOwnershipWhere(profile.id, profile.phone),
-      },
-      data: {
-        paidAmountSar: (bookingGate.paidAmountSar ?? 0) + balanceDueSar,
-        balanceDueAtBranchSar: null,
-      },
+    // بلا بوابة (محاكاة/وسائل غير مربوطة): تُسجَّل دفعة الرصيد مباشرةً بقفل تفاؤلي
+    // مع سطر BALANCE_PAYMENT في الدفتر ذرّياً.
+    const res = await prisma.$transaction(async (tx) => {
+      const upd = await tx.bookingRequest.updateMany({
+        where: {
+          id,
+          paymentStatus: "PAID",
+          balanceDueAtBranchSar: bookingGate.balanceDueAtBranchSar,
+          ...customerBookingOwnershipWhere(profile.id, profile.phone),
+        },
+        data: {
+          paidAmountSar: (bookingGate.paidAmountSar ?? 0) + balanceDueSar,
+          balanceDueAtBranchSar: null,
+        },
+      });
+      if (upd.count > 0) {
+        await recordPaymentTransaction(
+          {
+            bookingId: id,
+            kind: "BALANCE_PAYMENT",
+            amountSar: balanceDueSar,
+            method: paymentMethod,
+            actorKind: "CUSTOMER",
+            notes: "سداد فرق تمديد أونلاين",
+          },
+          tx,
+        );
+      }
+      return upd;
     });
     if (res.count === 0) {
       return {
@@ -257,39 +275,56 @@ export async function confirmMockPayment(
   }
 
   try {
-    const updated = await prisma.bookingRequest.updateMany({
-      where: {
-        id,
-        kind: "DIRECT",
-        paymentStatus: "PENDING",
-        // ownershipWhere يحمل مفتاح OR الخاص به — نجمع شرط الكاش عبر AND بدل
-        // spread مباشر حتى لا يطغى أحد مفتاحَي OR على الآخر بنفس الاسم.
-        AND: [
-          customerBookingOwnershipWhere(profile.id, profile.phone),
-          // يمنع إعادة معالجة اختيار كاش سابق فقط (متعامل معه صراحة أدناه) —
-          // لا يمنع التحول لكاش بعد محاولة إلكترونية سابقة فشلت (paymentMethod
-          // يبقى مسجَّلاً بوسيلة البطاقة رغم فشل الدفع طالما الحالة لا تزال PENDING).
-          // ملاحظة: `not: "CASH"` وحدها تستبعد الصفوف بقيمة NULL في MySQL
-          // (NULL <> 'CASH' = NULL وليس true) — لازم OR صريح مع null.
-          isCash
-            ? { OR: [{ paymentMethod: null }, { paymentMethod: { not: "CASH" } }] }
-            : {},
-        ],
-      },
-      data: isCash
-        ? {
-            paymentMethod,
-            paymentStatus: "PENDING",
-            paidAt: null,
-            status: BOOKING_STATUS_UNDER_REVIEW,
-          }
-        : {
-            paymentStatus: "PAID",
-            paidAt: new Date(),
-            paymentMethod,
-            paidAmountSar: paidTotalSar,
-            balanceDueAtBranchSar: null,
+    // الدفع الإلكتروني بلا بوابة (محاكاة): يُسجَّل PAID + سطر INITIAL_PAYMENT ذرّياً.
+    // الكاش يبقى PENDING (UNDER_REVIEW) — لا يُحصَّل شيء الآن فلا سطر في الدفتر.
+    const updated = await prisma.$transaction(async (tx) => {
+      const upd = await tx.bookingRequest.updateMany({
+        where: {
+          id,
+          kind: "DIRECT",
+          paymentStatus: "PENDING",
+          // ownershipWhere يحمل مفتاح OR الخاص به — نجمع شرط الكاش عبر AND بدل
+          // spread مباشر حتى لا يطغى أحد مفتاحَي OR على الآخر بنفس الاسم.
+          AND: [
+            customerBookingOwnershipWhere(profile.id, profile.phone),
+            // يمنع إعادة معالجة اختيار كاش سابق فقط (متعامل معه صراحة أدناه) —
+            // لا يمنع التحول لكاش بعد محاولة إلكترونية سابقة فشلت (paymentMethod
+            // يبقى مسجَّلاً بوسيلة البطاقة رغم فشل الدفع طالما الحالة لا تزال PENDING).
+            // ملاحظة: `not: "CASH"` وحدها تستبعد الصفوف بقيمة NULL في MySQL
+            // (NULL <> 'CASH' = NULL وليس true) — لازم OR صريح مع null.
+            isCash
+              ? { OR: [{ paymentMethod: null }, { paymentMethod: { not: "CASH" } }] }
+              : {},
+          ],
+        },
+        data: isCash
+          ? {
+              paymentMethod,
+              paymentStatus: "PENDING",
+              paidAt: null,
+              status: BOOKING_STATUS_UNDER_REVIEW,
+            }
+          : {
+              paymentStatus: "PAID",
+              paidAt: new Date(),
+              paymentMethod,
+              paidAmountSar: paidTotalSar,
+              balanceDueAtBranchSar: null,
+            },
+      });
+      if (upd.count > 0 && !isCash) {
+        await recordPaymentTransaction(
+          {
+            bookingId: id,
+            kind: "INITIAL_PAYMENT",
+            amountSar: paidTotalSar ?? 0,
+            method: paymentMethod,
+            actorKind: "CUSTOMER",
           },
+          tx,
+        );
+      }
+      return upd;
     });
     if (updated.count === 0) {
       const exists = await prisma.bookingRequest.findFirst({

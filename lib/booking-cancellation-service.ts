@@ -23,6 +23,7 @@ import {
   getCustomerCancellationDeductTiers,
 } from "@/lib/site-settings";
 import { customerOwnsBooking } from "@/lib/customer-booking-access";
+import { recordPaymentTransaction } from "@/lib/payment-transaction";
 
 export type CancelBookingWithPolicyResult =
   | {
@@ -200,16 +201,33 @@ export async function cancelBookingWithPolicy(input: {
             "تعذّر تنفيذ الاسترداد عبر بوابة الدفع، ولم يتم إلغاء الحجز. يرجى المحاولة لاحقاً أو التواصل مع الدعم.",
         };
       }
-      await prisma.bookingRequest.update({
-        where: { id: row.id },
-        data: {
-          paymentStatus: paymentStatusAfterCancellationRefund(
-            br.paidTotalInclTax,
-            br.refundInclTax,
-          ),
-          cancellationRefundAmountSar: br.refundInclTax,
-          cancellationRefundExternalRef: exec.externalRef,
-        },
+      // تحديث حالة الاسترداد + سطر REFUND في الدفتر ذرّياً.
+      await prisma.$transaction(async (tx) => {
+        await tx.bookingRequest.update({
+          where: { id: row.id },
+          data: {
+            paymentStatus: paymentStatusAfterCancellationRefund(
+              br.paidTotalInclTax,
+              br.refundInclTax,
+            ),
+            cancellationRefundAmountSar: br.refundInclTax,
+            cancellationRefundExternalRef: exec.externalRef,
+          },
+        });
+        if (br.refundInclTax > 0) {
+          await recordPaymentTransaction(
+            {
+              bookingId: row.id,
+              kind: "REFUND",
+              amountSar: br.refundInclTax,
+              method: row.paymentMethod,
+              actorKind: input.role === "admin" ? "ADMIN" : "CUSTOMER",
+              externalRef: exec.externalRef,
+              notes: "استرداد إلغاء (سياسة الشرائح)",
+            },
+            tx,
+          );
+        }
       });
       refundInclTaxSar = br.refundInclTax;
       paymentMethodOut = row.paymentMethod;
@@ -340,13 +358,29 @@ export async function cancelBookingWithFullRefundByAdmin(input: {
     externalRef = exec.externalRef;
   }
 
-  await prisma.bookingRequest.update({
-    where: { id: row.id },
-    data: {
-      paymentStatus: "REFUNDED",
-      cancellationRefundAmountSar: paidAmount,
-      cancellationRefundExternalRef: externalRef,
-    },
+  // تحديث حالة الاسترداد الكامل + سطر REFUND في الدفتر ذرّياً.
+  await prisma.$transaction(async (tx) => {
+    await tx.bookingRequest.update({
+      where: { id: row.id },
+      data: {
+        paymentStatus: "REFUNDED",
+        cancellationRefundAmountSar: paidAmount,
+        cancellationRefundExternalRef: externalRef,
+      },
+    });
+    await recordPaymentTransaction(
+      {
+        bookingId: row.id,
+        kind: "REFUND",
+        amountSar: paidAmount,
+        method: channel === "CASH" ? "CASH" : row.paymentMethod,
+        actorKind: "ADMIN",
+        actorName: input.actorLabel,
+        externalRef,
+        notes: `إلغاء إداري باسترداد كامل${channel === "CASH" ? " (نقداً)" : ""}`,
+      },
+      tx,
+    );
   });
 
   const meta = await currentRequestMeta();

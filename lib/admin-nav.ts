@@ -61,6 +61,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/admin/financials", label: "الإدارة المالية", icon: "badge-dollar", permission: "FINANCIALS" },
       { href: "/admin/company-dues", label: "مستحقات للشركة", icon: "receipt", permission: "FINANCIALS" },
       { href: "/admin/customer-dues", label: "مستحقات للعميل", icon: "receipt", permission: "FINANCIALS" },
+      { href: "/admin/ledger", label: "دفتر الحركات المالية", icon: "credit-card", permission: "FINANCIALS" },
     ],
   },
   {

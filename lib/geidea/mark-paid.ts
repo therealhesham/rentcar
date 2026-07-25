@@ -1,6 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
+import { recordPaymentTransaction } from "@/lib/payment-transaction";
 import { sendAdminEmailForNewBooking } from "@/lib/booking-received-notification";
 import { sendBookingInvoiceEmailAfterPayment } from "@/lib/booking-invoice-email";
 import { sendBookingCompletionWhatsAppAfterPayment } from "@/lib/evolution-whatsapp";
@@ -43,20 +44,38 @@ export async function markBookingPaidFromGeideaOrder(
   source: "webhook" | "reconcile",
 ): Promise<{ updated: boolean }> {
   const gatewayMethod = bookingMethodFromGeideaBrand(order.paymentBrand);
-  const updated = await prisma.bookingRequest.updateMany({
-    where: { id: bookingId, kind: "DIRECT", paymentStatus: { not: "PAID" } },
-    data: {
-      paymentStatus: "PAID",
-      paidAt: new Date(),
-      paidAmountSar: order.amount,
-      paymentGatewayRef: order.orderId,
-      balanceDueAtBranchSar: null,
-      // وسيلة الدفع الفعلية من البوابة — يعتمد عليها منفّذ الاسترداد
-      ...(gatewayMethod ? { paymentMethod: gatewayMethod } : {}),
-    },
+  // إدراج سطر الدفعة الأولى في دفتر الأستاذ ذرّياً مع تحديث الحجز.
+  const applied = await prisma.$transaction(async (tx) => {
+    const updated = await tx.bookingRequest.updateMany({
+      where: { id: bookingId, kind: "DIRECT", paymentStatus: { not: "PAID" } },
+      data: {
+        paymentStatus: "PAID",
+        paidAt: new Date(),
+        paidAmountSar: order.amount,
+        paymentGatewayRef: order.orderId,
+        balanceDueAtBranchSar: null,
+        // وسيلة الدفع الفعلية من البوابة — يعتمد عليها منفّذ الاسترداد
+        ...(gatewayMethod ? { paymentMethod: gatewayMethod } : {}),
+      },
+    });
+    if (updated.count === 0) return false;
+    await recordPaymentTransaction(
+      {
+        bookingId,
+        kind: "INITIAL_PAYMENT",
+        amountSar: order.amount,
+        method: gatewayMethod,
+        actorKind: "GATEWAY",
+        actorName: `جيديا (${source === "webhook" ? "إشعار" : "مصالحة"})`,
+        gatewayRef: order.orderId,
+        sessionRef: order.merchantReferenceId,
+      },
+      tx,
+    );
+    return true;
   });
 
-  if (updated.count === 0) return { updated: false };
+  if (!applied) return { updated: false };
 
   await logActivity({
     kind: "BOOKING_PAYMENT",
@@ -110,21 +129,39 @@ export async function markBookingBalancePaidFromGeideaOrder(
   if (row.paymentSessionRef !== order.merchantReferenceId) return { updated: false };
 
   const newBalance = Math.max(0, Math.round((balance - order.amount) * 100) / 100);
-  const updated = await prisma.bookingRequest.updateMany({
-    where: {
-      id: bookingId,
-      paymentStatus: "PAID",
-      balanceDueAtBranchSar: row.balanceDueAtBranchSar,
-      paymentSessionRef: order.merchantReferenceId,
-    },
-    data: {
-      paidAmountSar: (row.paidAmountSar ?? 0) + order.amount,
-      balanceDueAtBranchSar: newBalance > 0 ? newBalance : null,
-      // مرجع الدفعة الأصلية يبقى للاسترداد؛ يُملأ فقط إن كان فارغاً (حجوزات قديمة).
-      ...(row.paymentGatewayRef ? {} : { paymentGatewayRef: order.orderId }),
-    },
+  // دفعة الرصيد تُدرَج في الدفتر ذرّياً مع تحديث الرصيد المستحق.
+  const applied = await prisma.$transaction(async (tx) => {
+    const updated = await tx.bookingRequest.updateMany({
+      where: {
+        id: bookingId,
+        paymentStatus: "PAID",
+        balanceDueAtBranchSar: row.balanceDueAtBranchSar,
+        paymentSessionRef: order.merchantReferenceId,
+      },
+      data: {
+        paidAmountSar: (row.paidAmountSar ?? 0) + order.amount,
+        balanceDueAtBranchSar: newBalance > 0 ? newBalance : null,
+        // مرجع الدفعة الأصلية يبقى للاسترداد؛ يُملأ فقط إن كان فارغاً (حجوزات قديمة).
+        ...(row.paymentGatewayRef ? {} : { paymentGatewayRef: order.orderId }),
+      },
+    });
+    if (updated.count === 0) return false;
+    await recordPaymentTransaction(
+      {
+        bookingId,
+        kind: "BALANCE_PAYMENT",
+        amountSar: order.amount,
+        actorKind: "GATEWAY",
+        actorName: `جيديا (${source === "webhook" ? "إشعار" : "مصالحة"})`,
+        gatewayRef: order.orderId,
+        sessionRef: order.merchantReferenceId,
+        notes: "سداد فرق تمديد",
+      },
+      tx,
+    );
+    return true;
   });
-  if (updated.count === 0) return { updated: false };
+  if (!applied) return { updated: false };
 
   await logActivity({
     kind: "BOOKING_PAYMENT",
