@@ -405,13 +405,22 @@ export function VehicleEditForm({ vehicle }: Props) {
             </div>
 
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <Field label="اسم الموديل" className="sm:col-span-2">
+              <Field label="اسم الموديل (عربي)">
                 <input
                   name="modelName"
                   required
                   defaultValue={vehicle.name}
                   className={inputCls}
-                  placeholder="مثال: Camry XSE"
+                  placeholder="مثال: كامري"
+                />
+              </Field>
+              <Field label="اسم الموديل (إنجليزي)" help="يظهر للزائر عند تصفح الموقع باللغة الإنجليزية">
+                <input
+                  name="nameEn"
+                  defaultValue={vehicle.nameEn ?? ""}
+                  className={inputCls}
+                  placeholder="مثال: Camry"
+                  dir="ltr"
                 />
               </Field>
               <Field label="عدد المقاعد">
@@ -554,7 +563,7 @@ export function VehicleEditForm({ vehicle }: Props) {
                 />
               </Field>
               <Field
-                label="شارة البطاقة"
+                label="شارة البطاقة (عربي)"
                 help="تظهر كلصاقة فوق بطاقة السيارة (اختياري)"
               >
                 <input
@@ -562,6 +571,18 @@ export function VehicleEditForm({ vehicle }: Props) {
                   defaultValue={vehicle.badge ?? ""}
                   placeholder="مثال: الأكثر طلباً"
                   className={inputCls}
+                />
+              </Field>
+              <Field
+                label="شارة البطاقة (إنجليزي)"
+                help="Badge text for English site (Optional)"
+              >
+                <input
+                  name="badgeEn"
+                  defaultValue={vehicle.badgeEn ?? ""}
+                  placeholder="e.g. Most Popular"
+                  className={inputCls}
+                  dir="ltr"
                 />
               </Field>
             </div>
