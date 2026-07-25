@@ -918,7 +918,7 @@ export function BookingSearchWidget({
           display: none;
         }
         /* ─── Mobile (<640px): elegant grouped field cards ─── */
-        @media (max-width: 639.98px) {
+        @media (max-width: 1279.98px) {
           .search-pill .field-trigger {
             background-color: #ffffff;
             border: 1px solid #efe7d6;
@@ -953,7 +953,7 @@ export function BookingSearchWidget({
         /* ─── Sixt-style elegant pill (desktop only) ───
            Tabs above keep their cream tone; the search bar itself
            becomes a clean white capsule with hair-line dividers. */
-        @media (min-width: 640px) {
+        @media (min-width: 1280px) {
           .search-pill {
             background: #ffffff;
             border-radius: 9999px;
@@ -1494,10 +1494,10 @@ export function BookingSearchWidget({
             </SubscriptionPackagesInWidget>
           ) : (
             /* ═══ SIXT-STYLE ELEGANT PILL ═══ */
-            <div className="search-pill flex flex-col gap-3 sm:flex-row sm:items-stretch sm:gap-0">
+            <div className="search-pill flex flex-col gap-3 xl:flex-row xl:items-stretch xl:gap-0">
 
               {/* ── 1. موقع الاستلام ── */}
-              <div className="relative sm:flex-[1.8] flex-1 min-w-0">
+              <div className="relative xl:flex-[1.8] flex-1 min-w-0">
                 <div
                   ref={pickupLocRef}
                   role="button"
@@ -1513,7 +1513,7 @@ export function BookingSearchWidget({
                       closeSchedulePopovers();
                     }
                   }}
-                  className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl sm:rounded-none sm:border-0 sm:border-e sm:border-[#ebe4d3] focus:outline-none cursor-pointer"
+                  className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl xl:rounded-none xl:border-0 xl:border-e xl:border-[#ebe4d3] focus:outline-none cursor-pointer"
                 >
                   <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
                     <MapPin className="size-3 text-[#dbb878]" aria-hidden />
@@ -1571,11 +1571,11 @@ export function BookingSearchWidget({
 
               {/* ── 1.5. موقع التوصيل (delivery mode only) ── */}
               {mode === "delivery" && (
-                <div className="relative sm:flex-[1.8] flex-1 min-w-0">
+                <div className="relative xl:flex-[1.8] flex-1 min-w-0">
                   <button
                     type="button"
                     onClick={() => setMapOpen(true)}
-                    className="field-trigger relative flex h-full w-full flex-col justify-center gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 text-start rounded-xl sm:rounded-none sm:border-0 sm:border-e sm:border-[#ebe4d3] focus:outline-none overflow-hidden"
+                    className="field-trigger relative flex h-full w-full flex-col justify-center gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 text-start rounded-xl xl:rounded-none xl:border-0 xl:border-e xl:border-[#ebe4d3] focus:outline-none overflow-hidden"
                   >
                     <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
                       <MapPin className="size-3 shrink-0 text-[#dbb878]" aria-hidden />
@@ -1597,7 +1597,7 @@ export function BookingSearchWidget({
 
               {/* ── 2. موقع الإرجاع (delivery mode only / or return-diff) ── */}
               {returnLocationDifferent && (
-                <div className="relative sm:flex-[1.8] flex-1 min-w-0">
+                <div className="relative xl:flex-[1.8] flex-1 min-w-0">
                   <div
                     ref={returnLocRef}
                     role="button"
@@ -1613,7 +1613,7 @@ export function BookingSearchWidget({
                         closeSchedulePopovers();
                       }
                     }}
-                    className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl sm:rounded-none sm:border-0 sm:border-e sm:border-[#ebe4d3] focus:outline-none cursor-pointer"
+                    className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl xl:rounded-none xl:border-0 xl:border-e xl:border-[#ebe4d3] focus:outline-none cursor-pointer"
                   >
                     <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
                       <MapPin className="size-3 text-[#dbb878]" aria-hidden />
@@ -1666,7 +1666,7 @@ export function BookingSearchWidget({
 
               {/* show "return different" toggle inside the bar */}
               {!returnLocationDifferent && (
-                <div className="flex w-full items-center rounded-2xl border border-[#efe7d6] bg-white px-3 py-1.5 shadow-[0_1px_2px_rgba(0,55,73,0.04),0_6px_16px_-10px_rgba(0,55,73,0.14)] sm:w-auto sm:rounded-none sm:border-0 sm:border-e sm:border-[#ebe4d3] sm:bg-transparent sm:py-0 sm:shadow-none">
+                <div className="flex w-full items-center rounded-2xl border border-[#efe7d6] bg-white px-3 py-1.5 shadow-[0_1px_2px_rgba(0,55,73,0.04),0_6px_16px_-10px_rgba(0,55,73,0.14)] xl:w-auto xl:rounded-none xl:border-0 xl:border-e xl:border-[#ebe4d3] xl:bg-transparent xl:py-0 xl:shadow-none">
                   <label className="flex cursor-pointer items-center gap-2 py-2 text-[11px] font-semibold text-[#6b5a3b] whitespace-nowrap">
                     <input
                       type="checkbox"
@@ -1680,7 +1680,7 @@ export function BookingSearchWidget({
               )}
 
               {/* ── 3+4. التاريخ والوقت — يقترنان في صف واحد على الجوال ── */}
-              <div className="grid grid-cols-2 gap-2.5 sm:contents">
+              <div className="grid grid-cols-2 gap-2.5 xl:contents">
               {/* ── 3. تاريخ الاستلام ── */}
               <div className="relative flex-1 min-w-0">
                 <button
@@ -1700,7 +1700,7 @@ export function BookingSearchWidget({
                     setDropoffTimeOpen(false);
                     setPickupDateOpen((v) => !v);
                   }}
-                  className={`field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl sm:rounded-none sm:border-0 sm:border-e sm:border-[#ebe4d3] focus:outline-none ${rental === "daily" && dateRangeOpen && dateRangeAnchor === "pickup" ? "ring-2 ring-[#dbb878]/40" : ""}`}
+                  className={`field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl xl:rounded-none xl:border-0 xl:border-e xl:border-[#ebe4d3] focus:outline-none ${rental === "daily" && dateRangeOpen && dateRangeAnchor === "pickup" ? "ring-2 ring-[#dbb878]/40" : ""}`}
                 >
                   <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
                     <CalendarClock className="size-3 text-[#dbb878]" aria-hidden />
@@ -1752,7 +1752,7 @@ export function BookingSearchWidget({
                     setPickupLocOpen(false);
                     setReturnLocOpen(false);
                   }}
-                  className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl sm:rounded-none sm:border-0 sm:border-e sm:border-[#ebe4d3] focus:outline-none"
+                  className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl xl:rounded-none xl:border-0 xl:border-e xl:border-[#ebe4d3] focus:outline-none"
                 >
                   <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
                     <Clock className="size-3 text-[#dbb878]" aria-hidden />
@@ -1792,7 +1792,7 @@ export function BookingSearchWidget({
               </div>
 
               {/* ── 5+6. التاريخ والوقت — يقترنان في صف واحد على الجوال ── */}
-              <div className="grid grid-cols-2 gap-2.5 sm:contents">
+              <div className="grid grid-cols-2 gap-2.5 xl:contents">
               {/* ── 5. تاريخ التسليم ── */}
               <div className="relative flex-1 min-w-0">
                 <button
@@ -1805,7 +1805,7 @@ export function BookingSearchWidget({
                     if (rental !== "daily") return;
                     toggleDateRange("dropoff");
                   }}
-                  className={`field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl sm:rounded-none sm:border-0 sm:border-e sm:border-[#ebe4d3] focus:outline-none disabled:opacity-60 ${rental === "daily" && dateRangeOpen && dateRangeAnchor === "dropoff" ? "ring-2 ring-[#dbb878]/40" : ""}`}
+                  className={`field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl xl:rounded-none xl:border-0 xl:border-e xl:border-[#ebe4d3] focus:outline-none disabled:opacity-60 ${rental === "daily" && dateRangeOpen && dateRangeAnchor === "dropoff" ? "ring-2 ring-[#dbb878]/40" : ""}`}
                 >
                   <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
                     <CalendarRange className="size-3 text-[#dbb878]" aria-hidden />
@@ -1865,7 +1865,7 @@ export function BookingSearchWidget({
                     setPickupLocOpen(false);
                     setReturnLocOpen(false);
                   }}
-                  className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl sm:rounded-none sm:border-0 sm:border-e sm:border-[#ebe4d3] focus:outline-none disabled:opacity-60"
+                  className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl xl:rounded-none xl:border-0 xl:border-e xl:border-[#ebe4d3] focus:outline-none disabled:opacity-60"
                 >
                   <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
                     <Clock className="size-3 text-[#dbb878]" aria-hidden />
@@ -1898,7 +1898,7 @@ export function BookingSearchWidget({
                 <button
                   type="submit"
                   disabled={dateCities.length === 0}
-                  className="cta-btn group relative mt-1 flex min-h-[52px] w-full items-center justify-center gap-2 overflow-hidden rounded-2xl px-5 py-4 text-white disabled:pointer-events-none disabled:opacity-45 sm:mt-0 sm:min-h-0 sm:rounded-none sm:rounded-l-full sm:px-9 sm:py-4 sm:text-[15px]"
+                  className="cta-btn group relative mt-1 flex min-h-[52px] w-full items-center justify-center gap-2 overflow-hidden rounded-2xl px-5 py-4 text-white disabled:pointer-events-none disabled:opacity-45 xl:mt-0 xl:min-h-0 xl:rounded-none xl:rounded-l-full xl:px-9 xl:py-4 xl:text-[15px]"
                   style={{ background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)` }}
                 >
                   <span
