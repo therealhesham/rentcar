@@ -145,12 +145,16 @@ export async function updateBookingRequest(
     return { ok: false, error: "لا يمكن تسليم السيارة للعميل قبل الموعد المحدد للحجز." };
   }
 
+  const vehiclePlateNumberRaw = formData.get("vehiclePlateNumber");
+  const vehiclePlateNumber = vehiclePlateNumberRaw !== null ? String(vehiclePlateNumberRaw).trim() : undefined;
+
   const result = await updateBookingRequestByAdmin(bookingRequestId, {
     ...parsed.data,
     status,
     inquiryCarTypeSlug: inquirySlug || null,
     directCarModelId:
       Number.isInteger(directModelId) && directModelId > 0 ? directModelId : null,
+    vehiclePlateNumber,
   });
 
   if (!result.ok) {

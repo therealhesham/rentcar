@@ -399,6 +399,20 @@ export function EditBookingModalInner({
                 </span>
               </label>
 
+              <label className="sm:col-span-2 block text-sm font-bold text-on-surface">
+                رقم لوحة السيارة المسلّمة (اختياري)
+                <input
+                  name="vehiclePlateNumber"
+                  type="text"
+                  defaultValue={request.vehiclePlateNumber ?? ""}
+                  placeholder="مثال: أ ب ج 1234 أو 1234 ABC"
+                  className="mt-1 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm font-bold text-[#003749] outline-none focus:ring-2 focus:ring-primary"
+                />
+                <span className="mt-1 block text-xs text-on-surface-variant">
+                  يمكنك تحديد أو تعديل رقم اللوحة المرتبطة بهذه السيارة.
+                </span>
+              </label>
+
               {request.status.trim().toUpperCase() === "CANCELLED" &&
               (request.cancelledAt != null ||
                 (request.cancellationDeductedDays != null && request.cancellationDeductedDays > 0) ||

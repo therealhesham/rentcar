@@ -91,6 +91,8 @@ export function VehiclePlateHandoverModal({
     });
   }
 
+  if (!isOpen) return null;
+
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
       <div className="relative w-full max-w-md rounded-3xl border border-outline-variant/30 bg-white p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-150" dir="rtl">

@@ -261,6 +261,7 @@ export default async function AdminDashboardPage(props: {
     cancellationRefundAmountSar: request.cancellationRefundAmountSar ?? null,
     cancellationRefundExternalRef: request.cancellationRefundExternalRef ?? null,
     balanceDueAtBranchSar: request.balanceDueAtBranchSar ?? null,
+    vehiclePlateNumber: request.vehiclePlateNumber ?? null,
     pickupBranchName: request.pickupBranch?.name ?? null,
     returnBranchName: request.returnBranch?.name ?? null,
     createdAtLabel: new Date(request.createdAt).toLocaleString("ar-SA"),

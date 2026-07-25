@@ -41,6 +41,7 @@ export type DashboardBookingRow = {
   cancellationRefundAmountSar: number | null;
   cancellationRefundExternalRef: string | null;
   balanceDueAtBranchSar: number | null;
+  vehiclePlateNumber?: string | null;
   pickupBranchName: string | null;
   returnBranchName: string | null;
   createdAtLabel: string;
@@ -89,6 +90,7 @@ function editRequestPayload(request: DashboardBookingRow) {
     cancellationRefundAmountSar: request.cancellationRefundAmountSar,
     cancellationRefundExternalRef: request.cancellationRefundExternalRef,
     balanceDueAtBranchSar: request.balanceDueAtBranchSar,
+    vehiclePlateNumber: request.vehiclePlateNumber,
   };
 }
 
