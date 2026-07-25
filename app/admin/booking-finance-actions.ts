@@ -11,6 +11,11 @@ import { isBookingPaymentMethod } from "@/lib/booking-payment-methods";
 import { prisma } from "@/lib/prisma";
 import { logBookingEvent } from "@/lib/booking-audit";
 import { recordPaymentTransaction } from "@/lib/payment-transaction";
+import { computeCheckoutTotals } from "@/lib/booking-checkout-pricing";
+import {
+  parseBookingPricingSnapshot,
+  resolveBookingRentalPricePerDayExclTax,
+} from "@/lib/booking-pricing-snapshot";
 
 /** هامش تقريب للمقارنات المالية (كسور الهللة). */
 const REFUND_EPS = 0.01;
@@ -172,13 +177,45 @@ export async function processBookingPayment(
 
   const booking = await prisma.bookingRequest.findUnique({
     where: { id: bookingId },
-    select: { paymentStatus: true, kind: true, balanceDueAtBranchSar: true, paidAmountSar: true },
+    select: {
+      paymentStatus: true,
+      kind: true,
+      balanceDueAtBranchSar: true,
+      paidAmountSar: true,
+      snapshotTotalAmountSar: true,
+      addonsJson: true,
+      numberOfDays: true,
+      carModel: { select: { price: true, vatRatePercent: true } },
+    },
   });
 
   if (!booking) return { ok: false, error: "الطلب غير موجود." };
   if (booking.kind !== "DIRECT") {
     return { ok: false, error: "تسجيل الدفع متاح للحجوزات المباشرة فقط." };
   }
+
+  let totalAmountSar = booking.snapshotTotalAmountSar ?? 0;
+  if (!totalAmountSar || totalAmountSar <= 0) {
+    const { addons, interCityShipping, checkoutOneTimeFees, delayPenalty } =
+      parseBookingPricingSnapshot(booking.addonsJson);
+    const effectiveRentalPrice = booking.carModel
+      ? resolveBookingRentalPricePerDayExclTax(booking.carModel.price, booking.addonsJson)
+      : 0;
+    const oneTimeFeesExclTax =
+      (interCityShipping?.feeExclVatSar ?? 0) +
+      checkoutOneTimeFees.reduce((s, x) => s + x.feeExclVatSar, 0) +
+      (delayPenalty?.feeExclVatSar ?? 0);
+    const vatRate = booking.carModel?.vatRatePercent ?? 15;
+    const totals = computeCheckoutTotals(
+      effectiveRentalPrice,
+      booking.numberOfDays,
+      vatRate,
+      addons.map((a) => ({ pricePerDay: a.pricePerDayExclTax })),
+      { oneTimeFeesExclTax },
+    );
+    totalAmountSar = totals.totalInclTax;
+  }
+
   if (booking.paymentStatus === "PAID") {
     const balance = booking.balanceDueAtBranchSar ?? 0;
     if (balance <= 0) {
@@ -221,7 +258,7 @@ export async function processBookingPayment(
           actorKind: "ADMIN",
           actorName: receivedBy,
           externalRef,
-          notes: "سداد فرق تمديد بالفرع",
+          notes: "سداد فرق تمديد أو دفعة متبقية بالفرع",
         },
         tx,
       );
@@ -234,6 +271,8 @@ export async function processBookingPayment(
       };
     }
   } else {
+    const initialBalanceDue = Math.max(0, Math.round((totalAmountSar - amount) * 100) / 100);
+
     // قفل تفاؤلي: طلب واحد فقط يسجّل الدفعة الأولى. سطر الدفعة يُدرَج ذرّياً.
     const applied = await prisma.$transaction(async (tx) => {
       const res = await tx.bookingRequest.updateMany({
@@ -245,7 +284,7 @@ export async function processBookingPayment(
           paidAt:           new Date(),
           ...(externalRef ? { paymentExternalRef: externalRef } : {}),
           ...(receivedBy  ? { paymentReceivedBy: receivedBy }             : {}),
-          balanceDueAtBranchSar: 0,
+          balanceDueAtBranchSar: initialBalanceDue,
         },
       });
       if (res.count === 0) return false;
