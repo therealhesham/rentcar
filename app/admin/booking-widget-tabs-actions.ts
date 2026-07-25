@@ -28,6 +28,7 @@ export async function updateBookingWidgetTabs(
     rentalCorporate: readCheckbox(formData, "rentalCorporate"),
     modePickup: readCheckbox(formData, "modePickup"),
     modeDelivery: readCheckbox(formData, "modeDelivery"),
+    allowHolidayBooking: readCheckbox(formData, "allowHolidayBooking"),
   };
 
   const anyRental =

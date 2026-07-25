@@ -10,6 +10,8 @@ export type BookingWidgetTabFlags = {
   rentalCorporate: boolean;
   modePickup: boolean;
   modeDelivery: boolean;
+  /** السماح بالحجز في أيام إجازات الفروع (الافتراضي: false = عدم السماح، أي تعطيل الأيام في التقويم) */
+  allowHolidayBooking: boolean;
 };
 
 export const DEFAULT_BOOKING_WIDGET_TAB_FLAGS: BookingWidgetTabFlags = {
@@ -20,6 +22,7 @@ export const DEFAULT_BOOKING_WIDGET_TAB_FLAGS: BookingWidgetTabFlags = {
   rentalCorporate: true,
   modePickup: true,
   modeDelivery: true,
+  allowHolidayBooking: false,
 };
 
 function asBool(v: unknown, fallback: boolean): boolean {
@@ -43,6 +46,10 @@ export function normalizeBookingWidgetTabFlags(raw: unknown): BookingWidgetTabFl
     rentalCorporate: asBool(o.rentalCorporate, DEFAULT_BOOKING_WIDGET_TAB_FLAGS.rentalCorporate),
     modePickup: asBool(o.modePickup, DEFAULT_BOOKING_WIDGET_TAB_FLAGS.modePickup),
     modeDelivery: asBool(o.modeDelivery, DEFAULT_BOOKING_WIDGET_TAB_FLAGS.modeDelivery),
+    allowHolidayBooking: asBool(
+      o.allowHolidayBooking,
+      DEFAULT_BOOKING_WIDGET_TAB_FLAGS.allowHolidayBooking,
+    ),
   };
 
   const anyRental =

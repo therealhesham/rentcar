@@ -744,7 +744,7 @@ export function BookingSearchWidget({
       }
     }
 
-    if (mode === "pickup" && pickupBranchEffective) {
+    if (!tabFlagsEff.allowHolidayBooking && mode === "pickup" && pickupBranchEffective) {
       const sch = lookupBranchOpeningSchedule(dateCities, pickupBranchEffective);
       if (!isDateTimeWithinBranchSchedule(pickupDate, sch)) {
         setBranchHoursNotice({
@@ -755,7 +755,7 @@ export function BookingSearchWidget({
         return;
       }
     }
-    if (returnBranchEffective) {
+    if (!tabFlagsEff.allowHolidayBooking && returnBranchEffective) {
       const schR = lookupBranchOpeningSchedule(dateCities, returnBranchEffective);
       if (!isDateTimeWithinBranchSchedule(dropoffDate, schR)) {
         setBranchHoursNotice({
@@ -1227,6 +1227,8 @@ export function BookingSearchWidget({
                   onClose={() => setDateRangeOpen(false)}
                   startDateDdMmYy={pickupDateDraft}
                   endDateDdMmYy={dropoffDateDraft}
+                  schedule={pickupTimeBranchSchedule}
+                  allowHolidayBooking={tabFlagsEff.allowHolidayBooking}
                   onStartChange={applyPickupDateOnly}
                   onRangeChange={(start, end) => {
                     applyDateRange(start, end);
@@ -1720,6 +1722,8 @@ export function BookingSearchWidget({
                     onClose={() => setPickupDateOpen(false)}
                     label={t("pickupDate")}
                     dateDdMmYy={pickupDateDraft}
+                    schedule={pickupTimeBranchSchedule}
+                    allowHolidayBooking={tabFlagsEff.allowHolidayBooking}
                     onConfirm={(dateDdMmYy) => {
                       applyPickupDateFromDraft(dateDdMmYy);
                       setPickupDateOpen(false);
@@ -1827,6 +1831,8 @@ export function BookingSearchWidget({
                     onClose={() => setDateRangeOpen(false)}
                     startDateDdMmYy={pickupDateDraft}
                     endDateDdMmYy={dropoffDateDraft}
+                    schedule={pickupTimeBranchSchedule}
+                    allowHolidayBooking={tabFlagsEff.allowHolidayBooking}
                     onStartChange={applyPickupDateOnly}
                     onRangeChange={(start, end) => {
                       applyDateRange(start, end);

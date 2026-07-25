@@ -7,6 +7,11 @@ import { Calendar, X, ChevronRight, ChevronLeft } from "lucide-react";
 import { useAnchoredPopoverPosition } from "@/lib/use-anchored-popover-position";
 import { formatYmdAsDdMmYy, parseDdMmYyToYmd } from "@/lib/booking-search-shared";
 
+import {
+  isBranchClosedOnDate,
+  type BranchOpeningHoursSchedule,
+} from "@/lib/branch-opening-hours";
+
 type Props = {
   isOpen: boolean;
   onClose: () => void;
@@ -15,6 +20,8 @@ type Props = {
   minDateYmd?: string;
   onConfirm: (dateDdMmYy: string) => void;
   anchorRef: React.RefObject<HTMLElement | null>;
+  schedule?: BranchOpeningHoursSchedule | null;
+  allowHolidayBooking?: boolean;
 };
 
 const MONTHS_AR = [
@@ -43,6 +50,8 @@ export function DatePickerPopover({
   minDateYmd,
   onConfirm,
   anchorRef,
+  schedule = null,
+  allowHolidayBooking = false,
 }: Props) {
   const t = useTranslations("Common");
   const panelRef = useRef<HTMLDivElement>(null);
@@ -100,7 +109,8 @@ export function DatePickerPopover({
     const effMin = minDateYmd || todayYmd();
     for (let d = 1; d <= daysInMonth; d++) {
       const ymd = `${calYear}-${String(calMonth + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-      cells.push({ ymd, day: d, currMonth: true, disabled: ymd < effMin });
+      const isClosedHoliday = !allowHolidayBooking && isBranchClosedOnDate(ymd, schedule);
+      cells.push({ ymd, day: d, currMonth: true, disabled: ymd < effMin || isClosedHoliday });
     }
     let nextDay = 1;
     while (cells.length < 42) {

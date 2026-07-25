@@ -123,3 +123,37 @@ export function isDateTimeWithinBranchSchedule(
   const minutes = riyadhMinutesSinceMidnight(at);
   return dayRowAllows(row, minutes).ok;
 }
+
+/**
+ * هل اليوم المحدد (YYYY-MM-DD أو Date) هو يوم إجازة (مغلق) بالكامل في جدول الفرع؟
+ * schedule = null → ليس مغلقاً.
+ */
+export function isBranchClosedOnDate(
+  dateOrYmd: string | Date,
+  schedule: BranchOpeningHoursSchedule | null | undefined,
+): boolean {
+  if (!schedule || !scheduleHasAnyRule(schedule)) return false;
+  let dt: Date;
+  if (typeof dateOrYmd === "string") {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateOrYmd.trim())) return false;
+    const [y, m, d] = dateOrYmd.trim().split("-").map(Number);
+    dt = new Date(y, m - 1, d);
+  } else {
+    dt = dateOrYmd;
+  }
+  if (Number.isNaN(dt.getTime())) return false;
+
+  const weekdayStr = String(riyadhJsWeekday(dt));
+  const row = schedule.days[weekdayStr];
+  if (!row || row.closed === true) return true;
+
+  const o = row.open?.trim();
+  const c = row.close?.trim();
+  if (!o || !c) return true;
+  const openM = parseHmToMinutes(o);
+  const closeM = parseHmToMinutes(c);
+  if (openM == null || closeM == null || openM >= closeM) return true;
+
+  return false;
+}
+

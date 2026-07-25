@@ -80,6 +80,28 @@ export function BookingWidgetTabsForm({ flags }: Props) {
         </ul>
       </fieldset>
 
+      <fieldset className="space-y-3">
+        <legend className="text-base font-extrabold text-on-surface">إجازات ومواعيد الفروع (تقويم الحجز)</legend>
+        <p className="text-sm text-on-surface-variant">
+          التحكم في إمكانية اختيار أيام إجازات/عطلات الفروع في تقويم الكاليندر أثناء الحجز.
+        </p>
+        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-outline-variant/40 bg-surface-container-lowest px-4 py-3 hover:border-outline-variant">
+          <input
+            type="checkbox"
+            name="allowHolidayBooking"
+            defaultChecked={flags.allowHolidayBooking}
+            className="mt-0.5 size-4 accent-primary"
+          />
+          <span>
+            <span className="block font-bold text-on-surface">السماح بالحجز في الإجازات؟</span>
+            <span className="mt-0.5 block text-xs text-on-surface-variant">
+              عند ترك هذا الخيار <strong>غير مفعّل (الافتراضي)</strong>: تظهر أيام إجازات الفرع المحددة في جدول العمل بشكل <strong>جاف (معطّلة وغير قابلة للاختيار)</strong> في تقويم الحجز.
+              عند تفعيله: يتم السماح للعميل باختيار أي تاريخ في الكاليندر حتى لو كان يوم إجازة للفرع.
+            </span>
+          </span>
+        </label>
+      </fieldset>
+
       {state?.error ? (
         <p className="rounded-lg bg-error-container/30 px-3 py-2 text-sm font-bold text-error">{state.error}</p>
       ) : null}

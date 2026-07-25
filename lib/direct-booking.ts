@@ -1021,9 +1021,15 @@ export async function assertBranchesAndPickupHoursForDirectBooking(
     if (!pickupRow) {
       return { ok: false, error: "فرع الاستلام غير متاح أو غير مفعّل." };
     }
-    const pickupSch = parseBranchOpeningHoursJson(pickupRow.openingHoursJson);
-    if (!isDateTimeWithinBranchSchedule(common.pickupDate, pickupSch)) {
-      return { ok: false, error: formatBranchOutsideHoursError(pickupRow.name) };
+
+    // فحص الجدول الزمني للفرع — يُتخطَّى إذا كان الأدمن قد سمح بالحجز في الإجازات
+    const { getBookingWidgetTabFlags } = await import("@/lib/site-settings");
+    const tabFlags = await getBookingWidgetTabFlags();
+    if (!tabFlags.allowHolidayBooking) {
+      const pickupSch = parseBranchOpeningHoursJson(pickupRow.openingHoursJson);
+      if (!isDateTimeWithinBranchSchedule(common.pickupDate, pickupSch)) {
+        return { ok: false, error: formatBranchOutsideHoursError(pickupRow.name) };
+      }
     }
   }
 

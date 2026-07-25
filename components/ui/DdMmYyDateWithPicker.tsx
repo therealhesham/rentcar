@@ -13,6 +13,11 @@ import {
 import { createPortal } from "react-dom";
 import { OVERLAY_BACKDROP_Z, OVERLAY_PANEL_Z } from "@/lib/overlay-z-index";
 
+import {
+  isBranchClosedOnDate,
+  type BranchOpeningHoursSchedule,
+} from "@/lib/branch-opening-hours";
+
 export type DdMmYyDateWithPickerProps = {
   id: string;
   value: string;
@@ -31,6 +36,8 @@ export type DdMmYyDateWithPickerProps = {
   buttonClassName?: string;
   rowClassName?: string;
   calendarButtonLabel?: string;
+  schedule?: BranchOpeningHoursSchedule | null;
+  allowHolidayBooking?: boolean;
 };
 
 const AR_LOCALE_GREGORY = "ar-SA-u-ca-gregory";
@@ -239,6 +246,8 @@ export function DdMmYyDateWithPicker({
   buttonClassName = "",
   rowClassName = "",
   calendarButtonLabel = "فتح التقويم",
+  schedule = null,
+  allowHolidayBooking = false,
 }: DdMmYyDateWithPickerProps) {
   const uid = useId();
   const anchorRef = useRef<HTMLDivElement>(null);
@@ -424,7 +433,8 @@ export function DdMmYyDateWithPicker({
               return <div key={`e-${i}`} className="h-6" />;
             }
             const ymd = toYmd(vy, vm, d);
-            const disabledDay = !ymdInRange(ymd, minYmd, maxYmd);
+            const isClosedHoliday = !allowHolidayBooking && isBranchClosedOnDate(ymd, schedule);
+            const disabledDay = !ymdInRange(ymd, minYmd, maxYmd) || isClosedHoliday;
             const selected = nativeYmd === ymd;
             const isToday = ymd === todayYmd;
             return (

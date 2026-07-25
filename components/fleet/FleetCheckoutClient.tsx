@@ -694,7 +694,7 @@ export function FleetCheckoutClient({
         ? "DELIVERY"
         : "BRANCH";
 
-    if (pickupMode === "BRANCH" && trip.pickupIso) {
+    if (pickupMode === "BRANCH" && trip.pickupIso && !tabFlags?.allowHolidayBooking) {
       const sch = lookupBranchOpeningSchedule(bookingCities, trip.pickupBranchSlugForHours);
       if (!isDateTimeWithinBranchSchedule(new Date(trip.pickupIso), sch)) {
         setBranchHoursMessage(
@@ -704,7 +704,7 @@ export function FleetCheckoutClient({
         return;
       }
     }
-    if (trip.dropoffIso && trip.branchSlug) {
+    if (trip.dropoffIso && trip.branchSlug && !tabFlags?.allowHolidayBooking) {
       const schR = lookupBranchOpeningSchedule(bookingCities, trip.branchSlug);
       if (!isDateTimeWithinBranchSchedule(new Date(trip.dropoffIso), schR)) {
         setBranchHoursMessage(
