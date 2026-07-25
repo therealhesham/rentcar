@@ -3,16 +3,21 @@
 import { useState, useTransition } from "react";
 import { Check, X, Key, CornerDownLeft, Loader2, AlertCircle } from "lucide-react";
 import { quickUpdateBookingStatus } from "@/app/admin/booking-request-actions";
+import { recordReturnToBranchAction } from "@/app/admin/booking-lifecycle-actions";
+import { VehiclePlateHandoverModal } from "@/components/admin/VehiclePlateHandoverModal";
 
 type Props = {
   bookingId: number;
   status: string;
   kind: "INQUIRY" | "DIRECT";
   carModelId: number | null;
+  currentPlateNumber?: string | null;
 };
 
-export function BookingListQuickActions({ bookingId, status, kind, carModelId }: Props) {
+export function BookingListQuickActions({ bookingId, status, kind, carModelId, currentPlateNumber }: Props) {
   const [isPending, startTransition] = useTransition();
+  const [handoverModalOpen, setHandoverModalOpen] = useState(false);
+
   const [modalConfig, setModalConfig] = useState<{
     open: boolean;
     type: "confirm" | "error";
@@ -23,12 +28,20 @@ export function BookingListQuickActions({ bookingId, status, kind, carModelId }:
 
   const handleAction = (newStatus: string) => {
     startTransition(async () => {
-      const result = await quickUpdateBookingStatus(bookingId, newStatus);
+      let result;
+      if (newStatus === "RETURNED") {
+        const formData = new FormData();
+        formData.append("bookingRequestId", String(bookingId));
+        result = await recordReturnToBranchAction(null, formData);
+      } else {
+        result = await quickUpdateBookingStatus(bookingId, newStatus);
+      }
+
       if (!result.ok) {
         setModalConfig({
           open: true,
           type: "error",
-          message: result.error || "حدث خطأ أثناء تحديث الحالة",
+          message: "error" in result && typeof result.error === "string" ? result.error : "حدث خطأ أثناء تحديث الحالة",
         });
       }
     });
@@ -87,15 +100,11 @@ export function BookingListQuickActions({ bookingId, status, kind, carModelId }:
           {s === "CONFIRMED" && (
             <button
               type="button"
-              onClick={() =>
-                confirmAction("هل تم تسليم السيارة للعميل بالفعل؟", () =>
-                  handleAction("PICKED_UP"), "تسليم السيارة"
-                )
-              }
-              className="inline-flex items-center gap-1 rounded-lg bg-sky-100 px-2 py-1.5 text-[11px] font-bold text-sky-800 transition-colors hover:bg-sky-200"
+              onClick={() => setHandoverModalOpen(true)}
+              className="inline-flex items-center gap-1 rounded-lg bg-sky-100 px-2.5 py-1.5 text-[11px] font-bold text-sky-800 transition-colors hover:bg-sky-200"
             >
               <Key className="size-3.5 shrink-0" aria-hidden />
-              تم تسليم السيارة
+              تسليم السيارة للعميل
             </button>
           )}
 
@@ -104,18 +113,29 @@ export function BookingListQuickActions({ bookingId, status, kind, carModelId }:
               type="button"
               onClick={() =>
                 confirmAction("هل تم استلام السيارة من العميل وإنهاء الحجز؟", () =>
-                  handleAction("RETURNED"), "إنهاء الحجز"
+                  handleAction("RETURNED"), "إرجاع واستلام السيارة"
                 )
               }
-              className="inline-flex items-center gap-1 rounded-lg bg-violet-100 px-2 py-1.5 text-[11px] font-bold text-violet-800 transition-colors hover:bg-violet-200"
+              className="inline-flex items-center gap-1 rounded-lg bg-violet-100 px-2.5 py-1.5 text-[11px] font-bold text-violet-800 transition-colors hover:bg-violet-200"
             >
               <CornerDownLeft className="size-3.5 shrink-0" aria-hidden />
-              استلام السيارة من العميل
+              تسليم إلى الفرع (إرجاع)
             </button>
           )}
         </div>
       )}
 
+      {/* ─── Handover Modal Popup ──────────────────────────────────────── */}
+      <VehiclePlateHandoverModal
+        isOpen={handoverModalOpen}
+        onClose={() => setHandoverModalOpen(false)}
+        bookingId={bookingId}
+        carModelId={carModelId}
+        mode="HANDOVER"
+        currentPlateNumber={currentPlateNumber}
+      />
+
+      {/* ─── Generic Confirm / Error Modal ────────────────────────────── */}
       {modalConfig.open && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <button
@@ -123,7 +143,7 @@ export function BookingListQuickActions({ bookingId, status, kind, carModelId }:
             className="absolute inset-0 bg-inverse-surface/40 backdrop-blur-sm cursor-default"
             onClick={() => setModalConfig({ ...modalConfig, open: false })}
           />
-          <div className="relative z-10 w-full max-w-sm rounded-2xl border border-outline-variant/40 bg-surface-container-lowest p-5 editorial-shadow animate-in fade-in zoom-in-95 duration-200">
+          <div className="relative z-10 w-full max-w-sm rounded-2xl border border-outline-variant/40 bg-surface-container-lowest p-5 editorial-shadow animate-in fade-in zoom-in-95 duration-200" dir="rtl">
             {modalConfig.type === "error" ? (
               <>
                 <div className="flex items-start gap-3">

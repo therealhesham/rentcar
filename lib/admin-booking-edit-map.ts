@@ -41,5 +41,6 @@ export function toEditableBookingRow(booking: AdminBookingDetail): EditableBooki
     cancellationDeductedDays: booking.cancellationDeductedDays,
     cancellationRefundAmountSar: booking.cancellationRefundAmountSar,
     cancellationRefundExternalRef: booking.cancellationRefundExternalRef,
+    vehiclePlateNumber: booking.vehiclePlateNumber,
   };
 }

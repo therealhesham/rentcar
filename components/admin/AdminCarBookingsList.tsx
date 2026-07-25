@@ -32,6 +32,7 @@ export type CarBookingRow = {
   kind: "INQUIRY" | "DIRECT";
   carModelId: number | null;
   paymentStatus: string | null;
+  vehiclePlateNumber?: string | null;
 };
 
 export type CarBookingDayGroup = {
@@ -240,7 +241,14 @@ export function AdminCarBookingsList({ groups }: Props) {
                         {row.phone}
                       </span>
                     </td>
-                    <td className="px-4 py-3 align-top font-medium text-on-surface">{row.carLabel}</td>
+                    <td className="px-4 py-3 align-top font-medium text-on-surface">
+                      <div>{row.carLabel}</div>
+                      {row.vehiclePlateNumber ? (
+                        <span className="mt-1 inline-flex items-center gap-1 rounded-md border border-[#003749]/15 bg-[#fffdf8] px-2 py-0.5 text-[11px] font-black text-[#003749]" dir="ltr">
+                          لوحة: {row.vehiclePlateNumber}
+                        </span>
+                      ) : null}
+                    </td>
                     <td className="px-4 py-3 align-top">
                       <span className="block tabular-nums text-on-surface" dir="ltr">
                         {row.startYmd} → {row.endYmd}

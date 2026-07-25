@@ -76,9 +76,16 @@ function StatTile({
   );
 }
 
-export default async function AdminCarBookingsPage() {
+export default async function AdminCarBookingsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ q?: string; plate?: string }>;
+}) {
   const session = await requireAdminPage();
   const initialSettings = await getCarBookingsNotificationSettings();
+  const params = (await searchParams) ?? {};
+  const searchQ = (params.q || params.plate || "").trim().toLowerCase();
+
   const rows = await prisma.bookingRequest.findMany({
     where: bookingBranchWhere(session, {
       kind: "DIRECT",
@@ -86,6 +93,15 @@ export default async function AdminCarBookingsPage() {
       status: { notIn: [...NON_BLOCKING_BOOKING_STATUSES] },
       // الحجوزات الفائتة (لم تُستلم ومرّ موعدها) تخرج من النشطة إلى صفحة الفائتة.
       NOT: missedPickupCondition(),
+      ...(searchQ
+        ? {
+            OR: [
+              { vehiclePlateNumber: { contains: searchQ } },
+              { fullName: { contains: searchQ } },
+              { phone: { contains: searchQ } },
+            ],
+          }
+        : {}),
     }),
     include: {
       carModel: { include: { brand: true, category: true } },
@@ -121,6 +137,7 @@ export default async function AdminCarBookingsPage() {
       kind: b.kind as "INQUIRY" | "DIRECT",
       carModelId: b.carModelId,
       paymentStatus: b.paymentStatus ?? null,
+      vehiclePlateNumber: b.vehiclePlateNumber ?? null,
     };
     const list = groupsMap.get(startYmd) ?? [];
     list.push(row);

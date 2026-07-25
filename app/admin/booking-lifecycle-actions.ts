@@ -11,6 +11,7 @@ import {
   type LateReturnInfo,
 } from "@/lib/booking-lifecycle-service";
 import { logBookingEvent } from "@/lib/booking-audit";
+import { prisma } from "@/lib/prisma";
 
 export async function recordPickupFromBranchAction(
   _prev: { ok: boolean; error?: string } | null,
@@ -27,7 +28,14 @@ export async function recordPickupFromBranchAction(
   const scope = await assertBookingRequestInScope(auth.session, bookingRequestId);
   if (!scope.ok) return { ok: false, error: scope.error };
 
-  const result = await recordBookingPickupFromBranch(bookingRequestId);
+  const vehicleUnitIdRaw = formData.get("vehicleUnitId");
+  const vehicleUnitId = vehicleUnitIdRaw ? Number(vehicleUnitIdRaw) : undefined;
+  const vehiclePlateNumber = String(formData.get("vehiclePlateNumber") ?? "").trim() || undefined;
+
+  const result = await recordBookingPickupFromBranch(bookingRequestId, {
+    vehicleUnitId: Number.isInteger(vehicleUnitId) && (vehicleUnitId ?? 0) > 0 ? vehicleUnitId : undefined,
+    vehiclePlateNumber,
+  });
   if (!result.ok) return result;
 
   await logBookingEvent({
@@ -36,6 +44,7 @@ export async function recordPickupFromBranchAction(
     actorKind: "ADMIN",
     actorName: auth.session.displayName,
     toStatus: "PICKED_UP",
+    notes: vehiclePlateNumber ? `تم ربط السيارة ذات اللوحة: ${vehiclePlateNumber}` : undefined,
   });
 
   revalidatePath("/admin");
@@ -98,5 +107,57 @@ export async function recordReturnToBranchAction(
   revalidatePath(`/admin/bookings/${bookingRequestId}`);
   revalidatePath(`/fleet/payment/${bookingRequestId}`);
   revalidatePath("/account");
+  return { ok: true };
+}
+
+export async function updateBookingVehiclePlateAction(
+  bookingRequestId: number,
+  vehicleUnitId?: number | null,
+  vehiclePlateNumber?: string | null,
+): Promise<{ ok: boolean; error?: string }> {
+  const auth = await requireAdminForAction();
+  if (!auth.ok) return { ok: false, error: auth.error };
+
+  const scope = await assertBookingRequestInScope(auth.session, bookingRequestId);
+  if (!scope.ok) return { ok: false, error: scope.error };
+
+  let finalUnitId = vehicleUnitId ?? null;
+  let finalPlateNumber = vehiclePlateNumber?.trim() || null;
+
+  if (finalUnitId && !finalPlateNumber) {
+    const unit = await prisma.vehicleUnit.findUnique({ where: { id: finalUnitId } });
+    if (unit) finalPlateNumber = unit.plateNumber;
+  } else if (!finalUnitId && finalPlateNumber) {
+    const unit = await prisma.vehicleUnit.findUnique({ where: { plateNumber: finalPlateNumber } });
+    if (unit) finalUnitId = unit.id;
+  }
+
+  await prisma.bookingRequest.update({
+    where: { id: bookingRequestId },
+    data: {
+      vehicleUnitId: finalUnitId,
+      vehiclePlateNumber: finalPlateNumber,
+    },
+  });
+
+  if (finalUnitId) {
+    await prisma.vehicleUnit.update({
+      where: { id: finalUnitId },
+      data: { status: "RENTED" },
+    });
+  }
+
+  await logBookingEvent({
+    bookingId: bookingRequestId,
+    event: "BOOKING_UPDATED",
+    actorKind: "ADMIN",
+    actorName: auth.session.displayName,
+    notes: finalPlateNumber ? `تم تحديث لوحة السيارة إلى: ${finalPlateNumber}` : "تم إزالة ربط رقم اللوحة",
+  });
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/car-bookings");
+  revalidatePath(`/admin/bookings/${bookingRequestId}`);
+
   return { ok: true };
 }

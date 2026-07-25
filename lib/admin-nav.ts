@@ -99,6 +99,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     collapsible: true,
     items: [
       { href: "/admin/vehicles", label: "المركبات", icon: "car", permission: "FLEET" },
+      { href: "/admin/vehicle-units", label: "لوحات السيارات", icon: "car", permission: "FLEET" },
       { href: "/admin/fleet-visibility", label: "إتاحة السيارات", icon: "sliders", permission: "FLEET" },
       { href: "/admin/categories", label: "فئات الأسطول", icon: "tags", permission: "FLEET" },
       { href: "/admin/brands", label: "البراندات", icon: "tags", permission: "FLEET" },

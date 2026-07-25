@@ -19,6 +19,8 @@ import { AdminBalancePaymentModalInner } from "./AdminBalancePaymentModal";
 import { EditBookingModalInner, type EditableBookingRow } from "./EditBookingRequestForm";
 import { quickUpdateBookingStatus } from "@/app/admin/booking-request-actions";
 
+import { VehiclePlateHandoverModal } from "./VehiclePlateHandoverModal";
+
 type CategoryOption = { slug: string; title: string };
 type BookableModelOption = { id: number; label: string };
 
@@ -35,6 +37,8 @@ export function BookingRowActionsDropdown({ request, paymentStatus, categories, 
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [balancePaymentModalOpen, setBalancePaymentModalOpen] = useState(false);
+  const [handoverModalOpen, setHandoverModalOpen] = useState(false);
+  const [updatePlateModalOpen, setUpdatePlateModalOpen] = useState(false);
 
   const [isPending, startTransition] = useTransition();
   const [modalConfig, setModalConfig] = useState<{
@@ -189,17 +193,24 @@ export function BookingRowActionsDropdown({ request, paymentStatus, categories, 
                     <div className="my-1 h-px bg-outline-variant/20 mx-2" />
                     <button
                       type="button"
-                      onClick={() =>
-                        confirmAction("هل تم تسليم السيارة للعميل بالفعل؟", () =>
-                          handleAction("PICKED_UP"), "تسليم السيارة"
-                        )
-                      }
+                      onClick={() => setHandoverModalOpen(true)}
                       className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-start text-xs font-bold text-sky-800 hover:bg-sky-100 transition-colors"
                     >
                       <Key className="size-3.5 text-sky-600" />
-                      تم تسليم السيارة
+                      تسليم السيارة للعميل
                     </button>
                   </>
+                )}
+
+                {(status === "CONFIRMED" || status === "PICKED_UP" || status === "RETURNED") && (
+                  <button
+                    type="button"
+                    onClick={() => setUpdatePlateModalOpen(true)}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-start text-xs font-bold text-[#003749] hover:bg-surface-container-low transition-colors"
+                  >
+                    <Key className="size-3.5 text-[#dbb878]" />
+                    {request.vehiclePlateNumber ? `تعديل اللوحة (${request.vehiclePlateNumber})` : "ربط رقم اللوحة"}
+                  </button>
                 )}
 
                 {status === "PICKED_UP" && (
@@ -319,6 +330,26 @@ export function BookingRowActionsDropdown({ request, paymentStatus, categories, 
           </div>
         </div>
       )}
+
+      {/* ─── Handover Modal Popup ──────────────────────────────────────── */}
+      <VehiclePlateHandoverModal
+        isOpen={handoverModalOpen}
+        onClose={() => setHandoverModalOpen(false)}
+        bookingId={request.id}
+        carModelId={request.carModelId}
+        mode="HANDOVER"
+        currentPlateNumber={request.vehiclePlateNumber}
+      />
+
+      {/* ─── Update Plate Modal Popup ──────────────────────────────────── */}
+      <VehiclePlateHandoverModal
+        isOpen={updatePlateModalOpen}
+        onClose={() => setUpdatePlateModalOpen(false)}
+        bookingId={request.id}
+        carModelId={request.carModelId}
+        mode="UPDATE_ONLY"
+        currentPlateNumber={request.vehiclePlateNumber}
+      />
     </>
   );
 }

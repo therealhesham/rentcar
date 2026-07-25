@@ -1594,6 +1594,7 @@ export type AdminBookingUpdateInput = DirectBookingCommon & {
   status: string;
   inquiryCarTypeSlug: string | null;
   directCarModelId: number | null;
+  vehiclePlateNumber?: string | null;
 };
 
 export async function updateBookingRequestByAdmin(
@@ -1684,6 +1685,7 @@ export async function updateBookingRequestByAdmin(
     numberOfDays: days,
     termsAccepted: input.termsAccepted,
     status: statusTrim,
+    ...(input.vehiclePlateNumber !== undefined ? { vehiclePlateNumber: input.vehiclePlateNumber?.trim() || null } : {}),
   };
 
   if (booking.kind === "INQUIRY") {

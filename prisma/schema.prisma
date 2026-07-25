@@ -163,6 +163,7 @@ model Branch {
   pickupBookings  BookingRequest[] @relation("BookingPickupBranch")
   returnBookings  BookingRequest[] @relation("BookingReturnBranch")
   rentalDiscounts RentalDiscount[]
+  vehicleUnits    VehicleUnit[]
 
   @@index([cityId])
   @@index([sortOrder])
@@ -266,6 +267,7 @@ model CarModel {
   bookingRequests    BookingRequest[]
   subscriptionPlans  SubscriptionPlan[]
   rentalDiscounts    RentalDiscount[]
+  vehicleUnits       VehicleUnit[]
 
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
@@ -298,6 +300,36 @@ model Fleet {
   @@index([branchId])
   @@index([modelId])
   @@index([isVisible, displayOrder])
+}
+
+/// وحدة سيارة فعلية ذات رقم لوحة محدد في الأسطول.
+model VehicleUnit {
+  id               Int      @id @default(autoincrement())
+  /// رقم اللوحة (مثل: أ ب ج 1234)
+  plateNumber      String   @unique @db.VarChar(64)
+  /// رقم الهيكل (اختياري)
+  chassisNumber    String?  @db.VarChar(64)
+  /// لون المركبة
+  color            String?  @db.VarChar(64)
+
+  carModelId       Int
+  carModel         CarModel @relation(fields: [carModelId], references: [id], onDelete: Cascade)
+
+  branchId         Int?
+  branch           Branch?  @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  /// حالة السيارة: AVAILABLE | RENTED | MAINTENANCE | INACTIVE
+  status           String   @default("AVAILABLE") @db.VarChar(24)
+  notes            String?  @db.Text
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  bookingRequests  BookingRequest[]
+
+  @@index([carModelId])
+  @@index([branchId])
+  @@index([status])
 }
 
 /// إضافات اختيارية للتأجير (يومية، غير شامل الضريبة) — تُعرض في صفحة إتمام الحجز.
@@ -474,6 +506,12 @@ model BookingRequest {
   lateReturnPenaltyWaived Boolean @default(false)
   /// الموظف الذي قرر تطبيق/إعفاء غرامة الإرجاع المتأخر.
   lateReturnDecidedBy String? @db.VarChar(128)
+  /// الوحدة الفعلية المسلّمة للعميل (اختياري)
+  vehicleUnitId       Int?
+  vehicleUnit         VehicleUnit? @relation(fields: [vehicleUnitId], references: [id], onDelete: SetNull)
+  /// رقم لوحة السيارة المسلّمة للعميل (مثل: أ ب ج 1234)
+  vehiclePlateNumber  String?      @db.VarChar(64)
+
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
   logs                BookingLog[]
@@ -485,6 +523,8 @@ model BookingRequest {
   @@index([kind, createdAt])
   @@index([carModelId])
   @@index([customerId])
+  @@index([vehicleUnitId])
+  @@index([vehiclePlateNumber])
 }
 
 /// عملية مالية مرتبطة بحجز — كل دفعة أو استرداد يُسجَّل هنا بدلاً من الكتابة المباشرة على BookingRequest.

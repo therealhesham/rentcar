@@ -116,6 +116,8 @@ async function loadDirectBooking(bookingRequestId: number) {
       paidAmountSar: true,
       balanceDueAtBranchSar: true,
       snapshotTotalAmountSar: true,
+      vehicleUnitId: true,
+      vehiclePlateNumber: true,
       carModel: {
         select: { price: true, vatRatePercent: true },
       },
@@ -123,9 +125,10 @@ async function loadDirectBooking(bookingRequestId: number) {
   });
 }
 
-/** تسجيل استلام السيارة من الفرع — الحالة PICKED_UP. */
+/** تسجيل استلام السيارة من الفرع — الحالة PICKED_UP مع ربط رقم اللوحة اختيراياً. */
 export async function recordBookingPickupFromBranch(
   bookingRequestId: number,
+  opts?: { vehicleUnitId?: number | null; vehiclePlateNumber?: string | null },
 ): Promise<LifecycleActionResult> {
   const booking = await loadDirectBooking(bookingRequestId);
   if (!booking) return { ok: false, error: "الطلب غير موجود." };
@@ -138,17 +141,42 @@ export async function recordBookingPickupFromBranch(
     return { ok: false, error: "لا يمكن استلام السيارة قبل الموعد المحدد للحجز." };
   }
 
-  const updated = await prisma.bookingRequest.updateMany({
-    where: {
-      id: bookingRequestId,
-      kind: "DIRECT",
-      status: { notIn: [BOOKING_STATUS_PICKED_UP, BOOKING_STATUS_RETURNED] },
-    },
-    data: {
-      status: BOOKING_STATUS_PICKED_UP,
-      vehiclePickedUpAt: now,
-    },
+  let finalUnitId: number | null = opts?.vehicleUnitId ?? null;
+  let finalPlateNumber: string | null = opts?.vehiclePlateNumber?.trim() || null;
+
+  if (finalUnitId && !finalPlateNumber) {
+    const unit = await prisma.vehicleUnit.findUnique({ where: { id: finalUnitId } });
+    if (unit) finalPlateNumber = unit.plateNumber;
+  } else if (!finalUnitId && finalPlateNumber) {
+    const unit = await prisma.vehicleUnit.findUnique({ where: { plateNumber: finalPlateNumber } });
+    if (unit) finalUnitId = unit.id;
+  }
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const res = await tx.bookingRequest.updateMany({
+      where: {
+        id: bookingRequestId,
+        kind: "DIRECT",
+        status: { notIn: [BOOKING_STATUS_PICKED_UP, BOOKING_STATUS_RETURNED] },
+      },
+      data: {
+        status: BOOKING_STATUS_PICKED_UP,
+        vehiclePickedUpAt: now,
+        ...(finalUnitId != null ? { vehicleUnitId: finalUnitId } : {}),
+        ...(finalPlateNumber != null ? { vehiclePlateNumber: finalPlateNumber } : {}),
+      },
+    });
+
+    if (res.count > 0 && finalUnitId) {
+      await tx.vehicleUnit.update({
+        where: { id: finalUnitId },
+        data: { status: "RENTED" },
+      });
+    }
+
+    return res;
   });
+
   if (updated.count === 0) {
     return { ok: false, error: "تعذّر تسجيل الاستلام. حدّث الصفحة." };
   }
@@ -280,6 +308,13 @@ export async function recordBookingReturnToBranch(
       },
     });
     if (updated.count === 0) return false;
+
+    if (booking.vehicleUnitId) {
+      await tx.vehicleUnit.update({
+        where: { id: booking.vehicleUnitId },
+        data: { status: "AVAILABLE" },
+      });
+    }
 
     if (cash) {
       // الكاش يسدّد كل شيء عند الإرجاع: أصل الإيجار سطر INITIAL_PAYMENT،

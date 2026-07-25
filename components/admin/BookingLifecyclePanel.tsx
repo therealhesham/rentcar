@@ -1,9 +1,8 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { AlarmClock, CarFront, CheckCircle2, RotateCcw } from "lucide-react";
+import { AlarmClock, CarFront, RotateCcw, Key, CheckCircle2 } from "lucide-react";
 import {
-  recordPickupFromBranchAction,
   recordReturnToBranchAction,
   type ReturnToBranchActionResult,
 } from "@/app/admin/booking-lifecycle-actions";
@@ -14,6 +13,7 @@ import {
   isBookingReturned,
 } from "@/lib/booking-lifecycle";
 import { bookingStatusLabelAr } from "@/lib/booking-display-labels";
+import { VehiclePlateHandoverModal } from "@/components/admin/VehiclePlateHandoverModal";
 
 function fmtSarNum(n: number): string {
   return n.toLocaleString("en-US", {
@@ -36,6 +36,8 @@ type Props = {
   paymentMethod: string | null;
   vehiclePickedUpAt: Date | null;
   vehicleReturnedAt: Date | null;
+  carModelId?: number | null;
+  currentPlateNumber?: string | null;
 };
 
 function fmtWhen(d: Date | null): string | null {
@@ -58,20 +60,23 @@ export function BookingLifecyclePanel({
   paymentMethod,
   vehiclePickedUpAt,
   vehicleReturnedAt,
+  carModelId = null,
+  currentPlateNumber = null,
 }: Props) {
-  const [pickupState, pickupAction, pickupPending] = useActionState(
-    recordPickupFromBranchAction,
-    null,
-  );
   const [returnState, returnAction, returnPending] = useActionState(
     recordReturnToBranchAction,
     null,
   );
+
+  const [handoverModalOpen, setHandoverModalOpen] = useState(false);
+  const [updatePlateModalOpen, setUpdatePlateModalOpen] = useState(false);
+
   // إخفاء مودال قرار الغرامة عند «إلغاء» — يُعاد الفتح تلقائياً مع نتيجة جديدة
   const [dismissedLateState, setDismissedLateState] = useState<object | null>(null);
   useEffect(() => {
     setDismissedLateState(null);
   }, [returnState]);
+
   const showLateModal =
     needsLateDecision(returnState) && dismissedLateState !== returnState;
 
@@ -93,21 +98,32 @@ export function BookingLifecyclePanel({
       <ol className="space-y-2 text-sm">
         <li
           className={[
-            "flex items-start gap-2 rounded-xl border px-3 py-2.5",
+            "flex items-start justify-between gap-2 rounded-xl border px-3 py-2.5",
             pickedUp || returned
               ? "border-emerald-200/80 bg-emerald-50/80 text-emerald-950"
               : "border-outline-variant/25 bg-surface-container-low/50 text-on-surface-variant",
           ].join(" ")}
         >
-          <CarFront className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-          <div>
-            <p className="font-bold">استلام السيارة من الفرع</p>
-            {pickupAt ? (
-              <p className="mt-0.5 text-xs opacity-90">{pickupAt}</p>
-            ) : (
-              <p className="mt-0.5 text-xs">لم يُسجَّل بعد</p>
-            )}
+          <div className="flex items-start gap-2">
+            <CarFront className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            <div>
+              <p className="font-bold">استلام السيارة من الفرع</p>
+              {pickupAt ? (
+                <p className="mt-0.5 text-xs opacity-90">{pickupAt}</p>
+              ) : (
+                <p className="mt-0.5 text-xs">لم يُسجَّل بعد</p>
+              )}
+            </div>
           </div>
+          {(pickedUp || returned || showPickup) && (
+            <button
+              type="button"
+              onClick={() => setUpdatePlateModalOpen(true)}
+              className="text-xs font-bold text-primary hover:underline self-center"
+            >
+              {currentPlateNumber ? `تعديل اللوحة (${currentPlateNumber})` : "ربط رقم اللوحة ⚙️"}
+            </button>
+          )}
         </li>
         <li
           className={[
@@ -135,23 +151,14 @@ export function BookingLifecyclePanel({
       </p>
 
       {showPickup ? (
-        <form action={pickupAction}>
-          <input type="hidden" name="bookingRequestId" value={bookingRequestId} />
-          <button
-            type="submit"
-            disabled={pickupPending}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-on-primary transition-opacity hover:opacity-95 disabled:opacity-60"
-          >
-            <CheckCircle2 className="h-4 w-4" aria-hidden />
-            {pickupPending ? "جاري التسجيل…" : "تسجيل استلام السيارة من الفرع"}
-          </button>
-          {pickupState && !pickupState.ok ? (
-            <p className="mt-2 text-xs font-bold text-red-700">{pickupState.error}</p>
-          ) : null}
-          {pickupState?.ok ? (
-            <p className="mt-2 text-xs font-bold text-emerald-800">تم تسجيل الاستلام.</p>
-          ) : null}
-        </form>
+        <button
+          type="button"
+          onClick={() => setHandoverModalOpen(true)}
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-on-primary transition-opacity hover:opacity-95"
+        >
+          <CheckCircle2 className="h-4 w-4" aria-hidden />
+          تسجيل تسليم السيارة للعميل (فتح مودال اللوحة)
+        </button>
       ) : null}
 
       {showReturn ? (
@@ -266,6 +273,26 @@ export function BookingLifecyclePanel({
           ) : null}
         </form>
       ) : null}
+
+      {/* ─── Handover Modal Popup ──────────────────────────────────────── */}
+      <VehiclePlateHandoverModal
+        isOpen={handoverModalOpen}
+        onClose={() => setHandoverModalOpen(false)}
+        bookingId={bookingRequestId}
+        carModelId={carModelId}
+        mode="HANDOVER"
+        currentPlateNumber={currentPlateNumber}
+      />
+
+      {/* ─── Update Plate Modal Popup ──────────────────────────────────── */}
+      <VehiclePlateHandoverModal
+        isOpen={updatePlateModalOpen}
+        onClose={() => setUpdatePlateModalOpen(false)}
+        bookingId={bookingRequestId}
+        carModelId={carModelId}
+        mode="UPDATE_ONLY"
+        currentPlateNumber={currentPlateNumber}
+      />
     </div>
   );
 }

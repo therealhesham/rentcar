@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeftRight,
@@ -13,6 +16,10 @@ import {
   Receipt,
   Settings,
   User,
+  Hash,
+  Clock,
+  Pencil,
+  Key,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { AdminKindBadge, AdminStatusBadge } from "@/components/admin/AdminStatusBadge";
@@ -35,6 +42,7 @@ import {
 } from "@/lib/booking-pricing-snapshot";
 import { addDaysToYmd } from "@/lib/direct-booking";
 import { StatementActionsDropdown } from "@/app/admin/(dashboard)/bookings/[id]/statement/StatementActionsDropdown";
+import { VehiclePlateHandoverModal } from "@/components/admin/VehiclePlateHandoverModal";
 
 function paymentStatusLabelAr(ps: string, balanceDue?: number): string {
   const k = ps.trim().toUpperCase();
@@ -54,16 +62,23 @@ function paymentStatusStyles(ps: string, balanceDue?: number): string {
   return "bg-amber-50 text-amber-950 ring-amber-200/60";
 }
 
-function formatPickupDateTime(d: Date): string {
-  return d.toLocaleString("ar-SA", {
-    weekday: "short",
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Asia/Riyadh",
-  });
+function formatFullDateTimeAr(dateVal: Date | string | null | undefined): string {
+  if (!dateVal) return "—";
+  try {
+    const d = new Date(dateVal);
+    return d.toLocaleString("ar-SA", {
+      weekday: "short",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+      timeZone: "Asia/Riyadh",
+    });
+  } catch {
+    return String(dateVal);
+  }
 }
 
 function DetailRow({
@@ -91,7 +106,6 @@ function DetailRow({
   );
 }
 
-
 type Props = {
   booking: AdminBookingDetail;
   editActions?: ReactNode;
@@ -99,10 +113,15 @@ type Props = {
 };
 
 export function BookingDetailView({ booking, editActions, cancellation }: Props) {
+  const [updatePlateModalOpen, setUpdatePlateModalOpen] = useState(false);
   const kycAttachments = resolveBookingKycForDisplay(booking, booking.customer);
 
   const pickupYmd = booking.pickupDate.toISOString().slice(0, 10);
   const returnYmd = addDaysToYmd(pickupYmd, booking.numberOfDays);
+  const pickupDateTimeAr = formatFullDateTimeAr(booking.pickupDate);
+  const scheduledReturnDateObj = new Date(new Date(booking.pickupDate).getTime() + booking.numberOfDays * 24 * 60 * 60 * 1000);
+  const scheduledReturnDateTimeAr = formatFullDateTimeAr(scheduledReturnDateObj);
+
   const carLabel = booking.carModel
     ? `${booking.carModel.brand.name} ${booking.carModel.name}`
     : booking.carType;
@@ -133,50 +152,33 @@ export function BookingDetailView({ booking, editActions, cancellation }: Props)
   const effectiveRentalPrice = booking.carModel
     ? resolveBookingRentalPricePerDayExclTax(booking.carModel.price, booking.addonsJson)
     : 0;
-  const shipFee = interCityShipping?.feeExclVatSar ?? 0;
-  const checkoutFeesSum = checkoutOneTimeFees.reduce((s, x) => s + x.feeExclVatSar, 0);
-  const delayFee = delayPenalty?.feeExclVatSar ?? 0;
-  const vatRate = booking.carModel?.vatRatePercent ?? 15;
+  const oneTimeFeesTotal =
+    (interCityShipping?.feeExclVatSar ?? 0) +
+    checkoutOneTimeFees.reduce((acc, f) => acc + f.feeExclVatSar, 0);
+
   const amountTotals = computeCheckoutTotals(
     effectiveRentalPrice,
     booking.numberOfDays,
-    vatRate,
+    booking.carModel?.vatRatePercent ?? 15,
     addons.map((a) => ({ pricePerDay: a.pricePerDayExclTax })),
-    { oneTimeFeesExclTax: shipFee + checkoutFeesSum + delayFee },
+    { oneTimeFeesExclTax: oneTimeFeesTotal },
   );
 
-  const headerActions = (
-    <div className="flex flex-wrap items-center gap-2">
-      {booking.kind === "DIRECT" ? (
-        <Link
-          href={`/admin/bookings/${booking.id}/finance`}
-          className="inline-flex items-center gap-2 rounded-xl border border-outline-variant/30 bg-white px-4 py-2.5 text-sm font-bold text-on-surface shadow-sm transition-colors hover:bg-surface-container-low"
-        >
-          <Receipt className="h-4 w-4 text-emerald-700" aria-hidden />
-          العمليات المالية
-        </Link>
-      ) : null}
-      {/* {booking.kind === "DIRECT" ? (
-        <Link
-          href={`/fleet/payment/${booking.id}`}
-          target="_blank"
-          className="inline-flex items-center gap-2 rounded-xl border border-outline-variant/30 bg-white px-4 py-2.5 text-sm font-bold text-on-surface shadow-sm transition-colors hover:bg-surface-container-low"
-        >
-          <ExternalLink className="h-4 w-4" aria-hidden />
-          صفحة الدفع
-        </Link>
-      ) : null} */}
-      {/* <Link
+  const headerActions = editActions ?? (
+    <div className="flex items-center gap-2">
+      <Link
         href={`/admin/bookings/${booking.id}?edit=1`}
-        className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-on-primary shadow-sm transition-opacity hover:opacity-95"
+        className="inline-flex items-center gap-1.5 rounded-xl border border-outline-variant/40 bg-surface-container-low px-3.5 py-2 text-xs font-bold text-on-surface hover:bg-surface-container-high transition-colors"
       >
-        تعديل الطلب
-      </Link> */}
+        <Settings className="h-3.5 w-3.5 text-on-surface-variant" aria-hidden />
+        تعديل الحجز
+      </Link>
     </div>
   );
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div className="mx-auto max-w-6xl space-y-6">
+      {/* Top Header */}
       <AdminPageHeader
         backHref="/admin/car-bookings"
         backLabel="حجوزات السيارات"
@@ -194,16 +196,25 @@ export function BookingDetailView({ booking, editActions, cancellation }: Props)
           <div className="flex items-center gap-2">
             {headerActions}
             {booking.kind === "DIRECT" ? (
-              <StatementActionsDropdown bookingId={booking.id} printViaNavigation={true} />
+              <>
+                <Link
+                  href={`/admin/bookings/${booking.id}/finance`}
+                  className="inline-flex items-center gap-2 rounded-xl border border-outline-variant/40 bg-white px-4 py-2 text-sm font-extrabold text-[#003749] shadow-xs transition-colors hover:bg-surface-container-low"
+                >
+                  <Receipt className="size-4 text-emerald-600" />
+                  <span>العمليات المالية</span>
+                </Link>
+                <StatementActionsDropdown bookingId={booking.id} printViaNavigation={true} />
+              </>
             ) : null}
           </div>
         }
       />
 
       {/* Hero summary */}
-      <div className="mb-8 rounded-2xl border border-outline-variant/30 bg-surface-container-lowest p-5 shadow-sm sm:p-6">
+      <div className="rounded-2xl border border-outline-variant/30 bg-surface-container-lowest p-5 shadow-sm sm:p-6">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-3">
+          <div className="space-y-3.5">
             <div className="flex flex-wrap items-center gap-2">
               <AdminKindBadge kind={booking.kind} />
               <AdminStatusBadge status={booking.status} />
@@ -227,19 +238,46 @@ export function BookingDetailView({ booking, editActions, cancellation }: Props)
               ) : null}
             </div>
 
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm font-medium text-on-surface-variant">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 shrink-0" aria-hidden />
-                <span>
-                  {booking.numberOfDays} {booking.numberOfDays === 1 ? "يوم" : "أيام"}
-                  {" · "}
-                  {formatReturnDateAr(pickupYmd)} إلى {formatReturnDateAr(returnYmd)}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 shrink-0" aria-hidden />
-                <span>
-                  {booking.pickupMode === "DELIVERY" ? "توصيل للعميل" : "استلام من الفرع"}
+            {/* Plate Number & Quick History Badge */}
+            <div className="flex flex-wrap items-center gap-2.5 pt-1">
+              <span className="inline-flex items-center gap-2 rounded-xl border border-[#003749]/20 bg-[#fffdf8] px-3.5 py-1.5 text-xs font-extrabold text-[#003749] shadow-2xs">
+                <Hash className="size-3.5 text-[#dbb878]" />
+                <span>رقم اللوحة: {booking.vehiclePlateNumber || "غير محددة"}</span>
+                <button
+                  type="button"
+                  onClick={() => setUpdatePlateModalOpen(true)}
+                  className="ms-1 rounded-md bg-[#003749]/10 px-2 py-0.5 text-[11px] font-extrabold text-[#003749] hover:bg-[#003749] hover:text-white transition-colors"
+                >
+                  {booking.vehiclePlateNumber ? "تعديل ⚙️" : "ربط لوحة ➕"}
+                </button>
+              </span>
+
+              {booking.vehiclePlateNumber ? (
+                <Link
+                  href={`/admin/car-bookings?plate=${encodeURIComponent(booking.vehiclePlateNumber)}`}
+                  className="inline-flex items-center gap-1 text-xs font-extrabold text-primary hover:underline"
+                >
+                  استعلام الحجوزات السابقة باللوحة →
+                </Link>
+              ) : null}
+            </div>
+
+            {/* Date & Time display */}
+            <div className="space-y-2 pt-2 text-xs font-bold text-on-surface">
+              <div className="flex flex-wrap items-center gap-3 rounded-xl bg-surface-container-low/60 p-3 border border-outline-variant/20">
+                <div className="flex items-center gap-2 text-sky-900">
+                  <Clock className="size-4 shrink-0 text-sky-700" />
+                  <span>الاستلام (الاستلام المحدد):</span>
+                  <span className="font-extrabold text-[#003749]">{pickupDateTimeAr}</span>
+                </div>
+                <span className="hidden sm:inline text-outline">•</span>
+                <div className="flex items-center gap-2 text-violet-900">
+                  <Clock className="size-4 shrink-0 text-violet-700" />
+                  <span>الإرجاع (الإرجاع المجدول):</span>
+                  <span className="font-extrabold text-[#003749]">{scheduledReturnDateTimeAr}</span>
+                </div>
+                <span className="rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-black text-primary ms-auto">
+                  المدة: {booking.numberOfDays} {booking.numberOfDays === 1 ? "يوم" : "أيام"}
                 </span>
               </div>
             </div>
@@ -285,23 +323,14 @@ export function BookingDetailView({ booking, editActions, cancellation }: Props)
                 <DetailRow label="البريد" mono>
                   <a
                     href={`mailto:${booking.contactEmail}`}
-                    className="inline-flex max-w-full items-center gap-1.5 truncate text-primary hover:underline"
+                    className="inline-flex items-center gap-1.5 text-primary hover:underline"
                   >
-                    <Mail className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                    <span className="truncate">{booking.contactEmail}</span>
+                    <Mail className="h-3.5 w-3.5" aria-hidden />
+                    {booking.contactEmail}
                   </a>
                 </DetailRow>
               ) : null}
               <DetailRow label="الفئة العمرية">{booking.ageRange}</DetailRow>
-              {booking.customer ? (
-                <DetailRow label="حساب مسجّل">
-                  <span className="block text-end text-xs leading-relaxed">
-                    {booking.customer.name ?? "—"}
-                    <br />
-                    <span dir="ltr">{booking.customer.email}</span>
-                  </span>
-                </DetailRow>
-              ) : null}
             </dl>
           </BookingDetailSection>
 
@@ -368,54 +397,22 @@ export function BookingDetailView({ booking, editActions, cancellation }: Props)
                     </SarAmountWithSymbol>
                   </DetailRow>
                 ) : null}
-                {typeof booking.paidAmountSar === "number" && booking.paidAmountSar > 0 ? (
-                  <DetailRow label="إجمالي المدفوع" mono>
-                    <SarAmountWithSymbol
-                      bold
-                      amountClassName="font-extrabold text-on-surface"
-                      glyphClassName="text-on-surface-variant"
-                    >
-                      {formatSarAmount(booking.paidAmountSar)}
-                    </SarAmountWithSymbol>
-                  </DetailRow>
-                ) : null}
-                {booking.paymentMethod ? (
-                  <DetailRow label="الطريقة">
-                    {bookingPaymentMethodLabelAr(booking.paymentMethod)}
-                  </DetailRow>
-                ) : null}
+                <DetailRow label="طريقة الدفع">
+                  {bookingPaymentMethodLabelAr(booking.paymentMethod)}
+                </DetailRow>
                 {booking.paidAt ? (
-                  <DetailRow label="وقت الدفع">
-                    <span className="text-xs">{booking.paidAt.toLocaleString("ar-SA")}</span>
-                  </DetailRow>
-                ) : null}
-                {balanceDueAtBranch > 0 ? (
-                  <DetailRow label="مستحق عند الإرجاع">
-                    <SarAmountWithSymbol
-                      bold
-                      amountClassName="font-extrabold text-amber-700"
-                      glyphClassName="text-amber-700"
-                    >
-                      {formatSarAmount(balanceDueAtBranch)}
-                    </SarAmountWithSymbol>
+                  <DetailRow label="تاريخ الدفع" mono>
+                    {formatFullDateTimeAr(booking.paidAt)}
                   </DetailRow>
                 ) : null}
               </dl>
+
               {balanceDueAtBranch > 0 ? (
-                <div className="mt-4 flex items-start gap-2 rounded-xl border border-amber-300/70 bg-amber-50 px-3.5 py-3 text-xs font-bold leading-relaxed text-amber-950">
-                  <CreditCard className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-                  <span>
-                    مدّد العميل مدة الحجز — فرق قدره{" "}
-                    <SarAmountWithSymbol
-                      amountClassName="font-extrabold"
-                      glyphClassName="text-amber-900"
-                    >
-                      {formatSarAmount(balanceDueAtBranch)}
-                    </SarAmountWithSymbol>{" "}
-                    {booking.paymentStatus.trim().toUpperCase() === "PAID"
-                      ? "يسدّده العميل أونلاين من صفحة الدفع، أو نقداً عند تسليم/إرجاع السيارة في الفرع (تمديد بعد الدفع)."
-                      : "يُحصَّل ضمن إجمالي الحجز عند الاستلام/الإرجاع في الفرع."}
-                  </span>
+                <div className="mt-4 rounded-xl border border-amber-200/80 bg-amber-50/90 p-4 text-amber-950">
+                  <p className="text-xs font-bold">مستحق التحصيل في الفرع (عند الاستلام أو الإرجاع):</p>
+                  <p className="mt-1 font-mono text-lg font-black text-amber-900" dir="ltr">
+                    {formatSarAmount(balanceDueAtBranch)} ر.س
+                  </p>
                 </div>
               ) : null}
             </BookingDetailSection>
@@ -441,59 +438,31 @@ export function BookingDetailView({ booking, editActions, cancellation }: Props)
                 ))}
                 {interCityShipping ? (
                   <DetailRow label={interCityShipping.labelAr} mono>
-                    <SarAmountWithSymbol>{formatSarAmount(shipFee)}</SarAmountWithSymbol>
+                    <SarAmountWithSymbol>{formatSarAmount(interCityShipping.feeExclVatSar)}</SarAmountWithSymbol>
                   </DetailRow>
                 ) : null}
-                {checkoutOneTimeFees.map((f) => (
-                  <DetailRow key={f.slug} label={f.labelAr} mono>
+                {checkoutOneTimeFees.map((f, i) => (
+                  <DetailRow key={`fee-${i}`} label={f.labelAr} mono>
                     <SarAmountWithSymbol>{formatSarAmount(f.feeExclVatSar)}</SarAmountWithSymbol>
                   </DetailRow>
                 ))}
-                {delayPenalty ? (
-                  <DetailRow label={delayPenalty.labelAr} mono>
-                    <SarAmountWithSymbol
-                      amountClassName="text-rose-700"
-                      glyphClassName="text-rose-700/70"
-                    >
-                      {formatSarAmount(delayFee)}
-                    </SarAmountWithSymbol>
-                  </DetailRow>
-                ) : null}
-              </dl>
-
-              <div className="mt-4 space-y-2.5 border-t border-outline-variant/20 pt-4">
-                <DetailRow label="الإجمالي غير شامل الضريبة" mono>
-                  <SarAmountWithSymbol>{formatSarAmount(amountTotals.subtotalExclTax)}</SarAmountWithSymbol>
-                </DetailRow>
-                <DetailRow label={`ضريبة القيمة المضافة (${vatRate}%)`} mono>
+                <DetailRow label={`ضريبة القيمة المضافة (${booking.carModel?.vatRatePercent ?? 15}٪)`} mono>
                   <SarAmountWithSymbol>{formatSarAmount(amountTotals.vatAmount)}</SarAmountWithSymbol>
                 </DetailRow>
-                <DetailRow label="المجموع الكلي (شامل الضريبة)" mono>
-                  <SarAmountWithSymbol
-                    bold
-                    amountClassName="font-extrabold text-primary"
-                    glyphClassName="text-primary/70"
-                  >
-                    {formatSarAmount(amountTotals.totalInclTax)}
-                  </SarAmountWithSymbol>
-                </DetailRow>
-              </div>
+                <div className="pt-2 border-t border-outline-variant/20">
+                  <DetailRow label="الإجمالي النهائي" mono>
+                    <SarAmountWithSymbol bold amountClassName="text-base text-primary">
+                      {formatSarAmount(amountTotals.totalInclTax)}
+                    </SarAmountWithSymbol>
+                  </DetailRow>
+                </div>
+              </dl>
             </BookingDetailSection>
           ) : null}
         </div>
 
-        {/* Sidebar */}
-        <aside className="space-y-6 lg:sticky lg:top-6">
-          {editActions ? (
-            <BookingDetailSection
-              icon={Settings}
-              title="تعديل الطلب"
-              description="تغيير بيانات العميل، التواريخ، الفرع، الحالة، أو السيارة"
-            >
-              {editActions}
-            </BookingDetailSection>
-          ) : null}
-
+        {/* Sidebar column */}
+        <div className="space-y-6">
           {booking.kind === "DIRECT" ? (
             <BookingDetailSection
               icon={Car}
@@ -512,14 +481,16 @@ export function BookingDetailView({ booking, editActions, cancellation }: Props)
                 vehicleReturnedAt={
                   (booking as { vehicleReturnedAt?: Date | null }).vehicleReturnedAt ?? null
                 }
+                carModelId={booking.carModelId}
+                currentPlateNumber={booking.vehiclePlateNumber}
               />
             </BookingDetailSection>
           ) : null}
 
           <BookingDetailSection
             icon={Ban}
-            title="إلغاء الحجز"
-            description="سياسة العميل: شرائح الخصم والاسترداد"
+            title="إلغاء الحجز والسياسات"
+            description="إدارة الاسترداد وقواعد الخصم للعميل"
           >
             <BookingCancelPanel
               bookingRequestId={booking.id}
@@ -532,45 +503,22 @@ export function BookingDetailView({ booking, editActions, cancellation }: Props)
               cancellationDeductedDays={booking.cancellationDeductedDays}
               cancellationRefundAmountSar={booking.cancellationRefundAmountSar}
               cancellationRefundExternalRef={booking.cancellationRefundExternalRef}
-              cancellationReasonAr={booking.cancellationReasonAr}
               paidAmountSar={booking.paidAmountSar}
-              cancellationPolicyAr={cancellation.cancellationPolicyAr}
-              cancelMinHoursBeforePickup={cancellation.cancelMinHoursBeforePickup}
-              cancellationDeductTiers={cancellation.cancellationDeductTiers}
-              cancellationFinancePreview={cancellation.cancellationFinancePreview}
+              {...cancellation}
             />
           </BookingDetailSection>
-
-          <BookingDetailSection icon={Calendar} title="السجل">
-            <dl className="space-y-3 text-sm">
-              <DetailRow label="أُنشئ">
-                <span className="text-xs">{booking.createdAt.toLocaleString("ar-SA")}</span>
-              </DetailRow>
-              <DetailRow label="آخر تحديث">
-                <span className="text-xs">{booking.updatedAt.toLocaleString("ar-SA")}</span>
-              </DetailRow>
-              {booking.cancelledAt ? (
-                <DetailRow label="أُلغي في">
-                  <span className="text-xs">{booking.cancelledAt.toLocaleString("ar-SA")}</span>
-                </DetailRow>
-              ) : null}
-              <DetailRow label="رقم الطلب" mono>
-                #{booking.id}
-              </DetailRow>
-            </dl>
-          </BookingDetailSection>
-
-          {interBranch && booking.returnBranch?.slug ? (
-            <Link
-              href={`/admin/branch-returns?branch=${booking.returnBranch.slug}`}
-              className="flex items-center justify-center gap-2 rounded-2xl border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-950 transition-colors hover:bg-amber-100/80"
-            >
-              <ArrowLeftRight className="h-4 w-4" aria-hidden />
-              مرتجعات فرع {booking.returnBranch.name}
-            </Link>
-          ) : null}
-        </aside>
+        </div>
       </div>
+
+      {/* Plate Edit Modal */}
+      <VehiclePlateHandoverModal
+        isOpen={updatePlateModalOpen}
+        onClose={() => setUpdatePlateModalOpen(false)}
+        bookingId={booking.id}
+        carModelId={booking.carModelId}
+        mode="UPDATE_ONLY"
+        currentPlateNumber={booking.vehiclePlateNumber}
+      />
     </div>
   );
 }
