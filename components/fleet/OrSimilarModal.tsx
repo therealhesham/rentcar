@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
+import { useTranslations } from "next-intl";
 import { X, Info, CheckCircle2 } from "lucide-react";
 import { OVERLAY_BACKDROP_Z } from "@/lib/overlay-z-index";
 
@@ -16,25 +17,27 @@ type Props = {
   onClose: () => void;
 };
 
-const POINTS = [
-  {
-    icon: CheckCircle2,
-    title: "نفس الفئة مضمونة",
-    desc: "ستحصل على سيارة بنفس حجم وفئة السيارة التي اخترتها تماماً.",
-  },
-  {
-    icon: CheckCircle2,
-    title: "مواصفات مماثلة",
-    desc: "عدد المقاعد، مساحة الشنطة، وناقل الحركة ستكون متطابقة أو أفضل.",
-  },
-  {
-    icon: Info,
-    title: "لماذا؟",
-    desc: "لضمان توفر السيارة دائماً، نحتفظ بحق تقديم موديل مشابه عند الضرورة وفق معايير ACRISS العالمية.",
-  },
-];
-
 export function OrSimilarModal({ open, carName, onConfirm, onClose }: Props) {
+  const t = useTranslations("OrSimilarModal");
+
+  const points = [
+    {
+      icon: CheckCircle2,
+      title: t("point1Title"),
+      desc: t("point1Sub"),
+    },
+    {
+      icon: CheckCircle2,
+      title: t("point2Title"),
+      desc: t("point2Sub"),
+    },
+    {
+      icon: Info,
+      title: t("point3Title"),
+      desc: t("point3Sub"),
+    },
+  ];
+
   /* قفل التمرير */
   useEffect(() => {
     if (!open) return;
@@ -65,21 +68,20 @@ export function OrSimilarModal({ open, carName, onConfirm, onClose }: Props) {
       <button
         type="button"
         className="absolute inset-0 bg-[#0f1923]/50 backdrop-blur-[4px] transition-opacity"
-        aria-label="إغلاق"
+        aria-label="Close"
         onClick={onClose}
       />
 
       {/* البطاقة */}
       <div
         className="relative w-full max-w-[440px] overflow-hidden rounded-3xl bg-white shadow-[0_32px_80px_-20px_rgba(15,61,71,0.4)] ring-1 ring-black/[0.06]"
-        dir="rtl"
       >
         {/* زر الإغلاق */}
         <button
           type="button"
           onClick={onClose}
           className="absolute end-4 top-4 z-10 rounded-full bg-white/80 p-1.5 text-gray-400 backdrop-blur-sm transition-colors hover:bg-gray-100 hover:text-gray-700"
-          aria-label="إغلاق"
+          aria-label="Close"
         >
           <X className="size-5" aria-hidden />
         </button>
@@ -119,16 +121,16 @@ export function OrSimilarModal({ open, carName, onConfirm, onClose }: Props) {
             {carName}
           </h2>
           <p className="mt-1 text-[14px] font-semibold" style={{ color: GOLD }}>
-            أو مشابهة
+            {t("subtitle")}
           </p>
           <p className="mt-2 text-[13px] leading-relaxed text-white/75">
-            السيارة المعروضة مثال على الفئة التي ستحجزها
+            {t("description")}
           </p>
         </div>
 
         {/* النقاط التوضيحية */}
         <div className="divide-y divide-gray-100 px-6">
-          {POINTS.map((pt, i) => (
+          {points.map((pt, i) => (
             <div key={i} className="flex gap-3 py-3.5">
               <pt.icon
                 className="mt-0.5 size-4 shrink-0"
@@ -152,14 +154,14 @@ export function OrSimilarModal({ open, carName, onConfirm, onClose }: Props) {
             className="w-full rounded-2xl py-3.5 text-[15px] font-extrabold text-white shadow-[0_8px_24px_-8px_rgba(201,163,86,0.6)] transition-[transform,box-shadow] hover:-translate-y-0.5 active:translate-y-0"
             style={{ background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)` }}
           >
-            فهمت، أكمل الحجز
+            {t("confirm")}
           </button>
           <button
             type="button"
             onClick={onClose}
             className="w-full rounded-2xl border-2 border-gray-200 bg-white py-3.5 text-[14px] font-bold text-gray-600 transition-colors hover:border-gray-300 hover:bg-gray-50"
           >
-            إلغاء
+            {t("cancel")}
           </button>
         </div>
       </div>

@@ -17,9 +17,21 @@ const FUEL_AR: Record<FuelType, string> = {
   ELECTRIC: "كهرباء",
 };
 
+const FUEL_EN: Record<FuelType, string> = {
+  GASOLINE: "Gasoline",
+  DIESEL: "Diesel",
+  HYBRID: "Hybrid",
+  ELECTRIC: "Electric",
+};
+
 const TRANS_AR: Record<Transmission, string> = {
   MANUAL: "يدوي",
   AUTOMATIC: "أوتوماتيك",
+};
+
+const TRANS_EN: Record<Transmission, string> = {
+  MANUAL: "Manual",
+  AUTOMATIC: "Automatic",
 };
 
 const PLACEHOLDER_IMG =
@@ -82,7 +94,9 @@ function mapFleetRowToFleetCar(
   const brandName = m.brand.name.trim();
   const modelName = localizeDbField(m, "name", locale).trim();
   const fullTitle = `${brandName} ${modelName}`.trim();
-  const subtitle = `${m.year} • ${locale === "en" ? m.fuel : FUEL_AR[m.fuel]} • ${locale === "en" ? m.transmission : TRANS_AR[m.transmission]}`;
+  const fuelText = locale === "en" ? FUEL_EN[m.fuel] : FUEL_AR[m.fuel];
+  const transText = locale === "en" ? TRANS_EN[m.transmission] : TRANS_AR[m.transmission];
+  const subtitle = `${m.year} • ${fuelText} • ${transText}`;
 
   let priceUi;
   if (monthlyOverride) {
@@ -90,6 +104,8 @@ function mapFleetRowToFleetCar(
     priceUi = buildFleetCardPriceParts(monthlyOverride.price, m.vatRatePercent, priceMode, {
       startingFrom: monthlyOverride.varies,
       periodLabelAr: "شهرياً",
+      periodLabelEn: "Monthly",
+      locale,
     });
   } else {
     const basePrice = rowBasePrice(row);
@@ -107,7 +123,9 @@ function mapFleetRowToFleetCar(
     priceUi = buildFleetCardPriceParts(effectivePrice, m.vatRatePercent, priceMode, {
       originalPriceExclTaxSar: resolved?.originalPricePerDayExclTax,
       discountLabelAr: resolved?.displayLabelAr,
+      discountLabelEn: resolved?.displayLabelAr,
       startingFrom,
+      locale,
     });
   }
   /** غير مخزّن في قاعدة البيانات — تقدير بسيط للعرض حسب حجم المركبة */

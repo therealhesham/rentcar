@@ -232,6 +232,30 @@
     "bags": "Bags",
     "price": "Price"
   },
+  "FleetCard": {
+    "orSimilar": "or similar",
+    "saveForLater": "Save for later",
+    "seats": "Seats",
+    "doors": "Doors",
+    "bags": "Bags",
+    "ac": "A/C",
+    "electric": "Electric",
+    "speed": "Speed",
+    "time": "Time"
+  },
+  "OrSimilarModal": {
+    "title": "Or Similar Vehicle",
+    "subtitle": "or similar",
+    "description": "The vehicle displayed is an example of the category you will book.",
+    "point1Title": "Guaranteed Category & Features",
+    "point1Sub": "You will receive a vehicle with identical size, seats, and transmission type.",
+    "point2Title": "Equal or Higher Quality",
+    "point2Sub": "If the exact model is unavailable, you will be upgraded to an equivalent or superior model at no extra cost.",
+    "point3Title": "Fleet Availability",
+    "point3Sub": "Ensures fast delivery and seamless pickup without delays.",
+    "confirm": "Understood & Continue",
+    "cancel": "Cancel"
+  },
   "Branches": {
     "eyebrow": "Our branches",
     "title": "Serving you across the Kingdom",

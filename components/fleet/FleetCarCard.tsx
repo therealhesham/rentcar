@@ -1,20 +1,20 @@
 "use client";
 
+import { useLocale, useTranslations } from "next-intl";
 import { SpecIcon } from "@/components/icons";
 import { FleetBookNowButton } from "@/components/fleet/FleetBookNowButton";
 import type { FleetCar } from "@/lib/fleet-types";
 import type { BookingCityBranchesOption } from "@/lib/booking-location-options";
 import { SarCurrencyGlyph } from "@/components/ui/SarCurrencyGlyph";
 
-/** تسمية عربية مختصرة لكل مواصفة حسب اسم الأيقونة */
-const SPEC_LABEL_AR: Record<string, string> = {
-  airline_seat_recline_extra: "مقاعد",
-  door_open: "أبواب",
-  luggage: "حقائب",
-  mode_fan: "A/C",
-  bolt: "كهرباء",
-  speed: "سرعة",
-  timer: "وقت",
+const SPEC_KEY_MAP: Record<string, string> = {
+  airline_seat_recline_extra: "seats",
+  door_open: "doors",
+  luggage: "bags",
+  mode_fan: "ac",
+  bolt: "electric",
+  speed: "speed",
+  timer: "time",
 };
 
 /** يستخرج «الوقود» و«ناقل الحركة» من subtitle: "السنة • الوقود • الناقل" */
@@ -48,14 +48,35 @@ export function FleetCarCard({
   car: FleetCar;
   cities?: BookingCityBranchesOption[];
 }) {
+  const locale = useLocale();
+  const t = useTranslations("FleetCard");
+  const isEn = locale === "en";
   const meta = metaFromSubtitle(car.subtitle);
+
+  const primaryLabel = isEn
+    ? car.priceUi.primaryLabelEn ?? car.priceUi.primaryLabelAr
+    : car.priceUi.primaryLabelAr;
+  const secondaryLabel = isEn
+    ? car.priceUi.secondaryLabelEn ?? car.priceUi.secondaryLabelAr
+    : car.priceUi.secondaryLabelAr;
+  const footnote = isEn
+    ? car.priceUi.footnoteEn ?? car.priceUi.footnoteAr
+    : car.priceUi.footnoteAr;
+  const prefixLabel = isEn
+    ? car.priceUi.prefixLabelEn ?? car.priceUi.prefixLabelAr
+    : car.priceUi.prefixLabelAr;
+  const periodLabel = isEn
+    ? car.priceUi.periodLabelEn ?? car.priceUi.periodLabelAr
+    : car.priceUi.periodLabelAr;
+  const discountLabel = isEn
+    ? car.priceUi.discountLabelEn ?? car.priceUi.discountLabelAr
+    : car.priceUi.discountLabelAr;
 
   return (
     <article
-      dir="rtl"
       className="group flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
     >
-      {/* ────── الرأس: الاسم يمين، الفئة يسار ────── */}
+      {/* ────── الرأس: الاسم ، الفئة ────── */}
       <div className="flex items-start justify-between gap-2 px-4 pt-4 pb-2">
 
         {/* الاسم + السنة + أو مشابهة */}
@@ -63,12 +84,12 @@ export function FleetCarCard({
           <h3 className="truncate text-base font-bold leading-snug text-gray-900">
             {car.brand} {car.name}
             {car.year ? (
-              <span className="mr-1 text-sm font-normal text-gray-400">
+              <span className="mx-1 text-sm font-normal text-gray-400">
                 {car.year}
               </span>
             ) : null}
           </h3>
-          <p className="text-[12px] font-medium text-gray-500">أو مشابهة</p>
+          <p className="text-[12px] font-medium text-gray-500">{t("orSimilar")}</p>
 
           {meta.length > 0 ? (
             <p className="mt-0.5 text-[11px] text-gray-400">
@@ -83,9 +104,9 @@ export function FleetCarCard({
             <span className="inline-block h-2 w-2 shrink-0 rounded-full bg-gray-400" />
             {car.badge}
           </span>
-        ) : car.priceUi.discountLabelAr ? (
+        ) : discountLabel ? (
           <span className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-bold text-red-600">
-            {car.priceUi.discountLabelAr}
+            {discountLabel}
           </span>
         ) : null}
       </div>
@@ -99,9 +120,9 @@ export function FleetCarCard({
           loading="lazy"
           className="h-full w-full object-contain transition-transform duration-700 ease-out group-hover:scale-[1.04]"
         />
-        {car.badge && car.priceUi.discountLabelAr ? (
+        {car.badge && discountLabel ? (
           <span className="absolute top-4 left-4 rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white">
-            {car.priceUi.discountLabelAr}
+            {discountLabel}
           </span>
         ) : null}
       </div>
@@ -109,46 +130,50 @@ export function FleetCarCard({
       {/* ────── شريط المواصفات الأفقي ────── */}
       {car.specs.length > 0 ? (
         <div className="mx-4 mt-3 flex items-center justify-center gap-4 border-t border-b border-gray-100 py-2.5">
-          {car.specs.map((s, i) => (
-            <div
-              key={`${car.id}-spec-${i}`}
-              className="flex items-center gap-1"
-            >
-              {i > 0 && (
-                <span className="mr-3 ml-0 h-4 w-px bg-gray-200" />
-              )}
-              <SpecIcon
-                name={s.icon}
-                className="h-4 w-4 shrink-0 text-gray-500"
-              />
-              <span className="text-[13px] font-bold tabular-nums text-gray-800">
-                {s.value}
-              </span>
-              <span className="text-[10px] font-medium text-gray-400">
-                {SPEC_LABEL_AR[s.icon] ?? ""}
-              </span>
-            </div>
-          ))}
+          {car.specs.map((s, i) => {
+            const specKey = SPEC_KEY_MAP[s.icon];
+            const specText = specKey ? t(specKey) : "";
+            return (
+              <div
+                key={`${car.id}-spec-${i}`}
+                className="flex items-center gap-1"
+              >
+                {i > 0 && (
+                  <span className="mx-2 h-4 w-px bg-gray-200" />
+                )}
+                <SpecIcon
+                  name={s.icon}
+                  className="h-4 w-4 shrink-0 text-gray-500"
+                />
+                <span className="text-[13px] font-bold tabular-nums text-gray-800">
+                  {s.value}
+                </span>
+                <span className="text-[10px] font-medium text-gray-400">
+                  {specText}
+                </span>
+              </div>
+            );
+          })}
         </div>
       ) : null}
 
       {/* ────── السعر + زر الحجز في نفس الصف ────── */}
       <div className="flex items-end justify-between gap-3 px-4 pt-3 pb-1">
 
-        {/* السعر — يمين */}
+        {/* السعر */}
         <div className="flex flex-col">
-          {car.priceUi.primaryLabelAr && (
+          {primaryLabel && (
             <p className="text-[12px] font-medium text-gray-500">
-              {car.priceUi.primaryLabelAr}
+              {primaryLabel}
             </p>
           )}
-          {car.priceUi.footnoteAr && (
-            <p className="text-[12px] text-gray-400">{car.priceUi.footnoteAr}</p>
+          {footnote && (
+            <p className="text-[12px] text-gray-400">{footnote}</p>
           )}
           <div className="mt-0.5 flex items-baseline gap-1.5">
-            {car.priceUi.prefixLabelAr ? (
+            {prefixLabel ? (
               <span className="text-[12px] font-semibold text-gray-500">
-                {car.priceUi.prefixLabelAr}
+                {prefixLabel}
               </span>
             ) : null}
             {car.priceUi.originalPrimaryAmount ? (
@@ -161,9 +186,9 @@ export function FleetCarCard({
               {car.priceUi.primaryAmount}
             </span>
             <SarCurrencyGlyph className="h-4 w-4 shrink-0 text-gray-700" />
-            {car.priceUi.periodLabelAr && car.priceUi.primaryLabelAr !== car.priceUi.periodLabelAr ? (
+            {periodLabel && primaryLabel !== periodLabel ? (
               <span className="text-[12px] font-semibold text-gray-500">
-                / {car.priceUi.periodLabelAr}
+                / {periodLabel}
               </span>
             ) : null}
           </div>
@@ -171,14 +196,14 @@ export function FleetCarCard({
             <p className="mt-0.5 flex items-baseline gap-1 text-[11px] text-gray-500">
               {car.priceUi.secondaryAmount}
               <SarCurrencyGlyph className="h-[0.65em] w-[0.65em]" />
-              {car.priceUi.secondaryLabelAr && (
-                <span>· {car.priceUi.secondaryLabelAr}</span>
+              {secondaryLabel && (
+                <span>· {secondaryLabel}</span>
               )}
             </p>
           )}
         </div>
 
-        {/* زر الحجز — يسار */}
+        {/* زر الحجز */}
         <div className="shrink-0 [&_a]:!w-auto [&_button]:!w-auto">
           <FleetBookNowButton
             modelId={car.modelId}
@@ -195,7 +220,7 @@ export function FleetCarCard({
           className="flex items-center gap-1 text-[11px] text-gray-400 transition-colors hover:text-gray-600"
         >
           <BookmarkIcon />
-          <span className="whitespace-nowrap">حفظ للمرة القادمة</span>
+          <span className="whitespace-nowrap">{t("saveForLater")}</span>
         </button>
       </div>
     </article>
