@@ -33,6 +33,7 @@ import {
   DeliveryOriginCityLabelSuffix,
   useDeliveryOriginCity,
 } from "@/components/home/DeliveryOriginCityHint";
+import { resolveCityCenter } from "@/lib/delivery-origin-city";
 import { GroupedBranchSelect } from "@/components/home/GroupedBranchSelect";
 import { PickupReturnBranchFields } from "@/components/home/PickupReturnBranchFields";
 import { SubscriptionPackagesInWidget } from "@/components/subscriptions/SubscriptionPackagesInWidget";
@@ -303,6 +304,16 @@ export function BookingSearchWidget({
     detectedSlug: deliveryOriginCitySlug || returnCityEff || defaultCitySlug,
     onDetectedSlugChange: setDeliveryOriginCitySlug,
   });
+
+  const deliverySelected = deliveryLat != null && deliveryLng != null;
+  const deliveryAddressSnippet = deliveryAddressText.trim();
+
+  /** مركز افتتاح الخريطة عند غياب موقع محدَّد — مدينة الفرع بدل مركز الرياض دائماً. */
+  const deliveryFallbackCenter = useMemo(() => {
+    const slug = deliveryOriginCitySlug || returnCityEff || defaultCitySlug;
+    const city = dateCities.find((c) => c.slug === slug);
+    return city ? resolveCityCenter(city) : null;
+  }, [dateCities, deliveryOriginCitySlug, returnCityEff, defaultCitySlug]);
 
   const deliveryLocationLabel = (
     <>
@@ -1462,12 +1473,14 @@ export function BookingSearchWidget({
                         onClick={() => setMapOpen(true)}
                         className="group flex w-full items-center justify-between gap-2 rounded-lg border border-dashed border-[#c9a356]/55 bg-white/60 px-2.5 py-2 text-start text-[13px] font-semibold text-[#0f1923] outline-none transition-[border-color,background-color,box-shadow] hover:border-[#dbb878] hover:bg-[#fffdf8] focus-visible:ring-2 focus-visible:ring-[#dbb878]/35"
                       >
-                        {deliveryLat != null && deliveryLng != null ? (
-                          <span className="flex items-center gap-2 text-[#0f3d47]">
-                            <span className="flex size-5 items-center justify-center rounded-full bg-emerald-100">
+                        {deliverySelected ? (
+                          <span className="flex min-w-0 items-center gap-2 text-[#0f3d47]">
+                            <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-100">
                               <span className="size-2 rounded-full bg-emerald-500" />
                             </span>
-                            {t("locationSelected")}
+                            <span className="truncate">
+                              {deliveryAddressSnippet || t("locationSelected")}
+                            </span>
                           </span>
                         ) : (
                           <span className="text-[#6b5a3b]">{t("selectOnMap")}</span>
@@ -1497,7 +1510,10 @@ export function BookingSearchWidget({
             <div className="search-pill flex flex-col gap-3 xl:flex-row xl:items-stretch xl:gap-0">
 
               {/* ── 1. موقع الاستلام ── */}
-              <div className="relative xl:flex-[1.8] flex-1 min-w-0">
+              {/* في وضع التوصيل يحمل اسم فرع فقط، فيتنازل عن مساحته لحقل عنوان التوصيل */}
+              <div
+                className={`relative flex-1 min-w-0 ${mode === "delivery" ? "xl:flex-[1.35]" : "xl:flex-[1.8]"}`}
+              >
                 <div
                   ref={pickupLocRef}
                   role="button"
@@ -1571,7 +1587,8 @@ export function BookingSearchWidget({
 
               {/* ── 1.5. موقع التوصيل (delivery mode only) ── */}
               {mode === "delivery" && (
-                <div className="relative xl:flex-[1.8] flex-1 min-w-0">
+                /* يعرض عنواناً كاملاً، فيأخذ أوسع نصيب في الشريط */
+                <div className="relative xl:flex-[2.4] flex-1 min-w-0">
                   <button
                     type="button"
                     onClick={() => setMapOpen(true)}
@@ -1581,12 +1598,14 @@ export function BookingSearchWidget({
                       <MapPin className="size-3 shrink-0 text-[#dbb878]" aria-hidden />
                       <span className="truncate">{deliveryLocationLabel}</span>
                     </span>
-                    {deliveryLat != null && deliveryLng != null ? (
+                    {deliverySelected ? (
                       <span className="flex w-full items-center gap-2 text-[13px] font-bold text-[#0f3d47]">
                         <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-emerald-100">
                           <span className="size-1.5 shrink-0 rounded-full bg-emerald-500" />
                         </span>
-                        <span className="truncate">{t("locationSelected")}</span>
+                        <span className="truncate">
+                          {deliveryAddressSnippet || t("locationSelected")}
+                        </span>
                       </span>
                     ) : (
                       <span className="truncate w-full text-[13px] font-medium text-[#aaa08e]">{t("selectOnMap")}</span>
@@ -1597,7 +1616,7 @@ export function BookingSearchWidget({
 
               {/* ── 2. موقع الإرجاع (delivery mode only / or return-diff) ── */}
               {returnLocationDifferent && (
-                <div className="relative xl:flex-[1.8] flex-1 min-w-0">
+                <div className="relative xl:flex-[1.5] flex-1 min-w-0">
                   <div
                     ref={returnLocRef}
                     role="button"
@@ -1682,7 +1701,7 @@ export function BookingSearchWidget({
               {/* ── 3+4. التاريخ والوقت — يقترنان في صف واحد على الجوال ── */}
               <div className="grid grid-cols-2 gap-2.5 xl:contents">
               {/* ── 3. تاريخ الاستلام ── */}
-              <div className="relative flex-1 min-w-0">
+              <div className="relative flex-1 min-w-0 xl:flex-[1.15]">
                 <button
                   ref={pickupDateRef}
                   type="button"
@@ -1738,7 +1757,8 @@ export function BookingSearchWidget({
               </div>
 
               {/* ── 4. وقت الاستلام ── */}
-              <div className="relative flex-1 min-w-0">
+              {/* «09:00» لا يحتاج عرض التاريخ */}
+              <div className="relative flex-1 min-w-0 xl:flex-[0.8]">
                 <button
                   ref={pickupTimeRef}
                   type="button"
@@ -1794,7 +1814,7 @@ export function BookingSearchWidget({
               {/* ── 5+6. التاريخ والوقت — يقترنان في صف واحد على الجوال ── */}
               <div className="grid grid-cols-2 gap-2.5 xl:contents">
               {/* ── 5. تاريخ التسليم ── */}
-              <div className="relative flex-1 min-w-0">
+              <div className="relative flex-1 min-w-0 xl:flex-[1.15]">
                 <button
                   ref={dropoffDateRef}
                   type="button"
@@ -1849,7 +1869,7 @@ export function BookingSearchWidget({
               </div>
 
               {/* ── 6. وقت التسليم ── */}
-              <div className="relative flex-1 min-w-0">
+              <div className="relative flex-1 min-w-0 xl:flex-[0.8]">
                 <button
                   ref={dropoffTimeRef}
                   type="button"
@@ -2063,9 +2083,13 @@ export function BookingSearchWidget({
             ? { lat: deliveryLat, lng: deliveryLng }
             : null
         }
-        onConfirm={(lat, lng) => {
+        fallbackCenter={deliveryFallbackCenter}
+        addressField
+        initialAddress={deliveryAddressText}
+        onConfirm={(lat, lng, addr) => {
           setDeliveryLat(lat);
           setDeliveryLng(lng);
+          setDeliveryAddressText(addr);
           setMapOpen(false);
         }}
       />

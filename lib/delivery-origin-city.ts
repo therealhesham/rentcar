@@ -138,6 +138,12 @@ function haversineKm(a: CityGeoPoint, b: CityGeoPoint): number {
   return 2 * R * Math.asin(Math.sqrt(x));
 }
 
+/**
+ * أقصى مسافة نعتبر عندها النقطة «داخل» المدينة. بدونها كانت أقرب مدينة تفوز
+ * دائماً — فيظهر مثلاً «تبوك» لدبوس في الرياض لمجرد أنها الأقرب.
+ */
+const MAX_CITY_MATCH_KM = 120;
+
 export function resolveDeliveryCityFromCoords(
   lat: number,
   lng: number,
@@ -159,7 +165,7 @@ export function resolveDeliveryCityFromCoords(
     }
   }
 
-  return bestSlug;
+  return bestKm <= MAX_CITY_MATCH_KM ? bestSlug : null;
 }
 
 export function resolveDeliveryCityFromAddress(

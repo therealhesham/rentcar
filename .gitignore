@@ -25,6 +25,11 @@
 .DS_Store
 *.pem
 
+# editor swap files (vim/neovim)
+*.swp
+*.swo
+*~
+
 # debug
 npm-debug.log*
 yarn-debug.log*

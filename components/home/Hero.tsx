@@ -66,7 +66,7 @@ export function Hero({ cities, tabFlags }: HeroProps) {
         className="relative z-10 scroll-mt-24 px-3 pt-36 sm:px-6 sm:pt-[16rem] lg:px-8 lg:pt-[19rem]"
         dir="rtl"
       >
-        <div className="mx-auto w-full max-w-[72rem]">
+        <div className="mx-auto w-full max-w-[84rem]">
           <HeroEntrance delay={0.12}>
             <BookingWidget cities={cities} tabFlags={tabFlags} />
           </HeroEntrance>
