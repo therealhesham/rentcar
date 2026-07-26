@@ -8,11 +8,13 @@ type MotionSectionProps = {
   className?: string;
   /** تأخير بداية الانتقال (ثوانٍ) */
   delay?: number;
-  /** محفوظ للتوافق — الانتقال عمودي الآن لتجنّب تمرير أفقي على الجوال */
+  /** محفوظ للتوافق */
   x?: number;
 };
 
-/** قسم يظهر عند التمرير — انزلاق عمودي لتجنّب تمرير أفقي على الشاشات الضيقة */
+const smoothEase = [0.16, 1, 0.3, 1] as const;
+
+/** قسم يظهر عند التمرير — انزلاق عمودي ناعم وانسيابي مع استجابة فورية */
 export function MotionSection({
   children,
   className,
@@ -26,10 +28,10 @@ export function MotionSection({
   return (
     <motion.div
       className={className}
-      initial={{ opacity: 0, y: 28 }}
+      initial={{ opacity: 0, y: 18 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-40px 0px" }}
-      transition={{ duration: 0.65, delay, ease: [0.22, 1, 0.36, 1] }}
+      viewport={{ once: true, margin: "-80px 0px -40px 0px" }}
+      transition={{ duration: 0.52, delay, ease: smoothEase }}
     >
       {children}
     </motion.div>

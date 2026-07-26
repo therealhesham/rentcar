@@ -3,7 +3,8 @@
 import { motion, useReducedMotion } from "framer-motion";
 import type { ReactNode } from "react";
 
-const ease = [0.22, 1, 0.36, 1] as const;
+/** منحنى حركة انسيابي فائق النعومة (Apple / Vercel Spring-like Easing) */
+const smoothEase = [0.16, 1, 0.3, 1] as const;
 
 type RevealProps = {
   children: ReactNode;
@@ -12,8 +13,8 @@ type RevealProps = {
   y?: number;
 };
 
-/** يظهر عند دخول القسم إلى نافذة العرض (مرة واحدة) */
-export function Reveal({ children, className, delay = 0, y = 22 }: RevealProps) {
+/** يظهر بنعومة عند دخول القسم إلى نافذة العرض */
+export function Reveal({ children, className, delay = 0, y = 16 }: RevealProps) {
   const reduced = useReducedMotion();
   if (reduced) {
     return <div className={className}>{children}</div>;
@@ -24,8 +25,8 @@ export function Reveal({ children, className, delay = 0, y = 22 }: RevealProps) 
       className={className}
       initial={{ opacity: 0, y }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-36px 0px -24px 0px" }}
-      transition={{ duration: 0.48, ease, delay }}
+      viewport={{ once: true, margin: "-80px 0px -40px 0px" }}
+      transition={{ duration: 0.5, ease: smoothEase, delay }}
     >
       {children}
     </motion.div>
@@ -38,7 +39,7 @@ type HeroEntranceProps = {
   delay?: number;
 };
 
-/** للهيرو فوق الطية: حركة عند أول عرض */
+/** للهيرو فوق الطية: حركة دخول سلسة وفائقة النعومة عند تحميل الصفحة */
 export function HeroEntrance({
   children,
   className,
@@ -52,9 +53,9 @@ export function HeroEntrance({
   return (
     <motion.div
       className={className}
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.42, ease, delay }}
+      transition={{ duration: 0.55, ease: smoothEase, delay }}
     >
       {children}
     </motion.div>
