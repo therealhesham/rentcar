@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Plus, Search, Car, Hash, Palette, Building2, Layers, History, Trash2, Edit, X, Check, ArrowRight } from "lucide-react";
+import { Plus, Search, Car, Hash, Building2, History, Wrench, Trash2, Edit, X, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { createVehicleUnitAction, updateVehicleUnitAction, deleteVehicleUnitAction } from "@/app/admin/vehicle-units-actions";
 import type { VehicleUnitListItem } from "@/lib/vehicle-units";
@@ -129,13 +129,14 @@ export function VehicleUnitsManager({ units, carModels, branches }: Props) {
                 <th className="px-5 py-3.5">اللون / رقم الهيكل</th>
                 <th className="px-5 py-3.5">حالة السيارة</th>
                 <th className="px-5 py-3.5 text-center">عدد الحجوزات</th>
+                <th className="px-5 py-3.5 text-center">عمليات الصيانة</th>
                 <th className="px-5 py-3.5 text-center">إجراءات</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant/20 text-on-surface">
               {filteredUnits.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-5 py-12 text-center text-on-surface-variant font-medium">
+                  <td colSpan={8} className="px-5 py-12 text-center text-on-surface-variant font-medium">
                     لا توجد لوحات سيارات مسجلة تطابق محددات البحث.
                   </td>
                 </tr>
@@ -212,9 +213,28 @@ export function VehicleUnitsManager({ units, carModels, branches }: Props) {
                       </span>
                     </td>
 
+                    {/* Maintenance Count */}
+                    <td className="px-5 py-4 text-center">
+                      <span className="inline-flex items-center gap-1 text-sm font-black text-[#8a7752]">
+                        <Wrench className="size-3.5 text-on-surface-variant" />
+                        {u.maintenanceCount}
+                      </span>
+                      {u.hasOpenMaintenance ? (
+                        <div className="mt-1 text-[11px] font-bold text-amber-700">عملية جارية</div>
+                      ) : null}
+                    </td>
+
                     {/* Actions */}
                     <td className="px-5 py-4 text-center">
                       <div className="flex items-center justify-center gap-2">
+                        <Link
+                          href={`/admin/vehicle-units/${u.id}`}
+                          className="inline-flex items-center gap-1 rounded-lg border border-outline-variant/40 px-2.5 py-1.5 text-xs font-extrabold text-primary transition-colors hover:bg-surface-container"
+                          title="سجل السيارة: الحجوزات وعمليات الصيانة"
+                        >
+                          سجل السيارة
+                          <ArrowRight className="size-3.5" />
+                        </Link>
                         <button
                           type="button"
                           onClick={() => openEditModal(u)}

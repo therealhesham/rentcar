@@ -13,6 +13,9 @@ export type VehicleUnitListItem = {
   status: string;
   notes: string | null;
   bookingsCount: number;
+  maintenanceCount: number;
+  /// هل توجد عملية صيانة جارية (لم تُغلق بعد) على هذه اللوحة
+  hasOpenMaintenance: boolean;
   createdAt: Date;
 };
 
@@ -52,7 +55,12 @@ export async function listAllVehicleUnits(): Promise<VehicleUnitListItem[]> {
           },
         },
         branch: { select: { name: true } },
-        _count: { select: { bookingRequests: true } },
+        _count: { select: { bookingRequests: true, maintenanceLogs: true } },
+        maintenanceLogs: {
+          where: { status: "IN_PROGRESS" },
+          select: { id: true },
+          take: 1,
+        },
       },
       orderBy: [{ carModel: { name: "asc" } }, { plateNumber: "asc" }],
     });
@@ -70,70 +78,11 @@ export async function listAllVehicleUnits(): Promise<VehicleUnitListItem[]> {
       status: r.status,
       notes: r.notes,
       bookingsCount: r._count.bookingRequests,
+      maintenanceCount: r._count.maintenanceLogs,
+      hasOpenMaintenance: r.maintenanceLogs.length > 0,
       createdAt: r.createdAt,
     }));
   } catch {
     return [];
-  }
-}
-
-/** جلب بيانات سجل تفصيلي لوحدة سيارة محددة برقم اللوحة أو الـ ID مع كل الحجوزات السابقة */
-export async function getVehicleUnitHistory(plateNumberOrId: string | number) {
-  try {
-    const where = typeof plateNumberOrId === "number"
-      ? { id: plateNumberOrId }
-      : { plateNumber: String(plateNumberOrId).trim() };
-
-    const unit = await prisma.vehicleUnit.findFirst({
-      where,
-      include: {
-        carModel: {
-          select: {
-            id: true,
-            name: true,
-            year: true,
-            brand: { select: { name: true } },
-          },
-        },
-        branch: { select: { id: true, name: true } },
-        bookingRequests: {
-          include: {
-            customer: { select: { name: true, phone: true } },
-            pickupBranch: { select: { name: true } },
-            returnBranch: { select: { name: true } },
-          },
-          orderBy: { createdAt: "desc" },
-        },
-      },
-    });
-
-    if (!unit) return null;
-
-    return {
-      id: unit.id,
-      plateNumber: unit.plateNumber,
-      chassisNumber: unit.chassisNumber,
-      color: unit.color,
-      carModel: unit.carModel,
-      branch: unit.branch,
-      status: unit.status,
-      notes: unit.notes,
-      totalBookingsCount: unit.bookingRequests.length,
-      bookings: unit.bookingRequests.map((b) => ({
-        id: b.id,
-        customerName: b.fullName || b.customer?.name || "عميل بدون اسم",
-        phone: b.phone || b.customer?.phone || "—",
-        pickupDate: b.pickupDate,
-        numberOfDays: b.numberOfDays,
-        status: b.status,
-        pickupBranchName: b.pickupBranch?.name ?? "—",
-        returnBranchName: b.returnBranch?.name ?? "—",
-        vehiclePickedUpAt: b.vehiclePickedUpAt,
-        vehicleReturnedAt: b.vehicleReturnedAt,
-        createdAt: b.createdAt,
-      })),
-    };
-  } catch {
-    return null;
   }
 }

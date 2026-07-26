@@ -164,6 +164,7 @@ model Branch {
   returnBookings  BookingRequest[] @relation("BookingReturnBranch")
   rentalDiscounts RentalDiscount[]
   vehicleUnits    VehicleUnit[]
+  maintenanceLogs VehicleMaintenanceLog[]
 
   @@index([cityId])
   @@index([sortOrder])
@@ -326,10 +327,60 @@ model VehicleUnit {
   updatedAt        DateTime @updatedAt
 
   bookingRequests  BookingRequest[]
+  maintenanceLogs  VehicleMaintenanceLog[]
 
   @@index([carModelId])
   @@index([branchId])
   @@index([status])
+}
+
+/// عملية صيانة مسجَّلة على وحدة سيارة (لوحة) — تظهر في سجل السيارة بجانب الحجوزات.
+model VehicleMaintenanceLog {
+  id            Int         @id @default(autoincrement())
+  vehicleUnitId Int
+  vehicleUnit   VehicleUnit @relation(fields: [vehicleUnitId], references: [id], onDelete: Cascade)
+
+  /// نوع الصيانة: PERIODIC | OIL_CHANGE | TIRES | REPAIR | ACCIDENT | INSPECTION | OTHER
+  kind        String  @db.VarChar(32)
+  /// حالة العملية: IN_PROGRESS | COMPLETED | CANCELLED
+  status      String  @default("IN_PROGRESS") @db.VarChar(16)
+  /// وصف العمل المنفَّذ أو المطلوب.
+  description String  @db.Text
+
+  /// تاريخ دخول المركبة للصيانة.
+  startedAt   DateTime
+  /// تاريخ خروجها/انتهاء العملية — null = ما زالت جارية.
+  completedAt DateTime?
+
+  /// التكلفة بالريال (كما وردت في فاتورة الورشة). null = غير مسجّلة بعد.
+  costSar     Float?
+  /// اسم الورشة أو مزوّد الخدمة.
+  vendorName  String? @db.VarChar(191)
+  /// رقم فاتورة الورشة.
+  invoiceRef  String? @db.VarChar(128)
+  /// قراءة عداد الكيلومترات عند تنفيذ الصيانة.
+  odometerKm  Int?
+
+  /// تاريخ الصيانة الدورية القادمة (تنبيه).
+  nextDueDate       DateTime?
+  /// عداد الكيلومترات المستحق عنده الصيانة القادمة (تنبيه).
+  nextDueOdometerKm Int?
+
+  /// الفرع الذي سجّل العملية (اختياري).
+  branchId    Int?
+  branch      Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  /// اسم الموظف الذي أنشأ السجل.
+  createdBy   String? @db.VarChar(128)
+  notes       String? @db.VarChar(500)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([vehicleUnitId, startedAt])
+  @@index([status, startedAt])
+  @@index([branchId])
+  @@index([nextDueDate])
 }
 
 /// إضافات اختيارية للتأجير (يومية، غير شامل الضريبة) — تُعرض في صفحة إتمام الحجز.
