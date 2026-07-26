@@ -28,6 +28,7 @@ export async function startGeideaTestPaymentAction(): Promise<void> {
   let redirectUrl: string;
   let merchantReferenceId: string;
   try {
+    console.log("[test-geidea] Starting test payment session creation...");
     const session = await createGeideaCheckoutSession({
       bookingRequestId: 0,
       amountSar: TEST_AMOUNT_SAR,
@@ -36,9 +37,11 @@ export async function startGeideaTestPaymentAction(): Promise<void> {
     });
     redirectUrl = session.redirectUrl;
     merchantReferenceId = session.merchantReferenceId;
+    console.log("[test-geidea] Session created successfully:", session);
   } catch (e) {
+    const detailMsg = e instanceof Error ? e.message : String(e);
     console.error("[test-geidea] session creation failed:", e);
-    redirect("/admin/test-geidea?error=" + encodeURIComponent("تعذّر إنشاء جلسة الدفع."));
+    redirect("/admin/test-geidea?error=" + encodeURIComponent(`تعذّر إنشاء جلسة الدفع: ${detailMsg}`));
   }
 
   const jar = await cookies();

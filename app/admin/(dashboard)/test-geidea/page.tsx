@@ -65,19 +65,42 @@ export default async function AdminTestGeideaPage({ searchParams }: Props) {
       </div>
 
       {sp.error ? (
-        <p className="rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{sp.error}</p>
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          <p className="font-bold">❌ حدث خطأ أثناء عملية الدفع:</p>
+          <pre className="mt-2 whitespace-pre-wrap rounded-lg bg-red-100 p-3 font-mono text-xs dir-ltr">
+            {sp.error}
+          </pre>
+        </div>
       ) : null}
 
-      <AdminCard title="حالة الإعداد">
-        {configured ? (
-          <p className="text-sm font-bold text-emerald-700">
-            بوابة جيديا مهيّأة — مفاتيح البيئة موجودة (GEIDEA_PUBLIC_KEY / GEIDEA_API_PASSWORD).
-          </p>
-        ) : (
-          <p className="text-sm font-bold text-red-700">
-            بوابة جيديا غير مهيّأة — أضف GEIDEA_PUBLIC_KEY و GEIDEA_API_PASSWORD في متغيرات البيئة.
-          </p>
-        )}
+      <AdminCard title="حالة الإعداد واللوجات الحية">
+        <div className="space-y-3">
+          {configured ? (
+            <p className="text-sm font-bold text-emerald-700">
+              ✅ بوابة جيديا مهيّأة — مفاتيح البيئة موجودة ومفعلة.
+            </p>
+          ) : (
+            <p className="text-sm font-bold text-red-700">
+              ❌ بوابة جيديا غير مهيّأة — أضف GEIDEA_PUBLIC_KEY و GEIDEA_API_PASSWORD في متغيرات البيئة.
+            </p>
+          )}
+
+          <div className="rounded-xl bg-surface-container p-4 text-xs space-y-2 font-mono dir-ltr">
+            <p className="font-sans font-bold text-on-surface text-sm mb-2">📋 متغيرات البيئة الحالية (Diagnostics):</p>
+            <p>GEIDEA_PUBLIC_KEY: {process.env.GEIDEA_PUBLIC_KEY ? `✅ (Length: ${process.env.GEIDEA_PUBLIC_KEY.trim().length}, Prefix: ${process.env.GEIDEA_PUBLIC_KEY.trim().slice(0, 6)}...)` : "❌ غير مضبوط"}</p>
+            <p>GEIDEA_API_PASSWORD: {process.env.GEIDEA_API_PASSWORD ? `✅ (Length: ${process.env.GEIDEA_API_PASSWORD.trim().length})` : "❌ غير مضبوط"}</p>
+            <p>GEIDEA_API_BASE: {process.env.GEIDEA_API_BASE?.trim() || "https://api.ksamerchant.geidea.net (الافتراضي - KSA)"}</p>
+            <p>GEIDEA_HPP_BASE: {process.env.GEIDEA_HPP_BASE?.trim() || "https://www.ksamerchant.geidea.net (الافتراضي - KSA)"}</p>
+            <p>APP_PUBLIC_URL: {process.env.APP_PUBLIC_URL?.trim() || "⚠️ غير محدد (قد يؤثر على التوجيه والـ Webhook)"}</p>
+          </div>
+
+          <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-xs text-blue-900 space-y-1 font-sans">
+            <p className="font-bold">💡 تلميح التشخيص والدعم:</p>
+            <p>تم إضافة لوجات مفصلة في خادم التطبيق (`console.log`). يتم تسجيل كل طلبات `Geidea Client` والـ Payloads والردود بـ HTTP Status في لوجات الخادم (Terminal Logs).</p>
+            <p className="font-mono bg-blue-100 p-2 rounded mt-2 dir-ltr">node scripts/geidea-diagnose.mjs</p>
+            <p className="text-[11px] text-blue-700">يمكنك أيضاً تشغيل الأمر أعلاه مباشرة في السيرفر لفحص الاتصال والتوقيع بجميع المفاتيح طازجة وطباعة الرد الكامل من جيديا.</p>
+          </div>
+        </div>
       </AdminCard>
 
       <AdminCard

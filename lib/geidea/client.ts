@@ -49,20 +49,43 @@ async function geideaFetch<T>(
   path: string,
   init: { method: "GET" | "POST"; body?: unknown },
 ): Promise<T> {
-  const res = await fetch(`${cfg.apiBase}${path}`, {
-    method: init.method,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Basic ${Buffer.from(`${cfg.publicKey}:${cfg.apiPassword}`).toString("base64")}`,
-    },
-    body: init.body != null ? JSON.stringify(init.body) : undefined,
-    cache: "no-store",
-  });
+  const url = `${cfg.apiBase}${path}`;
+  console.log(`[Geidea Client] 🚀 Request ${init.method} -> ${url}`);
+  if (init.body) {
+    console.log(`[Geidea Client] 📤 Payload:`, JSON.stringify(init.body, null, 2));
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: init.method,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Basic ${Buffer.from(`${cfg.publicKey}:${cfg.apiPassword}`).toString("base64")}`,
+      },
+      body: init.body != null ? JSON.stringify(init.body) : undefined,
+      cache: "no-store",
+    });
+  } catch (err) {
+    console.error(`[Geidea Client] 💥 Network fetch failed for ${url}:`, err);
+    throw new Error(`Geidea network connection failed: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
   const text = await res.text();
+  console.log(`[Geidea Client] 📥 Response HTTP ${res.status} for ${path}`);
+  console.log(`[Geidea Client] 📄 Raw Response Body:`, text);
+
   if (!res.ok) {
+    console.error(`[Geidea Client] ❌ HTTP ${res.status} Error:`, text);
     throw new Error(`Geidea ${path} → HTTP ${res.status}: ${text.slice(0, 300)}`);
   }
-  return JSON.parse(text) as T;
+
+  try {
+    return JSON.parse(text) as T;
+  } catch (parseErr) {
+    console.error(`[Geidea Client] ❌ Failed to parse JSON response from Geidea:`, text);
+    throw new Error(`Geidea ${path} → Invalid JSON response`);
+  }
 }
 
 export type GeideaSession = {
