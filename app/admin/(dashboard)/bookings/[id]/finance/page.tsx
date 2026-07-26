@@ -6,12 +6,9 @@ import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { BookingFinanceOperationsPanel } from "@/components/admin/BookingFinanceOperationsPanel";
 import { BookingPaymentPanel } from "@/components/admin/BookingPaymentPanel";
 import { SarAmountWithSymbol } from "@/components/ui/SarAmountWithSymbol";
-import { computeCheckoutTotals, formatSarAmount } from "@/lib/booking-checkout-pricing";
+import { formatSarAmount } from "@/lib/booking-checkout-pricing";
 import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
-import {
-  parseBookingPricingSnapshot,
-  resolveBookingRentalPricePerDayExclTax,
-} from "@/lib/booking-pricing-snapshot";
+import { computeBookingOutstanding } from "@/lib/booking-outstanding";
 import { getBookingPaymentTransactions } from "@/lib/payment-transaction";
 
 export const dynamic = "force-dynamic";
@@ -92,34 +89,9 @@ export default async function BookingFinancePage({
   const statusKey = booking.paymentStatus.trim().toUpperCase();
   const canPay    = statusKey !== "PAID" && statusKey !== "REFUNDED";
 
-  const { addons, interCityShipping, checkoutOneTimeFees, delayPenalty } =
-    parseBookingPricingSnapshot(booking.addonsJson);
-  const effectiveRentalPrice = booking.carModel
-    ? resolveBookingRentalPricePerDayExclTax(booking.carModel.price, booking.addonsJson)
-    : 0;
-  const oneTimeFeesExclTax =
-    (interCityShipping?.feeExclVatSar ?? 0) +
-    checkoutOneTimeFees.reduce((s, x) => s + x.feeExclVatSar, 0) +
-    (delayPenalty?.feeExclVatSar ?? 0);
-  const vatRate = booking.carModel?.vatRatePercent ?? 15;
-  const totals = computeCheckoutTotals(
-    effectiveRentalPrice,
-    booking.numberOfDays,
-    vatRate,
-    addons.map((a) => ({ pricePerDay: a.pricePerDayExclTax })),
-    { oneTimeFeesExclTax },
-  );
-  const totalAmountSar = totals.totalInclTax;
-  const remainingDueSar = Math.max(0, totalAmountSar - (booking.paidAmountSar ?? 0));
-
-  // الرصيد لا يُحصَّل في الحالات النهائية (ملغى/مرفوض/مسترد) — وإلا يُعرض متبقياً
-  // بصرف النظر عن حالة الدفع (حجز مدفوع جزئياً بعد تمديد له رصيد قائم).
-  const bookingStatusKey = booking.status.trim().toUpperCase();
-  const bookingTerminal =
-    bookingStatusKey === "CANCELLED" || bookingStatusKey === "REJECTED";
-  const refundedState = statusKey === "REFUNDED" || statusKey === "PARTIAL_REFUND";
-  const outstandingDueSar =
-    bookingTerminal || refundedState ? 0 : Math.round(remainingDueSar * 100) / 100;
+  // «رصيد التحصيل» من المصدر الموحّد (نفس ما يُعرض للموظف عند استلام السيارة).
+  const { totalInclTax: totalAmountSar, outstandingDueSar } =
+    computeBookingOutstanding(booking);
   const isPartiallyPaid = statusKey === "PAID" && outstandingDueSar > 0;
 
   return (

@@ -37,6 +37,8 @@ export type LateReturnInfo = {
   vatRatePercent: number;
   policyKind: "hourly" | "full_day";
   billableHours: number;
+  /** أيام التأخير المحتسبة عند policyKind === full_day (تراكمي). */
+  billableDays: number;
 };
 
 export type ReturnLifecycleResult =
@@ -84,6 +86,7 @@ function computeLateReturnInfo(booking: LoadedBooking, now: Date): LateReturnInf
     vatRatePercent: vat,
     policyKind: policy.kind,
     billableHours: policy.billableHours,
+    billableDays: policy.billableDays,
   };
 }
 
@@ -218,8 +221,9 @@ export async function recordBookingReturnToBranch(
           kind: lateInfo.policyKind,
           lateHours: lateInfo.totalLateHours,
           billableHours: lateInfo.billableHours,
+          billableDays: lateInfo.billableDays,
           feeExclVatSar: lateInfo.policyFeeExclTax,
-          labelAr: "ساعات تأخير",
+          labelAr: lateInfo.policyKind === "full_day" ? "أيام تأخير" : "ساعات تأخير",
           scheduledReturnAt: lateInfo.scheduledReturnAtIso,
           actualDropoffAt: lateInfo.actualReturnAtIso,
         }

@@ -46,6 +46,7 @@ function parseDelayPenaltySnap(raw: unknown): DelayPenaltySnap | null {
   if (kind !== "hourly" && kind !== "full_day") return null;
   const lateHours = Number(o.lateHours);
   const billableHours = Number(o.billableHours ?? 0);
+  const billableDays = Number(o.billableDays ?? 0);
   if (!Number.isFinite(lateHours) || lateHours <= DELAY_PENALTY_FREE_HOURS) return null;
   const labelAr = typeof o.labelAr === "string" ? o.labelAr.trim() : "";
   if (!labelAr) return null;
@@ -57,6 +58,7 @@ function parseDelayPenaltySnap(raw: unknown): DelayPenaltySnap | null {
     kind,
     lateHours,
     billableHours: Number.isFinite(billableHours) ? billableHours : 0,
+    billableDays: Number.isFinite(billableDays) ? billableDays : 0,
     feeExclVatSar: Math.round(fee * 100) / 100,
     labelAr,
     scheduledReturnAt,

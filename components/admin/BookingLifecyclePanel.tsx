@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { AlarmClock, CarFront, RotateCcw, Key, CheckCircle2 } from "lucide-react";
+import { AlarmClock, CarFront, RotateCcw, Key, CheckCircle2, AlertTriangle } from "lucide-react";
 import {
   recordReturnToBranchAction,
   type ReturnToBranchActionResult,
@@ -38,6 +38,8 @@ type Props = {
   vehicleReturnedAt: Date | null;
   carModelId?: number | null;
   currentPlateNumber?: string | null;
+  /** رصيد التحصيل من العميل (نفس مصدر صفحة المالية) — يُعرض كتنبيه للموظف. */
+  outstandingDueSar?: number;
 };
 
 function fmtWhen(d: Date | null): string | null {
@@ -62,6 +64,7 @@ export function BookingLifecyclePanel({
   vehicleReturnedAt,
   carModelId = null,
   currentPlateNumber = null,
+  outstandingDueSar = 0,
 }: Props) {
   const [returnState, returnAction, returnPending] = useActionState(
     recordReturnToBranchAction,
@@ -150,6 +153,20 @@ export function BookingLifecyclePanel({
         <span className="font-bold text-on-surface">{bookingStatusLabelAr(status)}</span>
       </p>
 
+      {/* تنبيه مستحقات — يظهر للموظف طالما فيه رصيد للتحصيل والسيارة لم تُرجَع بعد */}
+      {outstandingDueSar > 0 && !returned ? (
+        <div className="flex items-start gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5 text-amber-900">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+          <div className="text-xs leading-relaxed">
+            <p className="font-bold">على العميل مبلغ مستحق للتحصيل</p>
+            <p className="mt-0.5 text-sm font-extrabold" dir="ltr">
+              {fmtSarNum(outstandingDueSar)} ر.س
+            </p>
+            <p className="mt-0.5 opacity-90">حصّل المبلغ من العميل قبل إتمام استلام السيارة.</p>
+          </div>
+        </div>
+      ) : null}
+
       {showPickup ? (
         <button
           type="button"
@@ -217,7 +234,13 @@ export function BookingLifecyclePanel({
                     <dd className="font-extrabold text-amber-700">
                       {returnState.lateInfo.totalLateHours} ساعة
                       {returnState.lateInfo.policyKind === "full_day"
-                        ? " — غرامة يوم كامل"
+                        ? ` — غرامة ${
+                            returnState.lateInfo.billableDays === 1
+                              ? "يوم كامل"
+                              : returnState.lateInfo.billableDays === 2
+                                ? "يومين"
+                                : `${returnState.lateInfo.billableDays} أيام`
+                          }`
                         : " — غرامة بالساعة"}
                     </dd>
                   </div>

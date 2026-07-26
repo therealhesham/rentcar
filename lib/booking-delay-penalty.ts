@@ -14,6 +14,8 @@ export type DelayPenaltySnap = {
   lateHours: number;
   /** ساعات التأخير المستخدمة في المعادلة عند kind === hourly */
   billableHours: number;
+  /** أيام التأخير المحتسبة عند kind === full_day (تراكمي). */
+  billableDays: number;
   feeExclVatSar: number;
   labelAr: string;
   scheduledReturnAt: string;
@@ -49,21 +51,25 @@ export function computeLateReturnHours(
  * ساعات تأخير الحجز اليومي:
  * - حتى ساعتين: مجاني
  * - أكثر من ساعتين وحتى 4 ساعات: (ساعات التأخير × سعر اليوم ÷ 24) × 2
- * - أكثر من 4 ساعات: يوم إيجار كامل (سعر اليوم)
+ * - أكثر من 4 ساعات: غرامة تراكمية بالأيام — كل يوم تأخير (24 ساعة، والجزء منها
+ *   يُجبَر لأعلى ليوم كامل) = سعر يوم إيجار. مثال: 25 ساعة = يومان، 93 ساعة = 4 أيام.
  */
 export function computeDelayPenaltyExclTax(
   pricePerDayExclTax: number,
   lateHours: number,
-): { feeExclVatSar: number; kind: DelayPenaltyKind; billableHours: number } {
+): { feeExclVatSar: number; kind: DelayPenaltyKind; billableHours: number; billableDays: number } {
   const price = safePrice(pricePerDayExclTax);
   if (lateHours <= DELAY_PENALTY_FREE_HOURS) {
-    return { feeExclVatSar: 0, kind: "none", billableHours: 0 };
+    return { feeExclVatSar: 0, kind: "none", billableHours: 0, billableDays: 0 };
   }
   if (lateHours > DELAY_PENALTY_FULL_DAY_HOURS) {
+    // تراكمي: كل يوم تأخير (أو جزء منه) = سعر يوم كامل.
+    const billableDays = Math.max(1, Math.ceil(lateHours / 24));
     return {
-      feeExclVatSar: Math.round(price),
+      feeExclVatSar: Math.round(price * billableDays),
       kind: "full_day",
       billableHours: 0,
+      billableDays,
     };
   }
   // لا تُحتسب الكسور: تُجبَر ساعات التأخير لأعلى لأقرب ساعة كاملة (2.3 → 3، 1.1 → 2)،
@@ -74,6 +80,7 @@ export function computeDelayPenaltyExclTax(
     feeExclVatSar: Math.round(raw * 100) / 100,
     kind: "hourly",
     billableHours,
+    billableDays: 0,
   };
 }
 
@@ -82,11 +89,8 @@ function formatHoursAr(h: number): string {
   return h.toLocaleString("ar-SA", { maximumFractionDigits: 1 });
 }
 
-function buildDelayLabelAr(kind: DelayPenaltyKind, billableHours: number): string {
-  if (kind === "full_day") {
-    return `ساعات تأخير`;
-  }
-  return `ساعات تأخير`;
+function buildDelayLabelAr(kind: DelayPenaltyKind): string {
+  return kind === "full_day" ? `أيام تأخير` : `ساعات تأخير`;
 }
 
 export function isDailyRentalTab(rentalTab: string | null | undefined): boolean {
@@ -107,7 +111,7 @@ export function computeDelayPenaltySnap(
   if (dropoff.getTime() < pickup.getTime()) return null;
 
   const lateHours = computeLateReturnHours(pickup, input.numberOfDays, dropoff);
-  const { feeExclVatSar, kind, billableHours } = computeDelayPenaltyExclTax(
+  const { feeExclVatSar, kind, billableHours, billableDays } = computeDelayPenaltyExclTax(
     input.pricePerDayExclTax,
     lateHours,
   );
@@ -119,8 +123,9 @@ export function computeDelayPenaltySnap(
     kind,
     lateHours,
     billableHours,
+    billableDays,
     feeExclVatSar,
-    labelAr: buildDelayLabelAr(kind, billableHours),
+    labelAr: buildDelayLabelAr(kind),
     scheduledReturnAt,
     actualDropoffAt: dropoff.toISOString(),
   };

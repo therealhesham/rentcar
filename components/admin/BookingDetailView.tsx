@@ -40,6 +40,7 @@ import {
   parseBookingPricingSnapshot,
   resolveBookingRentalPricePerDayExclTax,
 } from "@/lib/booking-pricing-snapshot";
+import { computeBookingOutstanding } from "@/lib/booking-outstanding";
 import { addDaysToYmd } from "@/lib/direct-booking";
 import { BookingHeaderGearMenu } from "@/components/admin/BookingHeaderGearMenu";
 import { VehiclePlateHandoverModal } from "@/components/admin/VehiclePlateHandoverModal";
@@ -163,6 +164,9 @@ export function BookingDetailView({ booking, editActions, cancellation }: Props)
     addons.map((a) => ({ pricePerDay: a.pricePerDayExclTax })),
     { oneTimeFeesExclTax: oneTimeFeesTotal },
   );
+
+  // رصيد التحصيل من المصدر الموحّد — يُمرَّر للوحة الإرجاع كتنبيه للموظف.
+  const { outstandingDueSar } = computeBookingOutstanding(booking);
 
 
 
@@ -464,6 +468,7 @@ export function BookingDetailView({ booking, editActions, cancellation }: Props)
                 }
                 carModelId={booking.carModelId}
                 currentPlateNumber={booking.vehiclePlateNumber}
+                outstandingDueSar={outstandingDueSar}
               />
             </BookingDetailSection>
           ) : null}
