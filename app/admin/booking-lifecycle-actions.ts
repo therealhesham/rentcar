@@ -11,6 +11,7 @@ import {
   type LateReturnInfo,
 } from "@/lib/booking-lifecycle-service";
 import { logBookingEvent } from "@/lib/booking-audit";
+import { parseOdometerInput } from "@/lib/booking-odometer";
 import { prisma } from "@/lib/prisma";
 
 export async function recordPickupFromBranchAction(
@@ -32,11 +33,20 @@ export async function recordPickupFromBranchAction(
   const vehicleUnitId = vehicleUnitIdRaw ? Number(vehicleUnitIdRaw) : undefined;
   const vehiclePlateNumber = String(formData.get("vehiclePlateNumber") ?? "").trim() || undefined;
 
+  const odometer = parseOdometerInput(formData.get("odometerAtPickupKm"));
+  if (!odometer.ok) return { ok: false, error: odometer.error };
+
   const result = await recordBookingPickupFromBranch(bookingRequestId, {
     vehicleUnitId: Number.isInteger(vehicleUnitId) && (vehicleUnitId ?? 0) > 0 ? vehicleUnitId : undefined,
     vehiclePlateNumber,
+    odometerAtPickupKm: odometer.value,
   });
   if (!result.ok) return result;
+
+  const pickupNotes = [
+    vehiclePlateNumber ? `تم ربط السيارة ذات اللوحة: ${vehiclePlateNumber}` : null,
+    odometer.value != null ? `العداد عند التسليم: ${odometer.value} كم` : null,
+  ].filter(Boolean);
 
   await logBookingEvent({
     bookingId: bookingRequestId,
@@ -44,7 +54,7 @@ export async function recordPickupFromBranchAction(
     actorKind: "ADMIN",
     actorName: auth.session.displayName,
     toStatus: "PICKED_UP",
-    notes: vehiclePlateNumber ? `تم ربط السيارة ذات اللوحة: ${vehiclePlateNumber}` : undefined,
+    notes: pickupNotes.length > 0 ? pickupNotes.join(" — ") : undefined,
   });
 
   revalidatePath("/admin");
@@ -81,11 +91,24 @@ export async function recordReturnToBranchAction(
   const latePenaltyDecision =
     decisionRaw === "APPLY" || decisionRaw === "WAIVE" ? decisionRaw : undefined;
 
+  const odometer = parseOdometerInput(formData.get("odometerAtReturnKm"));
+  if (!odometer.ok) return { ok: false, error: odometer.error };
+
   const result = await recordBookingReturnToBranch(bookingRequestId, {
     latePenaltyDecision,
     decidedBy: auth.session.displayName,
+    odometerAtReturnKm: odometer.value,
   });
   if (!result.ok) return result;
+
+  const returnNotes = [
+    latePenaltyDecision === "APPLY"
+      ? "تم تطبيق غرامة التأخير"
+      : latePenaltyDecision === "WAIVE"
+        ? "تم إعفاء العميل من غرامة التأخير"
+        : null,
+    odometer.value != null ? `العداد عند الإرجاع: ${odometer.value} كم` : null,
+  ].filter(Boolean);
 
   await logBookingEvent({
     bookingId: bookingRequestId,
@@ -93,11 +116,7 @@ export async function recordReturnToBranchAction(
     actorKind: "ADMIN",
     actorName: auth.session.displayName,
     toStatus: "RETURNED",
-    notes: latePenaltyDecision === "APPLY"
-      ? "تم تطبيق غرامة التأخير"
-      : latePenaltyDecision === "WAIVE"
-        ? "تم إعفاء العميل من غرامة التأخير"
-        : undefined,
+    notes: returnNotes.length > 0 ? returnNotes.join(" — ") : undefined,
   });
 
   revalidatePath("/admin");

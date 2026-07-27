@@ -121,6 +121,7 @@ async function loadDirectBooking(bookingRequestId: number) {
       snapshotTotalAmountSar: true,
       vehicleUnitId: true,
       vehiclePlateNumber: true,
+      odometerAtPickupKm: true,
       carModel: {
         select: { price: true, vatRatePercent: true },
       },
@@ -131,7 +132,11 @@ async function loadDirectBooking(bookingRequestId: number) {
 /** تسجيل استلام السيارة من الفرع — الحالة PICKED_UP مع ربط رقم اللوحة اختيراياً. */
 export async function recordBookingPickupFromBranch(
   bookingRequestId: number,
-  opts?: { vehicleUnitId?: number | null; vehiclePlateNumber?: string | null },
+  opts?: {
+    vehicleUnitId?: number | null;
+    vehiclePlateNumber?: string | null;
+    odometerAtPickupKm?: number | null;
+  },
 ): Promise<LifecycleActionResult> {
   const booking = await loadDirectBooking(bookingRequestId);
   if (!booking) return { ok: false, error: "الطلب غير موجود." };
@@ -167,6 +172,9 @@ export async function recordBookingPickupFromBranch(
         vehiclePickedUpAt: now,
         ...(finalUnitId != null ? { vehicleUnitId: finalUnitId } : {}),
         ...(finalPlateNumber != null ? { vehiclePlateNumber: finalPlateNumber } : {}),
+        ...(opts?.odometerAtPickupKm != null
+          ? { odometerAtPickupKm: opts.odometerAtPickupKm }
+          : {}),
       },
     });
 
@@ -193,12 +201,28 @@ export async function recordBookingPickupFromBranch(
  */
 export async function recordBookingReturnToBranch(
   bookingRequestId: number,
-  opts?: { latePenaltyDecision?: LatePenaltyDecision; decidedBy?: string | null },
+  opts?: {
+    latePenaltyDecision?: LatePenaltyDecision;
+    decidedBy?: string | null;
+    odometerAtReturnKm?: number | null;
+  },
 ): Promise<ReturnLifecycleResult> {
   const booking = await loadDirectBooking(bookingRequestId);
   if (!booking) return { ok: false, error: "الطلب غير موجود." };
   if (!canRecordReturnToBranch(booking)) {
     return { ok: false, error: "سجّل استلام السيارة من الفرع أولاً." };
+  }
+
+  // العداد لا يرجع للخلف — قراءة أقل من قراءة التسليم غالباً خطأ إدخال.
+  if (
+    opts?.odometerAtReturnKm != null &&
+    booking.odometerAtPickupKm != null &&
+    opts.odometerAtReturnKm < booking.odometerAtPickupKm
+  ) {
+    return {
+      ok: false,
+      error: `قراءة العداد عند الإرجاع (${opts.odometerAtReturnKm.toLocaleString("en-US")}) أقل من قراءة التسليم (${booking.odometerAtPickupKm.toLocaleString("en-US")}). راجع الرقم.`,
+    };
   }
 
   const now = new Date();
@@ -281,6 +305,9 @@ export async function recordBookingReturnToBranch(
       data: {
         status: BOOKING_STATUS_RETURNED,
         vehicleReturnedAt: now,
+        ...(opts?.odometerAtReturnKm != null
+          ? { odometerAtReturnKm: opts.odometerAtReturnKm }
+          : {}),
         // مدفوع أونلاين + غرامة مطبقة: تبقى الغرامة رصيداً مستحقاً يتابَع من صفحة الاستلامات المتأخرة
         balanceDueAtBranchSar: !cash && penaltyInclTax > 0 ? penaltyInclTax : null,
         ...(appliedSnap

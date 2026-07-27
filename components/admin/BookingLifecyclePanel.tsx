@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { AlarmClock, CarFront, RotateCcw, Key, CheckCircle2, AlertTriangle } from "lucide-react";
+import { AlarmClock, CarFront, RotateCcw, Key, CheckCircle2, AlertTriangle, Gauge } from "lucide-react";
 import {
   recordReturnToBranchAction,
   type ReturnToBranchActionResult,
@@ -13,6 +13,7 @@ import {
   isBookingReturned,
 } from "@/lib/booking-lifecycle";
 import { bookingStatusLabelAr } from "@/lib/booking-display-labels";
+import { formatKm, summarizeBookingOdometer } from "@/lib/booking-odometer";
 import { VehiclePlateHandoverModal } from "@/components/admin/VehiclePlateHandoverModal";
 
 function fmtSarNum(n: number): string {
@@ -40,6 +41,10 @@ type Props = {
   currentPlateNumber?: string | null;
   /** رصيد التحصيل من العميل (نفس مصدر صفحة المالية) — يُعرض كتنبيه للموظف. */
   outstandingDueSar?: number;
+  /** قراءتا العداد ومدة الحجز — لحساب المسافة المقطوعة وعرضها. */
+  odometerAtPickupKm?: number | null;
+  odometerAtReturnKm?: number | null;
+  numberOfDays?: number;
 };
 
 function fmtWhen(d: Date | null): string | null {
@@ -65,6 +70,9 @@ export function BookingLifecyclePanel({
   carModelId = null,
   currentPlateNumber = null,
   outstandingDueSar = 0,
+  odometerAtPickupKm = null,
+  odometerAtReturnKm = null,
+  numberOfDays = 1,
 }: Props) {
   const [returnState, returnAction, returnPending] = useActionState(
     recordReturnToBranchAction,
@@ -95,6 +103,11 @@ export function BookingLifecyclePanel({
 
   const pickupAt = fmtWhen(vehiclePickedUpAt);
   const returnAt = fmtWhen(vehicleReturnedAt);
+  const odometer = summarizeBookingOdometer({
+    odometerAtPickupKm,
+    odometerAtReturnKm,
+    numberOfDays,
+  });
 
   return (
     <div className="space-y-4">
@@ -153,6 +166,46 @@ export function BookingLifecyclePanel({
         <span className="font-bold text-on-surface">{bookingStatusLabelAr(status)}</span>
       </p>
 
+      {/* ملخص الكيلومترات — يظهر بمجرد تسجيل أي قراءة */}
+      {odometer.pickupKm != null || odometer.returnKm != null ? (
+        <div className="rounded-xl border border-sky-200/70 bg-sky-50/60 px-3 py-2.5">
+          <p className="flex items-center gap-1.5 text-xs font-bold text-sky-900">
+            <Gauge className="h-3.5 w-3.5" aria-hidden />
+            الكيلومترات
+          </p>
+          <dl className="mt-1.5 grid grid-cols-3 gap-2 text-xs">
+            <div>
+              <dt className="text-sky-800/70">عند التسليم</dt>
+              <dd className="font-bold text-sky-950" dir="ltr">
+                {formatKm(odometer.pickupKm)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-sky-800/70">عند الإرجاع</dt>
+              <dd className="font-bold text-sky-950" dir="ltr">
+                {formatKm(odometer.returnKm)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-sky-800/70">المسافة المقطوعة</dt>
+              <dd className="font-extrabold text-sky-950" dir="ltr">
+                {formatKm(odometer.distanceKm)}
+              </dd>
+            </div>
+          </dl>
+          {odometer.hasInconsistentReadings ? (
+            <p className="mt-1.5 flex items-center gap-1 text-[11px] font-bold text-error">
+              <AlertTriangle className="h-3 w-3" aria-hidden />
+              قراءة الإرجاع أقل من التسليم — راجع الرقم.
+            </p>
+          ) : odometer.avgPerDayKm != null ? (
+            <p className="mt-1.5 text-[11px] font-medium text-sky-800/80">
+              بمعدل {formatKm(odometer.avgPerDayKm)} يومياً.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
       {/* تنبيه مستحقات — يظهر للموظف طالما فيه رصيد للتحصيل والسيارة لم تُرجَع بعد */}
       {outstandingDueSar > 0 && !returned ? (
         <div className="flex items-start gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5 text-amber-900">
@@ -181,6 +234,33 @@ export function BookingLifecyclePanel({
       {showReturn ? (
         <form action={returnAction}>
           <input type="hidden" name="bookingRequestId" value={bookingRequestId} />
+
+          {/* قراءة العداد عند الإرجاع — تُقارَن بقراءة التسليم لحساب المسافة */}
+          <div className="mb-3">
+            <label
+              htmlFor="odometerAtReturnKm"
+              className="mb-1.5 flex items-center gap-1.5 text-xs font-bold text-on-surface-variant"
+            >
+              <Gauge className="h-3.5 w-3.5 text-sky-600" aria-hidden />
+              قراءة العداد عند الإرجاع (كم) — اختياري
+            </label>
+            <input
+              id="odometerAtReturnKm"
+              name="odometerAtReturnKm"
+              type="number"
+              min={odometer.pickupKm ?? 0}
+              step={1}
+              inputMode="numeric"
+              dir="ltr"
+              placeholder={
+                odometer.pickupKm != null
+                  ? `أكبر من ${odometer.pickupKm.toLocaleString("en-US")}`
+                  : "مثال: 45850"
+              }
+              className="w-full rounded-xl border border-outline-variant/40 bg-white p-2.5 text-xs font-bold text-on-surface outline-none focus:border-primary"
+            />
+          </div>
+
           <button
             type="submit"
             disabled={returnPending}

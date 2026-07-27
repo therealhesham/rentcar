@@ -562,6 +562,10 @@ model BookingRequest {
   vehicleUnit         VehicleUnit? @relation(fields: [vehicleUnitId], references: [id], onDelete: SetNull)
   /// رقم لوحة السيارة المسلّمة للعميل (مثل: أ ب ج 1234)
   vehiclePlateNumber  String?      @db.VarChar(64)
+  /// قراءة عداد الكيلومترات لحظة تسليم السيارة للعميل (اختياري — يُدخله الموظف).
+  odometerAtPickupKm  Int?
+  /// قراءة العداد لحظة إرجاع السيارة إلى الفرع. الفرق عن قراءة التسليم = المسافة المقطوعة.
+  odometerAtReturnKm  Int?
 
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt

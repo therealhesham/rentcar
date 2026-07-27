@@ -469,6 +469,9 @@ export function BookingDetailView({ booking, editActions, cancellation }: Props)
                 carModelId={booking.carModelId}
                 currentPlateNumber={booking.vehiclePlateNumber}
                 outstandingDueSar={outstandingDueSar}
+                odometerAtPickupKm={booking.odometerAtPickupKm}
+                odometerAtReturnKm={booking.odometerAtReturnKm}
+                numberOfDays={booking.numberOfDays}
               />
             </BookingDetailSection>
           ) : null}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
-import { X, Key, Loader2, Hash, Check } from "lucide-react";
+import { X, Key, Loader2, Hash, Check, Gauge } from "lucide-react";
 import { recordPickupFromBranchAction, updateBookingVehiclePlateAction } from "@/app/admin/booking-lifecycle-actions";
 import { fetchVehicleUnitOptionsAction } from "@/app/admin/vehicle-units-actions";
 
@@ -36,6 +36,7 @@ export function VehiclePlateHandoverModal({
   const [vehicleOptions, setVehicleOptions] = useState<VehicleOption[]>([]);
   const [selectedUnitId, setSelectedUnitId] = useState<string>("");
   const [customPlate, setCustomPlate] = useState(currentPlateNumber || "");
+  const [odometerKm, setOdometerKm] = useState("");
   const [loadingUnits, setLoadingUnits] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -44,6 +45,7 @@ export function VehiclePlateHandoverModal({
       setErrorMsg(null);
       setCustomPlate(currentPlateNumber || "");
       setSelectedUnitId("");
+      setOdometerKm("");
       if (carModelId) {
         setLoadingUnits(true);
         fetchVehicleUnitOptionsAction(carModelId).then((res) => {
@@ -72,6 +74,7 @@ export function VehiclePlateHandoverModal({
         formData.append("bookingRequestId", String(bookingId));
         if (selectedUnitId) formData.append("vehicleUnitId", selectedUnitId);
         if (customPlate.trim()) formData.append("vehiclePlateNumber", customPlate.trim());
+        if (odometerKm.trim()) formData.append("odometerAtPickupKm", odometerKm.trim());
         res = await recordPickupFromBranchAction(null, formData);
       } else {
         const unitIdNum = selectedUnitId ? Number(selectedUnitId) : undefined;
@@ -154,6 +157,33 @@ export function VehiclePlateHandoverModal({
             )}
           </div>
 
+          {/* قراءة العداد — تُسجَّل عند التسليم فقط ليُحسب الفرق عند الإرجاع */}
+          {mode === "HANDOVER" ? (
+            <div>
+              <label
+                htmlFor="odometerAtPickupKm"
+                className="mb-1.5 flex items-center gap-1.5 text-xs font-bold text-on-surface-variant"
+              >
+                <Gauge className="size-3.5 text-sky-600" />
+                قراءة العداد عند التسليم (كم) — اختياري
+              </label>
+              <input
+                id="odometerAtPickupKm"
+                type="number"
+                min={0}
+                step={1}
+                inputMode="numeric"
+                value={odometerKm}
+                onChange={(e) => setOdometerKm(e.target.value)}
+                placeholder="مثال: 45200"
+                dir="ltr"
+                className="w-full rounded-xl border border-outline-variant/40 bg-white p-2.5 text-xs font-bold text-on-surface outline-none focus:border-primary"
+              />
+              <p className="mt-1 text-[11px] font-medium text-on-surface-variant opacity-80">
+                تُقارَن بقراءة الإرجاع لحساب المسافة المقطوعة.
+              </p>
+            </div>
+          ) : null}
 
           <div className="pt-2 flex gap-2.5">
             <button
