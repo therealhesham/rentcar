@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Building2,
   CalendarClock,
@@ -78,6 +79,7 @@ function fmtKm(km: number | null): string {
 
 export function VehicleLogView({ log, branches }: Props) {
   const { unit, bookings, maintenance, stats } = log;
+  const router = useRouter();
   const [tab, setTab] = useState<TabKey>("ALL");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingLog, setEditingLog] = useState<VehicleLogMaintenance | null>(null);
@@ -122,6 +124,8 @@ export function VehicleLogView({ log, branches }: Props) {
         return;
       }
       setModalOpen(false);
+      // revalidatePath وحده لا يعيد رسم هذه الصفحة لأن الإجراء يُستدعى مباشرة لا عبر <form action>.
+      router.refresh();
       if (res.warning) alert(res.warning);
     });
   }
@@ -129,8 +133,12 @@ export function VehicleLogView({ log, branches }: Props) {
   function handleComplete(id: number) {
     startTransition(async () => {
       const res = await completeMaintenanceLogAction(id);
-      if (!res.ok) alert(res.error || "تعذّر إغلاق العملية.");
-      else if (res.warning) alert(res.warning);
+      if (!res.ok) {
+        alert(res.error || "تعذّر إغلاق العملية.");
+        return;
+      }
+      router.refresh();
+      if (res.warning) alert(res.warning);
     });
   }
 
@@ -138,8 +146,12 @@ export function VehicleLogView({ log, branches }: Props) {
     if (!confirm("هل تريد حذف سجل الصيانة هذا نهائياً؟")) return;
     startTransition(async () => {
       const res = await deleteMaintenanceLogAction(id);
-      if (!res.ok) alert(res.error || "تعذّر الحذف.");
-      else if (res.warning) alert(res.warning);
+      if (!res.ok) {
+        alert(res.error || "تعذّر الحذف.");
+        return;
+      }
+      router.refresh();
+      if (res.warning) alert(res.warning);
     });
   }
 
