@@ -31,6 +31,8 @@ function round2(n: number): number {
 function revalidateBooking(bookingId: number) {
   revalidatePath("/admin");
   revalidatePath("/admin/company-dues");
+  revalidatePath("/admin/customer-dues");
+  revalidatePath("/admin/financials");
   revalidatePath(`/admin/bookings/${bookingId}`);
   revalidatePath(`/admin/bookings/${bookingId}/finance`);
   revalidatePath(`/admin/bookings/${bookingId}/statement`);
@@ -155,7 +157,7 @@ export async function voidBookingExtraChargeAction(
   const scope = await assertBookingRequestInScope(auth.session, charge.bookingId);
   if (!scope.ok) return { ok: false, error: scope.error };
 
-  let newBalance = 0;
+  let refundDueAddedSar = 0;
   try {
     const outcome = await prisma.$transaction(async (tx) => {
       // إعادة القراءة داخل الـ transaction: الحالة والرصيد قد يتغيّرا بين الفحص والكتابة.
@@ -168,11 +170,17 @@ export async function voidBookingExtraChargeAction(
 
       const booking = await tx.bookingRequest.findUnique({
         where: { id: charge.bookingId },
-        select: { balanceDueAtBranchSar: true },
+        select: {
+          balanceDueAtBranchSar: true,
+          refundDueToCustomerSar: true,
+          refundDueSettledAt: true,
+        },
       });
       if (!booking) return { error: "الحجز غير موجود." } as const;
 
       const balance = round2((booking.balanceDueAtBranchSar ?? 0) - fresh.amountInclTaxSar);
+      // رصيد سالب = الجزء الذي لم يعد له غطاء في المستحقات، أي ما حُصِّل فعلاً.
+      const collectedBack = balance < 0 ? round2(Math.abs(balance)) : 0;
 
       await tx.bookingExtraCharge.update({
         where: { id: chargeId },
@@ -185,34 +193,56 @@ export async function voidBookingExtraChargeAction(
       });
       await tx.bookingRequest.update({
         where: { id: charge.bookingId },
-        // رصيد سالب = البند حُصِّل بالفعل؛ نصفّره وننبّه الموظف ليردّ الفرق يدوياً.
-        data: { balanceDueAtBranchSar: Math.max(0, balance) },
+        data: {
+          balanceDueAtBranchSar: Math.max(0, balance),
+          // المبلغ المحصَّل يصير ديناً للعميل يُسوَّى من «مستحقات للعميل».
+          // مستحق سابق مُسوّى (settledAt != null) دفتره مُقفل، فنبدأ رصيداً جديداً
+          // بدل تراكمه فوق مبلغ سبق ردّه.
+          ...(collectedBack > 0
+            ? {
+                refundDueToCustomerSar:
+                  booking.refundDueSettledAt == null
+                    ? round2((booking.refundDueToCustomerSar ?? 0) + collectedBack)
+                    : collectedBack,
+                refundDueSettledAt: null,
+                refundDueSettledMethod: null,
+                refundDueSettledRef: null,
+                refundDueSettledBy: null,
+              }
+            : {}),
+        },
       });
-      return { balance } as const;
+      return { collectedBack } as const;
     });
     if ("error" in outcome) return { ok: false, error: outcome.error };
-    newBalance = outcome.balance;
+    refundDueAddedSar = outcome.collectedBack;
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "حدث خطأ غير متوقع.";
     return { ok: false, error: msg };
   }
-
-  const alreadyCollected = newBalance < 0;
 
   await logBookingEvent({
     bookingId: charge.bookingId,
     event: "EXTRA_CHARGE_VOIDED",
     actorKind: "ADMIN",
     actorName: auth.session.displayName,
-    notes: `${charge.amountInclTaxSar} ر.س — ${voidReason}`,
-    meta: { chargeId, amountInclTaxSar: charge.amountInclTaxSar, alreadyCollected },
+    notes:
+      refundDueAddedSar > 0
+        ? `${charge.amountInclTaxSar} ر.س — ${voidReason} — قُيّد ${refundDueAddedSar} ر.س كمستحق للعميل`
+        : `${charge.amountInclTaxSar} ر.س — ${voidReason}`,
+    meta: {
+      chargeId,
+      amountInclTaxSar: charge.amountInclTaxSar,
+      refundDueAddedSar,
+    },
   });
 
   revalidateBooking(charge.bookingId);
   return {
     ok: true,
-    warning: alreadyCollected
-      ? `تم إلغاء البند، لكن مبلغه كان محصَّلاً بالفعل — نفّذ استرداداً بقيمة ${round2(Math.abs(newBalance))} ر.س من قسم الاسترداد.`
-      : undefined,
+    warning:
+      refundDueAddedSar > 0
+        ? `تم إلغاء البند. مبلغه كان محصَّلاً، فقُيّد ${refundDueAddedSar} ر.س كمستحق للعميل — سوِّه من صفحة «مستحقات للعميل».`
+        : undefined,
   };
 }

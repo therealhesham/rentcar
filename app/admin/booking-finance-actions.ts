@@ -447,9 +447,12 @@ export async function processBookingPayment(
     notes: `${rawMethod} — ${amount} ر.س`,
   });
 
+  revalidatePath("/admin");
   revalidatePath("/admin/car-bookings");
+  revalidatePath("/admin/company-dues");
   revalidatePath(`/admin/bookings/${bookingId}`);
   revalidatePath(`/admin/bookings/${bookingId}/finance`);
+  revalidatePath(`/admin/bookings/${bookingId}/statement`);
 
   return { ok: true };
 }

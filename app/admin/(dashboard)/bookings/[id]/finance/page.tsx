@@ -90,11 +90,6 @@ export default async function BookingFinancePage({
 
   if (!booking) notFound();
 
-  const [ledger, extraCharges] = await Promise.all([
-    getBookingPaymentTransactions(id),
-    getBookingExtraCharges(id),
-  ]);
-
   const statusKey = booking.paymentStatus.trim().toUpperCase();
   const canPay    = statusKey !== "PAID" && statusKey !== "REFUNDED";
   const bookingStatusKey = booking.status.trim().toUpperCase();
@@ -104,6 +99,16 @@ export default async function BookingFinancePage({
   // «رصيد التحصيل» من المصدر الموحّد (نفس ما يُعرض للموظف عند استلام السيارة).
   const { totalInclTax: totalAmountSar, outstandingDueSar, balanceDueAtBranchSar } =
     computeBookingOutstanding(booking);
+
+  const [ledger, extraCharges] = await Promise.all([
+    getBookingPaymentTransactions(id),
+    getBookingExtraCharges(id, balanceDueAtBranchSar),
+  ]);
+  // إجمالي ما على الحجز = الإيجار + الرسوم الإضافية السارية، حتى تتصالح المعادلة
+  // «الكلي − المدفوع = المتبقي». الحجز الملغى تسقط عنه الرسوم كما يسقط رصيده.
+  const extraChargesInTotalSar = isTerminalBooking ? 0 : extraCharges.activeTotalInclTaxSar;
+  const grandTotalSar = Math.round((totalAmountSar + extraChargesInTotalSar) * 100) / 100;
+
   // ما يُطالَب به العميل الآن = متبقي الإيجار + المستحق عند الفرع (فروق التمديد والرسوم الإضافية).
   const totalDueNowSar = Math.round((outstandingDueSar + balanceDueAtBranchSar) * 100) / 100;
   const isPartiallyPaid = statusKey === "PAID" && totalDueNowSar > 0;
@@ -136,6 +141,8 @@ export default async function BookingFinancePage({
             bookingId={id}
             charges={extraCharges.charges}
             activeTotalInclTaxSar={extraCharges.activeTotalInclTaxSar}
+            unsettledTotalInclTaxSar={extraCharges.unsettledTotalInclTaxSar}
+            unsettledCount={extraCharges.unsettledCount}
             kindOptions={EXTRA_CHARGE_KINDS.map((k) => ({
               value: k,
               label: extraChargeKindLabelAr(k),
@@ -167,9 +174,21 @@ export default async function BookingFinancePage({
                 amountClassName="text-3xl font-black text-white"
                 glyphClassName="text-white/70"
               >
-                {formatSarAmount(totalAmountSar)}
+                {formatSarAmount(grandTotalSar)}
               </SarAmountWithSymbol>
             </div>
+            {extraChargesInTotalSar > 0 ? (
+              <p className="mt-2 text-[11px] font-semibold text-white/60">
+                إيجار{" "}
+                <span dir="ltr" className="tabular-nums">
+                  {formatSarAmount(totalAmountSar)}
+                </span>{" "}
+                + رسوم إضافية{" "}
+                <span dir="ltr" className="tabular-nums">
+                  {formatSarAmount(extraChargesInTotalSar)}
+                </span>
+              </p>
+            ) : null}
             {totalDueNowSar > 0 ? (
               <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-amber-200">
                 <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-300" />
@@ -262,15 +281,16 @@ export default async function BookingFinancePage({
                 </div>
               ) : null}
 
-              {/* تفصيل: كم من المستحق سببه رسوم إضافية */}
-              {extraCharges.activeTotalInclTaxSar > 0 ? (
+              {/* تفصيل: كم من المستحق *الباقي* سببه رسوم إضافية.
+                  يظهر فقط مع وجود رصيد قائم — بعد التحصيل لم تعد هناك رسوم مستحقة. */}
+              {extraCharges.unsettledTotalInclTaxSar > 0 ? (
                 <div className="flex items-center justify-between gap-2 ps-3">
                   <dt className="text-xs font-medium text-on-surface-variant">
-                    ↳ منها رسوم إضافية ({extraCharges.activeCount})
+                    ↳ منها رسوم إضافية ({extraCharges.unsettledCount})
                   </dt>
                   <dd className="text-xs font-bold text-amber-700">
                     <SarAmountWithSymbol>
-                      {formatSarAmount(extraCharges.activeTotalInclTaxSar)}
+                      {formatSarAmount(extraCharges.unsettledTotalInclTaxSar)}
                     </SarAmountWithSymbol>
                   </dd>
                 </div>

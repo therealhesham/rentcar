@@ -67,29 +67,61 @@ export type BookingExtraChargeRow = {
   voidReason: string | null;
   createdBy: string | null;
   createdAt: Date;
+  /** حُصِّل مبلغ هذا البند بالفعل (مشتق من الرصيد القائم — انظر الدالة أدناه). */
+  settled: boolean;
 };
 
 export type BookingExtraChargesSummary = {
   charges: BookingExtraChargeRow[];
-  /** مجموع البنود السارية (شامل الضريبة) — الجزء المضاف لرصيد التحصيل. */
+  /** مجموع البنود السارية (شامل الضريبة) — إجمالي ما سُجّل، محصَّلاً كان أم لا. */
   activeTotalInclTaxSar: number;
   activeCount: number;
+  /** الجزء الذي لم يُحصَّل بعد من البنود السارية. */
+  unsettledTotalInclTaxSar: number;
+  unsettledCount: number;
 };
 
-/** كل بنود الرسوم الإضافية على حجز، مرتّبة من الأحدث، مع مجموع البنود السارية. */
+/**
+ * كل بنود الرسوم الإضافية على حجز، مرتّبة من الأحدث.
+ *
+ * لا يحمل البند علم تحصيل خاص به لأن التحصيل يتم على وعاء واحد
+ * (`balanceDueAtBranchSar`) تُصبّ فيه الرسوم وفروق التمديد معاً. لذا نشتق حالة
+ * كل بند من الرصيد المتبقي: الأقدم يُسدَّد أولاً، وما يغطّيه الرصيد الباقي
+ * (محدوداً بمجموع البنود) يبقى غير محصَّل. البند المغطى جزئياً يُعدّ غير محصَّل
+ * حتى لا نَعِد الموظف بتحصيل لم يكتمل.
+ */
 export async function getBookingExtraCharges(
   bookingId: number,
+  outstandingBranchBalanceSar: number,
 ): Promise<BookingExtraChargesSummary> {
   const rows = await prisma.bookingExtraCharge.findMany({
     where: { bookingId },
     orderBy: { createdAt: "desc" },
   });
 
-  const active = rows.filter((r) => r.status === "ACTIVE");
+  const activeTotal = round2(
+    rows.filter((r) => r.status === "ACTIVE").reduce((s, r) => s + r.amountInclTaxSar, 0),
+  );
+  // الرصيد قد يضم فروق تمديد أيضاً؛ لا ننسب للرسوم أكثر من مجموعها.
+  let unsettledPool = Math.min(Math.max(0, outstandingBranchBalanceSar), activeTotal);
+
+  // rows مرتّبة تنازلياً، فالمرور عليها كما هي يبدأ من الأحدث = آخر ما يُسدَّد.
+  const charges: BookingExtraChargeRow[] = rows.map((r) => {
+    if (r.status !== "ACTIVE") return { ...r, settled: false };
+    const covered = unsettledPool > 0;
+    unsettledPool = Math.max(0, round2(unsettledPool - r.amountInclTaxSar));
+    return { ...r, settled: !covered };
+  });
+
+  const unsettled = charges.filter((c) => c.status === "ACTIVE" && !c.settled);
 
   return {
-    charges: rows,
-    activeTotalInclTaxSar: round2(active.reduce((s, r) => s + r.amountInclTaxSar, 0)),
-    activeCount: active.length,
+    charges,
+    activeTotalInclTaxSar: activeTotal,
+    activeCount: rows.filter((r) => r.status === "ACTIVE").length,
+    unsettledTotalInclTaxSar: round2(
+      unsettled.reduce((s, r) => s + r.amountInclTaxSar, 0),
+    ),
+    unsettledCount: unsettled.length,
   };
 }

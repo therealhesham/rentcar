@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useActionState } from "react";
+import { useEffect, useState, useActionState } from "react";
+import { useRouter } from "next/navigation";
 import { processBookingPayment } from "@/app/admin/booking-finance-actions";
 import {
   AlertCircle,
@@ -38,10 +39,27 @@ export function BookingPaymentPanel({
   /** المبلغ الكلي المتبقي على الحجز — يُستخدم لتعبئة الحقل بضغطة واحدة */
   fullAmountSar?: number | null;
 }) {
+  const router = useRouter();
   const [state, formAction, isPending] = useActionState(processBookingPayment, null);
   const [method, setMethod] = useState<BookingPaymentMethod>("CASH");
   const [amountValue, setAmountValue] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  // تفريغ الحقل عند وصول نتيجة ناجحة جديدة — تعديل الحالة أثناء الرسم
+  // (النمط الموصى به) بدل setState داخل useEffect الذي يسبب رسماً متتالياً.
+  const [seenState, setSeenState] = useState(state);
+  if (state !== seenState) {
+    setSeenState(state);
+    if (state?.ok) setAmountValue("");
+  }
+
+  // revalidatePath في الإجراء لا يعيد رسم هذه الصفحة وحده، فتبقى الأرقام (الرصيد
+  // المتبقي وملخص الدفع ودفتر الحجز) قديمة بعد التحصيل حتى تحديث يدوي.
+  // `state` مرجع جديد لكل استدعاء، فالتأثير يعمل مرة واحدة لكل دفعة ناجحة.
+  useEffect(() => {
+    if (!state?.ok) return;
+    router.refresh();
+  }, [state, router]);
 
   const statusKey = paymentStatus.trim().toUpperCase();
   const isPaid    = statusKey === "PAID";

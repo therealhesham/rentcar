@@ -48,7 +48,12 @@ export default async function BookingStatementPage(props: {
   const booking = await loadAdminBookingDetail(id);
   if (!booking) notFound();
 
-  const extraCharges = await getBookingExtraCharges(id);
+  const extraChargesBalance =
+    booking.status.trim().toUpperCase() === "CANCELLED" ||
+    booking.status.trim().toUpperCase() === "REJECTED"
+      ? 0
+      : (booking.balanceDueAtBranchSar ?? 0);
+  const extraCharges = await getBookingExtraCharges(id, extraChargesBalance);
 
   const carLabel = booking.carModel
     ? `${booking.carModel.brand.name} ${booking.carModel.name}`
@@ -259,15 +264,16 @@ export default async function BookingStatementPage(props: {
                     <SarAmountWithSymbol glyphClassName="text-emerald-700/70">{isPaid ? formatSarAmount(totals.totalInclTax) : "0.00"}</SarAmountWithSymbol>
                   </span>
                 </div>
-                {/* تفصيل بنود الرسوم الإضافية — العميل يرى سبب كل مبلغ يُطالَب به */}
-                {!isTerminalStatus && extraCharges.activeCount > 0 ? (
+                {/* تفصيل بنود الرسوم الإضافية — العميل يرى سبب كل مبلغ يُطالَب به.
+                    يظهر فقط مع وجود رصيد قائم؛ بعد التحصيل لا شيء مستحق ليُفصَّل. */}
+                {extraCharges.unsettledCount > 0 ? (
                   <div className="border-t border-outline-variant/20 pt-2">
                     <p className="mb-1.5 text-xs font-bold text-on-surface-variant">
                       رسوم إضافية:
                     </p>
                     <div className="space-y-1.5 ps-3">
                       {extraCharges.charges
-                        .filter((c) => c.status === "ACTIVE")
+                        .filter((c) => c.status === "ACTIVE" && !c.settled)
                         .map((c) => (
                           <div key={c.id} className="flex justify-between gap-3 text-xs">
                             <span className="text-on-surface-variant">

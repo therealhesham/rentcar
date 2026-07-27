@@ -94,6 +94,11 @@ export type CompanyReceivableItem = {
   dueSar: number;
   /** الحجز يتضمن غرامة تأخير مسجّلة في لقطة التسعير. */
   hasDelayPenalty: boolean;
+  /**
+   * الجزء من `dueSar` الناتج عن رسوم إضافية (تلفيات/وقود/مخالفات) لا عن فرق تمديد.
+   * يميّز التسمية في الواجهة: رصيد كلّه رسوم ليس «فرق تعديل/تمديد».
+   */
+  extraChargesDueSar: number;
 };
 
 /**
@@ -146,13 +151,29 @@ export async function getCompanyReceivables(
     }),
   ]);
 
+  // كم من رصيد كل حجز مصدره رسوم إضافية — لتسمية البند بدقة في الواجهة.
+  const chargeSums = await prisma.bookingExtraCharge.groupBy({
+    by: ["bookingId"],
+    where: {
+      status: "ACTIVE",
+      bookingId: { in: [...balances, ...unpaid].map((b) => b.id) },
+    },
+    _sum: { amountInclTaxSar: true },
+  });
+  const chargesByBooking = new Map(
+    chargeSums.map((c) => [c.bookingId, round2(c._sum.amountInclTaxSar ?? 0)]),
+  );
+
   const items: CompanyReceivableItem[] = [];
   for (const b of balances) {
+    const dueSar = round2(b.balanceDueAtBranchSar ?? 0);
     items.push({
       booking: b,
       category: "MODIFICATION_BALANCE",
-      dueSar: round2(b.balanceDueAtBranchSar ?? 0),
+      dueSar,
       hasDelayPenalty: parseBookingPricingSnapshot(b.addonsJson).delayPenalty != null,
+      // الرسوم المحصَّلة جزئياً لا تتجاوز الرصيد الباقي.
+      extraChargesDueSar: Math.min(chargesByBooking.get(b.id) ?? 0, dueSar),
     });
   }
   for (const b of unpaid) {
@@ -163,6 +184,7 @@ export async function getCompanyReceivables(
       category: "UNPAID_BOOKING",
       dueSar: due,
       hasDelayPenalty: parseBookingPricingSnapshot(b.addonsJson).delayPenalty != null,
+      extraChargesDueSar: Math.min(chargesByBooking.get(b.id) ?? 0, due),
     });
   }
 

@@ -36,6 +36,28 @@ const CATEGORY_UI: Record<
   },
 };
 
+/** رسوم إضافية تُصبّ في نفس رصيد الفرع، فالتسمية تتبع مصدر المبلغ لا الفئة وحدها. */
+const EXTRA_CHARGES_UI = {
+  label: "رسوم إضافية",
+  className: "bg-orange-50 text-orange-800 ring-1 ring-orange-200",
+};
+const MIXED_BALANCE_UI = {
+  label: "رسوم إضافية + فرق تعديل",
+  className: "bg-orange-50 text-orange-800 ring-1 ring-orange-200",
+};
+
+function categoryUiFor(
+  category: CompanyReceivableCategory,
+  dueSar: number,
+  extraChargesDueSar: number,
+) {
+  if (category !== "MODIFICATION_BALANCE" || extraChargesDueSar <= 0) {
+    return CATEGORY_UI[category];
+  }
+  // فرق الهللة لا يجعل الرصيد «مختلطاً».
+  return dueSar - extraChargesDueSar > 0.01 ? MIXED_BALANCE_UI : EXTRA_CHARGES_UI;
+}
+
 type FilterKey = "all" | "unpaid" | "balance";
 
 const FILTERS: { key: FilterKey; label: string }[] = [
@@ -152,8 +174,8 @@ export default async function CompanyDuesPage({ searchParams }: Props) {
                   </td>
                 </tr>
               ) : (
-                items.map(({ booking: b, category, dueSar, hasDelayPenalty }) => {
-                  const cat = CATEGORY_UI[category];
+                items.map(({ booking: b, category, dueSar, hasDelayPenalty, extraChargesDueSar }) => {
+                  const cat = categoryUiFor(category, dueSar, extraChargesDueSar);
                   const statusUpper = b.status.trim().toUpperCase();
                   const serviceStarted = ["RETURNED", "COMPLETED", "PICKED_UP"].includes(
                     statusUpper,

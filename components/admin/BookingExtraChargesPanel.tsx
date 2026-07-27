@@ -23,12 +23,16 @@ type ChargeRow = {
   voidReason: string | null;
   createdBy: string | null;
   createdAt: Date;
+  settled: boolean;
 };
 
 type Props = {
   bookingId: number;
   charges: ChargeRow[];
   activeTotalInclTaxSar: number;
+  /** الجزء غير المحصَّل من البنود السارية. */
+  unsettledTotalInclTaxSar: number;
+  unsettledCount: number;
   /** أنواع البنود بتسمياتها العربية — تأتي من الخادم لتبقى مصدراً واحداً. */
   kindOptions: { value: string; label: string }[];
   /** لا تُضاف رسوم على حجز ملغى أو مرفوض. */
@@ -43,10 +47,14 @@ export function BookingExtraChargesPanel({
   bookingId,
   charges,
   activeTotalInclTaxSar,
+  unsettledTotalInclTaxSar,
+  unsettledCount,
   kindOptions,
   disabled = false,
   disabledReason,
 }: Props) {
+  // لا شيء غير محصَّل ⇒ كل البنود المسجّلة سبق تحصيلها.
+  const settled = unsettledTotalInclTaxSar <= 0;
   const router = useRouter();
   const [formOpen, setFormOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -252,13 +260,16 @@ export function BookingExtraChargesPanel({
           <ul className="space-y-2.5">
             {charges.map((c) => {
               const voided = c.status !== "ACTIVE";
+              const paid = !voided && c.settled;
               return (
                 <li
                   key={c.id}
                   className={`rounded-xl border p-3.5 ${
                     voided
                       ? "border-outline-variant/30 bg-surface-container/40"
-                      : "border-amber-200/70 bg-amber-50/50"
+                      : paid
+                        ? "border-emerald-200/70 bg-emerald-50/50"
+                        : "border-amber-200/70 bg-amber-50/50"
                   }`}
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
@@ -273,7 +284,16 @@ export function BookingExtraChargesPanel({
                           <span className="rounded-full bg-surface-container px-2 py-0.5 text-[11px] font-bold text-on-surface-variant">
                             ملغى
                           </span>
-                        ) : null}
+                        ) : paid ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-800">
+                            <CheckCircle2 className="h-3 w-3" />
+                            مدفوع
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-900">
+                            مستحق
+                          </span>
+                        )}
                         {c.isTaxable ? (
                           <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-bold text-sky-800">
                             + ضريبة {c.vatRatePercent}%
@@ -299,7 +319,13 @@ export function BookingExtraChargesPanel({
 
                     <div className="flex shrink-0 items-center gap-3">
                       <span
-                        className={`font-extrabold tabular-nums ${voided ? "text-on-surface-variant line-through" : "text-amber-800"}`}
+                        className={`font-extrabold tabular-nums ${
+                          voided
+                            ? "text-on-surface-variant line-through"
+                            : paid
+                              ? "text-emerald-800"
+                              : "text-amber-800"
+                        }`}
                       >
                         <SarAmountWithSymbol>
                           {formatSarAmount(c.amountInclTaxSar)}
@@ -325,15 +351,45 @@ export function BookingExtraChargesPanel({
           </ul>
 
           {activeTotalInclTaxSar > 0 ? (
-            <div className="mt-4 flex items-center justify-between rounded-xl border border-amber-300/60 bg-amber-100/60 px-4 py-3">
-              <span className="text-sm font-black text-amber-900">
-                إجمالي الرسوم الإضافية المستحقة
-              </span>
-              <span className="text-base font-black text-amber-900">
-                <SarAmountWithSymbol bold>
-                  {formatSarAmount(activeTotalInclTaxSar)}
-                </SarAmountWithSymbol>
-              </span>
+            <div
+              className={`mt-4 space-y-2 rounded-xl border px-4 py-3 ${
+                settled
+                  ? "border-emerald-300/60 bg-emerald-50"
+                  : "border-amber-300/60 bg-amber-100/60"
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span
+                  className={`text-sm font-black ${settled ? "text-emerald-900" : "text-amber-900"}`}
+                >
+                  إجمالي الرسوم الإضافية المسجّلة
+                </span>
+                <span
+                  className={`text-base font-black ${settled ? "text-emerald-900" : "text-amber-900"}`}
+                >
+                  <SarAmountWithSymbol bold>
+                    {formatSarAmount(activeTotalInclTaxSar)}
+                  </SarAmountWithSymbol>
+                </span>
+              </div>
+
+              {settled ? (
+                <p className="flex items-center gap-1.5 text-xs font-bold text-emerald-800">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  محصَّلة بالكامل — لا يوجد رصيد قائم على هذا الحجز.
+                </p>
+              ) : (
+                <div className="flex items-center justify-between border-t border-amber-300/50 pt-2">
+                  <span className="text-xs font-bold text-amber-900">
+                    منها غير محصَّل ({unsettledCount})
+                  </span>
+                  <span className="text-sm font-black text-amber-900">
+                    <SarAmountWithSymbol bold>
+                      {formatSarAmount(unsettledTotalInclTaxSar)}
+                    </SarAmountWithSymbol>
+                  </span>
+                </div>
+              )}
             </div>
           ) : null}
         </>
