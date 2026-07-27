@@ -3,10 +3,16 @@ import { assertBookingRequestInScope } from "@/lib/admin-access";
 import { requireAdminPagePermission } from "@/lib/admin-page";
 import { prisma } from "@/lib/prisma";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { BookingExtraChargesPanel } from "@/components/admin/BookingExtraChargesPanel";
 import { BookingFinanceOperationsPanel } from "@/components/admin/BookingFinanceOperationsPanel";
 import { BookingPaymentPanel } from "@/components/admin/BookingPaymentPanel";
 import { SarAmountWithSymbol } from "@/components/ui/SarAmountWithSymbol";
 import { formatSarAmount } from "@/lib/booking-checkout-pricing";
+import {
+  EXTRA_CHARGE_KINDS,
+  extraChargeKindLabelAr,
+  getBookingExtraCharges,
+} from "@/lib/booking-extra-charges";
 import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
 import { computeBookingOutstanding } from "@/lib/booking-outstanding";
 import { getBookingPaymentTransactions } from "@/lib/payment-transaction";
@@ -84,15 +90,25 @@ export default async function BookingFinancePage({
 
   if (!booking) notFound();
 
-  const ledger = await getBookingPaymentTransactions(id);
+  const [ledger, extraCharges] = await Promise.all([
+    getBookingPaymentTransactions(id),
+    getBookingExtraCharges(id),
+  ]);
 
   const statusKey = booking.paymentStatus.trim().toUpperCase();
   const canPay    = statusKey !== "PAID" && statusKey !== "REFUNDED";
+  const bookingStatusKey = booking.status.trim().toUpperCase();
+  const isTerminalBooking =
+    bookingStatusKey === "CANCELLED" || bookingStatusKey === "REJECTED";
 
   // «رصيد التحصيل» من المصدر الموحّد (نفس ما يُعرض للموظف عند استلام السيارة).
-  const { totalInclTax: totalAmountSar, outstandingDueSar } =
+  const { totalInclTax: totalAmountSar, outstandingDueSar, balanceDueAtBranchSar } =
     computeBookingOutstanding(booking);
-  const isPartiallyPaid = statusKey === "PAID" && outstandingDueSar > 0;
+  // ما يُطالَب به العميل الآن = متبقي الإيجار + المستحق عند الفرع (فروق التمديد والرسوم الإضافية).
+  const totalDueNowSar = Math.round((outstandingDueSar + balanceDueAtBranchSar) * 100) / 100;
+  const isPartiallyPaid = statusKey === "PAID" && totalDueNowSar > 0;
+  // سقف الدفعة يطابق ما يقبله الخادم: عند PAID يحصّل الرصيد فقط، وقبلها الإيجار + الرسوم.
+  const collectibleNowSar = statusKey === "PAID" ? balanceDueAtBranchSar : totalDueNowSar;
 
   return (
     <div className="mx-auto max-w-4xl space-y-8">
@@ -111,9 +127,22 @@ export default async function BookingFinancePage({
             <BookingPaymentPanel
               bookingId={id}
               paymentStatus={booking.paymentStatus}
-              fullAmountSar={outstandingDueSar}
+              fullAmountSar={collectibleNowSar}
             />
           ) : null}
+
+          {/* رسوم إضافية — تلفيات ووقود ومخالفات تُضاف لرصيد التحصيل */}
+          <BookingExtraChargesPanel
+            bookingId={id}
+            charges={extraCharges.charges}
+            activeTotalInclTaxSar={extraCharges.activeTotalInclTaxSar}
+            kindOptions={EXTRA_CHARGE_KINDS.map((k) => ({
+              value: k,
+              label: extraChargeKindLabelAr(k),
+            }))}
+            disabled={isTerminalBooking}
+            disabledReason="لا يمكن إضافة رسوم على حجز ملغى أو مرفوض."
+          />
 
           {/* استرداد */}
           <BookingFinanceOperationsPanel
@@ -141,7 +170,7 @@ export default async function BookingFinancePage({
                 {formatSarAmount(totalAmountSar)}
               </SarAmountWithSymbol>
             </div>
-            {outstandingDueSar > 0 ? (
+            {totalDueNowSar > 0 ? (
               <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-amber-200">
                 <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-300" />
                 متبقٍ للتحصيل:{" "}
@@ -149,7 +178,7 @@ export default async function BookingFinancePage({
                   amountClassName="font-bold text-amber-200"
                   glyphClassName="text-amber-200/70"
                 >
-                  {formatSarAmount(outstandingDueSar)}
+                  {formatSarAmount(totalDueNowSar)}
                 </SarAmountWithSymbol>
               </p>
             ) : (
@@ -228,6 +257,20 @@ export default async function BookingFinancePage({
                   <dd className="font-extrabold text-amber-700">
                     <SarAmountWithSymbol>
                       {formatSarAmount(booking.balanceDueAtBranchSar)}
+                    </SarAmountWithSymbol>
+                  </dd>
+                </div>
+              ) : null}
+
+              {/* تفصيل: كم من المستحق سببه رسوم إضافية */}
+              {extraCharges.activeTotalInclTaxSar > 0 ? (
+                <div className="flex items-center justify-between gap-2 ps-3">
+                  <dt className="text-xs font-medium text-on-surface-variant">
+                    ↳ منها رسوم إضافية ({extraCharges.activeCount})
+                  </dt>
+                  <dd className="text-xs font-bold text-amber-700">
+                    <SarAmountWithSymbol>
+                      {formatSarAmount(extraCharges.activeTotalInclTaxSar)}
                     </SarAmountWithSymbol>
                   </dd>
                 </div>

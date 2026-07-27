@@ -567,6 +567,7 @@ model BookingRequest {
   updatedAt     DateTime            @updatedAt
   logs                BookingLog[]
   paymentTransactions PaymentTransaction[]
+  extraCharges        BookingExtraCharge[]
 
   @@index([status, createdAt])
   @@index([branchId])
@@ -614,6 +615,42 @@ model PaymentTransaction {
   @@index([gatewayRef])
   @@index([sessionRef])
   @@index([kind, status, createdAt])
+}
+
+/// بند رسوم إضافية على حجز (تلفيات، وقود، مخالفة...) — يُضاف مبلغه إلى `BookingRequest.balanceDueAtBranchSar`
+/// ليُحصَّل مع بقية المستحقات. سجل مالي لا يُحذف: الإلغاء يتم بتغيير `status` إلى VOIDED.
+model BookingExtraCharge {
+  id        Int            @id @default(autoincrement())
+  bookingId Int
+  booking   BookingRequest @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+
+  /// نوع البند: DAMAGE | FUEL | TRAFFIC_FINE | CLEANING | LOST_ITEM | OTHER
+  kind        String @db.VarChar(32)
+  /// وصف البند كما يُعرض للعميل في كشف الحساب (مثل: خدش الرفرف الأمامي الأيمن).
+  description String @db.Text
+
+  /// المبلغ قبل الضريبة كما أدخله الموظف.
+  amountExclTaxSar Float
+  /// هل يخضع هذا البند لضريبة القيمة المضافة (التعويض عن التلفيات غالباً خارج نطاقها).
+  isTaxable        Boolean @default(false)
+  /// نسبة الضريبة المطبَّقة لحظة الإنشاء (snapshot) — 0 عند isTaxable = false.
+  vatRatePercent   Int     @default(0)
+  /// الإجمالي المستحق تحصيله (شامل الضريبة) — مجمَّد لحظة الإنشاء ولا يُعاد حسابه.
+  amountInclTaxSar Float
+
+  /// ACTIVE = مستحق ومضاف للتحصيل | VOIDED = ملغى ومخصوم من التحصيل
+  status     String    @db.VarChar(16) @default("ACTIVE")
+  voidedAt   DateTime?
+  voidedBy   String?   @db.VarChar(128)
+  voidReason String?   @db.VarChar(500)
+
+  /// اسم الموظف الذي سجّل البند.
+  createdBy String?  @db.VarChar(128)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([bookingId, createdAt])
+  @@index([status, createdAt])
 }
 
 /// سجل أحداث الحجز — يُدوَّن تلقائياً عند كل حدث يغيّر حالة الحجز أو بياناته.

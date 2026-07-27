@@ -379,12 +379,23 @@ export async function processBookingPayment(
       };
     }
   } else {
-    const initialBalanceDue = Math.max(0, Math.round((totalAmountSar - amount) * 100) / 100);
+    // المستحق قبل الدفعة = إجمالي الإيجار + ما تراكم على الحجز (رسوم إضافية سُجّلت قبل التحصيل).
+    // بدون ضمّ الرصيد القائم كانت الدفعة الأولى تكتب فوقه فتُمحى تلك الرسوم.
+    const dueBeforePayment = totalAmountSar + (booking.balanceDueAtBranchSar ?? 0);
+    const initialBalanceDue = Math.max(
+      0,
+      Math.round((dueBeforePayment - amount) * 100) / 100,
+    );
 
     // قفل تفاؤلي: طلب واحد فقط يسجّل الدفعة الأولى. سطر الدفعة يُدرَج ذرّياً.
     const applied = await prisma.$transaction(async (tx) => {
       const res = await tx.bookingRequest.updateMany({
-        where: { id: bookingId, paymentStatus: { not: "PAID" } },
+        // نقفل على الرصيد أيضاً: بند رسوم أُضيف بالتوازي يُبطل الدفعة بدل أن يُمحى.
+        where: {
+          id: bookingId,
+          paymentStatus: { not: "PAID" },
+          balanceDueAtBranchSar: booking.balanceDueAtBranchSar,
+        },
         data: {
           paymentStatus:    "PAID",
           paidAmountSar:    amount,

@@ -5,6 +5,7 @@ import { loadAdminBookingDetail } from "@/lib/admin-booking-detail";
 import { requireAdminPage } from "@/lib/admin-page";
 import { parseBookingPricingSnapshot, resolveBookingRentalPricePerDayExclTax } from "@/lib/booking-pricing-snapshot";
 import { computeCheckoutTotals, formatSarAmount } from "@/lib/booking-checkout-pricing";
+import { extraChargeKindLabelAr, getBookingExtraCharges } from "@/lib/booking-extra-charges";
 import { ArrowLeft, Building2, ReceiptText, CalendarClock, Banknote } from "lucide-react";
 import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
 import { StatementActionsDropdown } from "./StatementActionsDropdown";
@@ -46,6 +47,8 @@ export default async function BookingStatementPage(props: {
 
   const booking = await loadAdminBookingDetail(id);
   if (!booking) notFound();
+
+  const extraCharges = await getBookingExtraCharges(id);
 
   const carLabel = booking.carModel
     ? `${booking.carModel.brand.name} ${booking.carModel.name}`
@@ -256,6 +259,34 @@ export default async function BookingStatementPage(props: {
                     <SarAmountWithSymbol glyphClassName="text-emerald-700/70">{isPaid ? formatSarAmount(totals.totalInclTax) : "0.00"}</SarAmountWithSymbol>
                   </span>
                 </div>
+                {/* تفصيل بنود الرسوم الإضافية — العميل يرى سبب كل مبلغ يُطالَب به */}
+                {!isTerminalStatus && extraCharges.activeCount > 0 ? (
+                  <div className="border-t border-outline-variant/20 pt-2">
+                    <p className="mb-1.5 text-xs font-bold text-on-surface-variant">
+                      رسوم إضافية:
+                    </p>
+                    <div className="space-y-1.5 ps-3">
+                      {extraCharges.charges
+                        .filter((c) => c.status === "ACTIVE")
+                        .map((c) => (
+                          <div key={c.id} className="flex justify-between gap-3 text-xs">
+                            <span className="text-on-surface-variant">
+                              <span className="font-bold text-on-surface">
+                                {extraChargeKindLabelAr(c.kind)}
+                              </span>
+                              {" — "}
+                              {c.description}
+                            </span>
+                            <span className="shrink-0 font-mono font-bold text-amber-800">
+                              <SarAmountWithSymbol glyphClassName="text-amber-800/70">
+                                {formatSarAmount(c.amountInclTaxSar)}
+                              </SarAmountWithSymbol>
+                            </span>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                ) : null}
                 {balanceDueAtBranch > 0 ? (
                   <div className="flex justify-between border-t border-outline-variant/20 pt-2">
                     <span className="font-bold text-amber-800">مستحق الدفع (في الفرع):</span>
