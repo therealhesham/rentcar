@@ -25,6 +25,19 @@ const spacesHost = spacesImageHostname();
 const nextConfig: NextConfig = {
   /** مطلوب لبناء صورة Docker التي تنسخ `.next/standalone` */
   output: "standalone",
+  /**
+   * ملف توثيق نطاق Apple Pay يُقدَّم من `public/.well-known/` كنص صريح — بدون هذا
+   * تُرسله Next كـ application/octet-stream فتعامله بعض أدوات التحقق كملف تنزيل.
+   * ملاحظة: المسار يتخطى وسيط next-intl تلقائياً لاحتوائه على نقطة (مُطابِق middleware).
+   */
+  async headers() {
+    return [
+      {
+        source: "/.well-known/apple-developer-merchantid-domain-association",
+        headers: [{ key: "Content-Type", value: "text/plain; charset=utf-8" }],
+      },
+    ];
+  },
   /** يسمح بموارد التطوير عبر أنفاق cloudflared (اختبار webhook جيديا محلياً) — لا أثر له في الإنتاج. */
   allowedDevOrigins: ["*.trycloudflare.com"],
   images: {

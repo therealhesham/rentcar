@@ -40,6 +40,38 @@ import {
 } from "@/lib/checkout-payment-method-flags";
 import { getCheckoutPaymentMethodFlags } from "@/lib/site-settings";
 
+/**
+ * إجمالي الحجز شامل الضريبة للدفع الإلكتروني — مصدر واحد يستخدمه تأكيد الدفع
+ * وجلسة Apple Pay السريعة. تكراره في مكانين يعني احتمال تحصيل مبلغ خاطئ.
+ */
+async function bookingOnlineTotalInclTaxSar(
+  id: number,
+  ownerWhere: Prisma.BookingRequestWhereInput,
+): Promise<number | null> {
+  const row = await prisma.bookingRequest.findFirst({
+    where: { id, kind: "DIRECT", ...ownerWhere },
+    select: {
+      snapshotTotalAmountSar: true,
+      numberOfDays: true,
+      addonsJson: true,
+      carModel: { select: { price: true, vatRatePercent: true } },
+    },
+  });
+  return (
+    row?.snapshotTotalAmountSar ??
+    (row?.carModel
+      ? bookingTotalInclTaxForDays(
+          bookingDaysPriceInputFromSnapshot(
+            row.carModel.price,
+            row.carModel.vatRatePercent,
+            row.addonsJson,
+          ),
+          row.numberOfDays,
+        )
+      : null)
+  );
+}
+
 function parsePaymentMethod(formData: FormData): CustomerCheckoutPaymentMethod | null {
   const raw = String(formData.get("paymentMethod") ?? "CARD")
     .trim()
@@ -208,31 +240,10 @@ export async function confirmMockPayment(
   // تعتمد عليه لوحة الإدارة في سقف الاسترداد واحتساب المتبقي.
   let paidTotalSar: number | null = null;
   if (!isCash) {
-    const row = await prisma.bookingRequest.findFirst({
-      where: {
-        id,
-        kind: "DIRECT",
-        ...customerBookingOwnershipWhere(profile.id, profile.phone),
-      },
-      select: {
-        snapshotTotalAmountSar: true,
-        numberOfDays: true,
-        addonsJson: true,
-        carModel: { select: { price: true, vatRatePercent: true } },
-      },
-    });
-    paidTotalSar =
-      row?.snapshotTotalAmountSar ??
-      (row?.carModel
-        ? bookingTotalInclTaxForDays(
-            bookingDaysPriceInputFromSnapshot(
-              row.carModel.price,
-              row.carModel.vatRatePercent,
-              row.addonsJson,
-            ),
-            row.numberOfDays,
-          )
-        : null);
+    paidTotalSar = await bookingOnlineTotalInclTaxSar(
+      id,
+      customerBookingOwnershipWhere(profile.id, profile.phone),
+    );
   }
 
   // بطاقة/مدى/Apple Pay مع مفاتيح جيديا: جلسة دفع مستضافة (HPP) — التأكيد الفعلي
@@ -415,4 +426,98 @@ export async function resendBookingInvoice(
   if (!access.ok) return access;
 
   return resendBookingInvoiceEmail(id);
+}
+
+export type ApplePayExpressSessionResult =
+  | { ok: true; sessionId: string }
+  | { ok: false; error: string };
+
+/**
+ * إنشاء جلسة Apple Pay السريعة (Express Checkout) — يُنادى عند اختيار العميل
+ * Apple Pay، قبل ظهور الزر، لأن شيت Apple يلزمه إيماءة مستخدم مباشرة ولا يمكن
+ * فتحه بعد رحلة إلى السيرفر.
+ *
+ * لا يُسجَّل أي دفع هنا: التأكيد يأتي من webhook جيديا أو من مصالحة صفحة الدفع
+ * (`reconcilePendingGeideaPaymentById`) اعتماداً على `paymentSessionRef` المحفوظ.
+ */
+export async function createApplePayExpressSession(
+  bookingRequestId: number,
+): Promise<ApplePayExpressSessionResult> {
+  const id = Number(bookingRequestId);
+  if (!Number.isInteger(id) || id < 1) {
+    return { ok: false, error: "معرّف الطلب غير صالح." };
+  }
+
+  if (!isGeideaConfigured()) {
+    return { ok: false, error: "بوابة الدفع غير مهيّأة حالياً." };
+  }
+
+  const methodFlags = await getCheckoutPaymentMethodFlags();
+  if (!isCheckoutPaymentMethodEnabled(methodFlags, "APPLE_PAY")) {
+    return { ok: false, error: "طريقة الدفع غير متاحة حالياً." };
+  }
+
+  const access = await requireCustomerBookingActionAccess(id);
+  if (!access.ok) return { ok: false, error: access.error };
+
+  const profile = await getCustomerProfile();
+  if (!profile) {
+    return { ok: false, error: "يجب تسجيل الدخول لإتمام هذه العملية." };
+  }
+
+  const ownerWhere = customerBookingOwnershipWhere(profile.id, profile.phone);
+  const booking = await prisma.bookingRequest.findFirst({
+    where: { id, kind: "DIRECT", ...ownerWhere },
+    select: {
+      status: true,
+      pickupDate: true,
+      paymentStatus: true,
+      balanceDueAtBranchSar: true,
+    },
+  });
+  if (!booking) {
+    return { ok: false, error: "الحجز غير موجود أو لا يخص حسابك." };
+  }
+
+  const statusKey = booking.status.trim().toUpperCase();
+  if (statusKey === "CANCELLED" || statusKey === "REJECTED") {
+    return { ok: false, error: "لا يمكن إتمام الدفع لحجز ملغى أو مرفوض." };
+  }
+  if (hasBookingPickupPassed(booking.pickupDate)) {
+    return { ok: false, error: "بدأ موعد استلام هذا الحجز. يرجى التواصل مع الدعم." };
+  }
+
+  // نفس قاعدة تأكيد الدفع: لو الحجز مدفوع وعليه رصيد تمديد فالمستحق هو الرصيد فقط.
+  const balanceDueSar =
+    booking.paymentStatus.trim().toUpperCase() === "PAID"
+      ? Math.round((booking.balanceDueAtBranchSar ?? 0) * 100) / 100
+      : 0;
+  const amountSar =
+    balanceDueSar > 0 ? balanceDueSar : await bookingOnlineTotalInclTaxSar(id, ownerWhere);
+
+  if (amountSar == null || amountSar <= 0) {
+    return { ok: false, error: "تعذّر احتساب مبلغ الحجز. تواصل مع الدعم." };
+  }
+
+  const appUrl = (process.env.APP_PUBLIC_URL ?? "").trim().replace(/\/$/, "");
+  try {
+    const session = await createGeideaCheckoutSession({
+      bookingRequestId: id,
+      amountSar,
+      callbackUrl: `${appUrl}/api/payments/geidea/webhook`,
+      expressCheckoutWallets: ["apple-pay"],
+    });
+    // المرجع تعتمد عليه المصالحة، والوسيلة يعتمد عليها منفّذ الاسترداد لاحقاً.
+    await prisma.bookingRequest.update({
+      where: { id },
+      data: {
+        paymentSessionRef: session.merchantReferenceId,
+        paymentMethod: "APPLE_PAY",
+      },
+    });
+    return { ok: true, sessionId: session.sessionId };
+  } catch (e) {
+    console.error("[geidea] apple pay express session creation failed:", e);
+    return { ok: false, error: "تعذّر تهيئة Apple Pay. حاول مجدداً." };
+  }
 }

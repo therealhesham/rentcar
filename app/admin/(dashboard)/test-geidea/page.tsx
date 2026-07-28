@@ -4,8 +4,10 @@ import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminCard } from "@/components/admin/AdminCard";
 import { TestGeideaRefundForm } from "@/components/admin/TestGeideaRefundForm";
 import { requireAdminPage } from "@/lib/admin-page";
+import { TestGeideaApplePay } from "@/components/admin/TestGeideaApplePay";
 import {
   fetchGeideaOrderByMerchantReference,
+  geideaCheckoutScriptUrl,
   isGeideaConfigured,
 } from "@/lib/geidea/client";
 import { startGeideaTestPaymentAction } from "@/app/admin/test-geidea-actions";
@@ -33,6 +35,7 @@ export default async function AdminTestGeideaPage({ searchParams }: Props) {
 
   const sp = await searchParams;
   const configured = isGeideaConfigured();
+  const scriptUrl = geideaCheckoutScriptUrl();
 
   const jar = await cookies();
   const ref = jar.get(TEST_GEIDEA_REF_COOKIE)?.value ?? null;
@@ -93,6 +96,19 @@ export default async function AdminTestGeideaPage({ searchParams }: Props) {
             ابدأ دفعة اختبار (١ ر.س)
           </button>
         </form>
+      </AdminCard>
+
+      <AdminCard
+        title="١‏.ب) اختبار Apple Pay السريع (١ ر.س)"
+        description="الزر يُعرض هنا مباشرةً (Express Checkout) بلا تحويل إلى صفحة جيديا — يظهر فقط على Safari في جهاز Apple مع بطاقة مُضافة. يتطلب توثيق النطاق وتفعيل Apple Pay for Web لدى جيديا."
+      >
+        {configured && scriptUrl ? (
+          <TestGeideaApplePay scriptUrl={scriptUrl} />
+        ) : (
+          <p className="text-sm font-bold text-red-700">
+            بوابة جيديا غير مهيّأة — لا يمكن تهيئة Apple Pay.
+          </p>
+        )}
       </AdminCard>
 
       <AdminCard

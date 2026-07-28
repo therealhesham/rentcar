@@ -30,6 +30,15 @@ export function isGeideaConfigured(): boolean {
   return getGeideaConfig() != null;
 }
 
+/**
+ * رابط مكتبة جيديا للواجهة (Express Checkout). يُشتق من `hppBase` نفسه حتى تبقى
+ * البيئة (KSA/تجريبية) متسقة مع نداءات الـ API — يُمرَّر للمتصفح من مكوّن سيرفر.
+ */
+export function geideaCheckoutScriptUrl(): string | null {
+  const cfg = getGeideaConfig();
+  return cfg ? `${cfg.hppBase}/hpp/geideaCheckout.min.js` : null;
+}
+
 /** المبلغ بصيغة جيديا: رقم بعلامتين عشريتين (نص). */
 function formatAmount(amountSar: number): string {
   return (Math.round(amountSar * 100) / 100).toFixed(2);
@@ -95,6 +104,14 @@ export type GeideaSession = {
   merchantReferenceId: string;
 };
 
+/** محافظ Express Checkout المدعومة — الزر يُعرض على صفحتنا لا على صفحة جيديا. */
+export type GeideaExpressWallet = "apple-pay";
+
+/** الاسم المعروض على زر المحفظة (تتطلبه جيديا مع كل عنصر في expressCheckouts). */
+const EXPRESS_WALLET_LABELS: Record<GeideaExpressWallet, string> = {
+  "apple-pay": "Apple Pay",
+};
+
 /**
  * إنشاء جلسة دفع (HPP Checkout). المبلغ يُحسب في السيرفر — لا يأتي من العميل أبداً.
  * توقيع الجلسة: HMAC على {publicKey}{amount}{currency}{merchantReferenceId}{timestamp}.
@@ -107,6 +124,11 @@ export async function createGeideaCheckoutSession(args: {
   /** HTTPS فقط — غير ذلك تستخدم جيديا صفحتها الافتراضية بعد الدفع. */
   returnUrl?: string;
   language?: "ar" | "en";
+  /**
+   * عند تمريرها تُنشأ جلسة Express Checkout: الزر (Apple Pay) يُعرض على صفحتنا عبر
+   * geideaCheckout.min.js بدل تحويل العميل إلى HPP. يتطلب توثيق النطاق لدى جيديا.
+   */
+  expressCheckoutWallets?: readonly GeideaExpressWallet[];
 }): Promise<GeideaSession> {
   const cfg = getGeideaConfig();
   if (!cfg) throw new Error("Geidea غير مهيّأة — أضف مفاتيح البيئة.");
@@ -140,6 +162,14 @@ export async function createGeideaCheckoutSession(args: {
         : {}),
       ...(args.returnUrl?.startsWith("https://")
         ? { returnUrl: args.returnUrl }
+        : {}),
+      ...(args.expressCheckoutWallets?.length
+        ? {
+            expressCheckouts: args.expressCheckoutWallets.map((wallet) => ({
+              wallet,
+              label: EXPRESS_WALLET_LABELS[wallet],
+            })),
+          }
         : {}),
     },
   });

@@ -4,7 +4,7 @@ import { PaymentClient } from "@/components/fleet/PaymentClient";
 import { SiteNav } from "@/components/shared/SiteNav";
 import { requireCustomerPaymentPageAccess } from "@/lib/customer-booking-access";
 import { getBookingForPayment } from "@/lib/booking-payment-data";
-import { isGeideaConfigured } from "@/lib/geidea/client";
+import { geideaCheckoutScriptUrl, isGeideaConfigured } from "@/lib/geidea/client";
 import { reconcilePendingGeideaPaymentById } from "@/lib/geidea/mark-paid";
 import { getCheckoutPaymentMethodFlags } from "@/lib/site-settings";
 import { buildPageMetadata } from "@/lib/seo";
@@ -46,6 +46,7 @@ export default async function FleetPaymentPage({
           booking={booking}
           paymentMethodFlags={paymentMethodFlags}
           hostedCheckout={isGeideaConfigured()}
+          geideaScriptUrl={geideaCheckoutScriptUrl()}
         />
       </div>
       <SiteFooter />

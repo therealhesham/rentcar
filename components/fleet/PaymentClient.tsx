@@ -17,8 +17,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { useActionState, useEffect, useMemo, useState, type ReactNode } from "react";
 import { BookingStepper } from "@/components/fleet/BookingStepper";
+import { useRouter } from "next/navigation";
 import {
   confirmMockPayment,
+  createApplePayExpressSession,
   resendBookingInvoice,
   type ConfirmPaymentResult,
 } from "@/app/[locale]/fleet/payment/payment-actions";
@@ -39,12 +41,15 @@ import {
   type CustomerCheckoutPaymentMethod,
 } from "@/lib/checkout-payment-method-flags";
 import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
+import { ApplePayExpressButton } from "@/components/fleet/ApplePayExpressButton";
 
 type Props = {
   booking: BookingPaymentSnapshot;
   paymentMethodFlags: CheckoutPaymentMethodFlags;
-  /** عند التفعيل: البطاقة/مدى/Apple Pay تُحوَّل لصفحة الدفع المستضافة (جيديا) — بلا إدخال بطاقة محلي. */
+  /** عند التفعيل: البطاقة/مدى تُحوَّل لصفحة الدفع المستضافة (جيديا) — بلا إدخال بطاقة محلي. */
   hostedCheckout?: boolean;
+  /** رابط مكتبة جيديا لزر Apple Pay السريع — null إن لم تكن البوابة مهيّأة. */
+  geideaScriptUrl?: string | null;
 };
 
 export type CheckoutPaymentMethod = CustomerCheckoutPaymentMethod;
@@ -178,11 +183,20 @@ const METHOD_OPTIONS: MethodOption[] = [
   },
 ];
 
-export function PaymentClient({ booking, paymentMethodFlags, hostedCheckout }: Props) {
+export function PaymentClient({
+  booking,
+  paymentMethodFlags,
+  hostedCheckout,
+  geideaScriptUrl,
+}: Props) {
   const enabledMethods = useMemo(
     () => listEnabledCheckoutPaymentMethods(paymentMethodFlags),
     [paymentMethodFlags],
   );
+
+  const router = useRouter();
+  // زر Apple Pay السريع يحتاج بوابة مهيّأة + رابط المكتبة؛ غير ذلك يبقى النص التجريبي.
+  const applePayExpressReady = Boolean(hostedCheckout && geideaScriptUrl);
 
   const ps = booking.paymentStatus.trim().toUpperCase();
   // وضع «دفع فرق التمديد»: الحجز مدفوع وعليه رصيد بعد تعديل/تمديد — تُعرض
@@ -648,12 +662,19 @@ export function PaymentClient({ booking, paymentMethodFlags, hostedCheckout }: P
               ) : null}
 
               {method === "APPLE_PAY" ? (
-                <div className="rounded-xl border border-neutral-800/15 bg-neutral-900/[0.04] px-4 py-3 text-sm text-neutral-900">
+                <div className="space-y-3 rounded-xl border border-neutral-800/15 bg-neutral-900/[0.04] px-4 py-3 text-sm text-neutral-900">
                   <p className="font-bold">Apple Pay</p>
-                  <p className="mt-1 text-xs leading-relaxed opacity-90">
-                    بعد التفعيل، ستُعرض جلسة Apple Pay (عبر البوابة المدعومة) لإتمام الدفع من iPhone أو
-                    Mac أو Apple Watch. الوضع الحالي تجريبي ويُسجَّل الطلب كمدفوع للاختبار.
-                  </p>
+                  {applePayExpressReady ? (
+                    <ApplePayExpressButton
+                      scriptUrl={geideaScriptUrl!}
+                      createSession={() => createApplePayExpressSession(booking.id)}
+                      onPaid={() => router.refresh()}
+                    />
+                  ) : (
+                    <p className="text-xs leading-relaxed opacity-90">
+                      الوضع الحالي تجريبي ويُسجَّل الطلب كمدفوع للاختبار.
+                    </p>
+                  )}
                 </div>
               ) : null}
 
@@ -760,25 +781,29 @@ export function PaymentClient({ booking, paymentMethodFlags, hostedCheckout }: P
                 </div>
               ) : null}
 
-              <button
-                type="submit"
-                disabled={pending}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#003749] py-3.5 text-sm font-extrabold text-white transition-opacity hover:opacity-95 disabled:opacity-50"
-              >
-                {pending ? (
-                  <>
-                    <Loader2 className="size-4 animate-spin" aria-hidden />
-                    جاري المعالجة…
-                  </>
-                ) : hostedCheckout && usesCardEntryForm(method) ? (
-                  <>
-                    المتابعة للدفع الآمن {formatSarAmount(payableAmountSar)}{" "}
-                    <SarCurrencyGlyph />
-                  </>
-                ) : (
-                  submitLabel
-                )}
-              </button>
+              {/* Apple Pay السريع يتولّى الدفع بنفسه — إظهار زر الإرسال هنا كان
+                  سينشئ جلسة جيديا ثانية ويحوّل العميل إلى HPP بلا داعٍ. */}
+              {method === "APPLE_PAY" && applePayExpressReady ? null : (
+                <button
+                  type="submit"
+                  disabled={pending}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#003749] py-3.5 text-sm font-extrabold text-white transition-opacity hover:opacity-95 disabled:opacity-50"
+                >
+                  {pending ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" aria-hidden />
+                      جاري المعالجة…
+                    </>
+                  ) : hostedCheckout && usesCardEntryForm(method) ? (
+                    <>
+                      المتابعة للدفع الآمن {formatSarAmount(payableAmountSar)}{" "}
+                      <SarCurrencyGlyph />
+                    </>
+                  ) : (
+                    submitLabel
+                  )}
+                </button>
+              )}
             </form>
           )}
         </section>

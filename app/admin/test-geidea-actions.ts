@@ -56,6 +56,46 @@ export async function startGeideaTestPaymentAction(): Promise<void> {
   redirect(redirectUrl);
 }
 
+export type ApplePayTestSessionResult =
+  | { ok: true; sessionId: string }
+  | { ok: false; error: string };
+
+/**
+ * جلسة اختبار Apple Pay السريعة (Express Checkout) بريال واحد — سوبر أدمن فقط.
+ * تستخدم نفس حيلة `bookingRequestId: 0` فيتجاهلها الـwebhook ولا تمسّ أي حجز.
+ * تُرجع sessionId (لا تُحوّل) لأن زر Apple Pay يُركَّب على صفحتنا نفسها.
+ */
+export async function startGeideaApplePayTestSessionAction(): Promise<ApplePayTestSessionResult> {
+  const auth = await requireSuperAdminForAction();
+  if (!auth.ok) return { ok: false, error: auth.error };
+
+  const appUrl = (process.env.APP_PUBLIC_URL ?? "").trim().replace(/\/$/, "");
+  try {
+    const session = await createGeideaCheckoutSession({
+      bookingRequestId: 0,
+      amountSar: TEST_AMOUNT_SAR,
+      callbackUrl: `${appUrl}/api/payments/geidea/webhook`,
+      expressCheckoutWallets: ["apple-pay"],
+    });
+    console.log("[test-geidea] apple pay express session created:", session.sessionId);
+    // نفس الكوكي التي يقرأها كرت «نتيجة آخر دفعة اختبار» — بعد نجاح الدفع يكفي
+    // تحديث الصفحة ليُجلب الطلب من جيديا بنفس المسار المستخدم مع HPP.
+    const jar = await cookies();
+    jar.set(TEST_GEIDEA_REF_COOKIE, session.merchantReferenceId, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/admin/test-geidea",
+      maxAge: 15 * 60,
+    });
+    return { ok: true, sessionId: session.sessionId };
+  } catch (e) {
+    const detail = e instanceof Error ? e.message : String(e);
+    console.error("[test-geidea] apple pay express session failed:", e);
+    return { ok: false, error: `تعذّر إنشاء جلسة Apple Pay: ${detail}` };
+  }
+}
+
 export type RefundActionState = {
   ok: boolean;
   error?: string;
