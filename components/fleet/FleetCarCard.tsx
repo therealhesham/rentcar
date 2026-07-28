@@ -17,6 +17,30 @@ const SPEC_KEY_MAP: Record<string, string> = {
   timer: "time",
 };
 
+/** يستخرج «الوقود» و«ناقل الحركة» من subtitle: "السنة • الوقود • الناقل" */
+function metaFromSubtitle(subtitle: string): string[] {
+  return subtitle
+    .split("•")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .filter((s) => !/^\d{4}$/.test(s));
+}
+
+/** أيقونة حفظ */
+function BookmarkIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5" aria-hidden>
+      <path
+        d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2v16z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function FleetCarCard({
   car,
   cities,
@@ -29,6 +53,7 @@ export function FleetCarCard({
   const locale = useLocale();
   const t = useTranslations("FleetCard");
   const isEn = locale === "en";
+  const meta = metaFromSubtitle(car.subtitle);
 
   const primaryLabel = isEn
     ? car.priceUi.primaryLabelEn ?? car.priceUi.primaryLabelAr
@@ -48,19 +73,48 @@ export function FleetCarCard({
   const discountLabel = isEn
     ? car.priceUi.discountLabelEn ?? car.priceUi.discountLabelAr
     : car.priceUi.discountLabelAr;
-  const ribbonText = car.badge || discountLabel;
 
   return (
-    <article className="group relative flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
-      {/* ────── شارة الفئة (ربطة أعلى الزاوية) ────── */}
-      {ribbonText ? (
-        <span className="absolute top-0 end-0 z-10 rounded-bl-2xl bg-[#e6be82] px-3.5 py-1.5 text-[12px] font-bold text-[#003749] shadow-sm">
-          {ribbonText}
-        </span>
-      ) : null}
+    <article
+      className="group flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
+    >
+      {/* ────── الرأس: الاسم ، الفئة ────── */}
+      <div className="flex items-start justify-between gap-2 px-4 pt-4 pb-2">
+
+        {/* الاسم + السنة + أو مشابهة */}
+        <div className="min-w-0">
+          <h3 className="truncate text-base font-bold leading-snug text-gray-900">
+            {car.brand} {car.name}
+            {car.year ? (
+              <span className="mx-1 text-sm font-normal text-gray-400">
+                {car.year}
+              </span>
+            ) : null}
+          </h3>
+          <p className="text-[12px] font-medium text-gray-500">{t("orSimilar")}</p>
+
+          {meta.length > 0 ? (
+            <p className="mt-0.5 text-[11px] text-gray-400">
+              {meta.join(" · ")}
+            </p>
+          ) : null}
+        </div>
+
+        {/* شارة الفئة */}
+        {car.badge ? (
+          <span className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-semibold text-gray-600">
+            <span className="inline-block h-2 w-2 shrink-0 rounded-full bg-gray-400" />
+            {car.badge}
+          </span>
+        ) : discountLabel ? (
+          <span className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-bold text-red-600">
+            {discountLabel}
+          </span>
+        ) : null}
+      </div>
 
       {/* ────── صورة السيارة ────── */}
-      <div className="relative flex h-44 w-full items-center justify-center overflow-hidden bg-white px-4 pt-4">
+      <div className="relative flex h-48 w-full items-center justify-center overflow-hidden bg-white">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={car.image}
@@ -68,82 +122,110 @@ export function FleetCarCard({
           loading="lazy"
           className="h-full w-full object-contain transition-transform duration-700 ease-out group-hover:scale-[1.04]"
         />
-      </div>
-
-      {/* ────── الموديل والسنة ────── */}
-      <div className="flex items-center justify-between gap-2 border-t border-gray-100 px-4 py-3">
-        <span className="truncate text-[15px] font-extrabold text-[#003749]">
-          {car.name}
-          {car.brand ? <span className="font-bold text-gray-400"> | {car.brand}</span> : null}
-        </span>
-        {car.year ? (
-          <span className="shrink-0 text-[17px] font-bold text-gray-800">{car.year}</span>
+        {car.badge && discountLabel ? (
+          <span className="absolute top-4 left-4 rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white">
+            {discountLabel}
+          </span>
         ) : null}
       </div>
 
-      {/* ────── المواصفات (يمين) + السعر (يسار) في صف واحد ────── */}
-      <div className="flex items-center justify-between gap-3 border-t border-gray-100 px-4 py-3">
-        {/* dir="ltr": ترتيب الأيقونات ثابت بصرياً (أبواب، مقاعد، حقائب) مهما كان اتجاه اللغة */}
-        {car.specs.length > 0 ? (
-          <div dir="ltr" className="flex items-center gap-5">
-            {car.specs.map((s, i) => {
-              const specKey = SPEC_KEY_MAP[s.icon];
-              const specText = specKey ? t(specKey) : "";
-              return (
-                <div key={`${car.id}-spec-${i}`} className="flex flex-col items-center gap-1">
-                  <SpecIcon name={s.icon} className="h-5 w-5 shrink-0 text-[#b9a17a]" />
-                  <span className="text-sm font-bold tabular-nums text-gray-800">{s.value}</span>
-                  <span className="sr-only">{specText}</span>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <span />
-        )}
+      {/* ────── شريط المواصفات الأفقي ────── */}
+      {car.specs.length > 0 ? (
+        <div className="mx-4 mt-3 flex items-center justify-center gap-4 border-t border-b border-gray-100 py-2.5">
+          {car.specs.map((s, i) => {
+            const specKey = SPEC_KEY_MAP[s.icon];
+            const specText = specKey ? t(specKey) : "";
+            return (
+              <div
+                key={`${car.id}-spec-${i}`}
+                className="flex items-center gap-1"
+              >
+                {i > 0 && (
+                  <span className="mx-2 h-4 w-px bg-gray-200" />
+                )}
+                <SpecIcon
+                  name={s.icon}
+                  className="h-4 w-4 shrink-0 text-gray-500"
+                />
+                <span className="text-[13px] font-bold tabular-nums text-gray-800">
+                  {s.value}
+                </span>
+                <span className="text-[10px] font-medium text-gray-400">
+                  {specText}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
 
-        {/* السعر — الرقم ثم رمز الريال (الرمز يقع يسار الرقم في الاتجاه العربي) */}
-        <div className="flex shrink-0 flex-col items-end">
-          {prefixLabel ? (
-            <span className="text-[11px] font-semibold text-gray-500">{prefixLabel}</span>
-          ) : null}
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-[26px] font-extrabold leading-none tracking-tight text-[#003749]">
+      {/* ────── السعر + زر الحجز في نفس الصف ────── */}
+      <div className="flex items-end justify-between gap-3 px-4 pt-3 pb-1">
+
+        {/* السعر */}
+        <div className="flex flex-col">
+          {primaryLabel && (
+            <p className="text-[12px] font-medium text-gray-500">
+              {primaryLabel}
+            </p>
+          )}
+          {footnote && (
+            <p className="text-[12px] text-gray-400">{footnote}</p>
+          )}
+          <div className="mt-0.5 flex items-baseline gap-1.5">
+            {prefixLabel ? (
+              <span className="text-[12px] font-semibold text-gray-500">
+                {prefixLabel}
+              </span>
+            ) : null}
+            {car.priceUi.originalPrimaryAmount ? (
+              <span className="flex items-baseline gap-0.5 text-sm text-gray-400 line-through">
+                {car.priceUi.originalPrimaryAmount}
+                <SarCurrencyGlyph className="h-[0.7em] w-[0.7em]" />
+              </span>
+            ) : null}
+            <span className="text-[26px] font-extrabold leading-none tracking-tight text-gray-900">
               {car.priceUi.primaryAmount}
             </span>
-            <SarCurrencyGlyph className="h-4 w-4 shrink-0 text-[#003749]" />
+            <SarCurrencyGlyph className="h-4 w-4 shrink-0 text-gray-700" />
+            {periodLabel && primaryLabel !== periodLabel ? (
+              <span className="text-[12px] font-semibold text-gray-500">
+                / {periodLabel}
+              </span>
+            ) : null}
           </div>
-          {periodLabel && primaryLabel !== periodLabel ? (
-            <span className="mt-0.5 text-[11px] font-semibold text-gray-500">
-              / {periodLabel}
-            </span>
-          ) : primaryLabel ? (
-            <span className="mt-0.5 text-[11px] font-medium text-gray-500">{primaryLabel}</span>
-          ) : null}
-
-          {/* السعر بعد الضريبة — يظهر في وضع العرض المزدوج (SPLIT) فقط */}
-          {car.priceUi.secondaryAmount ? (
-            <span className="mt-1 flex items-baseline gap-1 text-[11px] font-medium text-gray-500">
+          {car.priceUi.secondaryAmount && (
+            <p className="mt-0.5 flex items-baseline gap-1 text-[11px] text-gray-500">
               {car.priceUi.secondaryAmount}
-              <SarCurrencyGlyph className="h-[0.7em] w-[0.7em]" />
-              {secondaryLabel ? <span>· {secondaryLabel}</span> : null}
-            </span>
-          ) : null}
+              <SarCurrencyGlyph className="h-[0.65em] w-[0.65em]" />
+              {secondaryLabel && (
+                <span>· {secondaryLabel}</span>
+              )}
+            </p>
+          )}
+        </div>
+
+        {/* زر الحجز */}
+        <div className="shrink-0 [&_a]:!w-auto [&_button]:!w-auto">
+          <FleetBookNowButton
+            modelId={car.modelId}
+            cities={cities}
+            carName={`${car.brand} ${car.name}`}
+            allowHolidayBooking={allowHolidayBooking}
+            availableBranchSlugs={car.availableBranchSlugs}
+          />
         </div>
       </div>
 
-      {/* ────── زر الحجز + ملاحظة الضريبة ────── */}
-      <div className="flex flex-col items-end px-4 pb-4 pt-3">
-        <FleetBookNowButton
-          modelId={car.modelId}
-          cities={cities}
-          carName={`${car.brand} ${car.name}`}
-          allowHolidayBooking={allowHolidayBooking}
-          availableBranchSlugs={car.availableBranchSlugs}
-        />
-        {footnote ? (
-          <p className="mt-2 text-[11px] font-medium text-[#b9975b]">{footnote}</p>
-        ) : null}
+      {/* ────── حفظ للمرة القادمة ────── */}
+      <div className="flex justify-end px-4 pb-3 pt-1">
+        <button
+          type="button"
+          className="flex items-center gap-1 text-[11px] text-gray-400 transition-colors hover:text-gray-600"
+        >
+          <BookmarkIcon />
+          <span className="whitespace-nowrap">{t("saveForLater")}</span>
+        </button>
       </div>
     </article>
   );
