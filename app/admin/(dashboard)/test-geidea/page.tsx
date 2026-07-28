@@ -11,6 +11,7 @@ import {
   isGeideaConfigured,
 } from "@/lib/geidea/client";
 import { startGeideaTestPaymentAction } from "@/app/admin/test-geidea-actions";
+import { getApplePayExpressEnabled } from "@/lib/site-settings";
 import { TEST_GEIDEA_REF_COOKIE } from "@/lib/test-geidea-constants";
 
 export const dynamic = "force-dynamic";
@@ -35,7 +36,9 @@ export default async function AdminTestGeideaPage({ searchParams }: Props) {
 
   const sp = await searchParams;
   const configured = isGeideaConfigured();
-  const scriptUrl = geideaCheckoutScriptUrl();
+  // كرت اختبار Apple Pay يتبع نفس مفتاح الإدارة حتى يكون الاختبار مطابقاً لما يراه العميل.
+  const applePayExpress = await getApplePayExpressEnabled();
+  const scriptUrl = applePayExpress ? geideaCheckoutScriptUrl() : null;
 
   const jar = await cookies();
   const ref = jar.get(TEST_GEIDEA_REF_COOKIE)?.value ?? null;
@@ -102,12 +105,21 @@ export default async function AdminTestGeideaPage({ searchParams }: Props) {
         title="١‏.ب) اختبار Apple Pay السريع (١ ر.س)"
         description="الزر يُعرض هنا مباشرةً (Express Checkout) بلا تحويل إلى صفحة جيديا — يظهر فقط على Safari في جهاز Apple مع بطاقة مُضافة. يتطلب توثيق النطاق وتفعيل Apple Pay for Web لدى جيديا."
       >
-        {configured && scriptUrl ? (
-          <TestGeideaApplePay scriptUrl={scriptUrl} />
-        ) : (
+        {!configured ? (
           <p className="text-sm font-bold text-red-700">
             بوابة جيديا غير مهيّأة — لا يمكن تهيئة Apple Pay.
           </p>
+        ) : !scriptUrl ? (
+          <p className="text-sm leading-relaxed text-on-surface-variant">
+            الدفع المباشر معطّل حالياً — Apple Pay يُنفَّذ بالتحويل إلى صفحة جيديا (اختبره من الكرت
+            السابق). لتجربة الزر داخل الصفحة، فعّله من{" "}
+            <a href="/admin/payment-methods" className="font-bold text-primary underline">
+              طرق دفع العميل
+            </a>
+            .
+          </p>
+        ) : (
+          <TestGeideaApplePay scriptUrl={scriptUrl} />
         )}
       </AdminCard>
 

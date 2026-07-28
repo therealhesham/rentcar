@@ -70,3 +70,20 @@ export function isCheckoutPaymentMethodEnabled(
   const code = method.trim().toUpperCase() as CustomerCheckoutPaymentMethod;
   return (CUSTOMER_CHECKOUT_PAYMENT_METHODS as readonly string[]).includes(code) && flags[code];
 }
+
+/**
+ * الوسائل التي تُنفَّذ بالتحويل إلى صفحة جيديا المستضافة (HPP). مصدر واحد يستخدمه
+ * السيرفر (إنشاء الجلسة) والواجهة (نص الزر) — تكراره في الطرفين يجعلهما يفترقان،
+ * فيرى العميل «ادفع الآن» ثم يُفاجأ بتحويله إلى موقع آخر.
+ */
+export const GEIDEA_HOSTED_CHECKOUT_METHODS = [
+  "CARD",
+  "MADA",
+  "APPLE_PAY",
+] as const satisfies readonly CustomerCheckoutPaymentMethod[];
+
+export function isGeideaHostedCheckoutMethod(method: string): boolean {
+  return (GEIDEA_HOSTED_CHECKOUT_METHODS as readonly string[]).includes(
+    method.trim().toUpperCase(),
+  );
+}

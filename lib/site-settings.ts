@@ -298,6 +298,29 @@ export async function getCheckoutPaymentMethodFlags(): Promise<CheckoutPaymentMe
   }
 }
 
+/**
+ * وضع Apple Pay: مفعّلاً يُعرض زر Apple Pay داخل صفحتنا (Express Checkout)، ومعطّلاً
+ * يُحوَّل العميل إلى صفحة جيديا المستضافة مثل مدى والبطاقة.
+ *
+ * الافتراضي **معطّل**: مكتبة جيديا `geideaCheckout.min.js` بها خطأ يجعل
+ * `validateAndgetWallet` تقرأ `expressCheckouts` من كائن إعدادات التاجر بدل كائن
+ * الجلسة، فتُرجع null ويفشل تركيب الزر. يُفعَّل هذا المفتاح بعد إصلاح جيديا للمكتبة
+ * وتسجيل نطاقنا لدى Apple — دون أي تعديل على الكود.
+ */
+export const SITE_KEY_APPLE_PAY_EXPRESS = "apple_pay_express_enabled";
+
+export async function getApplePayExpressEnabled(): Promise<boolean> {
+  try {
+    const row = await prisma.siteSetting.findUnique({
+      where: { key: SITE_KEY_APPLE_PAY_EXPRESS },
+      select: { value: true },
+    });
+    return row?.value?.trim() === "true";
+  } catch {
+    return false;
+  }
+}
+
 export async function getRentalPriceDisplayMode(): Promise<RentalPriceDisplayMode> {
   try {
     const row = await prisma.siteSetting.findUnique({

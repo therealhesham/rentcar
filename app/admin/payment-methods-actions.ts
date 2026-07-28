@@ -8,7 +8,10 @@ import {
   type CheckoutPaymentMethodFlags,
 } from "@/lib/checkout-payment-method-flags";
 import { prisma } from "@/lib/prisma";
-import { SITE_KEY_CHECKOUT_PAYMENT_METHODS } from "@/lib/site-settings";
+import {
+  SITE_KEY_APPLE_PAY_EXPRESS,
+  SITE_KEY_CHECKOUT_PAYMENT_METHODS,
+} from "@/lib/site-settings";
 
 function readCheckbox(formData: FormData, name: string): boolean {
   return formData.get(name) === "on";
@@ -32,18 +35,27 @@ export async function updateCheckoutPaymentMethods(
   }
 
   const flags = normalizeCheckoutPaymentMethodFlags(raw);
+  const applePayExpress = readCheckbox(formData, "APPLE_PAY_EXPRESS");
 
   try {
-    await prisma.siteSetting.upsert({
-      where: { key: SITE_KEY_CHECKOUT_PAYMENT_METHODS },
-      create: { key: SITE_KEY_CHECKOUT_PAYMENT_METHODS, value: JSON.stringify(flags) },
-      update: { value: JSON.stringify(flags) },
-    });
+    await prisma.$transaction([
+      prisma.siteSetting.upsert({
+        where: { key: SITE_KEY_CHECKOUT_PAYMENT_METHODS },
+        create: { key: SITE_KEY_CHECKOUT_PAYMENT_METHODS, value: JSON.stringify(flags) },
+        update: { value: JSON.stringify(flags) },
+      }),
+      prisma.siteSetting.upsert({
+        where: { key: SITE_KEY_APPLE_PAY_EXPRESS },
+        create: { key: SITE_KEY_APPLE_PAY_EXPRESS, value: String(applePayExpress) },
+        update: { value: String(applePayExpress) },
+      }),
+    ]);
   } catch {
     return { ok: false, error: "تعذّر حفظ الإعداد." };
   }
 
   revalidatePath("/admin/payment-methods");
+  revalidatePath("/admin/test-geidea");
   revalidatePath("/fleet/payment/[id]", "page");
   return { ok: true };
 }

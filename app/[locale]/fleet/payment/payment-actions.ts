@@ -36,6 +36,7 @@ export type ConfirmPaymentResult =
 import {
   CUSTOMER_CHECKOUT_PAYMENT_METHODS,
   isCheckoutPaymentMethodEnabled,
+  isGeideaHostedCheckoutMethod,
   type CustomerCheckoutPaymentMethod,
 } from "@/lib/checkout-payment-method-flags";
 import { getCheckoutPaymentMethodFlags } from "@/lib/site-settings";
@@ -161,10 +162,7 @@ export async function confirmMockPayment(
     }
 
     const geideaBalanceHosted =
-      isGeideaConfigured() &&
-      (paymentMethod === "CARD" ||
-        paymentMethod === "MADA" ||
-        paymentMethod === "APPLE_PAY");
+      isGeideaConfigured() && isGeideaHostedCheckoutMethod(paymentMethod);
 
     if (geideaBalanceHosted) {
       const appUrl = (process.env.APP_PUBLIC_URL ?? "").trim().replace(/\/$/, "");
@@ -249,11 +247,7 @@ export async function confirmMockPayment(
   // بطاقة/مدى/Apple Pay مع مفاتيح جيديا: جلسة دفع مستضافة (HPP) — التأكيد الفعلي
   // يصل عبر الـ webhook، لا يُسجَّل أي دفع هنا.
   const geideaHosted =
-    !isCash &&
-    isGeideaConfigured() &&
-    (paymentMethod === "CARD" ||
-      paymentMethod === "MADA" ||
-      paymentMethod === "APPLE_PAY");
+    !isCash && isGeideaConfigured() && isGeideaHostedCheckoutMethod(paymentMethod);
 
   if (geideaHosted) {
     if (paidTotalSar == null || paidTotalSar <= 0) {

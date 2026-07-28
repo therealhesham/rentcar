@@ -9,6 +9,7 @@ import type {
 
 type Props = {
   flags: CheckoutPaymentMethodFlags;
+  applePayExpress: boolean;
 };
 
 const METHOD_FIELDS: {
@@ -58,7 +59,7 @@ const METHOD_FIELDS: {
   },
 ];
 
-export function CheckoutPaymentMethodsForm({ flags }: Props) {
+export function CheckoutPaymentMethodsForm({ flags, applePayExpress }: Props) {
   const [state, formAction, pending] = useActionState(updateCheckoutPaymentMethods, null);
 
   return (
@@ -92,6 +93,36 @@ export function CheckoutPaymentMethodsForm({ flags }: Props) {
           </li>
         ))}
       </ul>
+
+      <div className="space-y-2 rounded-xl border border-outline-variant/40 bg-surface-container-lowest px-4 py-3">
+        <p className="font-bold text-on-surface">طريقة تنفيذ Apple Pay</p>
+        <label className="flex cursor-pointer items-start gap-3">
+          <input
+            type="checkbox"
+            name="APPLE_PAY_EXPRESS"
+            defaultChecked={applePayExpress}
+            className="mt-0.5 size-4 accent-primary"
+          />
+          <span>
+            <span className="block text-sm font-bold text-on-surface">
+              الدفع المباشر داخل صفحتنا (Express Checkout)
+            </span>
+            <span className="mt-1 block text-xs leading-relaxed text-on-surface-variant">
+              معطّلاً (الوضع الحالي): يُحوَّل العميل إلى صفحة جيديا الآمنة مثل مدى والبطاقة — يعمل الآن.
+              <br />
+              مفعّلاً: يظهر زر Apple Pay داخل صفحة الدفع بلا تحويل.
+            </span>
+          </span>
+        </label>
+        <p className="rounded-lg bg-error-container/20 px-3 py-2 text-xs leading-relaxed text-on-surface-variant">
+          ⚠️ لا تُفعّله قبل أن تؤكّد جيديا أمرين: إصلاح خطأ مكتبة{" "}
+          <span className="font-mono" dir="ltr">
+            geideaCheckout.min.js
+          </span>{" "}
+          الذي يُفشل تركيب الزر، وتسجيل نطاقنا لدى Apple. جرّبه أولاً من صفحة «اختبار بوابة جيديا»
+          بريال واحد على متصفح Safari في جهاز Apple.
+        </p>
+      </div>
 
       {state?.error ? (
         <p className="rounded-lg bg-error-container/30 px-3 py-2 text-sm font-bold text-error">

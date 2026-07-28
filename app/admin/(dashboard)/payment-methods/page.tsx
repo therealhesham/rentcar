@@ -1,7 +1,10 @@
 import { redirect } from "next/navigation";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { verifyAdminSession } from "@/lib/admin-auth";
-import { getCheckoutPaymentMethodFlags } from "@/lib/site-settings";
+import {
+  getApplePayExpressEnabled,
+  getCheckoutPaymentMethodFlags,
+} from "@/lib/site-settings";
 import { CheckoutPaymentMethodsForm } from "./CheckoutPaymentMethodsForm";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +14,10 @@ export default async function AdminCheckoutPaymentMethodsPage() {
     redirect("/admin/login");
   }
 
-  const flags = await getCheckoutPaymentMethodFlags();
+  const [flags, applePayExpress] = await Promise.all([
+    getCheckoutPaymentMethodFlags(),
+    getApplePayExpressEnabled(),
+  ]);
 
   return (
     <>
@@ -22,7 +28,11 @@ export default async function AdminCheckoutPaymentMethodsPage() {
         backLabel="لوحة التحكم"
       />
 
-      <CheckoutPaymentMethodsForm key={JSON.stringify(flags)} flags={flags} />
+      <CheckoutPaymentMethodsForm
+        key={`${JSON.stringify(flags)}-${applePayExpress}`}
+        flags={flags}
+        applePayExpress={applePayExpress}
+      />
     </>
   );
 }

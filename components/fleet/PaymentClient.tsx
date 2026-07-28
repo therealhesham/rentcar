@@ -36,6 +36,7 @@ import {
 } from "@/lib/booking-cash-flow";
 import type { BookingPaymentSnapshot } from "@/lib/booking-payment-data";
 import {
+  isGeideaHostedCheckoutMethod,
   listEnabledCheckoutPaymentMethods,
   type CheckoutPaymentMethodFlags,
   type CustomerCheckoutPaymentMethod,
@@ -672,7 +673,9 @@ export function PaymentClient({
                     />
                   ) : (
                     <p className="text-xs leading-relaxed opacity-90">
-                      الوضع الحالي تجريبي ويُسجَّل الطلب كمدفوع للاختبار.
+                      {hostedCheckout
+                        ? "سيتم تحويلك إلى صفحة الدفع الآمنة لإتمام العملية عبر Apple Pay. يتطلب متصفح Safari على جهاز Apple مُضاف إليه بطاقة."
+                        : "الوضع الحالي تجريبي ويُسجَّل الطلب كمدفوع للاختبار."}
                     </p>
                   )}
                 </div>
@@ -794,7 +797,7 @@ export function PaymentClient({
                       <Loader2 className="size-4 animate-spin" aria-hidden />
                       جاري المعالجة…
                     </>
-                  ) : hostedCheckout && usesCardEntryForm(method) ? (
+                  ) : hostedCheckout && isGeideaHostedCheckoutMethod(method) ? (
                     <>
                       المتابعة للدفع الآمن {formatSarAmount(payableAmountSar)}{" "}
                       <SarCurrencyGlyph />

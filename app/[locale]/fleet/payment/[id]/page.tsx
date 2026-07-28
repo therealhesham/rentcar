@@ -6,7 +6,10 @@ import { requireCustomerPaymentPageAccess } from "@/lib/customer-booking-access"
 import { getBookingForPayment } from "@/lib/booking-payment-data";
 import { geideaCheckoutScriptUrl, isGeideaConfigured } from "@/lib/geidea/client";
 import { reconcilePendingGeideaPaymentById } from "@/lib/geidea/mark-paid";
-import { getCheckoutPaymentMethodFlags } from "@/lib/site-settings";
+import {
+  getApplePayExpressEnabled,
+  getCheckoutPaymentMethodFlags,
+} from "@/lib/site-settings";
 import { buildPageMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
@@ -32,9 +35,10 @@ export default async function FleetPaymentPage({
   // مباشرةً من البوابة ويُعلَّم الحجز مدفوعاً قبل عرض الصفحة.
   await reconcilePendingGeideaPaymentById(id);
 
-  const [booking, paymentMethodFlags] = await Promise.all([
+  const [booking, paymentMethodFlags, applePayExpress] = await Promise.all([
     getBookingForPayment(id),
     getCheckoutPaymentMethodFlags(),
+    getApplePayExpressEnabled(),
   ]);
   if (!booking) notFound();
 
@@ -46,7 +50,8 @@ export default async function FleetPaymentPage({
           booking={booking}
           paymentMethodFlags={paymentMethodFlags}
           hostedCheckout={isGeideaConfigured()}
-          geideaScriptUrl={geideaCheckoutScriptUrl()}
+          // معطّلاً يبقى null فيسقط Apple Pay تلقائياً إلى التحويل لصفحة جيديا.
+          geideaScriptUrl={applePayExpress ? geideaCheckoutScriptUrl() : null}
         />
       </div>
       <SiteFooter />
