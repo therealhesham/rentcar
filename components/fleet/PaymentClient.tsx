@@ -43,6 +43,7 @@ import {
 } from "@/lib/checkout-payment-method-flags";
 import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
 import { ApplePayExpressButton } from "@/components/fleet/ApplePayExpressButton";
+import type { PaymentIconUrls } from "@/lib/site-settings";
 
 type Props = {
   booking: BookingPaymentSnapshot;
@@ -51,6 +52,8 @@ type Props = {
   hostedCheckout?: boolean;
   /** رابط مكتبة جيديا لزر Apple Pay السريع — null إن لم تكن البوابة مهيّأة. */
   geideaScriptUrl?: string | null;
+  /** شعارات وسائل الدفع (تابي/تمارا/البطاقة/مدى/إمكان) — قابلة للتعديل من لوحة الإدارة. */
+  paymentIconUrls: PaymentIconUrls;
 };
 
 export type CheckoutPaymentMethod = CustomerCheckoutPaymentMethod;
@@ -133,66 +136,79 @@ type MethodOption =
 
 
 
-const METHOD_OPTIONS: MethodOption[] = [
-  {
-    id: "TABBY",
-    title: "تابي",
-    hint: "تقسيط على دفعات — يُفعَّل ربط بوابة تابي لاحقاً",
-    logoSrc: "/ايقونات خدمات الدفع/Tabby-01.svg",
-  },
-  {
-    id: "TAMARA",
-    title: "تمارا",
-    hint: "تقسيط حسب شروط تمارا — يُفعَّل الربط لاحقاً",
-    logoSrc: "/tamara.png",
-  },
-  {
-    id: "CARD",
-    title: "بطاقة ائتمانية",
-    hint: "فيزا، ماستركارد — بوابة الدفع بالبطاقة",
-    logoSrc: "/ايقونات خدمات الدفع/Visa_Inc._logo_(2014–2021).svg",
-  },
-  {
-    id: "MADA",
-    title: "مدى",
-    hint: "الدفع ببطاقة مدى",
-    logoSrc: "/ايقونات خدمات الدفع/شعار مدى - SVG.svg",
-  },
-  {
-    id: "AMKAN",
-    title: "إمكان",
-    hint: "خدمة إمكان للدفع",
-    logoSrc: "/ايقونات خدمات الدفع/شعار إمكان للتمويل - SVG.svg",
-  },
-  {
-    id: "CASH",
-    title: "عند الفرع",
-    hint: "",
-    Icon: Store,
-  },
-  {
-    id: "APPLE_PAY",
-    title: "Apple Pay",
-    hint: "",
-    Icon: Apple,
-  },
-  {
-    id: "POINTS",
-    title: "استبدال نقاط",
-    hint: "خصم من رصيد نقاط برنامج الولاء — يُربَط بنظام النقاط لاحقاً",
-    Icon: Gift,
-  },
-];
+/**
+ * شعارات تابي/تمارا/البطاقة/مدى/إمكان تأتي من paymentIconUrls (قابلة للتعديل من
+ * لوحة الإدارة) — لا قيم مثبّتة هنا، حتى تتفرّع الواجهة تلقائياً بمجرد رفع الأدمن
+ * شعاراً جديداً دون أي تعديل على الكود.
+ */
+function buildMethodOptions(paymentIconUrls: PaymentIconUrls): MethodOption[] {
+  return [
+    {
+      id: "TABBY",
+      title: "تابي",
+      hint: "تقسيط على دفعات — يُفعَّل ربط بوابة تابي لاحقاً",
+      logoSrc: paymentIconUrls.TABBY,
+    },
+    {
+      id: "TAMARA",
+      title: "تمارا",
+      hint: "تقسيط حسب شروط تمارا — يُفعَّل الربط لاحقاً",
+      logoSrc: paymentIconUrls.TAMARA,
+    },
+    {
+      id: "CARD",
+      title: "بطاقة ائتمانية",
+      hint: "فيزا، ماستركارد — بوابة الدفع بالبطاقة",
+      logoSrc: paymentIconUrls.CARD,
+    },
+    {
+      id: "MADA",
+      title: "مدى",
+      hint: "الدفع ببطاقة مدى",
+      logoSrc: paymentIconUrls.MADA,
+    },
+    {
+      id: "AMKAN",
+      title: "إمكان",
+      hint: "خدمة إمكان للدفع",
+      logoSrc: paymentIconUrls.AMKAN,
+    },
+    {
+      id: "CASH",
+      title: "عند الفرع",
+      hint: "",
+      Icon: Store,
+    },
+    {
+      id: "APPLE_PAY",
+      title: "Apple Pay",
+      hint: "",
+      Icon: Apple,
+    },
+    {
+      id: "POINTS",
+      title: "استبدال نقاط",
+      hint: "خصم من رصيد نقاط برنامج الولاء — يُربَط بنظام النقاط لاحقاً",
+      Icon: Gift,
+    },
+  ];
+}
 
 export function PaymentClient({
   booking,
   paymentMethodFlags,
   hostedCheckout,
   geideaScriptUrl,
+  paymentIconUrls,
 }: Props) {
   const enabledMethods = useMemo(
     () => listEnabledCheckoutPaymentMethods(paymentMethodFlags),
     [paymentMethodFlags],
+  );
+
+  const methodOptions = useMemo(
+    () => buildMethodOptions(paymentIconUrls),
+    [paymentIconUrls],
   );
 
   const router = useRouter();
@@ -208,13 +224,13 @@ export function PaymentClient({
 
   const visibleMethodOptions = useMemo(
     () =>
-      METHOD_OPTIONS.filter(
+      methodOptions.filter(
         (opt) =>
           enabledMethods.includes(opt.id) &&
           // في وضع دفع فرق التمديد لا يُعرض «عند الفرع» — الرصيد يُسدَّد أونلاين.
           !(balancePaymentMode && opt.id === "CASH"),
       ),
-    [enabledMethods, balancePaymentMode],
+    [methodOptions, enabledMethods, balancePaymentMode],
   );
 
   const [state, formAction, pending] = useActionState<ConfirmPaymentResult | null, FormData>(

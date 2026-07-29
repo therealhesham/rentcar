@@ -64,35 +64,19 @@ export async function getPromoBannerSlides(): Promise<PromoBannerSlide[]> {
 }
 /* ──────────────────────────────────────────────────────────── */
 
-/** صورة الهيرو الافتراضية (قديمة — للتوافق مع الروابط المحفوظة) */
-export const DEFAULT_HOME_HERO_IMAGE_URL =
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuD_wHp6ORrYsBkgi0UyOM9QPOZM5bDcBfhhiqFUAWIi_pRppfkX3yuO9YkH7lRHPQn0zMBLvBo77J3n-avrqC22bLvZ71W4X4QAFO6YqbuEJtNyFdOIgtj8yWTFS5AkpYAADSaZIePszEqX3bSF4-QdK92ONP57oeRSrrsiQ_SQu0Z0EXEoRFknm0KQUTN9WyJSd9H9sm_nfmeIVaY9ud5JaTpCFqXlwGaNLIvs-RFTOJcu-EAu_w31N9dPlt3mVhqd6YyUdFRk3Y6M";
+/**
+ * صورة الهيرو الافتراضية — التصميم الحالي خلفية واحدة كاملة العرض (لا صورتان
+ * يمين/يسار كما في تصميم سابق)، فالإعداد صورة واحدة فقط.
+ */
+export const DEFAULT_HOME_HERO_IMAGE_URL = "/heros.webp";
 
 export const DEFAULT_HOME_HERO_IMAGE_ALT =
-  "سيارة بورش فاخرة على طريق ساحلي عند غروب الشمس";
-
-export const DEFAULT_HOME_HERO_LEFT_IMAGE_URL =
-  "https://images.unsplash.com/photo-1489821584143-984f940e1256?auto=format&fit=crop&w=1200&q=80";
-
-export const DEFAULT_HOME_HERO_LEFT_IMAGE_ALT = "صف من السيارات أمام مبنى حديث";
-
-export const DEFAULT_HOME_HERO_RIGHT_IMAGE_URL =
-  "https://images.unsplash.com/photo-1617814076367-b759c7d7e738?auto=format&fit=crop&w=1200&q=80";
-
-export const DEFAULT_HOME_HERO_RIGHT_IMAGE_ALT = "معرض سيارات فاخرة من الداخل";
+  "سيارة فاخرة أمام معرض روائس لتأجير السيارات";
 
 export const SITE_KEY_HOME_HERO_IMAGE_URL = "home_hero_image_url";
 export const SITE_KEY_HOME_HERO_IMAGE_ALT = "home_hero_image_alt";
-export const SITE_KEY_HOME_HERO_LEFT_IMAGE_URL = "home_hero_left_image_url";
-export const SITE_KEY_HOME_HERO_LEFT_IMAGE_ALT = "home_hero_left_image_alt";
-export const SITE_KEY_HOME_HERO_RIGHT_IMAGE_URL = "home_hero_right_image_url";
-export const SITE_KEY_HOME_HERO_RIGHT_IMAGE_ALT = "home_hero_right_image_alt";
 
-const ALLOWED_DEFAULT_HERO_URLS = new Set([
-  DEFAULT_HOME_HERO_IMAGE_URL,
-  DEFAULT_HOME_HERO_LEFT_IMAGE_URL,
-  DEFAULT_HOME_HERO_RIGHT_IMAGE_URL,
-]);
+const ALLOWED_DEFAULT_HERO_URLS = new Set([DEFAULT_HOME_HERO_IMAGE_URL]);
 
 export function isAllowedHomeHeroImageUrl(url: string): boolean {
   const u = url.trim();
@@ -102,26 +86,15 @@ export function isAllowedHomeHeroImageUrl(url: string): boolean {
 }
 
 export type HomeHeroSettings = {
-  leftImageUrl: string;
-  leftImageAlt: string;
-  rightImageUrl: string;
-  rightImageAlt: string;
+  imageUrl: string;
+  imageAlt: string;
 };
 
-const HOME_HERO_SETTING_KEYS = [
-  SITE_KEY_HOME_HERO_IMAGE_URL,
-  SITE_KEY_HOME_HERO_IMAGE_ALT,
-  SITE_KEY_HOME_HERO_LEFT_IMAGE_URL,
-  SITE_KEY_HOME_HERO_LEFT_IMAGE_ALT,
-  SITE_KEY_HOME_HERO_RIGHT_IMAGE_URL,
-  SITE_KEY_HOME_HERO_RIGHT_IMAGE_ALT,
-];
+const HOME_HERO_SETTING_KEYS = [SITE_KEY_HOME_HERO_IMAGE_URL, SITE_KEY_HOME_HERO_IMAGE_ALT];
 
 const DEFAULT_HOME_HERO_SETTINGS: HomeHeroSettings = {
-  leftImageUrl: DEFAULT_HOME_HERO_LEFT_IMAGE_URL,
-  leftImageAlt: DEFAULT_HOME_HERO_LEFT_IMAGE_ALT,
-  rightImageUrl: DEFAULT_HOME_HERO_RIGHT_IMAGE_URL,
-  rightImageAlt: DEFAULT_HOME_HERO_RIGHT_IMAGE_ALT,
+  imageUrl: DEFAULT_HOME_HERO_IMAGE_URL,
+  imageAlt: DEFAULT_HOME_HERO_IMAGE_ALT,
 };
 
 export async function getHomeHeroSettings(): Promise<HomeHeroSettings> {
@@ -132,42 +105,75 @@ export async function getHomeHeroSettings(): Promise<HomeHeroSettings> {
     });
     const settings = new Map(rows.map((row) => [row.key, row.value]));
 
-    const legacyUrlCandidate =
-      settings.get(SITE_KEY_HOME_HERO_IMAGE_URL)?.trim() ?? "";
-    const legacyUrl = isAllowedHomeHeroImageUrl(legacyUrlCandidate)
-      ? legacyUrlCandidate
-      : "";
+    const urlCandidate = settings.get(SITE_KEY_HOME_HERO_IMAGE_URL)?.trim() ?? "";
+    const imageUrl = isAllowedHomeHeroImageUrl(urlCandidate)
+      ? urlCandidate
+      : DEFAULT_HOME_HERO_IMAGE_URL;
 
-    const legacyAlt = settings.get(SITE_KEY_HOME_HERO_IMAGE_ALT)?.trim() || "";
+    const imageAlt =
+      settings.get(SITE_KEY_HOME_HERO_IMAGE_ALT)?.trim() || DEFAULT_HOME_HERO_IMAGE_ALT;
 
-    const leftUrlCandidate =
-      settings.get(SITE_KEY_HOME_HERO_LEFT_IMAGE_URL)?.trim() ?? "";
-    const rightUrlCandidate =
-      settings.get(SITE_KEY_HOME_HERO_RIGHT_IMAGE_URL)?.trim() ?? "";
-
-    const leftImageUrl = isAllowedHomeHeroImageUrl(leftUrlCandidate)
-      ? leftUrlCandidate
-      : legacyUrl || DEFAULT_HOME_HERO_LEFT_IMAGE_URL;
-
-    const rightImageUrl = isAllowedHomeHeroImageUrl(rightUrlCandidate)
-      ? rightUrlCandidate
-      : legacyUrl || DEFAULT_HOME_HERO_RIGHT_IMAGE_URL;
-
-    const leftImageAlt =
-      settings.get(SITE_KEY_HOME_HERO_LEFT_IMAGE_ALT)?.trim() ||
-      legacyAlt ||
-      DEFAULT_HOME_HERO_LEFT_IMAGE_ALT;
-    const rightImageAlt =
-      settings.get(SITE_KEY_HOME_HERO_RIGHT_IMAGE_ALT)?.trim() ||
-      legacyAlt ||
-      DEFAULT_HOME_HERO_RIGHT_IMAGE_ALT;
-
-    return { leftImageUrl, leftImageAlt, rightImageUrl, rightImageAlt };
+    return { imageUrl, imageAlt };
   } catch (e: unknown) {
     const code =
       e && typeof e === "object" && "code" in e ? String((e as { code: string }).code) : "";
     if (code === "P2021" || code === "P2024") {
       return DEFAULT_HOME_HERO_SETTINGS;
+    }
+    throw e;
+  }
+}
+
+/* ─── أيقونات وسائل الدفع (صفحة إتمام الدفع) ──────────────── */
+
+export const PAYMENT_ICON_METHODS = ["TABBY", "TAMARA", "CARD", "MADA", "AMKAN"] as const;
+export type PaymentIconMethod = (typeof PAYMENT_ICON_METHODS)[number];
+
+/** المسارات الأصلية في public/ — تبقى افتراضاً مسموحاً حتى لا تختفي الأيقونة قبل أول رفع إداري. */
+export const DEFAULT_PAYMENT_ICON_URLS: Record<PaymentIconMethod, string> = {
+  TABBY: "/ايقونات خدمات الدفع/Tabby-01.svg",
+  TAMARA: "/tamara.png",
+  CARD: "/ايقونات خدمات الدفع/Visa_Inc._logo_(2014–2021).svg",
+  MADA: "/ايقونات خدمات الدفع/شعار مدى - SVG.svg",
+  AMKAN: "/ايقونات خدمات الدفع/شعار إمكان للتمويل - SVG.svg",
+};
+
+/** يُصدَّر لأن أكشن التحديث الإداري يحتاج نفس مفاتيح القراءة تماماً — لا تكرار للنمط. */
+export function paymentIconSettingKey(method: PaymentIconMethod): string {
+  return `payment_icon_${method.toLowerCase()}_url`;
+}
+
+export function isAllowedPaymentIconUrl(url: string): boolean {
+  const u = url.trim();
+  if (!u) return false;
+  if ((Object.values(DEFAULT_PAYMENT_ICON_URLS) as string[]).includes(u)) return true;
+  return isTrustedSpacesImageUrl(u);
+}
+
+export type PaymentIconUrls = Record<PaymentIconMethod, string>;
+
+export async function getPaymentIconUrls(): Promise<PaymentIconUrls> {
+  try {
+    const keys = PAYMENT_ICON_METHODS.map(paymentIconSettingKey);
+    const rows = await prisma.siteSetting.findMany({
+      where: { key: { in: keys } },
+      select: { key: true, value: true },
+    });
+    const settings = new Map(rows.map((row) => [row.key, row.value]));
+
+    const result = {} as PaymentIconUrls;
+    for (const method of PAYMENT_ICON_METHODS) {
+      const candidate = settings.get(paymentIconSettingKey(method))?.trim() ?? "";
+      result[method] = isAllowedPaymentIconUrl(candidate)
+        ? candidate
+        : DEFAULT_PAYMENT_ICON_URLS[method];
+    }
+    return result;
+  } catch (e: unknown) {
+    const code =
+      e && typeof e === "object" && "code" in e ? String((e as { code: string }).code) : "";
+    if (code === "P2021" || code === "P2024") {
+      return { ...DEFAULT_PAYMENT_ICON_URLS };
     }
     throw e;
   }

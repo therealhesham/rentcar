@@ -9,15 +9,13 @@ import type { BookingWidgetTabFlags } from "@/lib/booking-widget-tabs";
 import { HeroEntrance } from "./HomeMotion";
 
 export type HeroProps = {
-  leftImageUrl: string;
-  leftImageAlt: string;
-  rightImageUrl: string;
-  rightImageAlt: string;
+  imageUrl: string;
+  imageAlt: string;
   cities: BookingCityBranchesOption[];
   tabFlags?: BookingWidgetTabFlags | null;
 };
 
-export function Hero({ cities, tabFlags }: HeroProps) {
+export function Hero({ imageUrl, imageAlt, cities, tabFlags }: HeroProps) {
   const t = useTranslations("Hero");
   const locale = useLocale();
   const isRtl = locale === "ar";
@@ -26,8 +24,8 @@ export function Hero({ cities, tabFlags }: HeroProps) {
     <section className="relative overflow-hidden bg-gradient-to-b from-[#eef6f8] via-white to-[#fdfbf6] pt-[4.5rem] sm:pt-24">
       <div className="pointer-events-none absolute inset-0" aria-hidden>
         <Image
-          src="/heros.webp"
-          alt=""
+          src={imageUrl}
+          alt={imageAlt}
           fill
           priority
           className="object-cover object-center"

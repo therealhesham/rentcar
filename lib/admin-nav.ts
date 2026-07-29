@@ -90,6 +90,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/admin/booking-otp-delivery", label: "رمز التحقق", icon: "shield-check", permission: "CONTENT" },
       { href: "/admin/booking-widget-tabs", label: "تبويبات ويدجت الحجز", icon: "sliders", permission: "CONTENT" },
       { href: "/admin/payment-methods", label: "طرق دفع العميل", icon: "credit-card", permission: "CONTENT" },
+      { href: "/admin/payment-icons", label: "أيقونات وسائل الدفع", icon: "image", permission: "CONTENT" },
       { href: "/admin/whatsapp-templates", label: "قوالب الواتساب", icon: "megaphone", permission: "CONTENT" },
     ],
   },

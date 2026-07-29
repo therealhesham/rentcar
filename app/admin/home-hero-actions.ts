@@ -2,22 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSuperAdminForAction } from "@/lib/admin-access";
-import { requireGalleryFolderSlug } from "@/lib/gallery-folder";
+import { resolveUploadedImageUrl } from "@/lib/admin-image-resolve";
 import {
-  DEFAULT_HOME_HERO_LEFT_IMAGE_URL,
-  DEFAULT_HOME_HERO_RIGHT_IMAGE_URL,
+  DEFAULT_HOME_HERO_IMAGE_URL,
   isAllowedHomeHeroImageUrl,
-  SITE_KEY_HOME_HERO_LEFT_IMAGE_ALT,
-  SITE_KEY_HOME_HERO_LEFT_IMAGE_URL,
-  SITE_KEY_HOME_HERO_RIGHT_IMAGE_ALT,
-  SITE_KEY_HOME_HERO_RIGHT_IMAGE_URL,
+  SITE_KEY_HOME_HERO_IMAGE_ALT,
+  SITE_KEY_HOME_HERO_IMAGE_URL,
 } from "@/lib/site-settings";
 import { prisma } from "@/lib/prisma";
-import {
-  isSpacesConfigured,
-  isTrustedSpacesImageUrl,
-  uploadImageToSpaces,
-} from "@/lib/spaces-upload";
 
 async function upsertSiteSetting(key: string, value: string): Promise<void> {
   await prisma.siteSetting.upsert({
@@ -27,50 +19,6 @@ async function upsertSiteSetting(key: string, value: string): Promise<void> {
   });
 }
 
-async function resolveHeroImageUrl(opts: {
-  imageFile: FormDataEntryValue | null;
-  galleryImageUrl: string;
-  currentImage: string;
-  fallbackDefault: string;
-}): Promise<{ ok: true; imageUrl: string } | { ok: false; error: string }> {
-  const { imageFile, galleryImageUrl, currentImage, fallbackDefault } = opts;
-
-  let imageUrl = currentImage.trim();
-
-  if (imageFile instanceof File && imageFile.size > 0) {
-    if (!isSpacesConfigured()) {
-      return {
-        ok: false,
-        error:
-          "لم يُضبط تخزين Spaces في البيئة (SPACES_REGION، المفاتيح، SPACES_BUCKET).",
-      };
-    }
-    try {
-      await requireGalleryFolderSlug("home");
-      imageUrl = await uploadImageToSpaces(imageFile, "home");
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "فشل رفع الصورة.";
-      return { ok: false, error: msg };
-    }
-  } else if (galleryImageUrl && isTrustedSpacesImageUrl(galleryImageUrl)) {
-    imageUrl = galleryImageUrl;
-  }
-
-  if (!imageUrl) {
-    imageUrl = fallbackDefault;
-  }
-
-  if (!isAllowedHomeHeroImageUrl(imageUrl)) {
-    return {
-      ok: false,
-      error:
-        "رابط إحدى الصور غير مسموح. اختر صورة من المعرض أو ارفع ملفاً إلى Spaces، أو استخدم الصورة الافتراضية.",
-    };
-  }
-
-  return { ok: true, imageUrl };
-}
-
 export async function updateHomeHero(
   _prev: { ok: boolean; error?: string } | null,
   formData: FormData,
@@ -78,38 +26,27 @@ export async function updateHomeHero(
   const auth = await requireSuperAdminForAction();
   if (!auth.ok) return { ok: false, error: auth.error };
 
-  const altLeft = String(formData.get("altLeft") ?? "").trim();
-  const altRight = String(formData.get("altRight") ?? "").trim();
-
-  if (!altLeft || !altRight) {
-    return { ok: false, error: "أدخل وصفاً (alt) لكل من صورة اليسار واليمين." };
+  const imageAlt = String(formData.get("imageAlt") ?? "").trim();
+  if (!imageAlt) {
+    return { ok: false, error: "أدخل وصفاً (alt) لصورة الهيرو." };
   }
 
-  const leftResolved = await resolveHeroImageUrl({
-    imageFile: formData.get("imageFileLeft"),
-    galleryImageUrl: String(formData.get("galleryImageUrlLeft") ?? "").trim(),
-    currentImage: String(formData.get("currentImageLeft") ?? "").trim(),
-    fallbackDefault: DEFAULT_HOME_HERO_LEFT_IMAGE_URL,
+  const resolved = await resolveUploadedImageUrl({
+    imageFile: formData.get("imageFile"),
+    galleryImageUrl: String(formData.get("galleryImageUrl") ?? "").trim(),
+    currentImage: String(formData.get("currentImage") ?? "").trim(),
+    fallbackDefault: DEFAULT_HOME_HERO_IMAGE_URL,
+    isAllowedUrl: isAllowedHomeHeroImageUrl,
+    folderSlug: "home",
+    folderLabel: "الصفحة الرئيسية (هيرو)",
   });
-  if (!leftResolved.ok) {
-    return { ok: false, error: leftResolved.error };
-  }
-
-  const rightResolved = await resolveHeroImageUrl({
-    imageFile: formData.get("imageFileRight"),
-    galleryImageUrl: String(formData.get("galleryImageUrlRight") ?? "").trim(),
-    currentImage: String(formData.get("currentImageRight") ?? "").trim(),
-    fallbackDefault: DEFAULT_HOME_HERO_RIGHT_IMAGE_URL,
-  });
-  if (!rightResolved.ok) {
-    return { ok: false, error: rightResolved.error };
+  if (!resolved.ok) {
+    return { ok: false, error: resolved.error };
   }
 
   try {
-    await upsertSiteSetting(SITE_KEY_HOME_HERO_LEFT_IMAGE_URL, leftResolved.imageUrl);
-    await upsertSiteSetting(SITE_KEY_HOME_HERO_LEFT_IMAGE_ALT, altLeft);
-    await upsertSiteSetting(SITE_KEY_HOME_HERO_RIGHT_IMAGE_URL, rightResolved.imageUrl);
-    await upsertSiteSetting(SITE_KEY_HOME_HERO_RIGHT_IMAGE_ALT, altRight);
+    await upsertSiteSetting(SITE_KEY_HOME_HERO_IMAGE_URL, resolved.imageUrl);
+    await upsertSiteSetting(SITE_KEY_HOME_HERO_IMAGE_ALT, imageAlt);
   } catch (e: unknown) {
     console.error(e);
     const code =

@@ -45,10 +45,8 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
         <HomeScrollSections
           hero={
             <Hero
-              leftImageUrl={hero.leftImageUrl}
-              leftImageAlt={hero.leftImageAlt}
-              rightImageUrl={hero.rightImageUrl}
-              rightImageAlt={hero.rightImageAlt}
+              imageUrl={hero.imageUrl}
+              imageAlt={hero.imageAlt}
               cities={cities}
               tabFlags={tabFlags}
             />

@@ -9,6 +9,7 @@ import { reconcilePendingGeideaPaymentById } from "@/lib/geidea/mark-paid";
 import {
   getApplePayExpressEnabled,
   getCheckoutPaymentMethodFlags,
+  getPaymentIconUrls,
 } from "@/lib/site-settings";
 import { buildPageMetadata } from "@/lib/seo";
 
@@ -35,10 +36,11 @@ export default async function FleetPaymentPage({
   // مباشرةً من البوابة ويُعلَّم الحجز مدفوعاً قبل عرض الصفحة.
   await reconcilePendingGeideaPaymentById(id);
 
-  const [booking, paymentMethodFlags, applePayExpress] = await Promise.all([
+  const [booking, paymentMethodFlags, applePayExpress, paymentIconUrls] = await Promise.all([
     getBookingForPayment(id),
     getCheckoutPaymentMethodFlags(),
     getApplePayExpressEnabled(),
+    getPaymentIconUrls(),
   ]);
   if (!booking) notFound();
 
@@ -52,6 +54,7 @@ export default async function FleetPaymentPage({
           hostedCheckout={isGeideaConfigured()}
           // معطّلاً يبقى null فيسقط Apple Pay تلقائياً إلى التحويل لصفحة جيديا.
           geideaScriptUrl={applePayExpress ? geideaCheckoutScriptUrl() : null}
+          paymentIconUrls={paymentIconUrls}
         />
       </div>
       <SiteFooter />
