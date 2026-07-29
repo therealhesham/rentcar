@@ -401,6 +401,80 @@ export async function cancelBookingWithFullRefundByAdmin(input: {
   };
 }
 
+export type CancelBookingNoRefundResult =
+  | { ok: true; paymentMethod: string | null }
+  | { ok: false; error: string };
+
+/**
+ * إلغاء إداري بلا استرداد — يتجاوز شرائح خصم السياسة في الاتجاه المعاكس لاسترداد
+ * كامل: يُسجَّل خصم كل أيام الحجز ولا يُرَدّ أي مبلغ، حتى لو كانت السياسة العادية
+ * قد تسمح باسترداد جزئي. لحالات استثنائية (مخالفة شروط، عدم حضور دون إشعار)
+ * ويتطلب سبباً إلزامياً يُسجَّل على الحجز وفي سجل النشاط — تماماً كالاسترداد الكامل.
+ */
+export async function cancelBookingWithoutRefundByAdmin(input: {
+  bookingRequestId: number;
+  reasonAr: string;
+  actorLabel: string;
+}): Promise<CancelBookingNoRefundResult> {
+  const reason = input.reasonAr.trim();
+  if (!reason) {
+    return { ok: false, error: "سبب الإلغاء بلا استرداد إلزامي." };
+  }
+
+  const row = await loadBookingForCancel(input.bookingRequestId);
+  if (!row) {
+    return { ok: false, error: "الطلب غير موجود." };
+  }
+
+  const st = row.status.trim().toUpperCase();
+  if (st === "CANCELLED") {
+    return { ok: false, error: "الطلب ملغى بالفعل." };
+  }
+  if (TERMINAL_STATUSES.has(st)) {
+    return { ok: false, error: "لا يمكن إلغاء طلب في هذه الحالة." };
+  }
+  if (st === BOOKING_STATUS_RETURNED) {
+    return { ok: false, error: "لا يمكن إلغاء حجز تم إرجاع السيارة فيه بالفعل." };
+  }
+
+  const ps = row.paymentStatus.trim().toUpperCase();
+  const paidAmount = row.paidAmountSar ?? 0;
+  const paidEligible = row.kind === "DIRECT" && ps === "PAID" && paidAmount > 0;
+
+  const nowCancel = new Date();
+  const baseData = {
+    status: "CANCELLED" as const,
+    cancelledAt: nowCancel,
+    // خصم كامل المدة — لا استرداد مهما كانت شرائح السياسة العادية.
+    cancellationDeductedDays: row.numberOfDays,
+    cancellationReasonAr: reason,
+    balanceDueAtBranchSar: 0,
+    ...(paidEligible
+      ? {
+          paymentStatus: "NO_REFUND" as const,
+          cancellationRefundAmountSar: 0,
+        }
+      : {}),
+  };
+
+  // مطالبة ذرّية بالإلغاء — طلب واحد فقط يمرّ، يمنع تكرار المعالجة.
+  const claim = await prisma.bookingRequest.updateMany({
+    where: {
+      id: row.id,
+      status: { notIn: ["CANCELLED", "REJECTED", BOOKING_STATUS_RETURNED] },
+    },
+    data: baseData,
+  });
+  if (claim.count === 0) {
+    return { ok: false, error: "الطلب ملغى بالفعل أو في حالة لا تسمح بالإلغاء." };
+  }
+
+  // لا حركة مالية هنا (لا استرداد) — سجل النشاط المالي (logActivity) مخصص لحركات
+  // الدفع/الاسترداد فقط؛ تدقيق هذا الإلغاء يتم عبر logBookingEvent في طبقة الأكشن،
+  // بنفس نمط cancelAdminBooking.
+  return { ok: true, paymentMethod: paidEligible ? row.paymentMethod : null };
+}
+
 export type CancellationFinancePreview = {
   paidInclTax: number;
   refundInclTax: number;

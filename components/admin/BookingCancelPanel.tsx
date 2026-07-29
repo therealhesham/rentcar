@@ -5,6 +5,7 @@ import { useMemo, useState, useTransition } from "react";
 import {
   cancelAdminBooking,
   cancelAdminBookingWithFullRefund,
+  cancelAdminBookingWithoutRefund,
 } from "@/app/admin/booking-cancel-actions";
 import { SarCurrencyGlyph } from "@/components/ui/SarCurrencyGlyph";
 import { formatSarAmount } from "@/lib/booking-checkout-pricing";
@@ -78,6 +79,12 @@ export function BookingCancelPanel({
   const [fullRefundChannel, setFullRefundChannel] = useState<"ORIGINAL" | "CASH">("ORIGINAL");
   const [fullRefundError, setFullRefundError] = useState<string | null>(null);
   const [fullRefundPending, startFullRefundTransition] = useTransition();
+
+  const [noRefundModalOpen, setNoRefundModalOpen] = useState(false);
+  const [noRefundReason, setNoRefundReason] = useState("");
+  const [noRefundError, setNoRefundError] = useState<string | null>(null);
+  const [noRefundPending, startNoRefundTransition] = useTransition();
+
   const [cancelMenuOpen, setCancelMenuOpen] = useState(false);
 
   const statusKey = status.trim().toUpperCase();
@@ -331,6 +338,21 @@ export function BookingCancelPanel({
                     يتجاوز السياسة ويردّ كامل المدفوع — مع اختيار قناة الاسترداد.
                   </span>
                 </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCancelMenuOpen(false);
+                    setNoRefundError(null);
+                    setNoRefundReason("");
+                    setNoRefundModalOpen(true);
+                  }}
+                  className="flex w-full flex-col items-start gap-0.5 border-t border-outline-variant/30 px-4 py-3 text-start transition-colors hover:bg-neutral-50"
+                >
+                  <span className="text-sm font-bold text-neutral-800">إلغاء بلا استرداد</span>
+                  <span className="text-[11px] font-semibold text-on-surface-variant">
+                    يتجاوز السياسة ويحتجز كامل المدفوع — لا يُرَدّ أي مبلغ للعميل.
+                  </span>
+                </button>
               </div>
             </>
           ) : null}
@@ -468,6 +490,93 @@ export function BookingCancelPanel({
                   onClick={() => {
                     setFullRefundModalOpen(false);
                     setFullRefundError(null);
+                  }}
+                  className="flex-1 rounded-xl border border-outline-variant/40 py-3 text-sm font-bold text-on-surface transition-colors hover:bg-surface-container-low disabled:opacity-60"
+                >
+                  إغلاق
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {noRefundModalOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+          dir="rtl"
+        >
+          <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="border-b border-outline-variant/20 bg-neutral-100 px-6 py-4">
+              <h3 className="text-lg font-extrabold text-neutral-900">إلغاء بلا استرداد</h3>
+              <p className="mt-1 text-xs font-semibold text-neutral-600">
+                يتجاوز هذا الخيار سياسة خصم الشرائح ويحتجز كامل المبلغ المدفوع — لا يُرَدّ للعميل
+                أي شيء. لحالات استثنائية فقط (مخالفة شروط، عدم حضور).
+              </p>
+            </div>
+
+            <div className="p-6">
+              {paymentKey === "PAID" && typeof paidAmountSar === "number" && paidAmountSar > 0 ? (
+                <p className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-extrabold text-red-950">
+                  سيُحتجَز: <SarAmountInline amount={paidAmountSar} />
+                  <span className="mr-1 font-semibold text-red-900/80">بلا استرداد</span>
+                </p>
+              ) : (
+                <p className="mb-4 rounded-xl border border-outline-variant/40 bg-surface-container-low px-4 py-3 text-sm font-bold text-on-surface">
+                  لا يوجد مبلغ مدفوع على هذا الحجز — سيتم إلغاؤه فقط.
+                </p>
+              )}
+
+              <label className="block text-sm font-bold text-on-surface">
+                سبب الإلغاء بلا استرداد <span className="text-red-700">*</span>
+                <textarea
+                  value={noRefundReason}
+                  onChange={(e) => setNoRefundReason(e.target.value)}
+                  rows={3}
+                  placeholder=""
+                  className="mt-2 w-full rounded-xl border border-outline-variant/40 bg-white px-4 py-3 text-sm focus:border-neutral-500/60 focus:ring-2 focus:ring-neutral-500/15"
+                />
+              </label>
+
+              {noRefundError ? (
+                <p className="mt-3 text-xs font-bold text-red-700" role="alert">
+                  {noRefundError}
+                </p>
+              ) : null}
+
+              <div className="mt-6 flex gap-3">
+                <button
+                  type="button"
+                  disabled={noRefundPending}
+                  onClick={() => {
+                    if (!noRefundReason.trim()) {
+                      setNoRefundError("سبب الإلغاء بلا استرداد إلزامي.");
+                      return;
+                    }
+                    setNoRefundError(null);
+                    startNoRefundTransition(async () => {
+                      const fd = new FormData();
+                      fd.set("bookingRequestId", String(bookingRequestId));
+                      fd.set("reasonAr", noRefundReason.trim());
+                      const r = await cancelAdminBookingWithoutRefund(fd);
+                      if (!r.ok) {
+                        setNoRefundError(r.error ?? "تعذّر تنفيذ الإلغاء بلا استرداد.");
+                        return;
+                      }
+                      setNoRefundModalOpen(false);
+                      router.refresh();
+                    });
+                  }}
+                  className="flex-1 rounded-xl bg-neutral-800 py-3 text-sm font-bold text-white transition-colors hover:opacity-95 disabled:opacity-60"
+                >
+                  {noRefundPending ? "جاري التنفيذ…" : "تأكيد الإلغاء بلا استرداد"}
+                </button>
+                <button
+                  type="button"
+                  disabled={noRefundPending}
+                  onClick={() => {
+                    setNoRefundModalOpen(false);
+                    setNoRefundError(null);
                   }}
                   className="flex-1 rounded-xl border border-outline-variant/40 py-3 text-sm font-bold text-on-surface transition-colors hover:bg-surface-container-low disabled:opacity-60"
                 >

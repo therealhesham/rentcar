@@ -119,17 +119,17 @@ const BRANCH_LABEL_AR: Record<string, string> = {
 
 type MethodOption =
   | {
-      id: CheckoutPaymentMethod;
-      title: string;
-      hint: string;
-      logoSrc: string;
-    }
+    id: CheckoutPaymentMethod;
+    title: string;
+    hint: string;
+    logoSrc: string;
+  }
   | {
-      id: CheckoutPaymentMethod;
-      title: string;
-      hint: string;
-      Icon: typeof CreditCard;
-    };
+    id: CheckoutPaymentMethod;
+    title: string;
+    hint: string;
+    Icon: typeof CreditCard;
+  };
 
 
 
@@ -173,7 +173,7 @@ const METHOD_OPTIONS: MethodOption[] = [
   {
     id: "APPLE_PAY",
     title: "Apple Pay",
-    hint: "دفع سريع من محفظة آبل — يُفعَّل عند ربط البوابة (مثل Stripe أو مزوّد محلي)",
+    hint: "",
     Icon: Apple,
   },
   {
@@ -337,28 +337,28 @@ export function PaymentClient({
             ? "تأكيد استبدال النقاط (تجريبي)"
             : method === "CASH"
               ? (
-                  <>
-                    تأكيد الحجز (عند الفرع) {formatSarAmount(payableAmountSar)}{" "}
-                    <SarCurrencyGlyph />
-                  </>
-                )
+                <>
+                  تأكيد الحجز (عند الفرع) {formatSarAmount(payableAmountSar)}{" "}
+                  <SarCurrencyGlyph />
+                </>
+              )
               : method === "APPLE_PAY"
                 ? (
-                    <>
-                      ادفع {formatSarAmount(payableAmountSar)} <SarCurrencyGlyph /> عبر Apple Pay
-                    </>
-                  )
+                  <>
+                    ادفع {formatSarAmount(payableAmountSar)} <SarCurrencyGlyph /> عبر Apple Pay
+                  </>
+                )
                 : method === "MADA"
                   ? (
-                      <>
-                        ادفع {formatSarAmount(payableAmountSar)} <SarCurrencyGlyph /> عبر مدى
-                      </>
-                    )
+                    <>
+                      ادفع {formatSarAmount(payableAmountSar)} <SarCurrencyGlyph /> عبر مدى
+                    </>
+                  )
                   : (
-                      <>
-                        ادفع {formatSarAmount(payableAmountSar)} <SarCurrencyGlyph />
-                      </>
-                    );
+                    <>
+                      ادفع {formatSarAmount(payableAmountSar)} <SarCurrencyGlyph />
+                    </>
+                  );
 
   return (
     <main dir="rtl" className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
@@ -403,26 +403,23 @@ export function PaymentClient({
         <section className="order-2 space-y-6 lg:order-1">
           {checkoutComplete ? (
             <div
-              className={`overflow-hidden rounded-3xl border shadow-sm ${
-                showAmberSuccessPanel
+              className={`overflow-hidden rounded-3xl border shadow-sm ${showAmberSuccessPanel
                   ? "border-amber-200 bg-amber-50"
                   : "border-emerald-200 bg-emerald-50"
-              }`}
+                }`}
             >
               <div className="flex flex-col items-center gap-3 p-8 text-center sm:p-10">
                 <div
-                  className={`grid size-16 place-items-center rounded-full ${
-                    showAmberSuccessPanel
+                  className={`grid size-16 place-items-center rounded-full ${showAmberSuccessPanel
                       ? "bg-amber-100 text-amber-700"
                       : "bg-emerald-100 text-emerald-700"
-                  }`}
+                    }`}
                 >
                   <CheckCircle2 className="size-9" aria-hidden />
                 </div>
                 <h2
-                  className={`text-lg font-extrabold ${
-                    showAmberSuccessPanel ? "text-amber-900" : "text-emerald-800"
-                  }`}
+                  className={`text-lg font-extrabold ${showAmberSuccessPanel ? "text-amber-900" : "text-emerald-800"
+                    }`}
                 >
                   {underReview
                     ? "تم استلام طلبك"
@@ -435,9 +432,8 @@ export function PaymentClient({
                           : "تم استلام الدفع"}
                 </h2>
                 <p
-                  className={`max-w-md text-sm leading-relaxed ${
-                    showAmberSuccessPanel ? "text-amber-950/80" : "text-emerald-900/80"
-                  }`}
+                  className={`max-w-md text-sm leading-relaxed ${showAmberSuccessPanel ? "text-amber-950/80" : "text-emerald-900/80"
+                    }`}
                 >
                   {underReview
                     ? "شكراً لك! تم تسجيل طلبك بالدفع نقداً. سيتواصل معك فريقنا قريباً لتأكيد الحجز هاتفياً."
@@ -457,9 +453,8 @@ export function PaymentClient({
                 </p>
                 {resolvedMethodCode ? (
                   <p
-                    className={`text-sm font-bold ${
-                      showAmberSuccessPanel ? "text-amber-900" : "text-emerald-900"
-                    }`}
+                    className={`text-sm font-bold ${showAmberSuccessPanel ? "text-amber-900" : "text-emerald-900"
+                      }`}
                   >
                     طريقة الدفع: {bookingPaymentMethodLabelAr(resolvedMethodCode)}
                   </p>
@@ -482,36 +477,36 @@ export function PaymentClient({
                       {booking.pickupMode === "DELIVERY" ? "موقع التوصيل" : "الفرع"}
                     </dt>
                     <dd className="mt-0.5 text-[#003749]">
-                        {booking.pickupMode === "DELIVERY" ? (
-                          <span className="flex flex-col gap-1">
-                            {booking.deliveryAddress?.trim() ? (
-                              <span className="whitespace-pre-wrap font-bold">
-                                {booking.deliveryAddress.trim()}
-                              </span>
-                            ) : null}
-                            {booking.deliveryLat != null && booking.deliveryLng != null ? (
-                              <a
-                                href={`https://www.google.com/maps?q=${booking.deliveryLat},${booking.deliveryLng}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-xs font-bold text-emerald-800 underline"
-                                dir="ltr"
-                              >
-                                فتح الخريطة
-                              </a>
-                            ) : !booking.deliveryAddress?.trim() ? (
-                              <span className="text-on-surface-variant">—</span>
-                            ) : null}
-                          </span>
-                        ) : (
-                          <span className="font-bold">
-                            {branchLabelAr}
-                          </span>
-                        )}
+                      {booking.pickupMode === "DELIVERY" ? (
+                        <span className="flex flex-col gap-1">
+                          {booking.deliveryAddress?.trim() ? (
+                            <span className="whitespace-pre-wrap font-bold">
+                              {booking.deliveryAddress.trim()}
+                            </span>
+                          ) : null}
+                          {booking.deliveryLat != null && booking.deliveryLng != null ? (
+                            <a
+                              href={`https://www.google.com/maps?q=${booking.deliveryLat},${booking.deliveryLng}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs font-bold text-emerald-800 underline"
+                              dir="ltr"
+                            >
+                              فتح الخريطة
+                            </a>
+                          ) : !booking.deliveryAddress?.trim() ? (
+                            <span className="text-on-surface-variant">—</span>
+                          ) : null}
+                        </span>
+                      ) : (
+                        <span className="font-bold">
+                          {branchLabelAr}
+                        </span>
+                      )}
                     </dd>
                   </div>
                 </dl>
-               
+
                 <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
                   <Link
                     href="/"
@@ -592,11 +587,10 @@ export function PaymentClient({
                         setMethod(opt.id);
                         setClientError(null);
                       }}
-                      className={`relative flex flex-col items-start gap-2 rounded-xl border px-4 py-3 text-start transition-all ${
-                        on
+                      className={`relative flex flex-col items-start gap-2 rounded-xl border px-4 py-3 text-start transition-all ${on
                           ? "border-[#dbb878] bg-[#003749]/[0.04] ring-2 ring-[#dbb878]/35"
                           : "border-[#ebe4d3] bg-white hover:border-[#dbb878]/40 hover:shadow-sm"
-                      }`}
+                        }`}
                     >
                       {on ? (
                         <span className="absolute end-3 top-3 grid size-5 place-items-center rounded-full bg-[#003749] text-white">
@@ -618,11 +612,10 @@ export function PaymentClient({
                           </span>
                         ) : (
                           <span
-                            className={`grid size-10 shrink-0 place-items-center rounded-xl ring-1 transition-colors ${
-                              on
+                            className={`grid size-10 shrink-0 place-items-center rounded-xl ring-1 transition-colors ${on
                                 ? "bg-[#003749]/[0.06] ring-[#dbb878]/40"
                                 : "bg-neutral-50 ring-black/[0.06]"
-                            }`}
+                              }`}
                           >
                             <opt.Icon
                               className={`size-5 ${on ? "text-[#003749]" : "text-neutral-500"}`}

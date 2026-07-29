@@ -8,6 +8,7 @@ import {
 } from "@/lib/admin-access";
 import {
   cancelBookingWithFullRefundByAdmin,
+  cancelBookingWithoutRefundByAdmin,
   cancelBookingWithPolicy,
 } from "@/lib/booking-cancellation-service";
 import { logBookingEvent } from "@/lib/booking-audit";
@@ -110,6 +111,63 @@ export async function cancelAdminBookingWithFullRefund(
     actorName: auth.session.displayName,
     toStatus: "CANCELLED",
     notes: `استرداد كامل: ${result.refundInclTaxSar} ر.س — ${reasonAr}`,
+  });
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/car-bookings");
+  revalidatePath(`/admin/bookings/${bookingRequestId}`);
+  revalidatePath("/admin/customer-dues");
+  revalidatePath("/admin/company-dues");
+  revalidatePath("/account");
+  revalidatePath(`/fleet/payment/${bookingRequestId}`);
+
+  return result;
+}
+
+export type AdminCancelWithoutRefundResult =
+  | { ok: true; paymentMethod: string | null }
+  | { ok: false; error: string };
+
+/**
+ * إلغاء إداري بلا استرداد — يتجاوز سياسة الشرائح في الاتجاه المعاكس للاسترداد
+ * الكامل: تُخصَم كل أيام الحجز ولا يُرَدّ أي مبلغ. لحالات استثنائية (مخالفة شروط،
+ * عدم حضور). يتطلب سبباً إلزامياً يُسجَّل على الحجز وفي سجل النشاط — نفس بوابة
+ * صلاحية الاسترداد الكامل لأن القرارين يتجاوزان السياسة الافتراضية بنفس الوزن.
+ */
+export async function cancelAdminBookingWithoutRefund(
+  formData: FormData,
+): Promise<AdminCancelWithoutRefundResult> {
+  const auth = await requirePermissionForAction("FINANCIALS");
+  if (!auth.ok) return { ok: false, error: auth.error };
+
+  const bookingRequestId = Number(formData.get("bookingRequestId"));
+  if (!Number.isInteger(bookingRequestId) || bookingRequestId < 1) {
+    return { ok: false, error: "معرّف الطلب غير صالح." };
+  }
+
+  const reasonAr = String(formData.get("reasonAr") ?? "").trim();
+  if (!reasonAr) {
+    return { ok: false, error: "سبب الإلغاء بلا استرداد إلزامي." };
+  }
+
+  const scope = await assertBookingRequestInScope(auth.session, bookingRequestId);
+  if (!scope.ok) return { ok: false, error: scope.error };
+
+  const result = await cancelBookingWithoutRefundByAdmin({
+    bookingRequestId,
+    reasonAr,
+    actorLabel: auth.session.displayName,
+  });
+
+  if (!result.ok) return result;
+
+  await logBookingEvent({
+    bookingId: bookingRequestId,
+    event: "BOOKING_CANCELLED",
+    actorKind: "ADMIN",
+    actorName: auth.session.displayName,
+    toStatus: "CANCELLED",
+    notes: `إلغاء بلا استرداد — ${reasonAr}`,
   });
 
   revalidatePath("/admin");
