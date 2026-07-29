@@ -24,17 +24,16 @@ export function Hero({ cities, tabFlags }: HeroProps) {
 
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-[#eef6f8] via-white to-[#fdfbf6] pt-[4.5rem] sm:pt-24">
-      {/* صورة واقعية للمسجد النبوي — مع طبقة تفتيح لوضوح المحتوى */}
       <div className="pointer-events-none absolute inset-0" aria-hidden>
         <Image
-          src="/hero.webp"
+          src="/heros.webp"
           alt=""
           fill
           priority
           className="object-cover object-center"
           sizes="100vw"
         />
-        <div className="absolute inset-0 bg-white/45" />
+        <div className="absolute inset-0" />
         <div className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-white/80 via-white/40 to-transparent sm:h-64" />
         <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-white/70 to-transparent" />
       </div>
