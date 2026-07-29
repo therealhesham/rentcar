@@ -20,6 +20,14 @@ import {
   type BookingOtpChannel,
 } from "@/lib/site-settings";
 
+import {
+  isMsegatConfigured,
+  msegatRefValue,
+  parseMsegatRef,
+  sendMsegatOtp,
+  verifyMsegatOtp,
+} from "@/lib/msegat/client";
+
 export type { BookingOtpChannel };
 
 const OTP_LEN = BOOKING_OTP_LENGTH;
@@ -180,9 +188,12 @@ export async function sendCustomerLoginOtpForIdentifier(
     }
 
     if (channel === "SMS") {
-      const template = getSmsTemplate();
-      if (!template) {
-        return { ok: false, error: "عنوان إرسال الرسائل النصية غير مضبوط في البيئة (BOOKING_OTP_SMS_URL)." };
+      if (!isMsegatConfigured() && !getSmsTemplate()) {
+        return {
+          ok: false,
+          error:
+            "خدمة الرسائل النصية غير مضبوطة (MSEGAT_USERNAME و MSEGAT_API_KEY و MSEGAT_SENDER).",
+        };
       }
     } else if (!isEvolutionWhatsAppConfigured()) {
       return {
@@ -208,6 +219,37 @@ export async function sendCustomerLoginOtpForIdentifier(
           retryAfterSec,
         };
       }
+    }
+
+    // مسار MSEGAT: الرمز يُولَّد ويُتحقَّق منه لديهم — نحفظ الـ id فقط، والإرسال
+    // يسبق الحفظ لأن الـ id لا يوجد قبل نجاح النداء.
+    if (channel === "SMS" && isMsegatConfigured()) {
+      const sent = await sendMsegatOtp({ phoneE164 });
+      if (!sent.ok) return { ok: false, error: sent.error };
+
+      const expiresAtRef = new Date(Date.now() + OTP_TTL_MS);
+      try {
+        await prisma.customerLoginOtp.upsert({
+          where: { destinationKey: dest.destinationKey },
+          create: {
+            destinationKey: dest.destinationKey,
+            codeHash: msegatRefValue(sent.id),
+            expiresAt: expiresAtRef,
+            verifyAttempts: 0,
+            lastSentAt: new Date(),
+          },
+          update: {
+            codeHash: msegatRefValue(sent.id),
+            expiresAt: expiresAtRef,
+            verifyAttempts: 0,
+            lastSentAt: new Date(),
+          },
+        });
+      } catch (e) {
+        console.error("customer login OTP DB upsert (MSEGAT) failed", e);
+        return { ok: false, error: "تعذّر حفظ مرجع رمز التحقق. حاول لاحقاً." };
+      }
+      return { ok: true };
     }
 
     const otp = randomDigits(OTP_LEN);
@@ -439,6 +481,26 @@ export async function verifyAndConsumeCustomerLoginOtp(opts: {
   if (row.verifyAttempts >= MAX_VERIFY_ATTEMPTS) {
     await prisma.customerLoginOtp.delete({ where: { destinationKey: dest.destinationKey } }).catch(() => {});
     return { ok: false, error: "تجاوزت عدد المحاولات. اطلب رمزاً جديداً." };
+  }
+
+  // صفوف MSEGAT تحمل مرجعاً لا هاشاً — التحقق يتم لديهم.
+  const msegatId = parseMsegatRef(row.codeHash);
+  if (msegatId) {
+    const res = await verifyMsegatOtp({ id: msegatId, code });
+    if (!res.ok) {
+      // عطل الخدمة لا يُحسب محاولة على العميل — وإلا استُهلك رصيده بلا ذنب.
+      if (!res.transient) {
+        await prisma.customerLoginOtp.update({
+          where: { destinationKey: dest.destinationKey },
+          data: { verifyAttempts: { increment: 1 } },
+        });
+      }
+      return { ok: false, error: res.error };
+    }
+    await prisma.customerLoginOtp.delete({
+      where: { destinationKey: dest.destinationKey },
+    });
+    return { ok: true, userId: user.id };
   }
 
   const match = await bcrypt.compare(code, row.codeHash);

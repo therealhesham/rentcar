@@ -10,6 +10,13 @@ import {
   isEvolutionWhatsAppConfigured,
   sendEvolutionWhatsAppText,
 } from "@/lib/evolution-whatsapp";
+import {
+  isMsegatConfigured,
+  msegatRefValue,
+  parseMsegatRef,
+  sendMsegatOtp,
+  verifyMsegatOtp,
+} from "@/lib/msegat/client";
 import { BOOKING_OTP_LENGTH, BOOKING_OTP_REGEX, bookingOtpLengthLabelAr } from "@/lib/booking-otp-constants";
 import { bookingOtpChannelUsesPhone, getBookingOtpChannel, type BookingOtpChannel } from "@/lib/site-settings";
 
@@ -26,6 +33,14 @@ function getSmsTemplate(): string {
 
 export function isBookingOtpSmsUrlConfigured(): boolean {
   return getSmsTemplate().length > 0;
+}
+
+/**
+ * قناة SMS جاهزة عبر MSEGAT (المفضّلة) أو عبر رابط `BOOKING_OTP_SMS_URL` القديم.
+ * الإبقاء على القديم كاحتياطي يمنع توقّف التحقق إن لم تُضبط مفاتيح MSEGAT بعد.
+ */
+function isSmsChannelConfigured(): boolean {
+  return isMsegatConfigured() || isBookingOtpSmsUrlConfigured();
 }
 
 function phoneDestinationKey(e164: string): string {
@@ -73,7 +88,7 @@ export async function purgeExpiredBookingCheckoutOtps(): Promise<void> {
 export async function isBookingCheckoutOtpStepRequired(): Promise<boolean> {
   const ch = await getBookingOtpChannel();
   if (ch === "OFF") return false;
-  if (ch === "SMS") return isBookingOtpSmsUrlConfigured();
+  if (ch === "SMS") return isSmsChannelConfigured();
   if (ch === "WHATSAPP") return isEvolutionWhatsAppConfigured();
   if (ch === "EMAIL") return isOutgoingMailTransportConfigured();
   return false;
@@ -105,9 +120,12 @@ export async function sendBookingCheckoutOtpFromPublicRequest(body: {
     }
 
     if (channel === "SMS") {
-      const template = getSmsTemplate();
-      if (!template) {
-        return { ok: false, error: "عنوان إرسال الرسائل النصية غير مضبوط في البيئة (BOOKING_OTP_SMS_URL)." };
+      if (!isSmsChannelConfigured()) {
+        return {
+          ok: false,
+          error:
+            "خدمة الرسائل النصية غير مضبوطة (MSEGAT_USERNAME و MSEGAT_API_KEY و MSEGAT_SENDER).",
+        };
       }
     } else if (!isEvolutionWhatsAppConfigured()) {
       return {
@@ -134,6 +152,38 @@ export async function sendBookingCheckoutOtpFromPublicRequest(body: {
           retryAfterSec,
         };
       }
+    }
+
+    // مسار MSEGAT: الرمز يُولَّد ويُخزَّن لديهم، ونحتفظ بالـ id فقط. الإرسال يسبق
+    // الحفظ هنا (عكس المسار المحلي) لأن الـ id لا يوجد قبل نجاح النداء.
+    const useMsegat = channel === "SMS" && isMsegatConfigured();
+    if (useMsegat) {
+      const sent = await sendMsegatOtp({ phoneE164 });
+      if (!sent.ok) return { ok: false, error: sent.error };
+
+      const expiresAtRef = new Date(Date.now() + OTP_TTL_MS);
+      try {
+        await prisma.bookingCheckoutOtp.upsert({
+          where: { destinationKey: dest },
+          create: {
+            destinationKey: dest,
+            codeHash: msegatRefValue(sent.id),
+            expiresAt: expiresAtRef,
+            verifyAttempts: 0,
+            lastSentAt: new Date(),
+          },
+          update: {
+            codeHash: msegatRefValue(sent.id),
+            expiresAt: expiresAtRef,
+            verifyAttempts: 0,
+            lastSentAt: new Date(),
+          },
+        });
+      } catch (e) {
+        console.error("booking checkout OTP DB upsert (MSEGAT) failed", e);
+        return { ok: false, error: "تعذّر حفظ مرجع رمز التحقق. حاول لاحقاً." };
+      }
+      return { ok: true };
     }
 
     const otp = randomDigits(OTP_LEN);
@@ -363,6 +413,24 @@ export async function verifyAndConsumeBookingCheckoutOtp(opts: {
   if (row.verifyAttempts >= MAX_VERIFY_ATTEMPTS) {
     await prisma.bookingCheckoutOtp.delete({ where: { destinationKey } }).catch(() => {});
     return { ok: false, error: "تجاوزت عدد المحاولات. اطلب رمزاً جديداً." };
+  }
+
+  // صفوف MSEGAT تحمل مرجعاً لا هاشاً — التحقق يتم لديهم.
+  const msegatId = parseMsegatRef(row.codeHash);
+  if (msegatId) {
+    const res = await verifyMsegatOtp({ id: msegatId, code });
+    if (!res.ok) {
+      // عطل الخدمة لا يُحسب محاولة على العميل — وإلا استُهلك رصيده بلا ذنب.
+      if (!res.transient) {
+        await prisma.bookingCheckoutOtp.update({
+          where: { destinationKey },
+          data: { verifyAttempts: { increment: 1 } },
+        });
+      }
+      return { ok: false, error: res.error };
+    }
+    await prisma.bookingCheckoutOtp.delete({ where: { destinationKey } });
+    return { ok: true };
   }
 
   const match = await bcrypt.compare(code, row.codeHash);
