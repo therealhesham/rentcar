@@ -27,7 +27,7 @@ export function Hero({ cities, tabFlags }: HeroProps) {
       {/* صورة واقعية للمسجد النبوي — مع طبقة تفتيح لوضوح المحتوى */}
       <div className="pointer-events-none absolute inset-0" aria-hidden>
         <Image
-          src="/ssss.jpeg"
+          src="/hero.webp"
           alt=""
           fill
           priority
