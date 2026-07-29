@@ -1,13 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { FleetCarCard } from "@/components/fleet/FleetCarCard";
 import type { FleetCar } from "@/lib/fleet-types";
 import type { BookingCityBranchesOption } from "@/lib/booking-location-options";
 import { useTranslations } from "next-intl";
-
-const TEAL = "#003749";
 
 export type FleetCategoryTab = {
   slug: string;
@@ -21,9 +20,49 @@ export function FleetCategoriesShowcase({ tabs, cities, allowHolidayBooking = fa
   const firstWithCars = tabs.findIndex((t) => t.cars.length > 0);
   const [active, setActive] = useState(() => (firstWithCars >= 0 ? firstWithCars : 0));
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScroll, setCanScroll] = useState(false);
+
   const current = tabs[active] ?? tabs[0];
   const cars = useMemo(() => current?.cars ?? [], [current]);
   const t = useTranslations("FleetShowcase");
+
+  const checkScrollability = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScroll(el.scrollWidth > el.clientWidth + 4);
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    checkScrollability();
+    window.addEventListener("resize", checkScrollability, { passive: true });
+    return () => window.removeEventListener("resize", checkScrollability);
+  }, [checkScrollability, tabs]);
+
+  const handleScroll = (direction: "left" | "right") => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const delta = direction === "right" ? 260 : -260;
+    el.scrollBy({ left: delta, behavior: "smooth" });
+  };
+
+  /**
+   * يُمركز التبويب داخل الشريط فقط. لا نستخدم `scrollIntoView` لأنها تحرّك كل
+   * السلف القابلين للتمرير حتى الصفحة نفسها — فكان اختيار تبويب يُزيح الصفحة
+   * كاملةً حين لا يكون الشريط قابلاً للتمرير أصلاً.
+   * الحساب بفروق `getBoundingClientRect` ليعمل في الاتجاهين (RTL/LTR).
+   */
+  const centerTabInStrip = (tabEl: HTMLElement) => {
+    const strip = scrollRef.current;
+    if (!strip || strip.scrollWidth <= strip.clientWidth + 4) return;
+    const stripRect = strip.getBoundingClientRect();
+    const tabRect = tabEl.getBoundingClientRect();
+    const delta =
+      tabRect.left + tabRect.width / 2 - (stripRect.left + stripRect.width / 2);
+    strip.scrollBy({ left: delta, behavior: "smooth" });
+  };
 
   if (!current) return null;
 
@@ -47,44 +86,68 @@ export function FleetCategoriesShowcase({ tabs, cities, allowHolidayBooking = fa
           <span className="mx-2 inline-block font-light text-[#003749]/35">|</span>
           {t("atTheRightTime")}
         </h2>
-     
       </header>
 
-      <div className="mb-8 flex justify-center sm:mb-12">
-        <div
-          role="tablist"
-          aria-label="فئات الأسطول"
-          className="flex w-full max-w-4xl items-center gap-2 overflow-x-auto overscroll-x-contain rounded-xl border border-[#e5e2dc] bg-white p-1.5 shadow-sm [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:justify-center sm:overflow-visible sm:rounded-2xl [&::-webkit-scrollbar]:hidden"
-        >
-          {tabs.map((tab, i) => {
-            const isOn = i === active;
-            return (
-              <button
-                key={tab.slug}
-                type="button"
-                role="tab"
-                aria-selected={isOn}
-                id={`fleet-cat-tab-${tab.slug}`}
-                aria-controls={`fleet-cat-panel-${tab.slug}`}
-                onClick={() => setActive(i)}
-                className={`min-h-[44px] shrink-0 rounded-xl px-3 py-2.5 text-center text-[11px] font-extrabold tracking-wide transition-all duration-200 sm:flex-1 sm:px-5 sm:text-[12.5px] md:flex-none ${
-                  isOn
-                    ? "text-white shadow-md sm:shadow-none"
-                    : "border border-[#ebe8e2] bg-white text-[#0f1923] hover:border-[#003749]/28 sm:border-0 sm:bg-transparent"
-                }`}
-                style={
-                  isOn
-                    ? {
-                        background: `linear-gradient(135deg, ${TEAL} 0%, #004d63 100%)`,
-                        boxShadow: "0 8px 22px -10px rgba(0,55,73,0.45)",
-                      }
-                    : undefined
-                }
-              >
-                {tab.tabLabel}
-              </button>
-            );
-          })}
+      {/* Category Tabs Strip with Navigation Arrows */}
+      <div className="relative mb-8 flex items-center justify-center sm:mb-12">
+        {/* شريط واحد هادئ: الحدود على الحاوية فقط — الحدود المتداخلة (حاوية + أسهم
+            + كل تبويب) كانت تجعل الشريط يبدو صفَّ أزرار لا مجموعة تبويبات. */}
+        <div className="relative flex w-full max-w-5xl items-center gap-1 rounded-full border border-[#ece9e3] bg-[#faf9f6] p-1.5">
+          {/* الأسهم تُخفى تماماً حين لا يوجد ما يُمرَّر — أفضل من إظهارها معطّلة. */}
+          {canScroll ? (
+            <button
+              type="button"
+              onClick={() => handleScroll("right")}
+              aria-label="الفئات السابقة"
+              className="flex size-9 shrink-0 items-center justify-center rounded-full text-[#003749]/45 transition-colors duration-200 hover:bg-white hover:text-[#003749]"
+            >
+              <ChevronRight className="size-[18px]" />
+            </button>
+          ) : null}
+
+          {/* Scrollable Tabs Bar */}
+          <div
+            ref={scrollRef}
+            role="tablist"
+            aria-label="فئات الأسطول"
+            className="no-scrollbar flex flex-1 items-center gap-2 overflow-x-auto scroll-smooth py-1 whitespace-nowrap [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
+            {tabs.map((tab, i) => {
+              const isOn = i === active;
+              return (
+                <button
+                  key={tab.slug}
+                  type="button"
+                  role="tab"
+                  aria-selected={isOn}
+                  id={`fleet-cat-tab-${tab.slug}`}
+                  aria-controls={`fleet-cat-panel-${tab.slug}`}
+                  onClick={(e) => {
+                    setActive(i);
+                    centerTabInStrip(e.currentTarget);
+                  }}
+                  className={`min-h-[38px] shrink-0 rounded-full px-5 py-2 text-center text-[12.5px] tracking-wide transition-colors duration-200 ${
+                    isOn
+                      ? "bg-[#003749] font-bold text-white"
+                      : "font-semibold text-[#0f1923]/65 hover:bg-white hover:text-[#003749]"
+                  }`}
+                >
+                  {tab.tabLabel}
+                </button>
+              );
+            })}
+          </div>
+
+          {canScroll ? (
+            <button
+              type="button"
+              onClick={() => handleScroll("left")}
+              aria-label="الفئات التالية"
+              className="flex size-9 shrink-0 items-center justify-center rounded-full text-[#003749]/45 transition-colors duration-200 hover:bg-white hover:text-[#003749]"
+            >
+              <ChevronLeft className="size-[18px]" />
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -111,11 +174,12 @@ export function FleetCategoriesShowcase({ tabs, cities, allowHolidayBooking = fa
       )}
 
       <div className="mt-14 flex justify-center sm:mt-16">
+        {/* يحمل الفئة المختارة إلى صفحة الأسطول (`?category=`) فتُفتح مُفلترة عليها. */}
         <Link
-          href="/fleet"
+          href={`/fleet?category=${encodeURIComponent(current.slug)}`}
           className="inline-flex items-center gap-2 rounded-full border-2 border-[#003749]/18 bg-white px-8 py-3 text-sm font-extrabold text-[#003749] shadow-sm transition-colors hover:border-[#dbb878]/45 hover:bg-[#fdfbf6]"
         >
-          {t("viewFullFleet")}
+          {t("viewAll")}
           <svg viewBox="0 0 24 24" fill="none" className="size-4 rtl:rotate-180" aria-hidden>
             <path
               d="M15 18l-6-6 6-6"
