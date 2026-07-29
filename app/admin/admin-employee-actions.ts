@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireSuperAdminForAction } from "@/lib/admin-access";
 import { hashPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
+import { ADMIN_PERMISSIONS, type AdminPermission } from "@/lib/admin-permissions";
 
 export async function createAdminEmployee(
   _prev: { ok: boolean; error?: string } | null,
@@ -86,6 +87,48 @@ export async function setAdminEmployeeActive(
   await prisma.adminEmployee.update({
     where: { id },
     data: { isActive },
+  });
+
+  revalidatePath("/admin/employees");
+  return { ok: true };
+}
+
+/**
+ * تعديل صلاحيات موظف فرع موجود بالفعل — لا يوجد مسار آخر لتعديل حساب بعد إنشائه
+ * (فورم الإضافة يحدّد الصلاحيات مرة واحدة فقط عند الإنشاء).
+ * القيم تُفلتَر على قائمة ADMIN_PERMISSIONS المعروفة — لا تُحفظ أي قيمة غريبة قادمة
+ * من الفورم مباشرةً في العمود.
+ */
+export async function updateAdminEmployeePermissions(
+  _prev: { ok: boolean; error?: string } | null,
+  formData: FormData,
+): Promise<{ ok: boolean; error?: string }> {
+  const auth = await requireSuperAdminForAction();
+  if (!auth.ok) return { ok: false, error: auth.error };
+
+  const id = Number(formData.get("employeeId"));
+  if (!Number.isInteger(id) || id < 1) {
+    return { ok: false, error: "معرّف الموظف غير صالح." };
+  }
+
+  const known = new Set<string>(ADMIN_PERMISSIONS);
+  const permissions = formData
+    .getAll("permissions")
+    .map(String)
+    .filter((p): p is AdminPermission => known.has(p));
+
+  const row = await prisma.adminEmployee.findUnique({
+    where: { id },
+    select: { isSuperAdmin: true },
+  });
+  if (!row) return { ok: false, error: "الموظف غير موجود." };
+  if (row.isSuperAdmin) {
+    return { ok: false, error: "صلاحيات مدير النظام غير قابلة للتعديل من هنا." };
+  }
+
+  await prisma.adminEmployee.update({
+    where: { id },
+    data: { permissionsJson: JSON.stringify(permissions) },
   });
 
   revalidatePath("/admin/employees");

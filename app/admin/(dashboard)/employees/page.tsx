@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AdminEmployeeCreateForm } from "@/app/admin/(dashboard)/employees/AdminEmployeeCreateForm";
+import { AdminEmployeePermissionsForm } from "@/app/admin/(dashboard)/employees/AdminEmployeePermissionsForm";
 import { AdminEmployeeToggleForm } from "@/app/admin/(dashboard)/employees/AdminEmployeeToggleForm";
 import { requireAdminPage } from "@/lib/admin-page";
+import { ADMIN_PERMISSION_LABELS, type AdminPermission } from "@/lib/admin-permissions";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -82,13 +84,19 @@ export default async function AdminEmployeesPage() {
                   </p>
                   {e.permissionsJson && (
                     <div className="mt-2 flex flex-wrap gap-1">
-                      {JSON.parse(e.permissionsJson).map((p: string) => (
+                      {(JSON.parse(e.permissionsJson) as string[]).map((p) => (
                         <span key={p} className="rounded bg-primary-container px-2 py-0.5 text-[10px] font-bold text-on-primary-container">
-                          {p}
+                          {ADMIN_PERMISSION_LABELS[p as AdminPermission] ?? p}
                         </span>
                       ))}
                     </div>
                   )}
+                  <div className="mt-3">
+                    <AdminEmployeePermissionsForm
+                      employeeId={e.id}
+                      currentPermissions={e.permissionsJson ? JSON.parse(e.permissionsJson) : []}
+                    />
+                  </div>
                 </div>
                 <AdminEmployeeToggleForm employeeId={e.id} isActive={e.isActive} />
               </li>

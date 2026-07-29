@@ -40,6 +40,13 @@ export type BookingCancelPanelProps = {
     refundInclTax: number;
     methodLabel: string;
   } | null;
+  /**
+   * يتحكم بظهور «استرداد كامل» و«بلا استرداد» — يُحسب على السيرفر من صلاحيات
+   * الجلسة (CANCEL_OVERRIDE أو مدير النظام)، لا يُشتق هنا. الإخفاء عن غير المصرَّح
+   * له تجربة أفضل من إظهار خيار سيُرفَض من السيرفر لاحقاً — والسيرفر يتحقق مجدداً
+   * دائماً (`requirePermissionForAction`) فلا يُعتمَد على هذا الحقل وحده أمنياً.
+   */
+  canOverrideCancelPolicy: boolean;
 };
 
 function SarAmountInline({ amount }: { amount: number }) {
@@ -68,6 +75,7 @@ export function BookingCancelPanel({
   cancelMinHoursBeforePickup = 0,
   cancellationDeductTiers = [],
   cancellationFinancePreview = null,
+  canOverrideCancelPolicy,
 }: BookingCancelPanelProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -94,8 +102,11 @@ export function BookingCancelPanel({
   const isPickedUp = statusKey === "PICKED_UP";
 
   // «إلغاء مع استرداد كامل» له معنى فقط لحجز مباشر مدفوع فعلاً بمبلغ قابل للرد.
-  const canFullRefund =
+  const eligibleForOverride =
     kind === "DIRECT" && paymentKey === "PAID" && (paidAmountSar ?? 0) > 0;
+  // القائمة (سهم الخيارات + الاسترداد الكامل/بلا استرداد) تظهر فقط عند توفر
+  // الشرطين معاً: الحجز مؤهّل ماليّاً، والمستخدم يملك صلاحية تجاوز السياسة.
+  const canFullRefund = eligibleForOverride && canOverrideCancelPolicy;
 
   const previewDeductDays = useMemo(() => {
     if (!cancellationDeductTiers.length) return 0;

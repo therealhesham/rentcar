@@ -33,6 +33,11 @@ export default async function AdminBookingDetailPage({
   const id = Number(idRaw);
   if (!Number.isInteger(id) || id < 1) notFound();
 
+  // يتحكم بظهور خياري «استرداد كامل» و«بلا استرداد» في لوحة الإلغاء — يُحسب هنا
+  // (لا في المكوّن العميل) لأن جلسة الإدارة لا تصل إلا للسيرفر.
+  const canOverrideCancelPolicy =
+    session.isSuperAdmin || session.permissions.includes("CANCEL_OVERRIDE");
+
   const scope = await assertBookingRequestInScope(session, id);
   if (!scope.ok) {
     return (
@@ -88,6 +93,7 @@ export default async function AdminBookingDetailPage({
         booking={booking}
         editActions={editActions}
         cancellation={cancellation}
+        canOverrideCancelPolicy={canOverrideCancelPolicy}
       />
       <section className="mx-auto mt-8 max-w-screen-xl px-4 sm:px-6 lg:px-8">
         <div className="rounded-2xl border border-outline-variant/30 bg-surface-container-low p-5 md:p-6">

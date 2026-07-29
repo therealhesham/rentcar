@@ -111,9 +111,16 @@ type Props = {
   booking: AdminBookingDetail;
   editActions?: ReactNode;
   cancellation: AdminBookingCancellationContext;
+  /** يتحكم بظهور «استرداد كامل» و«بلا استرداد» — يُحسب من صلاحيات جلسة الإدارة على السيرفر. */
+  canOverrideCancelPolicy: boolean;
 };
 
-export function BookingDetailView({ booking, editActions, cancellation }: Props) {
+export function BookingDetailView({
+  booking,
+  editActions,
+  cancellation,
+  canOverrideCancelPolicy,
+}: Props) {
   const [updatePlateModalOpen, setUpdatePlateModalOpen] = useState(false);
   const kycAttachments = resolveBookingKycForDisplay(booking, booking.customer);
 
@@ -493,6 +500,7 @@ export function BookingDetailView({ booking, editActions, cancellation }: Props)
               cancellationRefundAmountSar={booking.cancellationRefundAmountSar}
               cancellationRefundExternalRef={booking.cancellationRefundExternalRef}
               paidAmountSar={booking.paidAmountSar}
+              canOverrideCancelPolicy={canOverrideCancelPolicy}
               {...cancellation}
             />
           </BookingDetailSection>

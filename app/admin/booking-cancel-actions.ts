@@ -70,11 +70,14 @@ export type AdminCancelWithFullRefundResult =
 /**
  * إلغاء إداري باسترداد كامل يتجاوز سياسة خصم الشرائح — لحالات استثنائية
  * (مثال: عدم توفر السيارة). يتطلب سبباً إلزامياً يُسجَّل على الحجز وفي سجل النشاط.
+ *
+ * صلاحية CANCEL_OVERRIDE مخصَّصة (لا FINANCIALS العامة) — تُمنح صراحةً من إدارة
+ * الموظفين، ومدير النظام يمرّ دائماً عبر requirePermissionForAction.
  */
 export async function cancelAdminBookingWithFullRefund(
   formData: FormData,
 ): Promise<AdminCancelWithFullRefundResult> {
-  const auth = await requirePermissionForAction("FINANCIALS");
+  const auth = await requirePermissionForAction("CANCEL_OVERRIDE");
   if (!auth.ok) return { ok: false, error: auth.error };
 
   const bookingRequestId = Number(formData.get("bookingRequestId"));
@@ -137,7 +140,7 @@ export type AdminCancelWithoutRefundResult =
 export async function cancelAdminBookingWithoutRefund(
   formData: FormData,
 ): Promise<AdminCancelWithoutRefundResult> {
-  const auth = await requirePermissionForAction("FINANCIALS");
+  const auth = await requirePermissionForAction("CANCEL_OVERRIDE");
   if (!auth.ok) return { ok: false, error: auth.error };
 
   const bookingRequestId = Number(formData.get("bookingRequestId"));
