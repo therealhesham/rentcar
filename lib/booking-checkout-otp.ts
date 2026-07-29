@@ -39,7 +39,7 @@ export function isBookingOtpSmsUrlConfigured(): boolean {
  * قناة SMS جاهزة عبر MSEGAT (المفضّلة) أو عبر رابط `BOOKING_OTP_SMS_URL` القديم.
  * الإبقاء على القديم كاحتياطي يمنع توقّف التحقق إن لم تُضبط مفاتيح MSEGAT بعد.
  */
-function isSmsChannelConfigured(): boolean {
+export function isSmsChannelConfigured(): boolean {
   return isMsegatConfigured() || isBookingOtpSmsUrlConfigured();
 }
 

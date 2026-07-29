@@ -138,7 +138,7 @@ const METHOD_OPTIONS: MethodOption[] = [
     id: "TABBY",
     title: "تابي",
     hint: "تقسيط على دفعات — يُفعَّل ربط بوابة تابي لاحقاً",
-    logoSrc: "/tabby.png",
+    logoSrc: "/ايقونات خدمات الدفع/Tabby-01.svg",
   },
   {
     id: "TAMARA",
@@ -150,19 +150,19 @@ const METHOD_OPTIONS: MethodOption[] = [
     id: "CARD",
     title: "بطاقة ائتمانية",
     hint: "فيزا، ماستركارد — بوابة الدفع بالبطاقة",
-    Icon: CreditCard,
+    logoSrc: "/ايقونات خدمات الدفع/Visa_Inc._logo_(2014–2021).svg",
   },
   {
     id: "MADA",
     title: "مدى",
     hint: "الدفع ببطاقة مدى",
-    Icon: CreditCard,
+    logoSrc: "/ايقونات خدمات الدفع/شعار مدى - SVG.svg",
   },
   {
     id: "AMKAN",
     title: "إمكان",
     hint: "خدمة إمكان للدفع",
-    Icon: Wallet,
+    logoSrc: "/ايقونات خدمات الدفع/شعار إمكان للتمويل - SVG.svg",
   },
   {
     id: "CASH",
@@ -603,36 +603,34 @@ export function PaymentClient({
                           <Check className="size-3" aria-hidden />
                         </span>
                       ) : null}
-                      <span className="flex w-full flex-wrap items-center gap-3 pe-6">
+                      <span className="flex w-full items-center gap-3 pe-6">
                         {"logoSrc" in opt ? (
-                          <span className="relative flex h-10 shrink-0 items-center overflow-hidden rounded-xl shadow-sm ring-1 ring-black/[0.06]">
+                          <span className="relative flex h-10 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-1 shadow-sm ring-1 ring-black/[0.06]">
                             <Image
                               src={opt.logoSrc}
-                              alt=""
-                              width={152}
-                              height={48}
-                              className="h-10 w-auto max-w-[min(100%,152px)] object-contain object-center"
-                              sizes="152px"
+                              alt={opt.title}
+                              width={100}
+                              height={40}
+                              className="h-7 w-auto max-w-full object-contain object-center"
+                              sizes="100px"
                               priority={opt.id === "TABBY"}
                             />
                           </span>
                         ) : (
-                          <>
-                            <span
-                              className={`grid size-10 shrink-0 place-items-center rounded-xl ring-1 transition-colors ${
-                                on
-                                  ? "bg-[#003749]/[0.06] ring-[#dbb878]/40"
-                                  : "bg-neutral-50 ring-black/[0.06]"
-                              }`}
-                            >
-                              <opt.Icon
-                                className={`size-5 ${on ? "text-[#003749]" : "text-neutral-500"}`}
-                                aria-hidden
-                              />
-                            </span>
-                            <span className="font-extrabold text-[#003749]">{opt.title}</span>
-                          </>
+                          <span
+                            className={`grid size-10 shrink-0 place-items-center rounded-xl ring-1 transition-colors ${
+                              on
+                                ? "bg-[#003749]/[0.06] ring-[#dbb878]/40"
+                                : "bg-neutral-50 ring-black/[0.06]"
+                            }`}
+                          >
+                            <opt.Icon
+                              className={`size-5 ${on ? "text-[#003749]" : "text-neutral-500"}`}
+                              aria-hidden
+                            />
+                          </span>
                         )}
+                        <span className="font-extrabold text-[#003749]">{opt.title}</span>
                       </span>
                       {opt.hint ? (
                         <span className="text-[11px] leading-snug text-on-surface-variant">{opt.hint}</span>

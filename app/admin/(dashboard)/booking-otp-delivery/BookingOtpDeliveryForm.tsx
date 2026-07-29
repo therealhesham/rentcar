@@ -25,7 +25,7 @@ const OPTIONS: {
   {
     value: "SMS",
     title: "رسالة نصية (SMS) إلى جوال العميل",
-    hint: `يُرسل رمز من ${bookingOtpLengthLabelAr()} عبر طلب GET إلى الرابط المعرّف في البيئة (BOOKING_OTP_SMS_URL) مع العناصر {otp} و {phone} و {localPhone} و {message}.`,
+    hint: "يُرسل رمز التحقق عبر MSEGAT إلى جوال العميل. الرمز يُولَّد ويُتحقَّق منه لدى MSEGAT — ويتطلب ضبط MSEGAT_USERNAME و MSEGAT_API_KEY و MSEGAT_SENDER في البيئة.",
   },
   {
     value: "EMAIL",
@@ -75,7 +75,7 @@ export function BookingOtpDeliveryForm({
               <span className="mt-1 block text-sm text-on-surface-variant">{opt.hint}</span>
               {opt.value === "SMS" && !smsUrlConfigured ? (
                 <span className="mt-2 block text-xs font-bold text-error">
-                  التنبيه: BOOKING_OTP_SMS_URL غير مضبوط في البيئة — لن يعمل الإرسال حتى تضيفه.
+                  التنبيه: خدمة الرسائل غير مضبوطة — أضف MSEGAT_USERNAME و MSEGAT_API_KEY و MSEGAT_SENDER في البيئة.
                 </span>
               ) : null}
               {opt.value === "EMAIL" && !mailConfigured ? (

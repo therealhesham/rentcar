@@ -7,17 +7,17 @@ import {
   parseBookingOtpChannel,
   type BookingOtpChannel,
 } from "@/lib/site-settings";
-import { isBookingOtpSmsUrlConfigured } from "@/lib/booking-checkout-otp";
+import { isSmsChannelConfigured } from "@/lib/booking-checkout-otp";
 import { isOutgoingMailTransportConfigured } from "@/lib/booking-invoice-email";
 import { isEvolutionWhatsAppConfigured } from "@/lib/evolution-whatsapp";
 import { prisma } from "@/lib/prisma";
 
 function validateChannelForServer(channel: BookingOtpChannel): { ok: true } | { ok: false; error: string } {
-  if (channel === "SMS" && !isBookingOtpSmsUrlConfigured()) {
+  if (channel === "SMS" && !isSmsChannelConfigured()) {
     return {
       ok: false,
       error:
-        "لإرسال الرمز عبر الرسائل النصية يجب ضبط المتغير BOOKING_OTP_SMS_URL في بيئة الخادم (رابط GET لبوابة الإرسال).",
+        "لإرسال الرمز عبر الرسائل النصية يجب ضبط MSEGAT_USERNAME و MSEGAT_API_KEY و MSEGAT_SENDER في بيئة الخادم.",
     };
   }
   if (channel === "EMAIL" && !isOutgoingMailTransportConfigured()) {

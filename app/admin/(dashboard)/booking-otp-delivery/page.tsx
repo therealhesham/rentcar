@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { verifyAdminSession } from "@/lib/admin-auth";
 import { getBookingOtpChannel } from "@/lib/site-settings";
-import { isBookingOtpSmsUrlConfigured } from "@/lib/booking-checkout-otp";
+import { isSmsChannelConfigured } from "@/lib/booking-checkout-otp";
 import { isOutgoingMailTransportConfigured } from "@/lib/booking-invoice-email";
 import { isEvolutionWhatsAppConfigured } from "@/lib/evolution-whatsapp";
 import { BookingOtpDeliveryForm } from "./BookingOtpDeliveryForm";
@@ -33,7 +33,7 @@ export default async function AdminBookingOtpDeliveryPage() {
       <BookingOtpDeliveryForm
         key={currentChannel}
         currentChannel={currentChannel}
-        smsUrlConfigured={isBookingOtpSmsUrlConfigured()}
+        smsUrlConfigured={isSmsChannelConfigured()}
         mailConfigured={isOutgoingMailTransportConfigured()}
         whatsappConfigured={isEvolutionWhatsAppConfigured()}
       />
