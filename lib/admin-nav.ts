@@ -106,6 +106,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/admin/brands", label: "البراندات", icon: "tags", permission: "FLEET" },
       { href: "/admin/rental-addons", label: "إضافات التأجير", icon: "puzzle", permission: "FLEET" },
       { href: "/admin/rental-discounts", label: "خصومات التأجير", icon: "percent", permission: "FLEET" },
+      { href: "/admin/coupon-codes", label: "أكواد الخصم", icon: "percent", permission: "FLEET" },
       { href: "/admin/cities", label: "المدن", icon: "map-pin", permission: "FLEET" },
       { href: "/admin/branches", label: "الفروع", icon: "building-2", permission: "FLEET" },
       { href: "/admin/employees", label: "موظفو الفروع", icon: "user-cog", permission: "EMPLOYEES" },

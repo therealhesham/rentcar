@@ -28,19 +28,20 @@ export function computeCancellationRefundBreakdown(input: {
   const vat = Number(input.vatRatePercent);
   if (!Number.isFinite(price) || price < 0 || !Number.isFinite(vat) || vat < 0) return null;
 
-  const { addons, interCityShipping, checkoutOneTimeFees, delayPenalty } =
+  const { addons, interCityShipping, checkoutOneTimeFees, delayPenalty, couponCode } =
     parseBookingPricingSnapshot(input.addonsJson);
   const shipFee = interCityShipping?.feeExclVatSar ?? 0;
   const checkoutFeesSum = checkoutOneTimeFees.reduce((s, x) => s + x.feeExclVatSar, 0);
   const delayFee = delayPenalty?.feeExclVatSar ?? 0;
   const oneTimeFeesExclTax = shipFee + checkoutFeesSum + delayFee;
+  const discountExclTax = couponCode?.scope === "FULL_TOTAL" ? couponCode.discountExclTax : 0;
 
   const totals = computeCheckoutTotals(
     price,
     days,
     vat,
     addons.map((a) => ({ pricePerDay: a.pricePerDayExclTax })),
-    { oneTimeFeesExclTax },
+    { oneTimeFeesExclTax, discountExclTax },
   );
 
   const deduct = Math.min(Math.max(0, input.deductDays), days);

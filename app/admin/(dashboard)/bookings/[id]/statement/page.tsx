@@ -59,7 +59,7 @@ export default async function BookingStatementPage(props: {
     ? `${booking.carModel.brand.name} ${booking.carModel.name}`
     : booking.carType;
 
-  const { addons, interCityShipping, checkoutOneTimeFees, delayPenalty } =
+  const { addons, interCityShipping, checkoutOneTimeFees, delayPenalty, couponCode } =
     parseBookingPricingSnapshot(booking.addonsJson);
 
   const effectiveRentalPrice = booking.carModel
@@ -69,6 +69,7 @@ export default async function BookingStatementPage(props: {
   const shipFee = interCityShipping?.feeExclVatSar ?? 0;
   const checkoutFeesSum = checkoutOneTimeFees.reduce((s, x) => s + x.feeExclVatSar, 0);
   const delayFee = delayPenalty?.feeExclVatSar ?? 0;
+  const discountExclTax = couponCode?.scope === "FULL_TOTAL" ? couponCode.discountExclTax : 0;
 
   const vatRate = booking.carModel?.vatRatePercent ?? 15;
 
@@ -77,7 +78,7 @@ export default async function BookingStatementPage(props: {
     booking.numberOfDays,
     vatRate,
     addons.map((a) => ({ pricePerDay: a.pricePerDayExclTax })),
-    { oneTimeFeesExclTax: shipFee + checkoutFeesSum + delayFee },
+    { oneTimeFeesExclTax: shipFee + checkoutFeesSum + delayFee, discountExclTax },
   );
 
   const isTerminalStatus = booking.status.trim().toUpperCase() === "CANCELLED" || booking.status.trim().toUpperCase() === "REJECTED";

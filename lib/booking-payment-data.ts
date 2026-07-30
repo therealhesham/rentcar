@@ -4,7 +4,7 @@ import { parseBookingPricingSnapshot, resolveBookingRentalPricePerDayExclTax } f
 import { computeCheckoutTotals } from "@/lib/booking-checkout-pricing";
 import type { InterCityShippingSnap } from "@/lib/inter-city-shipping";
 import type { DelayPenaltySnap } from "@/lib/booking-delay-penalty";
-import type { CheckoutOneTimeFeeSnap } from "@/lib/booking-pricing-snapshot";
+import type { CheckoutOneTimeFeeSnap, CouponCodeSnap } from "@/lib/booking-pricing-snapshot";
 
 const PLACEHOLDER_IMG =
   "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=1200&q=80";
@@ -72,10 +72,13 @@ export type BookingPaymentSnapshot = {
   delayPenalty: DelayPenaltySnap | null;
   /** مدة الحجز اليومي للعرض إن وُجدت في اللقطة. */
   tripDurationLabelAr: string | null;
+  /** كود الخصم المُطبَّق على الحجز إن وُجد. */
+  couponCode: CouponCodeSnap | null;
   totals: {
     rentalExclTax: number;
     addonsExclTax: number;
     oneTimeFeesExclTax: number;
+    discountExclTax: number;
     subtotalExclTax: number;
     vatAmount: number;
     totalInclTax: number;
@@ -104,7 +107,7 @@ export async function getBookingForPayment(
   const brandName = m.brand.name.trim();
   const modelName = m.name.trim();
 
-  const { addons, interCityShipping, checkoutOneTimeFees, delayPenalty, tripDurationLabelAr } =
+  const { addons, interCityShipping, checkoutOneTimeFees, delayPenalty, tripDurationLabelAr, couponCode } =
     parseBookingPricingSnapshot(row.addonsJson);
   const returnSlug = row.returnBranch?.slug ?? "jeddah";
   const effectiveRentalPrice = resolveBookingRentalPricePerDayExclTax(m.price, row.addonsJson);
@@ -112,12 +115,13 @@ export async function getBookingForPayment(
   const shipFee = interCityShipping?.feeExclVatSar ?? 0;
   const checkoutFeesSum = checkoutOneTimeFees.reduce((s, x) => s + x.feeExclVatSar, 0);
   const delayFee = delayPenalty?.feeExclVatSar ?? 0;
+  const discountExclTax = couponCode?.scope === "FULL_TOTAL" ? couponCode.discountExclTax : 0;
   const totals = computeCheckoutTotals(
     effectiveRentalPrice,
     row.numberOfDays,
     m.vatRatePercent,
     addons.map((a) => ({ pricePerDay: a.pricePerDayExclTax })),
-    { oneTimeFeesExclTax: shipFee + checkoutFeesSum + delayFee },
+    { oneTimeFeesExclTax: shipFee + checkoutFeesSum + delayFee, discountExclTax },
   );
 
   return {
@@ -162,6 +166,7 @@ export async function getBookingForPayment(
     checkoutOneTimeFees,
     delayPenalty,
     tripDurationLabelAr,
+    couponCode,
     totals,
   };
 }

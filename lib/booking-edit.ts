@@ -14,6 +14,8 @@ export type BookingDaysPriceInput = {
   addonPerDayExclTax: number[];
   /** رسوم لمرة واحدة لا تتأثر بعدد الأيام (شحن، رسوم إتمام، غرامة تأخير سابقة). */
   oneTimeFeesExclTax: number;
+  /** خصم كوبون FULL_TOTAL مُجمَّد (مبلغ ثابت لا يتغيّر مع عدد الأيام). صفر لو لا يوجد أو كان RENTAL_ONLY. */
+  discountExclTax: number;
 };
 
 /** إجمالي الحجز (شامل الضريبة) لعدد أيام محدّد — دالة نقية صالحة للعميل. */
@@ -26,7 +28,7 @@ export function bookingTotalInclTaxForDays(
     days,
     input.vatRatePercent,
     input.addonPerDayExclTax.map((pricePerDay) => ({ pricePerDay })),
-    { oneTimeFeesExclTax: input.oneTimeFeesExclTax },
+    { oneTimeFeesExclTax: input.oneTimeFeesExclTax, discountExclTax: input.discountExclTax },
   );
   return totals.totalInclTax;
 }
@@ -41,7 +43,7 @@ export function bookingDaysPriceInputFromSnapshot(
     modelPricePerDayExclTax,
     addonsJson,
   );
-  const { addons, interCityShipping, checkoutOneTimeFees, delayPenalty } =
+  const { addons, interCityShipping, checkoutOneTimeFees, delayPenalty, couponCode } =
     parseBookingPricingSnapshot(addonsJson);
   const shipFee = interCityShipping?.feeExclVatSar ?? 0;
   const checkoutFeesSum = checkoutOneTimeFees.reduce((s, x) => s + x.feeExclVatSar, 0);
@@ -51,6 +53,7 @@ export function bookingDaysPriceInputFromSnapshot(
     vatRatePercent,
     addonPerDayExclTax: addons.map((a) => a.pricePerDayExclTax),
     oneTimeFeesExclTax: shipFee + checkoutFeesSum + delayFee,
+    discountExclTax: couponCode?.scope === "FULL_TOTAL" ? couponCode.discountExclTax : 0,
   };
 }
 
@@ -71,6 +74,7 @@ export function rebuildAddonsJsonForDays(
     checkoutOneTimeFees?: unknown;
     rentalDiscount?: unknown;
     rentalPricePerDayExclTax?: unknown;
+    couponCode?: unknown;
   };
   try {
     data = JSON.parse(addonsJson);
@@ -92,6 +96,7 @@ export function rebuildAddonsJsonForDays(
     checkoutOneTimeFees?: unknown;
     rentalDiscount?: unknown;
     rentalPricePerDayExclTax?: unknown;
+    couponCode?: unknown;
   } = { items };
 
   if (data.interCityShipping) payload.interCityShipping = data.interCityShipping;
@@ -102,13 +107,15 @@ export function rebuildAddonsJsonForDays(
   if (typeof data.rentalPricePerDayExclTax === "number") {
     payload.rentalPricePerDayExclTax = data.rentalPricePerDayExclTax;
   }
+  if (data.couponCode) payload.couponCode = data.couponCode;
 
   const hasAny =
     items.length > 0 ||
     payload.interCityShipping != null ||
     payload.checkoutOneTimeFees != null ||
     payload.rentalDiscount != null ||
-    payload.rentalPricePerDayExclTax != null;
+    payload.rentalPricePerDayExclTax != null ||
+    payload.couponCode != null;
 
   return hasAny ? JSON.stringify(payload) : null;
 }

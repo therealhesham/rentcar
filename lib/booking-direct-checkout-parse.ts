@@ -57,6 +57,9 @@ export function parseCreateDirectBookingInputFromCheckoutJson(
   const pickupCitySlug = parsePickupCitySlugFromJson(obj);
   const pickupBranchSlug = parsePickupBranchSlugFromJson(obj);
   const excludeBlockingBookingRequestId = parseExcludeBlockingBookingRequestIdFromJson(obj);
+  const couponCodeRaw = obj.couponCode;
+  const couponCode =
+    typeof couponCodeRaw === "string" && couponCodeRaw.trim() ? couponCodeRaw.trim() : undefined;
   const sid =
     sessionUserId != null && Number.isInteger(sessionUserId) && sessionUserId > 0
       ? sessionUserId
@@ -80,6 +83,7 @@ export function parseCreateDirectBookingInputFromCheckoutJson(
       ...(excludeBlockingBookingRequestId != null
         ? { excludeBlockingBookingRequestId }
         : {}),
+      ...(couponCode != null ? { couponCode } : {}),
     },
   };
 }

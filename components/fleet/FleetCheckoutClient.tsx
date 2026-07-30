@@ -159,6 +159,20 @@ export function FleetCheckoutClient({
   const [openAddonInfoId, setOpenAddonInfoId] = useState<number | null>(null);
   const [termsOpen, setTermsOpen] = useState(false);
 
+  const [couponInput, setCouponInput] = useState("");
+  const [couponChecking, setCouponChecking] = useState(false);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<
+    | null
+    | {
+        code: string;
+        scope: "RENTAL_ONLY" | "FULL_TOTAL";
+        discountedPricePerDayExclTax: number;
+        discountExclTax: number;
+        labelAr: string;
+      }
+  >(null);
+
   /** واجهة: زرّان فقط (مواطن/مقيم معاً) + زائر؛ القيم المُرسَلة للخادم CITIZEN | RESIDENT تُشتق من أول رقم. */
   type IdDocUiKind = "SAUDI_ID" | "VISITOR";
   const sessionIdDocKind =
@@ -494,7 +508,9 @@ export function FleetCheckoutClient({
   const effectiveRentalPricePerDay =
     rentalTab === "monthly" && car.pricePerMonthExclTax != null
       ? car.pricePerMonthExclTax / trip.days
-      : car.pricePerDayExclTax;
+      : appliedCoupon?.scope === "RENTAL_ONLY"
+        ? appliedCoupon.discountedPricePerDayExclTax
+        : car.pricePerDayExclTax;
 
   const totals = computeCheckoutTotals(
     effectiveRentalPricePerDay,
@@ -504,6 +520,7 @@ export function FleetCheckoutClient({
     {
       oneTimeFeesExclTax:
         interCityShippingFeeSar + deliveryFeeSar + checkoutFeesSumExclTax + delayPenaltyExclTax,
+      discountExclTax: appliedCoupon?.scope === "FULL_TOTAL" ? appliedCoupon.discountExclTax : 0,
     },
   );
 
@@ -592,6 +609,69 @@ export function FleetCheckoutClient({
     } finally {
       setUploadingKyc(null);
     }
+  }
+
+  /** يتحقق من كود الخصم سيرفر-سايد ويعرض معاينة الخصم — التحقق الملزم يتكرر عند تأكيد الحجز. */
+  async function handleApplyCoupon() {
+    const code = couponInput.trim();
+    setCouponError(null);
+    if (!code) {
+      setCouponError("أدخل كود الخصم.");
+      return;
+    }
+    // زرّ الكوبون داخل الشريط الجانبي (aside) وليس داخل <form> بيانات الهوية، فلازم نقرأ
+    // الجوال من جلسة العميل المسجَّل أو من حقل الفورم مباشرة بدل الاعتماد على closest("form").
+    const phoneRaw =
+      sessionCustomer?.phoneLocal ??
+      (document.getElementById("phone") as HTMLInputElement | null)?.value ??
+      "";
+    const phone = phoneRaw.replace(/\s+/g, "").trim();
+    if (!/^5\d{8}$/.test(phone)) {
+      setCouponError("أدخل رقم الجوال أولاً.");
+      return;
+    }
+
+    setCouponChecking(true);
+    try {
+      const res = await fetch("/api/bookings/direct/coupon/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code,
+          phone,
+          carModelId: car.modelId,
+          branchSlug: trip.branchSlug,
+          numberOfDays: trip.days,
+          addonIds: [...selected],
+        }),
+      });
+      const data = (await res.json()) as
+        | { ok: true; scope: "RENTAL_ONLY" | "FULL_TOTAL"; discountedPricePerDayExclTax: number; discountExclTax: number; labelAr: string }
+        | { ok: false; error: string };
+      if (!data.ok) {
+        setAppliedCoupon(null);
+        setCouponError(data.error);
+        return;
+      }
+      setAppliedCoupon({
+        code: code.toUpperCase(),
+        scope: data.scope,
+        discountedPricePerDayExclTax: data.discountedPricePerDayExclTax,
+        discountExclTax: data.discountExclTax,
+        labelAr: data.labelAr,
+      });
+    } catch {
+      setAppliedCoupon(null);
+      setCouponError("تعذّر التحقق من الكود الآن، حاول مرة أخرى.");
+    } finally {
+      setCouponChecking(false);
+    }
+  }
+
+  function handleRemoveCoupon() {
+    setAppliedCoupon(null);
+    setCouponError(null);
+    setCouponInput("");
   }
 
   /** يمنع إرسال النموذج بالضغط على Enter من حقول الإدخال النصية بالخطأ (السلوك الافتراضي للمتصفح). */
@@ -728,6 +808,7 @@ export function FleetCheckoutClient({
       terms,
       pickupMode,
       addonIds: [...selected],
+      ...(appliedCoupon ? { couponCode: appliedCoupon.code } : {}),
       email,
       idDocumentKind: idDocumentKindForApi,
       nationalIdNumber: idDocKind === "SAUDI_ID" ? nationalId.replace(/\D/g, "") : "",
@@ -1527,7 +1608,7 @@ export function FleetCheckoutClient({
                   <p className="mt-1 text-[12px] font-semibold text-[#8a7752]">أو مركبة مشابهة من نفس الفئة</p>
 
                   <div className="mt-3 rounded-xl border border-[#ebe4d3] bg-[#fdfbf6] px-3 py-2.5 text-[11px] font-semibold leading-relaxed text-[#5c4d38]">
-                    {car.discountLabelAr ? (
+                    {car.discountLabelAr && !appliedCoupon ? (
                       <p className="mb-2 text-end">
                         <span className="rounded-md bg-[#c2410c]/10 px-2 py-0.5 text-[10px] font-extrabold text-[#c2410c]">
                           {car.discountLabelAr}
@@ -1718,6 +1799,57 @@ export function FleetCheckoutClient({
                           </span>
                           <span className="shrink-0 font-bold text-[#003749] tabular-nums" dir="ltr">
                             {formatSarAmount(delayPenaltyExclTax)} <SarCurrencyGlyph />
+                          </span>
+                        </div>
+                      ) : null}
+
+                      {/* Coupon Code */}
+                      <div className="rounded-lg border border-[#ebe4d3] bg-[#fdfbf6] p-3">
+                        {appliedCoupon ? (
+                          <div className="flex items-center justify-between gap-2 text-[13px]">
+                            <span className="font-bold text-[#0f7a3d]">
+                              {appliedCoupon.code} — {appliedCoupon.labelAr || "تم تطبيق الخصم"}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={handleRemoveCoupon}
+                              className="shrink-0 text-[12px] font-bold text-[#8a7752] underline underline-offset-2 hover:text-[#c2410c]"
+                            >
+                              إزالة
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={couponInput}
+                              onChange={(e) => {
+                                setCouponInput(e.target.value);
+                                setCouponError(null);
+                              }}
+                              placeholder="كود الخصم (إن وُجد)"
+                              className="w-full min-w-0 rounded-lg border border-[#ebe4d3] bg-white px-3 py-2 text-[13px] font-semibold text-[#003749] outline-none focus:border-[#dbb878]"
+                            />
+                            <button
+                              type="button"
+                              onClick={handleApplyCoupon}
+                              disabled={couponChecking || !couponInput.trim()}
+                              className="shrink-0 rounded-lg bg-[#003749] px-3 py-2 text-[12px] font-extrabold text-white disabled:opacity-50"
+                            >
+                              {couponChecking ? "..." : "تطبيق"}
+                            </button>
+                          </div>
+                        )}
+                        {couponError ? (
+                          <p className="mt-1.5 text-[11px] font-bold text-[#c2410c]">{couponError}</p>
+                        ) : null}
+                      </div>
+
+                      {totals.discountExclTax > 0 ? (
+                        <div className="flex justify-between text-[13px]">
+                          <span className="font-semibold text-[#0f7a3d]">خصم الكوبون</span>
+                          <span className="font-bold text-[#0f7a3d] tabular-nums" dir="ltr">
+                            -{formatSarAmount(totals.discountExclTax)} <SarCurrencyGlyph />
                           </span>
                         </div>
                       ) : null}

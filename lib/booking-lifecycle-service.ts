@@ -265,16 +265,17 @@ export async function recordBookingReturnToBranch(
       finalPaidAmountSar = booking.snapshotTotalAmountSar;
     } else if (booking.carModel) {
       // fallback للحجوزات القديمة قبل إضافة الحقل
-      const { addons, interCityShipping, checkoutOneTimeFees } = parseBookingPricingSnapshot(booking.addonsJson);
+      const { addons, interCityShipping, checkoutOneTimeFees, couponCode } = parseBookingPricingSnapshot(booking.addonsJson);
       const effectivePrice = resolveBookingRentalPricePerDayExclTax(booking.carModel.price, booking.addonsJson);
       const shipFee = interCityShipping?.feeExclVatSar ?? 0;
       const feesSum = checkoutOneTimeFees.reduce((s, x) => s + x.feeExclVatSar, 0);
+      const discountExclTax = couponCode?.scope === "FULL_TOTAL" ? couponCode.discountExclTax : 0;
       const totals = computeCheckoutTotals(
         effectivePrice,
         booking.numberOfDays,
         booking.carModel.vatRatePercent,
         addons.map((a) => ({ pricePerDay: a.pricePerDayExclTax })),
-        { oneTimeFeesExclTax: shipFee + feesSum },
+        { oneTimeFeesExclTax: shipFee + feesSum, discountExclTax },
       );
       finalPaidAmountSar = Math.round(totals.totalInclTax * 100) / 100;
     }
@@ -453,16 +454,17 @@ export async function syncLifecycleFromAdminStatusChange(
         },
       });
       if (br?.carModel) {
-        const { addons, interCityShipping, checkoutOneTimeFees } = parseBookingPricingSnapshot(br.addonsJson);
+        const { addons, interCityShipping, checkoutOneTimeFees, couponCode } = parseBookingPricingSnapshot(br.addonsJson);
         const effectivePrice = resolveBookingRentalPricePerDayExclTax(br.carModel.price, br.addonsJson);
         const shipFee = interCityShipping?.feeExclVatSar ?? 0;
         const feesSum = checkoutOneTimeFees.reduce((s, x) => s + x.feeExclVatSar, 0);
+        const discountExclTax = couponCode?.scope === "FULL_TOTAL" ? couponCode.discountExclTax : 0;
         const totals = computeCheckoutTotals(
           effectivePrice,
           br.numberOfDays,
           br.carModel.vatRatePercent,
           addons.map((a) => ({ pricePerDay: a.pricePerDayExclTax })),
-          { oneTimeFeesExclTax: shipFee + feesSum },
+          { oneTimeFeesExclTax: shipFee + feesSum, discountExclTax },
         );
         (data as Record<string, unknown>).paidAmountSar = totals.totalInclTax;
         // إزالة المبلغ المستحق عند الفرع بعد التسجيل

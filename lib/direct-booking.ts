@@ -47,8 +47,13 @@ import {
   type RentalDiscountPriceSnap,
 } from "@/lib/rental-discount";
 import { computeCheckoutTotals } from "@/lib/booking-checkout-pricing";
-import { parseBookingPricingSnapshot } from "@/lib/booking-pricing-snapshot";
+import { parseBookingPricingSnapshot, type CouponCodeSnap } from "@/lib/booking-pricing-snapshot";
 import { logBookingEvent } from "@/lib/booking-audit";
+import {
+  computeCouponDiscountOnSubtotal,
+  computeCouponDiscountPerDay,
+  resolveCouponCode,
+} from "@/lib/coupon-code";
 
 export { addDaysToYmd, lastInclusiveBookingDayYmd } from "@/lib/booking-calendar-ymd";
 
@@ -530,6 +535,14 @@ export class DirectBookingCapacityError extends Error {
   }
 }
 
+/** يُرمى داخل ترانزاكشن الحجز لو كود الخصم استُهلك بالكامل بين لحظة المعاينة ولحظة التأكيد. */
+export class CouponUnavailableError extends Error {
+  constructor(readonly userMessage: string) {
+    super("COUPON_UNAVAILABLE");
+    this.name = "CouponUnavailableError";
+  }
+}
+
 function isSerializationConflict(e: unknown): boolean {
   return e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2034";
 }
@@ -672,6 +685,8 @@ export type CreateDirectBookingInput = DirectBookingCommon & {
   customerId?: number | null;
   /** بريد إرسال الفاتورة (من واجهة الإتمام) */
   contactEmail?: string | null;
+  /** كود خصم يدخله العميل عند الإتمام — يحل محل الخصم التلقائي (RentalDiscount) عند صلاحيته. */
+  couponCode?: string | null;
   /** مستندات الهوية والرخصة (واجهة الإتمام) — اختياري لحجز المكتب من الإدارة */
   kyc?: DirectBookingKycInput | null;
   /**
@@ -900,6 +915,7 @@ async function buildBookingAddonsJsonSnapshot(
   dropoffDate: Date | null | undefined,
   rentalTab: string | null | undefined,
   rentalDiscount?: RentalDiscountPriceSnap | null,
+  couponCode?: CouponCodeSnap | null,
 ): Promise<{ ok: true; json: string | null } | { ok: false; error: string }> {
   const days = safeBookingDays(numberOfDays);
   let items: Array<{
@@ -991,6 +1007,7 @@ async function buildBookingAddonsJsonSnapshot(
     tripDurationLabelAr?: string;
     rentalDiscount?: RentalDiscountPriceSnap;
     rentalPricePerDayExclTax: number;
+    couponCode?: CouponCodeSnap;
   } = { items, rentalPricePerDayExclTax: pricePerDayExclTax };
   if (hasShip && interCityShipping) {
     payload.interCityShipping = interCityShipping;
@@ -1006,6 +1023,9 @@ async function buildBookingAddonsJsonSnapshot(
   }
   if (hasDiscount && rentalDiscount) {
     payload.rentalDiscount = rentalDiscount;
+  }
+  if (couponCode) {
+    payload.couponCode = couponCode;
   }
   return { ok: true, json: JSON.stringify(payload) };
 }
@@ -1227,21 +1247,54 @@ export async function createDirectBooking(
     commonNormalized.rentalTab?.trim().toLowerCase() === "monthly" && branchMonthlyPrice != null;
 
   let effectivePricePerDay: number;
-  let rentalDiscountSnap: ReturnType<typeof rentalDiscountSnapFromResolved> | null;
+  let rentalDiscountSnap: ReturnType<typeof rentalDiscountSnapFromResolved> | null = null;
+  let couponApplication:
+    | { id: number; maxUses: number | null; kind: "PERCENT" | "FIXED"; value: number; snap: CouponCodeSnap }
+    | null = null;
+
   if (isMonthlyBooking) {
     effectivePricePerDay = branchMonthlyPrice! / days;
-    rentalDiscountSnap = null;
   } else {
-    const rentalDiscountResolved = await resolveRentalDiscountForModel(branchBasePrice, {
-      brandId: model.brandId,
-      carModelId: model.id,
-      branchId: returnBranchRow?.id ?? null,
-      referenceDate: commonNormalized.pickupDate,
-    });
-    effectivePricePerDay = rentalDiscountResolved?.discountedPricePerDayExclTax ?? branchBasePrice;
-    rentalDiscountSnap = rentalDiscountResolved
-      ? rentalDiscountSnapFromResolved(rentalDiscountResolved)
-      : null;
+    const couponCodeRaw = prepared.couponCode?.trim();
+    if (couponCodeRaw) {
+      // كود الخصم يحل محل الخصم التلقائي (RentalDiscount) عند صلاحيته.
+      const resolvedCoupon = await resolveCouponCode(couponCodeRaw, {
+        customerPhone: commonNormalized.phone,
+      });
+      if (!resolvedCoupon.ok) {
+        return { ok: false, error: resolvedCoupon.error };
+      }
+      const c = resolvedCoupon.coupon;
+      if (c.scope === "RENTAL_ONLY") {
+        const { discountedPricePerDayExclTax } = computeCouponDiscountPerDay(
+          branchBasePrice,
+          c.kind,
+          c.value,
+        );
+        effectivePricePerDay = discountedPricePerDayExclTax;
+      } else {
+        effectivePricePerDay = branchBasePrice;
+      }
+      couponApplication = {
+        id: c.id,
+        maxUses: c.maxUses,
+        kind: c.kind,
+        value: c.value,
+        // discountExclTax يبدأ صفر ويُملأ لاحقاً لنطاق FULL_TOTAL بعد معرفة الإجمالي الفرعي.
+        snap: { code: c.code, kind: c.kind, scope: c.scope, discountExclTax: 0 },
+      };
+    } else {
+      const rentalDiscountResolved = await resolveRentalDiscountForModel(branchBasePrice, {
+        brandId: model.brandId,
+        carModelId: model.id,
+        branchId: returnBranchRow?.id ?? null,
+        referenceDate: commonNormalized.pickupDate,
+      });
+      effectivePricePerDay = rentalDiscountResolved?.discountedPricePerDayExclTax ?? branchBasePrice;
+      rentalDiscountSnap = rentalDiscountResolved
+        ? rentalDiscountSnapFromResolved(rentalDiscountResolved)
+        : null;
+    }
   }
 
   const addonsSnap = await buildBookingAddonsJsonSnapshot(
@@ -1255,6 +1308,7 @@ export async function createDirectBooking(
     commonNormalized.dropoffDate,
     commonNormalized.rentalTab,
     rentalDiscountSnap,
+    couponApplication?.snap ?? null,
   );
   if (!addonsSnap.ok) {
     return { ok: false, error: addonsSnap.error };
@@ -1272,13 +1326,48 @@ export async function createDirectBooking(
   // بند ساعات التأخير/الساعات الإضافية جزء من الإجمالي — إسقاطه كان يجعل
   // snapshotTotalAmountSar أقل من «تفاصيل المبلغ» المحسوبة حياً.
   const delayFeeForTotals = delayForTotals?.feeExclVatSar ?? 0;
+  const oneTimeFeesExclTaxSum = shipFeeForTotals + checkoutFeesSum + delayFeeForTotals;
+
+  // كوبون FULL_TOTAL: يُطرح من الإجمالي الفرعي (إيجار+إضافات+رسوم) بعد ما بقى معروف.
+  let couponDiscountExclTax = 0;
+  if (couponApplication && couponApplication.snap.scope === "FULL_TOTAL") {
+    const preDiscountTotals = computeCheckoutTotals(
+      effectivePricePerDay,
+      days,
+      model.vatRatePercent,
+      addonsForTotals.map((a: { pricePerDayExclTax: number }) => ({ pricePerDay: a.pricePerDayExclTax })),
+      { oneTimeFeesExclTax: oneTimeFeesExclTaxSum },
+    );
+    couponDiscountExclTax = computeCouponDiscountOnSubtotal(
+      preDiscountTotals.subtotalExclTax,
+      couponApplication.kind,
+      couponApplication.value,
+    );
+  }
+
   const bookingTotals = computeCheckoutTotals(
     effectivePricePerDay,
     days,
     model.vatRatePercent,
     addonsForTotals.map((a: { pricePerDayExclTax: number }) => ({ pricePerDay: a.pricePerDayExclTax })),
-    { oneTimeFeesExclTax: shipFeeForTotals + checkoutFeesSum + delayFeeForTotals },
+    { oneTimeFeesExclTax: oneTimeFeesExclTaxSum, discountExclTax: couponDiscountExclTax },
   );
+
+  // مبلغ التوفير الإجمالي (دون ضريبة) لتسجيله في CouponRedemption — موحّد الوحدة بين النطاقين.
+  const couponDiscountAmountSar = couponApplication
+    ? couponApplication.snap.scope === "FULL_TOTAL"
+      ? couponDiscountExclTax
+      : Math.max(0, branchBasePrice - effectivePricePerDay) * days
+    : 0;
+
+  // نلصق القيمة النهائية لـ discountExclTax داخل اللقطة المخزَّنة (كانت صفر مؤقتاً وقت البناء
+  // لأنها تعتمد على الإجمالي الفرعي الذي لا يُعرف إلا بعد جمع الإضافات والرسوم).
+  let finalAddonsJson = addonsSnap.json;
+  if (couponApplication && couponApplication.snap.scope === "FULL_TOTAL" && finalAddonsJson) {
+    const rawSnap = JSON.parse(finalAddonsJson) as Record<string, unknown>;
+    rawSnap.couponCode = { ...couponApplication.snap, discountExclTax: couponDiscountExclTax };
+    finalAddonsJson = JSON.stringify(rawSnap);
+  }
 
   const carType = model.category.slug || model.category.title;
 
@@ -1357,7 +1446,7 @@ export async function createDirectBooking(
             pickupDate: commonNormalized.pickupDate,
             numberOfDays: days,
             termsAccepted: commonNormalized.termsAccepted,
-            addonsJson: addonsSnap.json,
+            addonsJson: finalAddonsJson,
             status: cashPayNow ? "UNDER_REVIEW" : undefined,
             paymentStatus: electronicPayNow ? "PAID" : "PENDING",
             paymentMethod: paymentMethodStored,
@@ -1367,6 +1456,32 @@ export async function createDirectBooking(
           },
           select: { id: true },
         });
+
+        if (couponApplication) {
+          if (couponApplication.maxUses != null) {
+            const updated = await tx.couponCode.updateMany({
+              where: { id: couponApplication.id, usesCount: { lt: couponApplication.maxUses } },
+              data: { usesCount: { increment: 1 } },
+            });
+            if (updated.count === 0) {
+              throw new CouponUnavailableError("نفد الحد الأقصى لاستخدام كود الخصم. أعد المحاولة بدون الكود.");
+            }
+          } else {
+            await tx.couponCode.update({
+              where: { id: couponApplication.id },
+              data: { usesCount: { increment: 1 } },
+            });
+          }
+          await tx.couponRedemption.create({
+            data: {
+              couponCodeId: couponApplication.id,
+              bookingRequestId: created.id,
+              customerPhone: commonNormalized.phone,
+              discountAmountSar: couponDiscountAmountSar,
+            },
+          });
+        }
+
         return created.id;
       },
       {
@@ -1387,6 +1502,9 @@ export async function createDirectBooking(
         if (e2 instanceof DirectBookingCapacityError) {
           return capacityErrorToResult(e2);
         }
+        if (e2 instanceof CouponUnavailableError) {
+          return { ok: false, error: e2.userMessage };
+        }
         if (isSerializationConflict(e2)) {
           return {
             ok: false,
@@ -1399,6 +1517,8 @@ export async function createDirectBooking(
       }
     } else if (e instanceof DirectBookingCapacityError) {
       return capacityErrorToResult(e);
+    } else if (e instanceof CouponUnavailableError) {
+      return { ok: false, error: e.userMessage };
     } else {
       console.error(e);
       return { ok: false, error: "تعذّر إرسال الطلب الآن، حاول مرة أخرى." };

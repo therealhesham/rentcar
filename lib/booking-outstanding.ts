@@ -34,7 +34,7 @@ function round2(n: number): number {
 }
 
 export function computeBookingOutstanding(b: BookingOutstandingInput): BookingOutstanding {
-  const { addons, interCityShipping, checkoutOneTimeFees, delayPenalty } =
+  const { addons, interCityShipping, checkoutOneTimeFees, delayPenalty, couponCode } =
     parseBookingPricingSnapshot(b.addonsJson);
   const effectiveRentalPrice = b.carModel
     ? resolveBookingRentalPricePerDayExclTax(b.carModel.price, b.addonsJson)
@@ -43,12 +43,13 @@ export function computeBookingOutstanding(b: BookingOutstandingInput): BookingOu
     (interCityShipping?.feeExclVatSar ?? 0) +
     checkoutOneTimeFees.reduce((s, x) => s + x.feeExclVatSar, 0) +
     (delayPenalty?.feeExclVatSar ?? 0);
+  const discountExclTax = couponCode?.scope === "FULL_TOTAL" ? couponCode.discountExclTax : 0;
   const totals = computeCheckoutTotals(
     effectiveRentalPrice,
     b.numberOfDays,
     b.carModel?.vatRatePercent ?? 15,
     addons.map((a) => ({ pricePerDay: a.pricePerDayExclTax })),
-    { oneTimeFeesExclTax },
+    { oneTimeFeesExclTax, discountExclTax },
   );
 
   const statusKey = b.status.trim().toUpperCase();

@@ -324,16 +324,17 @@ export async function processAdminQuickPayment(
   // حساب المبلغ الكامل شامل الضريبة
   let paidAmountSar: number | null = null;
   if (beforeUpdate.carModel) {
-    const { addons, interCityShipping, checkoutOneTimeFees } = parseBookingPricingSnapshot(beforeUpdate.addonsJson);
+    const { addons, interCityShipping, checkoutOneTimeFees, couponCode } = parseBookingPricingSnapshot(beforeUpdate.addonsJson);
     const effectivePrice = resolveBookingRentalPricePerDayExclTax(beforeUpdate.carModel.price, beforeUpdate.addonsJson);
     const shipFee = interCityShipping?.feeExclVatSar ?? 0;
     const feesSum = checkoutOneTimeFees.reduce((s, x) => s + x.feeExclVatSar, 0);
+    const discountExclTax = couponCode?.scope === "FULL_TOTAL" ? couponCode.discountExclTax : 0;
     const totals = computeCheckoutTotals(
       effectivePrice,
       beforeUpdate.numberOfDays,
       beforeUpdate.carModel.vatRatePercent,
       addons.map((a) => ({ pricePerDay: a.pricePerDayExclTax })),
-      { oneTimeFeesExclTax: shipFee + feesSum },
+      { oneTimeFeesExclTax: shipFee + feesSum, discountExclTax },
     );
     paidAmountSar = totals.totalInclTax;
   }

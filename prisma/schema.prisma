@@ -443,6 +443,65 @@ enum RentalDiscountKind {
   FIXED_DAILY
 }
 
+/// كود خصم يُدخله العميل في صفحة الدفع — يُدار من الإدارة، ويحل محل الخصم التلقائي (RentalDiscount) عند استخدامه.
+model CouponCode {
+  id                  Int                @id @default(autoincrement())
+  /// يُخزَّن دائماً بحروف كبيرة (UPPERCASE) لمطابقة غير حسّاسة لحالة الأحرف.
+  code                String             @unique @db.VarChar(32)
+  kind                CouponDiscountKind
+  /// PERCENT: 1–100؛ FIXED: مبلغ ثابت بالريال (دون ضريبة).
+  value               Int
+  /// نطاق التطبيق: سعر الإيجار فقط أو الإجمالي كامل (إيجار + إضافات + رسوم).
+  scope               CouponScope
+  /// بداية الفترة (null = بدون بداية).
+  startsAt            DateTime?
+  /// نهاية الفترة (null = بدون نهاية).
+  endsAt              DateTime?
+  isActive            Boolean            @default(true)
+  /// الحد الأقصى لعدد مرات الاستخدام إجمالاً (null = بلا حد).
+  maxUses             Int?
+  /// عدد مرات الاستخدام الفعلي حتى الآن.
+  usesCount           Int                @default(0)
+  /// الحد الأقصى للاستخدام لكل عميل (برقم الجوال). null = بلا حد.
+  perCustomerLimit    Int?
+  /// معرّف الموظف الذي أنشأ الكود (اختياري، للتتبع فقط).
+  createdByEmployeeId Int?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  redemptions CouponRedemption[]
+
+  @@index([isActive])
+  @@index([startsAt, endsAt])
+}
+
+/// سجل استخدام كود خصم على حجز محدد — لتتبّع مين استخدم كل كود وإمتى.
+model CouponRedemption {
+  id                Int            @id @default(autoincrement())
+  couponCodeId      Int
+  couponCode        CouponCode     @relation(fields: [couponCodeId], references: [id], onDelete: Cascade)
+  bookingRequestId  Int            @unique
+  bookingRequest    BookingRequest @relation(fields: [bookingRequestId], references: [id], onDelete: Cascade)
+  /// رقم جوال العميل وقت الاستخدام (لحساب الحد الأقصى لكل عميل).
+  customerPhone     String         @db.VarChar(16)
+  /// قيمة الخصم الفعلية بالريال (دون ضريبة) وقت الاستخدام.
+  discountAmountSar Float
+  redeemedAt        DateTime       @default(now())
+
+  @@index([couponCodeId])
+  @@index([customerPhone])
+}
+
+enum CouponDiscountKind {
+  PERCENT
+  FIXED
+}
+
+enum CouponScope {
+  RENTAL_ONLY
+  FULL_TOTAL
+}
+
 /// طلب تواصل لحجز شركات (من الصفحة الرئيسية) — يتابعه المشرف يدوياً.
 model CorporateBookingLead {
   id           Int      @id @default(autoincrement())
@@ -572,6 +631,7 @@ model BookingRequest {
   logs                BookingLog[]
   paymentTransactions PaymentTransaction[]
   extraCharges        BookingExtraCharge[]
+  couponRedemption    CouponRedemption?
 
   @@index([status, createdAt])
   @@index([branchId])

@@ -11,6 +11,7 @@ export const SUPER_ADMIN_ONLY_PREFIXES = [
   "/admin/categories",
   "/admin/rental-addons",
   "/admin/rental-discounts",
+  "/admin/coupon-codes",
   "/admin/cities",
   "/admin/branches",
   "/admin/inter-city-shipping",

@@ -155,7 +155,7 @@ export function BookingDetailView({
       returnBranch: booking.returnBranch,
     });
 
-  const { addons, interCityShipping, checkoutOneTimeFees, delayPenalty } =
+  const { addons, interCityShipping, checkoutOneTimeFees, delayPenalty, couponCode } =
     parseBookingPricingSnapshot(booking.addonsJson);
   const effectiveRentalPrice = booking.carModel
     ? resolveBookingRentalPricePerDayExclTax(booking.carModel.price, booking.addonsJson)
@@ -163,13 +163,14 @@ export function BookingDetailView({
   const oneTimeFeesTotal =
     (interCityShipping?.feeExclVatSar ?? 0) +
     checkoutOneTimeFees.reduce((acc, f) => acc + f.feeExclVatSar, 0);
+  const couponDiscountExclTax = couponCode?.scope === "FULL_TOTAL" ? couponCode.discountExclTax : 0;
 
   const amountTotals = computeCheckoutTotals(
     effectiveRentalPrice,
     booking.numberOfDays,
     booking.carModel?.vatRatePercent ?? 15,
     addons.map((a) => ({ pricePerDay: a.pricePerDayExclTax })),
-    { oneTimeFeesExclTax: oneTimeFeesTotal },
+    { oneTimeFeesExclTax: oneTimeFeesTotal, discountExclTax: couponDiscountExclTax },
   );
 
   // رصيد التحصيل من المصدر الموحّد — يُمرَّر للوحة الإرجاع كتنبيه للموظف.

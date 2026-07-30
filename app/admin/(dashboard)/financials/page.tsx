@@ -86,20 +86,21 @@ export default async function FinancialsPage(props: {
   let cashBookingsThisMonthTotalSar = 0;
   for (const row of paidBookingsThisMonth) {
     if (!row.carModel) continue;
-    const { addons, interCityShipping, checkoutOneTimeFees, delayPenalty } =
+    const { addons, interCityShipping, checkoutOneTimeFees, delayPenalty, couponCode } =
       parseBookingPricingSnapshot(row.addonsJson);
-    
+
     const effectiveRentalPrice = resolveBookingRentalPricePerDayExclTax(row.carModel.price, row.addonsJson);
     const shipFee = interCityShipping?.feeExclVatSar ?? 0;
     const checkoutFeesSum = checkoutOneTimeFees.reduce((s, x) => s + x.feeExclVatSar, 0);
     const delayFee = delayPenalty?.feeExclVatSar ?? 0;
-    
+    const discountExclTax = couponCode?.scope === "FULL_TOTAL" ? couponCode.discountExclTax : 0;
+
     const totals = computeCheckoutTotals(
       effectiveRentalPrice,
       row.numberOfDays,
       row.carModel.vatRatePercent,
       addons.map((a) => ({ pricePerDay: a.pricePerDayExclTax })),
-      { oneTimeFeesExclTax: shipFee + checkoutFeesSum + delayFee },
+      { oneTimeFeesExclTax: shipFee + checkoutFeesSum + delayFee, discountExclTax },
     );
     
     bookingsPaidThisMonthTotalSar += totals.totalInclTax;
@@ -219,18 +220,19 @@ export default async function FinancialsPage(props: {
   const mappedBookingPayments = recentBookingPayments.map(row => {
     let computedTotal = 0;
     if (row.carModel) {
-      const { addons, interCityShipping, checkoutOneTimeFees, delayPenalty } =
+      const { addons, interCityShipping, checkoutOneTimeFees, delayPenalty, couponCode } =
         parseBookingPricingSnapshot(row.addonsJson);
       const effectiveRentalPrice = resolveBookingRentalPricePerDayExclTax(row.carModel.price, row.addonsJson);
       const shipFee = interCityShipping?.feeExclVatSar ?? 0;
       const checkoutFeesSum = checkoutOneTimeFees.reduce((s, x) => s + x.feeExclVatSar, 0);
       const delayFee = delayPenalty?.feeExclVatSar ?? 0;
+      const discountExclTax = couponCode?.scope === "FULL_TOTAL" ? couponCode.discountExclTax : 0;
       const totals = computeCheckoutTotals(
         effectiveRentalPrice,
         row.numberOfDays,
         row.carModel.vatRatePercent,
         addons.map((a) => ({ pricePerDay: a.pricePerDayExclTax })),
-        { oneTimeFeesExclTax: shipFee + checkoutFeesSum + delayFee },
+        { oneTimeFeesExclTax: shipFee + checkoutFeesSum + delayFee, discountExclTax },
       );
       computedTotal = totals.totalInclTax;
     }

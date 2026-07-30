@@ -21,6 +21,15 @@ export type CheckoutOneTimeFeeSnap = {
   feeExclVatSar: number;
 };
 
+/** لقطة كود خصم مُطبَّق على الحجز — بدون تفاصيل شرط الاستخدام (حد/فترة). */
+export type CouponCodeSnap = {
+  code: string;
+  kind: "PERCENT" | "FIXED";
+  scope: "RENTAL_ONLY" | "FULL_TOTAL";
+  /** المبلغ المخصوم من الإجمالي الفرعي قبل الضريبة — فقط لنطاق FULL_TOTAL (صفر لـ RENTAL_ONLY لأنه مُجمَّد أصلاً في rentalPricePerDayExclTax). */
+  discountExclTax: number;
+};
+
 export type BookingPricingSnapshotV1 = {
   items: AddonSnapItem[];
   interCityShipping?: InterCityShippingSnap | null;
@@ -35,6 +44,8 @@ export type BookingPricingSnapshotV1 = {
    * غير شامل الضريبة. مُجمَّد بمعزل عن أي تغيير لاحق في سعر الموديل الحالي.
    */
   rentalPricePerDayExclTax?: number | null;
+  /** كود الخصم المُطبَّق عند الحجز (إن وُجد) — يحل محل rentalDiscount. */
+  couponCode?: CouponCodeSnap | null;
 };
 
 function parseDelayPenaltySnap(raw: unknown): DelayPenaltySnap | null {
@@ -78,6 +89,7 @@ export function parseBookingPricingSnapshot(raw: string | null): {
   tripDurationLabelAr: string | null;
   rentalDiscount: RentalDiscountPriceSnap | null;
   rentalPricePerDayExclTax: number | null;
+  couponCode: CouponCodeSnap | null;
 } {
   if (!raw) {
     return {
@@ -88,6 +100,7 @@ export function parseBookingPricingSnapshot(raw: string | null): {
       tripDurationLabelAr: null,
       rentalDiscount: null,
       rentalPricePerDayExclTax: null,
+      couponCode: null,
     };
   }
   try {
@@ -171,6 +184,24 @@ export function parseBookingPricingSnapshot(raw: string | null): {
         ? Math.round(rawPrice * 100) / 100
         : null;
 
+    let couponCode: CouponCodeSnap | null = null;
+    const cc = data.couponCode;
+    if (
+      cc &&
+      typeof cc === "object" &&
+      typeof (cc as CouponCodeSnap).code === "string" &&
+      ((cc as CouponCodeSnap).kind === "PERCENT" || (cc as CouponCodeSnap).kind === "FIXED") &&
+      ((cc as CouponCodeSnap).scope === "RENTAL_ONLY" || (cc as CouponCodeSnap).scope === "FULL_TOTAL") &&
+      typeof (cc as CouponCodeSnap).discountExclTax === "number"
+    ) {
+      couponCode = {
+        code: (cc as CouponCodeSnap).code,
+        kind: (cc as CouponCodeSnap).kind,
+        scope: (cc as CouponCodeSnap).scope,
+        discountExclTax: Math.max(0, Math.round((cc as CouponCodeSnap).discountExclTax * 100) / 100),
+      };
+    }
+
     return {
       addons,
       interCityShipping,
@@ -179,6 +210,7 @@ export function parseBookingPricingSnapshot(raw: string | null): {
       tripDurationLabelAr,
       rentalDiscount,
       rentalPricePerDayExclTax,
+      couponCode,
     };
   } catch {
     return {
@@ -189,6 +221,7 @@ export function parseBookingPricingSnapshot(raw: string | null): {
       tripDurationLabelAr: null,
       rentalDiscount: null,
       rentalPricePerDayExclTax: null,
+      couponCode: null,
     };
   }
 }

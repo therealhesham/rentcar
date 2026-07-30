@@ -110,19 +110,20 @@ function unpaidBookingDueSar(b: BookingWithModel): number {
     return round2(b.snapshotTotalAmountSar);
   }
   if (!b.carModel) return 0;
-  const { addons, interCityShipping, checkoutOneTimeFees, delayPenalty } =
+  const { addons, interCityShipping, checkoutOneTimeFees, delayPenalty, couponCode } =
     parseBookingPricingSnapshot(b.addonsJson);
   const rentalPrice = resolveBookingRentalPricePerDayExclTax(b.carModel.price, b.addonsJson);
   const oneTime =
     (interCityShipping?.feeExclVatSar ?? 0) +
     checkoutOneTimeFees.reduce((s, x) => s + x.feeExclVatSar, 0) +
     (delayPenalty?.feeExclVatSar ?? 0);
+  const discountExclTax = couponCode?.scope === "FULL_TOTAL" ? couponCode.discountExclTax : 0;
   const totals = computeCheckoutTotals(
     rentalPrice,
     b.numberOfDays,
     b.carModel.vatRatePercent,
     addons.map((a) => ({ pricePerDay: a.pricePerDayExclTax })),
-    { oneTimeFeesExclTax: oneTime },
+    { oneTimeFeesExclTax: oneTime, discountExclTax },
   );
   return round2(totals.totalInclTax);
 }

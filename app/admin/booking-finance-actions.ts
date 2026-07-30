@@ -304,7 +304,7 @@ export async function processBookingPayment(
 
   let totalAmountSar = booking.snapshotTotalAmountSar ?? 0;
   if (!totalAmountSar || totalAmountSar <= 0) {
-    const { addons, interCityShipping, checkoutOneTimeFees, delayPenalty } =
+    const { addons, interCityShipping, checkoutOneTimeFees, delayPenalty, couponCode } =
       parseBookingPricingSnapshot(booking.addonsJson);
     const effectiveRentalPrice = booking.carModel
       ? resolveBookingRentalPricePerDayExclTax(booking.carModel.price, booking.addonsJson)
@@ -313,13 +313,14 @@ export async function processBookingPayment(
       (interCityShipping?.feeExclVatSar ?? 0) +
       checkoutOneTimeFees.reduce((s, x) => s + x.feeExclVatSar, 0) +
       (delayPenalty?.feeExclVatSar ?? 0);
+    const discountExclTax = couponCode?.scope === "FULL_TOTAL" ? couponCode.discountExclTax : 0;
     const vatRate = booking.carModel?.vatRatePercent ?? 15;
     const totals = computeCheckoutTotals(
       effectiveRentalPrice,
       booking.numberOfDays,
       vatRate,
       addons.map((a) => ({ pricePerDay: a.pricePerDayExclTax })),
-      { oneTimeFeesExclTax },
+      { oneTimeFeesExclTax, discountExclTax },
     );
     totalAmountSar = totals.totalInclTax;
   }
