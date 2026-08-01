@@ -49,6 +49,12 @@ export default async function AdminVehiclesPage() {
           actions={
             <>
               <Link
+                href="/admin/vehicles/quantities"
+                className="rounded-xl border border-outline-variant px-5 py-3 text-sm font-extrabold text-primary transition-colors hover:bg-surface-container"
+              >
+                تحديث الكميات من Excel
+              </Link>
+              <Link
                 href="/admin/vehicles/import"
                 className="rounded-xl border border-outline-variant px-5 py-3 text-sm font-extrabold text-primary transition-colors hover:bg-surface-container"
               >
@@ -149,6 +155,16 @@ export default async function AdminVehiclesPage() {
           ) : (
             "حسابك غير مرتبط بفرع."
           )
+        }
+        actions={
+          branchRow ? (
+            <Link
+              href="/admin/vehicles/quantities"
+              className="rounded-xl border border-outline-variant px-5 py-3 text-sm font-extrabold text-primary transition-colors hover:bg-surface-container"
+            >
+              تحديث الكميات من Excel
+            </Link>
+          ) : null
         }
       />
 

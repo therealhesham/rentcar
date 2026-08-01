@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import type { FuelType, Transmission } from "@prisma/client";
 import { requireSuperAdminForAction } from "@/lib/admin-access";
+import { buildBranchResolver } from "@/lib/branch-name-resolver";
 import { prisma } from "@/lib/prisma";
 import type { ImportRow } from "@/lib/vehicle-import-excel";
 
@@ -160,43 +161,6 @@ function parseRow(
     alt: mapping.alt ? cell(row, mapping.alt) || null : null,
     badge: mapping.badge ? cell(row, mapping.badge) || null : null,
     image: mapping.image ? cell(row, mapping.image) || null : null,
-  };
-}
-
-/** يوحّد اسم فرع للمطابقة: يزيل «فرع» البادئة والمسافات ويصغّر الأحرف. */
-function normalizeBranchName(s: string): string {
-  return s
-    .trim()
-    .replace(/^فرع\s+/, "")
-    .toLowerCase()
-    .replace(/\s+/g, "");
-}
-
-/** يبني حلّال اسم فرع → id: بالاسم أولاً، ثم باسم المدينة لو المدينة بها فرع واحد. */
-async function buildBranchResolver(): Promise<(name: string) => number | null> {
-  const branches = await prisma.branch.findMany({
-    where: { isActive: true },
-    select: { id: true, name: true, city: { select: { name: true } } },
-  });
-  const byName = new Map<string, number>();
-  const cityCounts = new Map<string, number>();
-  for (const b of branches) {
-    byName.set(normalizeBranchName(b.name), b.id);
-    if (b.city?.name) {
-      const c = normalizeBranchName(b.city.name);
-      cityCounts.set(c, (cityCounts.get(c) ?? 0) + 1);
-    }
-  }
-  const byCity = new Map<string, number>();
-  for (const b of branches) {
-    if (!b.city?.name) continue;
-    const c = normalizeBranchName(b.city.name);
-    if (cityCounts.get(c) === 1) byCity.set(c, b.id);
-  }
-  return (name: string) => {
-    const n = normalizeBranchName(name);
-    if (!n) return null;
-    return byName.get(n) ?? byCity.get(n) ?? null;
   };
 }
 
