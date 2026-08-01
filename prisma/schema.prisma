@@ -183,9 +183,12 @@ model AdminEmployee {
   branch       Branch?  @relation(fields: [branchId], references: [id], onDelete: Restrict)
   isSuperAdmin Boolean  @default(false)
   isActive     Boolean  @default(true)
-  
+
   /// مصفوفة JSON تحتوي على مفاتيح الصلاحيات الممنوحة للموظف (مثل: ["BOOKINGS", "FINANCIALS"])
   permissionsJson String? @db.Text
+
+  /// أرسل إيميل تلقائي عند حجز جديد — لموظف الفرع نفسه، أو CC لموظف الإدارة المركزية (branchId فارغ).
+  notifyOnBookingEmail Boolean @default(false)
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { createNotification } from "@/lib/notification-service";
+import { sendNewBookingNotificationEmails } from "@/lib/booking-notification-email";
 import {
   DIRECT_BOOKING_MSG_NO_FLEET,
   DIRECT_BOOKING_MSG_UNAVAILABLE_PERIOD,
@@ -611,6 +612,13 @@ export function parseCommonBookingFieldsFromFormData(
 
 type JsonBody = Record<string, unknown>;
 
+const PICKUP_SLOT_STEP_MS = 30 * 60 * 1000;
+
+/** يقرّب لأسفل لأقرب سلوت 30 دقيقة — نفس خطوة السلوتات في منتقي الوقت بالواجهة (TimePickerPopover). */
+function floorToPickupSlot(d: Date): Date {
+  return new Date(Math.floor(d.getTime() / PICKUP_SLOT_STEP_MS) * PICKUP_SLOT_STEP_MS);
+}
+
 export function parseCommonBookingFieldsFromJson(
   body: JsonBody,
 ): { ok: true; data: DirectBookingCommon } | { ok: false; error: string } {
@@ -641,6 +649,9 @@ export function parseCommonBookingFieldsFromJson(
   const pickupDate = new Date(pickupDateRaw);
   if (!pickupDateRaw || Number.isNaN(pickupDate.getTime())) {
     return { ok: false, error: "يرجى اختيار تاريخ بداية الحجز." };
+  }
+  if (pickupDate.getTime() < floorToPickupSlot(new Date()).getTime()) {
+    return { ok: false, error: "موعد الاستلام المختار فات. يرجى اختيار موعد قادم." };
   }
   if (!Number.isFinite(days) || days < 1 || days > 60) {
     return { ok: false, error: "عدد الأيام يجب أن يكون من 1 إلى 60." };
@@ -1549,6 +1560,8 @@ export async function createDirectBooking(
   } catch (err) {
     console.error("[createDirectBooking] Notification trigger error:", err);
   }
+
+  await sendNewBookingNotificationEmails(bookingRequestId);
 
   await logBookingEvent({
     bookingId: bookingRequestId,

@@ -1,5 +1,3 @@
-import type { AdminPermission } from "@/lib/admin-permissions";
-
 export type AdminNavItem = {
   href: string;
   label: string;
@@ -37,7 +35,6 @@ export type AdminNavItem = {
     | "credit-card"
     | "file-text";
   external?: boolean;
-  permission?: AdminPermission;
   /** إخفاء العنصر من القائمة الجانبية (لكن الصفحة لا تزال صالحة) */
   hidden?: boolean;
 };
@@ -55,28 +52,28 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     id: "main",
     label: "الرئيسية",
     items: [
-      { href: "/admin", label: "لوحة التحكم", icon: "layout-dashboard", permission: "DASHBOARD" },
-      { href: "/admin/statistics", label: "الإحصائيات", icon: "bar-chart-2", permission: "DASHBOARD" },
-      { href: "/admin/logs", label: "سجل النشاط", icon: "activity", permission: "DASHBOARD" },
-      { href: "/admin/financials", label: "الإدارة المالية", icon: "badge-dollar", permission: "FINANCIALS" },
-      { href: "/admin/company-dues", label: "مستحقات للشركة", icon: "receipt", permission: "FINANCIALS" },
-      { href: "/admin/customer-dues", label: "مستحقات للعميل", icon: "receipt", permission: "FINANCIALS" },
-      { href: "/admin/ledger", label: "دفتر الحركات المالية", icon: "credit-card", permission: "FINANCIALS" },
+      { href: "/admin", label: "لوحة التحكم", icon: "layout-dashboard" },
+      { href: "/admin/statistics", label: "الإحصائيات", icon: "bar-chart-2" },
+      { href: "/admin/logs", label: "سجل النشاط", icon: "activity" },
+      { href: "/admin/financials", label: "الإدارة المالية", icon: "badge-dollar" },
+      { href: "/admin/company-dues", label: "مستحقات للشركة", icon: "receipt" },
+      { href: "/admin/customer-dues", label: "مستحقات للعميل", icon: "receipt" },
+      { href: "/admin/ledger", label: "دفتر الحركات المالية", icon: "credit-card" },
     ],
   },
   {
     id: "bookings",
     label: "الحجوزات والعملاء",
     items: [
-      { href: "/admin/car-bookings", label: "حجوزات السيارات", icon: "clipboard-list", permission: "BOOKINGS", hidden: true },
-      { href: "/admin/missed-bookings", label: "حجوزات فائتة", icon: "calendar-x", permission: "BOOKINGS", hidden: true },
-      { href: "/admin/cancelled-bookings", label: "الحجوزات الملغاة", icon: "ban", permission: "BOOKINGS", hidden: true },
-      { href: "/admin/branch-returns", label: "التسليم الى الفرع", icon: "corner-down-left", permission: "BOOKINGS" },
-      { href: "/admin/late-returns", label: "الاستلامات المتأخرة", icon: "calendar-x", permission: "BOOKINGS" },
-      { href: "/admin/customers", label: "العملاء", icon: "users", permission: "BOOKINGS" },
-      { href: "/admin/direct-booking", label: "حجز مباشر (مكتب)", icon: "calendar-plus", permission: "BOOKINGS", hidden: true },
-      { href: "/admin/corporate-leads", label: "حجز الشركات", icon: "briefcase", permission: "CORPORATE_LEADS" },
-      { href: "/admin/fleet-availability", label: "توفر المركبات", icon: "activity", permission: "BOOKINGS", hidden: true },
+      { href: "/admin/car-bookings", label: "حجوزات السيارات", icon: "clipboard-list", hidden: true },
+      { href: "/admin/missed-bookings", label: "حجوزات فائتة", icon: "calendar-x", hidden: true },
+      { href: "/admin/cancelled-bookings", label: "الحجوزات الملغاة", icon: "ban", hidden: true },
+      { href: "/admin/branch-returns", label: "التسليم الى الفرع", icon: "corner-down-left" },
+      { href: "/admin/late-returns", label: "الاستلامات المتأخرة", icon: "calendar-x" },
+      { href: "/admin/customers", label: "العملاء", icon: "users" },
+      { href: "/admin/direct-booking", label: "حجز مباشر (مكتب)", icon: "calendar-plus", hidden: true },
+      { href: "/admin/corporate-leads", label: "حجز الشركات", icon: "briefcase" },
+      { href: "/admin/fleet-availability", label: "توفر المركبات", icon: "activity", hidden: true },
     ],
   },
   {
@@ -84,14 +81,14 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     label: "المحتوى والموقع",
     collapsible: true,
     items: [
-      { href: "/admin/home", label: "هيرو الرئيسية", icon: "image", permission: "CONTENT" },
-      { href: "/admin/promo-banner", label: "البانر الترويجي", icon: "megaphone", permission: "CONTENT" },
-      { href: "/admin/rental-pricing-display", label: "عرض أسعار التأجير", icon: "badge-dollar", permission: "CONTENT" },
-      { href: "/admin/booking-otp-delivery", label: "رمز التحقق", icon: "shield-check", permission: "CONTENT" },
-      { href: "/admin/booking-widget-tabs", label: "تبويبات ويدجت الحجز", icon: "sliders", permission: "CONTENT" },
-      { href: "/admin/payment-methods", label: "طرق دفع العميل", icon: "credit-card", permission: "CONTENT" },
-      { href: "/admin/payment-icons", label: "أيقونات وسائل الدفع", icon: "image", permission: "CONTENT" },
-      { href: "/admin/whatsapp-templates", label: "قوالب الواتساب", icon: "megaphone", permission: "CONTENT" },
+      { href: "/admin/home", label: "هيرو الرئيسية", icon: "image" },
+      { href: "/admin/promo-banner", label: "البانر الترويجي", icon: "megaphone" },
+      { href: "/admin/rental-pricing-display", label: "عرض أسعار التأجير", icon: "badge-dollar" },
+      { href: "/admin/booking-otp-delivery", label: "رمز التحقق", icon: "shield-check" },
+      { href: "/admin/booking-widget-tabs", label: "تبويبات ويدجت الحجز", icon: "sliders" },
+      { href: "/admin/payment-methods", label: "طرق دفع العميل", icon: "credit-card" },
+      { href: "/admin/payment-icons", label: "أيقونات وسائل الدفع", icon: "image" },
+      { href: "/admin/whatsapp-templates", label: "قوالب الواتساب", icon: "megaphone" },
     ],
   },
   {
@@ -99,29 +96,29 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     label: "الأسطول والفروع",
     collapsible: true,
     items: [
-      { href: "/admin/vehicles", label: "المركبات", icon: "car", permission: "FLEET" },
-      { href: "/admin/vehicle-units", label: "لوحات السيارات", icon: "car", permission: "FLEET" },
-      { href: "/admin/fleet-visibility", label: "إتاحة السيارات", icon: "sliders", permission: "FLEET" },
-      { href: "/admin/categories", label: "فئات الأسطول", icon: "tags", permission: "FLEET" },
-      { href: "/admin/brands", label: "البراندات", icon: "tags", permission: "FLEET" },
-      { href: "/admin/rental-addons", label: "إضافات التأجير", icon: "puzzle", permission: "FLEET" },
-      { href: "/admin/rental-discounts", label: "خصومات التأجير", icon: "percent", permission: "FLEET" },
-      { href: "/admin/coupon-codes", label: "أكواد الخصم", icon: "percent", permission: "FLEET" },
-      { href: "/admin/cities", label: "المدن", icon: "map-pin", permission: "FLEET" },
-      { href: "/admin/branches", label: "الفروع", icon: "building-2", permission: "FLEET" },
-      { href: "/admin/employees", label: "موظفو الفروع", icon: "user-cog", permission: "EMPLOYEES" },
-      { href: "/admin/inter-city-shipping", label: "شحن بين المدن", icon: "truck", permission: "FLEET" },
-      { href: "/admin/checkout-fees", label: "رسوم إتمام الحجز", icon: "receipt", permission: "FLEET" },
-      { href: "/admin/subscription-plans", label: "باقات اشتراك", icon: "package", permission: "SUBSCRIPTIONS" },
-      { href: "/admin/subscriptions", label: "اشتراكات العملاء", icon: "repeat", permission: "SUBSCRIPTIONS" },
+      { href: "/admin/vehicles", label: "المركبات", icon: "car" },
+      { href: "/admin/vehicle-units", label: "لوحات السيارات", icon: "car" },
+      { href: "/admin/fleet-visibility", label: "إتاحة السيارات", icon: "sliders" },
+      { href: "/admin/categories", label: "فئات الأسطول", icon: "tags" },
+      { href: "/admin/brands", label: "البراندات", icon: "tags" },
+      { href: "/admin/rental-addons", label: "إضافات التأجير", icon: "puzzle" },
+      { href: "/admin/rental-discounts", label: "خصومات التأجير", icon: "percent" },
+      { href: "/admin/coupon-codes", label: "أكواد الخصم", icon: "percent" },
+      { href: "/admin/cities", label: "المدن", icon: "map-pin" },
+      { href: "/admin/branches", label: "الفروع", icon: "building-2" },
+      { href: "/admin/employees", label: "موظفو الفروع", icon: "user-cog" },
+      { href: "/admin/inter-city-shipping", label: "شحن بين المدن", icon: "truck" },
+      { href: "/admin/checkout-fees", label: "رسوم إتمام الحجز", icon: "receipt" },
+      { href: "/admin/subscription-plans", label: "باقات اشتراك", icon: "package" },
+      { href: "/admin/subscriptions", label: "اشتراكات العملاء", icon: "repeat" },
     ],
   },
   {
     id: "policy",
     label: "السياسات",
     items: [
-      { href: "/admin/cancellation-policy", label: "إلغاء الحجز", icon: "scale", permission: "POLICY" },
-      { href: "/admin/rental-terms", label: "الشروط والأحكام", icon: "file-text", permission: "POLICY" },
+      { href: "/admin/cancellation-policy", label: "إلغاء الحجز", icon: "scale" },
+      { href: "/admin/rental-terms", label: "الشروط والأحكام", icon: "file-text" },
     ],
   },
   {

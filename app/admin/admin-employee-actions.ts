@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireSuperAdminForAction } from "@/lib/admin-access";
 import { hashPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
-import { ADMIN_PERMISSIONS, type AdminPermission } from "@/lib/admin-permissions";
+import { isKnownAdminPermission } from "@/lib/admin-permissions";
 
 export async function createAdminEmployee(
   _prev: { ok: boolean; error?: string } | null,
@@ -19,7 +19,12 @@ export async function createAdminEmployee(
   const password = String(formData.get("password") ?? "");
   const name = String(formData.get("name") ?? "").trim();
   const branchId = Number(formData.get("branchId"));
-  const permissions = formData.getAll("permissions").map(String);
+  const notifyOnBookingEmail =
+    formData.get("notifyOnBookingEmail") === "on" || formData.get("notifyOnBookingEmail") === "true";
+  const permissions = formData
+    .getAll("permissions")
+    .map(String)
+    .filter(isKnownAdminPermission);
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return { ok: false, error: "أدخل بريداً إلكترونياً صالحاً." };
@@ -54,6 +59,7 @@ export async function createAdminEmployee(
       isSuperAdmin: false,
       isActive: true,
       permissionsJson: JSON.stringify(permissions),
+      notifyOnBookingEmail,
     },
   });
 
@@ -96,7 +102,7 @@ export async function setAdminEmployeeActive(
 /**
  * تعديل صلاحيات موظف فرع موجود بالفعل — لا يوجد مسار آخر لتعديل حساب بعد إنشائه
  * (فورم الإضافة يحدّد الصلاحيات مرة واحدة فقط عند الإنشاء).
- * القيم تُفلتَر على قائمة ADMIN_PERMISSIONS المعروفة — لا تُحفظ أي قيمة غريبة قادمة
+ * القيم تُفلتَر على قائمة الصلاحيات المعروفة — لا تُحفظ أي قيمة غريبة قادمة
  * من الفورم مباشرةً في العمود.
  */
 export async function updateAdminEmployeePermissions(
@@ -111,11 +117,10 @@ export async function updateAdminEmployeePermissions(
     return { ok: false, error: "معرّف الموظف غير صالح." };
   }
 
-  const known = new Set<string>(ADMIN_PERMISSIONS);
   const permissions = formData
     .getAll("permissions")
     .map(String)
-    .filter((p): p is AdminPermission => known.has(p));
+    .filter(isKnownAdminPermission);
 
   const row = await prisma.adminEmployee.findUnique({
     where: { id },
@@ -129,6 +134,40 @@ export async function updateAdminEmployeePermissions(
   await prisma.adminEmployee.update({
     where: { id },
     data: { permissionsJson: JSON.stringify(permissions) },
+  });
+
+  revalidatePath("/admin/employees");
+  return { ok: true };
+}
+
+/** تعديل تفضيل إشعار الإيميل عند حجز جديد لموظف موجود بالفعل. */
+export async function updateAdminEmployeeNotificationPref(
+  _prev: { ok: boolean; error?: string } | null,
+  formData: FormData,
+): Promise<{ ok: boolean; error?: string }> {
+  const auth = await requireSuperAdminForAction();
+  if (!auth.ok) return { ok: false, error: auth.error };
+
+  const id = Number(formData.get("employeeId"));
+  if (!Number.isInteger(id) || id < 1) {
+    return { ok: false, error: "معرّف الموظف غير صالح." };
+  }
+
+  const notifyOnBookingEmail =
+    formData.get("notifyOnBookingEmail") === "on" || formData.get("notifyOnBookingEmail") === "true";
+
+  const row = await prisma.adminEmployee.findUnique({
+    where: { id },
+    select: { isSuperAdmin: true },
+  });
+  if (!row) return { ok: false, error: "الموظف غير موجود." };
+  if (row.isSuperAdmin) {
+    return { ok: false, error: "إعدادات مدير النظام غير قابلة للتعديل من هنا." };
+  }
+
+  await prisma.adminEmployee.update({
+    where: { id },
+    data: { notifyOnBookingEmail },
   });
 
   revalidatePath("/admin/employees");

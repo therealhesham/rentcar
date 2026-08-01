@@ -1,4 +1,4 @@
-import { requireAdminPagePermission } from "@/lib/admin-page";
+import { requireAdminPage } from "@/lib/admin-page";
 import { ReportExportButtons } from "@/components/admin/ReportExportButtons";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminCard } from "@/components/admin/AdminCard";
@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
 export default async function FinancialsPage(props: {
   searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const session = await requireAdminPagePermission("FINANCIALS");
+  const session = await requireAdminPage();
   const searchParams = await props.searchParams;
 
   // We'll use 30 days for the overview stats on this page

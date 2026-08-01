@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { assertBookingRequestInScope } from "@/lib/admin-access";
-import { requireAdminPagePermission } from "@/lib/admin-page";
+import { requireAdminPage } from "@/lib/admin-page";
 import { prisma } from "@/lib/prisma";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { BookingExtraChargesPanel } from "@/components/admin/BookingExtraChargesPanel";
@@ -59,7 +59,7 @@ export default async function BookingFinancePage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const session = await requireAdminPagePermission("FINANCIALS");
+  const session = await requireAdminPage();
   const { id: idRaw } = await params;
   const id = Number(idRaw);
   if (!Number.isInteger(id) || id < 1) notFound();

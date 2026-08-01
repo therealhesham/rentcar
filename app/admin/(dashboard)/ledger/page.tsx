@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireAdminPagePermission } from "@/lib/admin-page";
+import { requireAdminPage } from "@/lib/admin-page";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminCard } from "@/components/admin/AdminCard";
 import { AdminStatCard } from "@/components/admin/AdminStatCard";
@@ -65,7 +65,7 @@ type Props = {
 };
 
 export default async function LedgerPage({ searchParams }: Props) {
-  const session = await requireAdminPagePermission("FINANCIALS");
+  const session = await requireAdminPage();
   const scope = { isSuperAdmin: session.isSuperAdmin, branchId: session.branchId };
   const sp = await searchParams;
 

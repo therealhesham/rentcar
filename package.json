@@ -13,6 +13,7 @@
     "db:studio": "prisma studio",
     "db:seed": "prisma db seed",
     "vehicles:upload-images": "tsx prisma/scripts/upload-vehicle-images.ts",
+    "migrate:employee-permissions": "tsx prisma/scripts/migrate-employee-permissions-to-pages.ts",
     "postinstall": "prisma generate"
   },
   "prisma": {

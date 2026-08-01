@@ -50,6 +50,20 @@ function resolveDayBounds(
   return { kind: "range", openM, closeM };
 }
 
+function todayYmd(): string {
+  const t = new Date();
+  return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+}
+
+/** أقرب سلوت 30 دقيقة لم يفت بعد — null يعني اليوم المختار ليس اليوم الحالي (بلا قيد). */
+function minMinutesIfToday(dateDdMmYy: string | undefined): number | null {
+  const ymd = dateDdMmYy ? parseDdMmYyToYmd(dateDdMmYy) : null;
+  if (!ymd || ymd !== todayYmd()) return null;
+  const now = new Date();
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  return Math.ceil(nowMinutes / SLOT_STEP_MINUTES) * SLOT_STEP_MINUTES;
+}
+
 function minutesToHm(total: number): string {
   const h = Math.floor(total / 60);
   const m = total % 60;
@@ -106,13 +120,15 @@ export function TimePickerPopover({
 
   const allowedSlots = useMemo(() => {
     if (bounds.kind === "closed") return [];
+    const minMinutes = minMinutesIfToday(dateDdMmYy);
     const out: number[] = [];
     for (let m = 0; m < 24 * 60; m += SLOT_STEP_MINUTES) {
       if (bounds.kind === "range" && (m < bounds.openM || m > bounds.closeM)) continue;
+      if (minMinutes != null && m < minMinutes) continue;
       out.push(m);
     }
     return out;
-  }, [bounds]);
+  }, [bounds, dateDdMmYy]);
 
   const groups = useMemo(
     () =>

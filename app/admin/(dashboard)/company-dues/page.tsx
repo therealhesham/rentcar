@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireAdminPagePermission } from "@/lib/admin-page";
+import { requireAdminPage } from "@/lib/admin-page";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminCard } from "@/components/admin/AdminCard";
 import { AdminStatCard } from "@/components/admin/AdminStatCard";
@@ -73,7 +73,7 @@ function parseFilter(raw: string | undefined): FilterKey {
 type Props = { searchParams: Promise<{ type?: string }> };
 
 export default async function CompanyDuesPage({ searchParams }: Props) {
-  const session = await requireAdminPagePermission("FINANCIALS");
+  const session = await requireAdminPage();
   const scope = { isSuperAdmin: session.isSuperAdmin, branchId: session.branchId };
   const sp = await searchParams;
   const filter = parseFilter(sp.type);

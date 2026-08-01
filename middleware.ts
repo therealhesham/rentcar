@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import createIntlMiddleware from "next-intl/middleware";
 import { routing } from "./i18n/routing";
-import { isAdminVehiclesWritePath, isSuperAdminOnlyPath } from "@/lib/admin-routes";
+import { resolveAdminPagePermissionId } from "@/lib/admin-routes";
 import { parseAdminSessionTokenEdge } from "@/lib/admin-session-edge";
 
 const handleI18nRouting = createIntlMiddleware(routing);
@@ -24,11 +24,13 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(login);
     }
 
-    if (
-      !session.isSuperAdmin &&
-      (isSuperAdminOnlyPath(pathname) || isAdminVehiclesWritePath(pathname))
-    ) {
-      return NextResponse.redirect(new URL("/admin", request.url));
+    // لوحة التحكم الرئيسية دائماً متاحة لأي موظف مسجّل دخول (صفحة هبوط بعد تسجيل الدخول،
+    // وهدف إعادة التوجيه أدناه) — تُحدَّد محتوياتها حسب صلاحياته في مكان آخر.
+    if (!session.isSuperAdmin && pathname !== "/admin") {
+      const permId = resolveAdminPagePermissionId(pathname);
+      if (permId == null || !session.permissions.includes(permId)) {
+        return NextResponse.redirect(new URL("/admin", request.url));
+      }
     }
 
     return NextResponse.next();

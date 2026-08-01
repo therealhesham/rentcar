@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef } from "react";
 import { createAdminEmployee } from "@/app/admin/admin-employee-actions";
-import { ADMIN_PERMISSIONS, ADMIN_PERMISSION_LABELS } from "@/lib/admin-permissions";
+import { AdminPermissionsFieldset } from "@/app/admin/(dashboard)/employees/AdminPermissionsFieldset";
 
 type BranchOption = { id: number; name: string; slug: string };
 
@@ -78,21 +78,18 @@ export function AdminEmployeeCreateForm({ branches }: { branches: BranchOption[]
           className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
         />
       </label>
+      <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-outline-variant/50 bg-surface-container-lowest p-3 text-sm font-medium md:col-span-2">
+        <input
+          type="checkbox"
+          name="notifyOnBookingEmail"
+          className="h-4 w-4 rounded border-outline text-primary focus:ring-primary"
+        />
+        أرسل إيميل تلقائي عند حجز جديد (لموظف الفرع، أو CC لموظف الإدارة المركزية)
+      </label>
+
       <div className="md:col-span-2 mt-2 border-t border-outline-variant/30 pt-4">
         <label className="mb-3 block text-sm font-bold text-on-surface">الصلاحيات الممنوحة</label>
-        <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-          {ADMIN_PERMISSIONS.map((perm) => (
-            <label key={perm} className="flex cursor-pointer items-center gap-2 rounded-lg border border-outline-variant/50 bg-surface-container-lowest p-3 hover:bg-surface-container-low">
-              <input
-                type="checkbox"
-                name="permissions"
-                value={perm}
-                className="h-4 w-4 rounded border-outline text-primary focus:ring-primary"
-              />
-              <span className="text-sm font-medium text-on-surface">{ADMIN_PERMISSION_LABELS[perm]}</span>
-            </label>
-          ))}
-        </div>
+        <AdminPermissionsFieldset />
       </div>
       {state?.error ? (
         <p className="md:col-span-2 rounded-xl bg-error-container/40 px-3 py-2 text-sm font-bold text-error">

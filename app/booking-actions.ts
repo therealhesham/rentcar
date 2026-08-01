@@ -8,6 +8,7 @@ import {
 import { branchIdsFromReturnSlug } from "@/lib/booking-branches";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/lib/notification-service";
+import { sendNewBookingNotificationEmails } from "@/lib/booking-notification-email";
 
 type BookingActionState = { ok: boolean; error?: string };
 
@@ -37,8 +38,9 @@ export async function submitBookingRequest(
     return { ok: false, error: "الفرع غير متاح." };
   }
 
+  let createdId: number;
   try {
-    await prisma.bookingRequest.create({
+    const created = await prisma.bookingRequest.create({
       data: {
         kind: "INQUIRY",
         fullName: data.fullName,
@@ -52,7 +54,9 @@ export async function submitBookingRequest(
         numberOfDays: data.numberOfDays,
         termsAccepted: data.termsAccepted,
       },
+      select: { id: true },
     });
+    createdId = created.id;
   } catch (e) {
     console.error(e);
     return { ok: false, error: "تعذّر إرسال الطلب الآن، حاول مرة أخرى." };
@@ -69,6 +73,8 @@ export async function submitBookingRequest(
   } catch (err) {
     console.error("[submitBookingRequest] Notification trigger error:", err);
   }
+
+  await sendNewBookingNotificationEmails(createdId);
 
   revalidatePath("/admin");
   return { ok: true };

@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { updateAdminEmployeePermissions } from "@/app/admin/admin-employee-actions";
-import { ADMIN_PERMISSIONS, ADMIN_PERMISSION_LABELS } from "@/lib/admin-permissions";
+import { AdminPermissionsFieldset } from "@/app/admin/(dashboard)/employees/AdminPermissionsFieldset";
 
 export function AdminEmployeePermissionsForm({
   employeeId,
@@ -28,25 +28,7 @@ export function AdminEmployeePermissionsForm({
       {open ? (
         <form action={formAction} className="mt-3 rounded-xl border border-outline-variant/40 bg-surface-container-lowest p-4">
           <input type="hidden" name="employeeId" value={employeeId} />
-          <div className="grid gap-2 sm:grid-cols-2">
-            {ADMIN_PERMISSIONS.map((perm) => (
-              <label
-                key={perm}
-                className="flex cursor-pointer items-center gap-2 rounded-lg border border-outline-variant/40 bg-white p-2.5 hover:bg-surface-container-low"
-              >
-                <input
-                  type="checkbox"
-                  name="permissions"
-                  value={perm}
-                  defaultChecked={current.has(perm)}
-                  className="h-4 w-4 rounded border-outline text-primary focus:ring-primary"
-                />
-                <span className="text-xs font-medium text-on-surface">
-                  {ADMIN_PERMISSION_LABELS[perm]}
-                </span>
-              </label>
-            ))}
-          </div>
+          <AdminPermissionsFieldset currentPermissions={current} />
 
           {state?.error ? (
             <p className="mt-3 text-xs font-bold text-error">{state.error}</p>

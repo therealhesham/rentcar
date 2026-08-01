@@ -3,11 +3,8 @@ import type { AdminSession } from "@/lib/admin-auth";
 import { getAdminSession } from "@/lib/admin-auth";
 import { ADMIN_NAV_GROUPS, type AdminNavGroup } from "@/lib/admin-nav";
 import type { AdminPermission } from "@/lib/admin-permissions";
-import { isSuperAdminOnlyPath } from "@/lib/admin-routes";
 import { bookingInBranchScope } from "@/lib/booking-branches";
 import { prisma } from "@/lib/prisma";
-
-export { isSuperAdminOnlyPath, SUPER_ADMIN_ONLY_PREFIXES } from "@/lib/admin-routes";
 
 const BRANCH_NAV_GROUP_IDS = new Set(["main", "bookings", "external"]);
 
@@ -23,8 +20,8 @@ export function getAdminNavGroupsForSession(session: AdminSession): AdminNavGrou
   return ADMIN_NAV_GROUPS.map((group) => {
     const filteredItems = group.items.filter((item) => {
       if (item.external) return true; // Always show external links
-      if (!item.permission) return false; // Hide items with no permission explicitly defined (safety)
-      return allowedPermissions.has(item.permission);
+      if (item.href === "/admin") return true; // لوحة التحكم متاحة دائماً (نفس منطق middleware)
+      return allowedPermissions.has(item.href);
     });
 
     return {

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireAdminPagePermission } from "@/lib/admin-page";
+import { requireAdminPage } from "@/lib/admin-page";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminCard } from "@/components/admin/AdminCard";
 import { AdminStatCard } from "@/components/admin/AdminStatCard";
@@ -22,7 +22,7 @@ function fmtDate(d: Date | null): string {
 }
 
 export default async function CustomerDuesPage() {
-  const session = await requireAdminPagePermission("FINANCIALS");
+  const session = await requireAdminPage();
 
   const scopeWhere = session.isSuperAdmin
     ? {}

@@ -47,7 +47,7 @@ export async function addBookingExtraChargeAction(
   _prev: ExtraChargeActionResult | null,
   formData: FormData,
 ): Promise<ExtraChargeActionResult> {
-  const auth = await requirePermissionForAction("FINANCIALS");
+  const auth = await requirePermissionForAction("/admin/financials");
   if (!auth.ok) return { ok: false, error: auth.error };
 
   const bookingId = Number(formData.get("bookingId"));
@@ -138,7 +138,7 @@ export async function voidBookingExtraChargeAction(
   chargeId: number,
   reason: string,
 ): Promise<ExtraChargeActionResult> {
-  const auth = await requirePermissionForAction("FINANCIALS");
+  const auth = await requirePermissionForAction("/admin/financials");
   if (!auth.ok) return { ok: false, error: auth.error };
 
   if (!Number.isInteger(chargeId) || chargeId < 1) {

@@ -1,36 +1,17 @@
-/** مسارات إدارة المحتوى والإعدادات العامة — للسوبر أدمن فقط */
-export const SUPER_ADMIN_ONLY_PREFIXES = [
-  "/admin/home",
-  "/admin/promo-banner",
-  "/admin/rental-pricing-display",
-  "/admin/booking-otp-delivery",
-  "/admin/booking-widget-tabs",
-  "/admin/payment-methods",
-  "/admin/payment-icons",
-  "/admin/employees",
-  "/admin/categories",
-  "/admin/rental-addons",
-  "/admin/rental-discounts",
-  "/admin/coupon-codes",
-  "/admin/cities",
-  "/admin/branches",
-  "/admin/inter-city-shipping",
-  "/admin/checkout-fees",
-  "/admin/subscription-plans",
-  "/admin/subscriptions",
-  "/admin/cancellation-policy",
-  "/admin/corporate-leads",
-  "/admin/statistics/fleet",
-] as const;
+import { ADMIN_PAGE_PERMISSIONS } from "@/lib/admin-permissions";
 
-export function isSuperAdminOnlyPath(pathname: string): boolean {
-  return SUPER_ADMIN_ONLY_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
-  );
-}
-
-/** إضافة/تعديل مركبات — سوبر أدمن فقط؛ عرض القائمة متاح لموظف الفرع */
-export function isAdminVehiclesWritePath(pathname: string): boolean {
-  if (pathname === "/admin/vehicles/new") return true;
-  return /^\/admin\/vehicles\/[^/]+\/edit\/?$/.test(pathname);
+/**
+ * يطابق مسار صفحة أدمن بأطول href صلاحية مسجّل يطابقه (زي `/admin/statistics/fleet` أدق
+ * من `/admin/statistics`). `/admin` نفسها مطابقة حصرية (مش prefix) عشان متبلعش كل شيء تحتها.
+ * ترجع null لصفحة غير مسجّلة أصلاً — يُعامل كمنع افتراضي (fail-closed)، مش سماح.
+ */
+export function resolveAdminPagePermissionId(pathname: string): string | null {
+  let best: string | null = null;
+  for (const { href } of ADMIN_PAGE_PERMISSIONS) {
+    const matches =
+      href === "/admin" ? pathname === "/admin" : pathname === href || pathname.startsWith(`${href}/`);
+    if (!matches) continue;
+    if (best == null || href.length > best.length) best = href;
+  }
+  return best;
 }

@@ -24,7 +24,7 @@ export async function processBookingRefund(
   _prev: { ok: boolean; error?: string } | null,
   formData: FormData,
 ): Promise<{ ok: boolean; error?: string }> {
-  const auth = await requirePermissionForAction("FINANCIALS");
+  const auth = await requirePermissionForAction("/admin/financials");
   if (!auth.ok) return { ok: false, error: auth.error };
 
   const bookingId = Number(formData.get("bookingId"));
@@ -154,7 +154,7 @@ export async function reverseBookingRefund(
   _prev: { ok: boolean; error?: string } | null,
   formData: FormData,
 ): Promise<{ ok: boolean; error?: string }> {
-  const auth = await requirePermissionForAction("FINANCIALS");
+  const auth = await requirePermissionForAction("/admin/financials");
   if (!auth.ok) return { ok: false, error: auth.error };
 
   const bookingId = Number(formData.get("bookingId"));

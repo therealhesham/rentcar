@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { AdminEmployeeCreateForm } from "@/app/admin/(dashboard)/employees/AdminEmployeeCreateForm";
 import { AdminEmployeePermissionsForm } from "@/app/admin/(dashboard)/employees/AdminEmployeePermissionsForm";
 import { AdminEmployeeToggleForm } from "@/app/admin/(dashboard)/employees/AdminEmployeeToggleForm";
+import { AdminEmployeeNotifyToggleForm } from "@/app/admin/(dashboard)/employees/AdminEmployeeNotifyToggleForm";
 import { requireAdminPage } from "@/lib/admin-page";
 import { ADMIN_PERMISSION_LABELS, type AdminPermission } from "@/lib/admin-permissions";
 import { prisma } from "@/lib/prisma";
@@ -91,10 +92,14 @@ export default async function AdminEmployeesPage() {
                       ))}
                     </div>
                   )}
-                  <div className="mt-3">
+                  <div className="mt-3 flex flex-wrap gap-2">
                     <AdminEmployeePermissionsForm
                       employeeId={e.id}
                       currentPermissions={e.permissionsJson ? JSON.parse(e.permissionsJson) : []}
+                    />
+                    <AdminEmployeeNotifyToggleForm
+                      employeeId={e.id}
+                      notifyOnBookingEmail={e.notifyOnBookingEmail}
                     />
                   </div>
                 </div>

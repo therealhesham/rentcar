@@ -260,6 +260,7 @@ function smtpConfigured(): boolean {
 
 async function sendInvoiceViaSmtp(opts: {
   to: string;
+  cc?: string;
   subject: string;
   html: string;
   text?: string;
@@ -286,6 +287,7 @@ async function sendInvoiceViaSmtp(opts: {
   await transporter.sendMail({
     from,
     to: opts.to,
+    ...(opts.cc ? { cc: opts.cc } : {}),
     subject: opts.subject,
     html: opts.html,
     text: opts.text,
@@ -295,6 +297,7 @@ async function sendInvoiceViaSmtp(opts: {
 
 async function sendInvoiceViaResend(opts: {
   to: string;
+  cc?: string;
   subject: string;
   html: string;
   text?: string;
@@ -312,6 +315,7 @@ async function sendInvoiceViaResend(opts: {
   const { data, error } = await resend.emails.send({
     from,
     to: [opts.to],
+    ...(opts.cc ? { cc: opts.cc.split(",").map((s) => s.trim()) } : {}),
     subject: opts.subject,
     html: opts.html,
     ...(opts.text ? { text: opts.text } : {}),
@@ -339,6 +343,8 @@ export function isOutgoingMailTransportConfigured(): boolean {
 
 export async function sendPlainTransactionalEmail(opts: {
   to: string;
+  /** قايمة إيميلات مفصولة بفاصلة — نسخة CC اختيارية. */
+  cc?: string;
   subject: string;
   html: string;
   text?: string;

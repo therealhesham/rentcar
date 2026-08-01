@@ -22,7 +22,7 @@ export async function settleCustomerDue(
   _prev: SettleCustomerDueResult | null,
   formData: FormData,
 ): Promise<SettleCustomerDueResult> {
-  const auth = await requirePermissionForAction("FINANCIALS");
+  const auth = await requirePermissionForAction("/admin/customer-dues");
   if (!auth.ok) return { ok: false, error: auth.error };
 
   const bookingId = Number(formData.get("bookingId"));
