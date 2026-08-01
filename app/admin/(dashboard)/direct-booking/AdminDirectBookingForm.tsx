@@ -23,7 +23,7 @@ import {
   submitAdminDirectBooking,
   type AdminDirectBookingActionState,
 } from "@/app/admin/direct-booking-actions";
-import { addDaysToYmd } from "@/lib/direct-booking";
+import { addDaysToYmd } from "@/lib/booking-calendar-ymd";
 
 export type BrandWithBookableModels = {
   id: number;

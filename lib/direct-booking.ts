@@ -1,3 +1,4 @@
+import "server-only";
 import { Prisma } from "@prisma/client";
 import { createNotification } from "@/lib/notification-service";
 import { sendNewBookingNotificationEmails } from "@/lib/booking-notification-email";

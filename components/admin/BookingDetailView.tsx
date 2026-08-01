@@ -41,7 +41,7 @@ import {
   resolveBookingRentalPricePerDayExclTax,
 } from "@/lib/booking-pricing-snapshot";
 import { computeBookingOutstanding } from "@/lib/booking-outstanding";
-import { addDaysToYmd } from "@/lib/direct-booking";
+import { addDaysToYmd } from "@/lib/booking-calendar-ymd";
 import { BookingHeaderGearMenu } from "@/components/admin/BookingHeaderGearMenu";
 import { VehiclePlateHandoverModal } from "@/components/admin/VehiclePlateHandoverModal";
 
