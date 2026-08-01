@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { FleetCarCard } from "@/components/fleet/FleetCarCard";
 import type { FleetCar } from "@/lib/fleet-types";
 import type { BookingCityBranchesOption } from "@/lib/booking-location-options";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 export type FleetCategoryTab = {
   slug: string;
@@ -17,15 +17,35 @@ export type FleetCategoryTab = {
 type Props = { tabs: FleetCategoryTab[]; cities?: BookingCityBranchesOption[]; allowHolidayBooking?: boolean };
 
 export function FleetCategoriesShowcase({ tabs, cities, allowHolidayBooking = false }: Props) {
-  const firstWithCars = tabs.findIndex((t) => t.cars.length > 0);
-  const [active, setActive] = useState(() => (firstWithCars >= 0 ? firstWithCars : 0));
+  const t = useTranslations("FleetShowcase");
+  /* الاتجاه من اللغة لا من `rtl:` — متغيّر Tailwind لا يُولَّد في هذا الإعداد. */
+  const isRtl = useLocale() === "ar";
+  /** سهم حافة البداية (يسار في LTR، يمين في RTL) — يشير دائماً للخارج. */
+  const StartArrow = isRtl ? ChevronRight : ChevronLeft;
+  const EndArrow = isRtl ? ChevronLeft : ChevronRight;
+  /** سهم «عرض الكل»: جهة التقدّم في القراءة — عكس سهم حافة البداية. */
+  const ForwardArrow = EndArrow;
+
+  /**
+   * تبويب «الكل» أولاً وهو المُحدَّد افتراضياً — الزائر يرى الأسطول كاملاً قبل أن
+   * يضيّقه بنفسه. لا يُضاف مع فئة واحدة لأنه سيكرّرها حرفياً.
+   * (الفئات الفارغة مُستبعدة من الخادم، فكل تبويب هنا له سيارات.)
+   */
+  const displayTabs = useMemo<FleetCategoryTab[]>(() => {
+    if (tabs.length <= 1) return tabs;
+    return [
+      { slug: "all", tabLabel: t("allCategories"), cars: tabs.flatMap((tab) => tab.cars) },
+      ...tabs,
+    ];
+  }, [tabs, t]);
+
+  const [active, setActive] = useState(0);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScroll, setCanScroll] = useState(false);
 
-  const current = tabs[active] ?? tabs[0];
+  const current = displayTabs[active] ?? displayTabs[0];
   const cars = useMemo(() => current?.cars ?? [], [current]);
-  const t = useTranslations("FleetShowcase");
 
   const checkScrollability = useCallback(() => {
     const el = scrollRef.current;
@@ -39,13 +59,18 @@ export function FleetCategoriesShowcase({ tabs, cities, allowHolidayBooking = fa
     checkScrollability();
     window.addEventListener("resize", checkScrollability, { passive: true });
     return () => window.removeEventListener("resize", checkScrollability);
-  }, [checkScrollability, tabs]);
+  }, [checkScrollability, displayTabs]);
 
-  const handleScroll = (direction: "left" | "right") => {
+  /**
+   * بمنطق البداية/النهاية لا اليمين/اليسار — الشريط يعمل في الاتجاهين. في RTL يبدأ
+   * `scrollLeft` من صفر عند الحافة اليمنى ويصير سالباً نحو النهاية، فتنعكس الإشارة.
+   */
+  const handleScroll = (direction: "start" | "end") => {
     const el = scrollRef.current;
     if (!el) return;
-    const delta = direction === "right" ? 260 : -260;
-    el.scrollBy({ left: delta, behavior: "smooth" });
+    const isRtl = getComputedStyle(el).direction === "rtl";
+    const step = direction === "end" ? 260 : -260;
+    el.scrollBy({ left: isRtl ? -step : step, behavior: "smooth" });
   };
 
   /**
@@ -92,16 +117,18 @@ export function FleetCategoriesShowcase({ tabs, cities, allowHolidayBooking = fa
       <div className="relative mb-8 flex items-center justify-center sm:mb-12">
         {/* شريط واحد هادئ: الحدود على الحاوية فقط — الحدود المتداخلة (حاوية + أسهم
             + كل تبويب) كانت تجعل الشريط يبدو صفَّ أزرار لا مجموعة تبويبات. */}
-        <div className="relative flex w-full max-w-5xl items-center gap-1 rounded-full border border-[#ece9e3] bg-[#faf9f6] p-1.5">
+        {/* `w-fit` لا `w-full`: الشريط ينكمش على تبويباته فلا يتبقّى فراغ داخله حين تقلّ
+            الفئات، و`max-w-full` يحدّه بعرض الحاوية فيتولّى التمرير الأفقي عند كثرتها. */}
+        <div className="relative flex w-fit max-w-full items-center gap-1 rounded-full border border-[#ece9e3] bg-[#faf9f6] p-1.5">
           {/* الأسهم تُخفى تماماً حين لا يوجد ما يُمرَّر — أفضل من إظهارها معطّلة. */}
           {canScroll ? (
             <button
               type="button"
-              onClick={() => handleScroll("right")}
+              onClick={() => handleScroll("start")}
               aria-label="الفئات السابقة"
               className="flex size-9 shrink-0 items-center justify-center rounded-full text-[#003749]/45 transition-colors duration-200 hover:bg-white hover:text-[#003749]"
             >
-              <ChevronRight className="size-[18px]" />
+              <StartArrow className="size-[18px]" />
             </button>
           ) : null}
 
@@ -110,9 +137,9 @@ export function FleetCategoriesShowcase({ tabs, cities, allowHolidayBooking = fa
             ref={scrollRef}
             role="tablist"
             aria-label="فئات الأسطول"
-            className="no-scrollbar flex flex-1 items-center gap-2 overflow-x-auto scroll-smooth py-1 whitespace-nowrap [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="no-scrollbar flex min-w-0 flex-1 items-center gap-2 overflow-x-auto scroll-smooth py-1 whitespace-nowrap [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
-            {tabs.map((tab, i) => {
+            {displayTabs.map((tab, i) => {
               const isOn = i === active;
               return (
                 <button
@@ -141,11 +168,11 @@ export function FleetCategoriesShowcase({ tabs, cities, allowHolidayBooking = fa
           {canScroll ? (
             <button
               type="button"
-              onClick={() => handleScroll("left")}
+              onClick={() => handleScroll("end")}
               aria-label="الفئات التالية"
               className="flex size-9 shrink-0 items-center justify-center rounded-full text-[#003749]/45 transition-colors duration-200 hover:bg-white hover:text-[#003749]"
             >
-              <ChevronLeft className="size-[18px]" />
+              <EndArrow className="size-[18px]" />
             </button>
           ) : null}
         </div>
@@ -180,15 +207,8 @@ export function FleetCategoriesShowcase({ tabs, cities, allowHolidayBooking = fa
           className="inline-flex items-center gap-2 rounded-full border-2 border-[#003749]/18 bg-white px-8 py-3 text-sm font-extrabold text-[#003749] shadow-sm transition-colors hover:border-[#dbb878]/45 hover:bg-[#fdfbf6]"
         >
           {t("viewAll")}
-          <svg viewBox="0 0 24 24" fill="none" className="size-4 rtl:rotate-180" aria-hidden>
-            <path
-              d="M15 18l-6-6 6-6"
-              stroke="currentColor"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+          {/* يشير إلى جهة التقدّم في القراءة: يميناً في LTR ويساراً في RTL. */}
+          <ForwardArrow className="size-4" strokeWidth={2.2} aria-hidden />
         </Link>
       </div>
     </div>

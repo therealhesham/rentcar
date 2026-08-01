@@ -25,13 +25,20 @@ export async function FleetCategories() {
     getBookingWidgetTabFlags(),
   ]);
 
-  const tabs: FleetCategoryTab[] = categories.map((cat) => ({
-    slug: cat.slug,
-    tabLabel: cat.title,
-    cars: cat.models
-      .map((m) => carByModel.get(m.id))
-      .filter((car): car is NonNullable<typeof car> => car != null),
-  }));
+  // فئة بلا سيارات متاحة لا تُعرض إطلاقاً — تبويب فارغ يوهم الزائر بوجود خيار.
+  const tabs: FleetCategoryTab[] = categories
+    .map((cat) => ({
+      slug: cat.slug,
+      tabLabel: cat.title,
+      cars: cat.models
+        .map((m) => carByModel.get(m.id))
+        .filter((car): car is NonNullable<typeof car> => car != null),
+    }))
+    .filter((tab) => tab.cars.length > 0);
+
+  if (tabs.length === 0) {
+    return null;
+  }
 
   return (
     <section
