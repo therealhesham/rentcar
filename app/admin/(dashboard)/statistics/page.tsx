@@ -8,6 +8,7 @@ import { AdminLabelBreakdown } from "@/components/admin/stats/AdminLabelBreakdow
 import { AdminPeriodSelect } from "@/components/admin/stats/AdminPeriodSelect";
 import { AdminTrendPill } from "@/components/admin/stats/AdminTrendPill";
 import { requireAdminPage } from "@/lib/admin-page";
+import { adminScope } from "@/lib/admin-scope";
 import {
   getAdminOverviewStats,
   parseAdminStatsPeriod,
@@ -22,8 +23,7 @@ export default async function AdminStatisticsOverviewPage({ searchParams }: Prop
   const session = await requireAdminPage();
   const sp = await searchParams;
   const days = parseAdminStatsPeriod(sp.days);
-  const branchSlug = session.isSuperAdmin ? null : session.branchSlug;
-  const stats = await getAdminOverviewStats(days, branchSlug);
+  const stats = await getAdminOverviewStats(days, adminScope(session));
   const bookingDelta = trendDeltaPct(stats.bookingsInPeriod, stats.bookingsPrevPeriod);
 
   return (

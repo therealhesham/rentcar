@@ -223,8 +223,6 @@ export function FleetCarCard({
           type="button"
           className="flex items-center gap-1 text-[11px] text-gray-400 transition-colors hover:text-gray-600"
         >
-          <BookmarkIcon />
-          <span className="whitespace-nowrap">{t("saveForLater")}</span>
         </button>
       </div>
     </article>

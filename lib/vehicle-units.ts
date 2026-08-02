@@ -1,3 +1,4 @@
+import { branchWhereForScope, type AdminScope } from "@/lib/admin-scope";
 import { prisma } from "@/lib/prisma";
 
 export type VehicleUnitListItem = {
@@ -44,9 +45,14 @@ export async function getVehicleUnitOptionsForModel(modelId: number, branchId?: 
 }
 
 /** استعلام شامل عن جميع وحدات السيارات بالأسطول لصفحة الإدارة */
-export async function listAllVehicleUnits(): Promise<VehicleUnitListItem[]> {
+export async function listAllVehicleUnits(
+  scope: AdminScope = { kind: "all" },
+): Promise<VehicleUnitListItem[]> {
   try {
+    const branchWhere = branchWhereForScope(scope);
     const rows = await prisma.vehicleUnit.findMany({
+      where:
+        Object.keys(branchWhere).length === 0 ? {} : { branch: branchWhere },
       include: {
         carModel: {
           select: {

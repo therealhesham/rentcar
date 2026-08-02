@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import {
   assertBookingRequestInScope,
+  assertBranchSlugInScope,
   enforceBranchOnFormData,
   requireAdminForAction,
 } from "@/lib/admin-access";
@@ -121,6 +122,12 @@ export async function updateBookingRequest(
   if (!scope.ok) return { ok: false, error: scope.error };
 
   const scopedForm = enforceBranchOnFormData(auth.session, formData);
+  const branchScope = await assertBranchSlugInScope(
+    auth.session,
+    String(scopedForm.get("branch") ?? ""),
+  );
+  if (!branchScope.ok) return { ok: false, error: branchScope.error };
+
   const parsed = parseCommonBookingFieldsFromFormData(scopedForm);
   if (!parsed.ok) {
     return parsed;

@@ -2,9 +2,10 @@ import Link from "next/link";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminVehiclesTable } from "@/components/admin/AdminVehiclesTable";
 import { requireAdminPage } from "@/lib/admin-page";
+import { adminScope } from "@/lib/admin-scope";
 import {
+  listFleetVehiclesAcrossBranches,
   listFleetVehiclesForAdmin,
-  listFleetVehiclesForSuperAdmin,
 } from "@/lib/fleet-vehicle-admin-data";
 import { prisma } from "@/lib/prisma";
 
@@ -12,10 +13,12 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminVehiclesPage() {
   const session = await requireAdminPage();
+  const scope = adminScope(session);
   const branchId = session.branchId;
 
-  if (session.isSuperAdmin) {
-    const { branches, categories, vehicles } = await listFleetVehiclesForSuperAdmin();
+  // نطاق أوسع من فرع واحد (سوبر أدمن، إدارة مركزية، مشرف مدينة) → عمود كمية لكل فرع.
+  if (scope.kind !== "branch") {
+    const { branches, categories, vehicles } = await listFleetVehiclesAcrossBranches(scope);
 
     // Map vehicles to unified shape for the table component
     const mappedVehicles = vehicles.map((v) => ({
@@ -83,7 +86,7 @@ export default async function AdminVehiclesPage() {
           </div>
         ) : (
           <AdminVehiclesTable
-            isSuperAdmin={true}
+            multiBranch={true}
             branches={branches}
             categories={categories}
             vehicles={mappedVehicles}
@@ -93,7 +96,7 @@ export default async function AdminVehiclesPage() {
     );
   }
 
-  // Branch Admin path
+  // موظف فرع واحد: عمود كمية واحد لفرعه
   const [{ categories, vehicles }, branchRow] = await Promise.all([
     listFleetVehiclesForAdmin(branchId),
     branchId
@@ -174,7 +177,7 @@ export default async function AdminVehiclesPage() {
         </div>
       ) : (
         <AdminVehiclesTable
-          isSuperAdmin={false}
+          multiBranch={false}
           branchId={branchId}
           branchName={branchRow?.name}
           branches={[]}

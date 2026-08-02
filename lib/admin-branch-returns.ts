@@ -77,16 +77,16 @@ const MAX_RENTAL_DAYS = 60;
 function bookingWhereForReturnWindow(
   returnStartYmd: string,
   returnEndYmd: string,
-  returnBranchSlug?: string | null,
+  returnBranchWhere?: Prisma.BranchWhereInput | null,
 ): Prisma.BookingRequestWhereInput {
   const earliestPickupYmd = addDaysToYmd(returnStartYmd, -MAX_RENTAL_DAYS);
+  const hasBranchFilter =
+    returnBranchWhere != null && Object.keys(returnBranchWhere).length > 0;
   return {
     kind: "DIRECT",
     carModelId: { not: null },
     NOT: { status: { in: [...NON_BLOCKING_BOOKING_STATUSES] } },
-    ...(returnBranchSlug
-      ? { returnBranch: { slug: returnBranchSlug.trim().toLowerCase() } }
-      : {}),
+    ...(hasBranchFilter ? { returnBranch: returnBranchWhere } : {}),
     pickupDate: { gte: new Date(`${earliestPickupYmd}T00:00:00.000Z`) },
   };
 }
@@ -179,7 +179,8 @@ const returnSelect = {
 /** عدد المرتجعات لكل يوم في شهر (مفتاح YYYY-MM-DD). */
 export async function loadBranchReturnCountsForMonth(input: {
   yearMonth: string;
-  returnBranchSlug?: string | null;
+  /** فلتر فرع الإرجاع (نطاق الموظف و/أو الفرع المختار) — فارغ = كل الفروع. */
+  returnBranchWhere?: Prisma.BranchWhereInput | null;
 }): Promise<Record<string, number>> {
   const dim = daysInCalendarMonth(input.yearMonth);
   const returnStartYmd = `${input.yearMonth}-01`;
@@ -189,7 +190,7 @@ export async function loadBranchReturnCountsForMonth(input: {
     where: bookingWhereForReturnWindow(
       returnStartYmd,
       returnEndYmd,
-      input.returnBranchSlug,
+      input.returnBranchWhere,
     ),
     select: { pickupDate: true, numberOfDays: true },
   });
@@ -205,13 +206,14 @@ export async function loadBranchReturnCountsForMonth(input: {
 
 export async function loadBranchReturnsForDay(input: {
   viewYmd: string;
-  returnBranchSlug?: string | null;
+  /** فلتر فرع الإرجاع (نطاق الموظف و/أو الفرع المختار) — فارغ = كل الفروع. */
+  returnBranchWhere?: Prisma.BranchWhereInput | null;
 }): Promise<BranchReturnRow[]> {
   const rows = await prisma.bookingRequest.findMany({
     where: bookingWhereForReturnWindow(
       input.viewYmd,
       input.viewYmd,
-      input.returnBranchSlug,
+      input.returnBranchWhere,
     ),
     select: returnSelect,
     orderBy: [{ pickupDate: "asc" }, { id: "asc" }],
@@ -221,7 +223,8 @@ export async function loadBranchReturnsForDay(input: {
 
 export async function loadBranchReturnsForMonth(input: {
   yearMonth: string;
-  returnBranchSlug?: string | null;
+  /** فلتر فرع الإرجاع (نطاق الموظف و/أو الفرع المختار) — فارغ = كل الفروع. */
+  returnBranchWhere?: Prisma.BranchWhereInput | null;
 }): Promise<BranchReturnRow[]> {
   const dim = daysInCalendarMonth(input.yearMonth);
   const returnStartYmd = `${input.yearMonth}-01`;
@@ -231,7 +234,7 @@ export async function loadBranchReturnsForMonth(input: {
     where: bookingWhereForReturnWindow(
       returnStartYmd,
       returnEndYmd,
-      input.returnBranchSlug,
+      input.returnBranchWhere,
     ),
     select: returnSelect,
     orderBy: [{ pickupDate: "asc" }, { id: "asc" }],

@@ -9,6 +9,7 @@ import { AdminLabelBreakdown } from "@/components/admin/stats/AdminLabelBreakdow
 import { AdminPeriodSelect } from "@/components/admin/stats/AdminPeriodSelect";
 import { AdminTrendPill } from "@/components/admin/stats/AdminTrendPill";
 import { requireAdminPage } from "@/lib/admin-page";
+import { adminScope, isBranchIdInScope } from "@/lib/admin-scope";
 import {
   formatSar,
   getAdminBranchDetailStats,
@@ -36,8 +37,8 @@ export default async function AdminBranchDetailStatsPage({ params, searchParams 
   const branchId = Number(idRaw);
   if (!Number.isInteger(branchId) || branchId < 1) notFound();
 
-  // موظف الفرع لا يرى تفاصيل فرع آخر
-  if (!session.isSuperAdmin && session.branchId !== branchId) {
+  // فرع خارج النطاق (فرع آخر، أو فرع خارج مدينة المشرف) لا تُعرض تفاصيله
+  if (!(await isBranchIdInScope(adminScope(session), branchId))) {
     redirect("/admin/statistics/branches");
   }
 

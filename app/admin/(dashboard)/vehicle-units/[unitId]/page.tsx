@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { requireAdminPage } from "@/lib/admin-page";
-import { prisma } from "@/lib/prisma";
+import { adminScope, listScopedBranches } from "@/lib/admin-scope";
 import { getVehicleLog } from "@/lib/vehicle-log";
 import { VehicleLogView } from "./VehicleLogView";
 
@@ -12,7 +12,7 @@ export default async function VehicleLogPage({
 }: {
   params: Promise<{ unitId: string }>;
 }) {
-  await requireAdminPage();
+  const scope = adminScope(await requireAdminPage());
 
   const { unitId } = await params;
   const id = Number(unitId);
@@ -20,11 +20,7 @@ export default async function VehicleLogPage({
 
   const [log, branches] = await Promise.all([
     getVehicleLog(id),
-    prisma.branch.findMany({
-      where: { isActive: true },
-      select: { id: true, name: true },
-      orderBy: { name: "asc" },
-    }),
+    listScopedBranches(scope),
   ]);
 
   if (!log) notFound();

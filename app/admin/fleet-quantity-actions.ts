@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdminForAction } from "@/lib/admin-access";
+import { adminScope, scopedBranchIds } from "@/lib/admin-scope";
 import { buildBranchResolver } from "@/lib/branch-name-resolver";
 import {
   MAX_FLEET_QUANTITY,
@@ -153,8 +154,8 @@ function lookupModel(
 }
 
 type ResolveContext = {
-  /** null = مدير نظام (كل الفروع)؛ رقم = موظف محصور بفرعه. */
-  scopedBranchId: number | null;
+  /** null = كل الفروع (سوبر أدمن أو إدارة مركزية)؛ مصفوفة = الفروع المسموحة للحساب. */
+  allowedBranchIds: number[] | null;
 };
 
 async function resolveAuth(): Promise<
@@ -162,11 +163,11 @@ async function resolveAuth(): Promise<
 > {
   const auth = await requireAdminForAction();
   if (!auth.ok) return { ok: false, error: auth.error };
-  if (auth.session.isSuperAdmin) return { ok: true, ctx: { scopedBranchId: null } };
-  if (!auth.session.branchId) {
-    return { ok: false, error: "حسابك غير مرتبط بفرع." };
+  const allowedBranchIds = await scopedBranchIds(adminScope(auth.session));
+  if (allowedBranchIds != null && allowedBranchIds.length === 0) {
+    return { ok: false, error: "حسابك غير مرتبط بأي فرع." };
   }
-  return { ok: true, ctx: { scopedBranchId: auth.session.branchId } };
+  return { ok: true, ctx: { allowedBranchIds } };
 }
 
 /**
@@ -189,15 +190,21 @@ async function resolveQuantityRows(
 
   const [resolveBranch, modelIndex, branches] = await Promise.all([
     buildBranchResolver(
-      ctx.scopedBranchId ? { allowedBranchIds: [ctx.scopedBranchId] } : undefined,
+      ctx.allowedBranchIds ? { allowedBranchIds: ctx.allowedBranchIds } : undefined,
     ),
     buildModelIndex(),
     prisma.branch.findMany({ select: { id: true, name: true } }),
   ]);
   const branchNames = new Map(branches.map((b) => [b.id, b.name]));
 
-  const defaultBranchId =
-    ctx.scopedBranchId ?? (fallbackBranchId && branchNames.has(fallbackBranchId) ? fallbackBranchId : null);
+  // فرع واحد مسموح ⇒ هو الافتراضي؛ غير ذلك يُستخدم الفرع المختار في الواجهة إن كان مسموحاً.
+  const onlyAllowedBranchId =
+    ctx.allowedBranchIds?.length === 1 ? ctx.allowedBranchIds[0]! : null;
+  const fallbackAllowed =
+    fallbackBranchId != null &&
+    branchNames.has(fallbackBranchId) &&
+    (ctx.allowedBranchIds == null || ctx.allowedBranchIds.includes(fallbackBranchId));
+  const defaultBranchId = onlyAllowedBranchId ?? (fallbackAllowed ? fallbackBranchId : null);
 
   // تجميع حسب (موديل، فرع): ملف فيه صف لكل سيارة يُجمَع بدل أن يتغلّب آخر صف بصمت.
   type Agg = { modelId: number; branchId: number; quantity: number; firstRow: number; mergedRows: number };
@@ -278,7 +285,7 @@ async function resolveQuantityRows(
       modelId = found.modelId;
     }
 
-    if (ctx.scopedBranchId != null && branchId !== ctx.scopedBranchId) {
+    if (ctx.allowedBranchIds != null && !ctx.allowedBranchIds.includes(branchId)) {
       result.errors.push({
         row: rowNum,
         message: `لا تملك صلاحية تعديل كميات فرع «${branchNames.get(branchId) ?? branchId}»`,

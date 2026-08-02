@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import ExcelJS from "exceljs";
 import { getAdminSession } from "@/lib/admin-auth";
+import { adminScope, fleetWhereForScope, scopedBranchIds } from "@/lib/admin-scope";
 import { FLEET_QUANTITY_COLUMNS, fleetRowKey } from "@/lib/fleet-quantity-import";
 import { prisma } from "@/lib/prisma";
 
@@ -28,20 +29,31 @@ export async function GET(req: NextRequest) {
     return new Response("Forbidden", { status: 403 });
   }
 
-  // موظف الفرع لا يرى أو يعدّل غير فرعه.
-  let branchId: number | null = session.isSuperAdmin ? null : session.branchId ?? null;
-  if (session.isSuperAdmin) {
-    const raw = Number(req.nextUrl.searchParams.get("branch"));
-    if (Number.isInteger(raw) && raw > 0) branchId = raw;
+  // الفروع المسموحة للحساب: null = كل الفروع.
+  const scope = adminScope(session);
+  const allowedBranchIds = await scopedBranchIds(scope);
+  if (allowedBranchIds != null && allowedBranchIds.length === 0) {
+    return new Response("حسابك غير مرتبط بأي فرع.", { status: 403 });
   }
-  if (!session.isSuperAdmin && branchId == null) {
-    return new Response("حسابك غير مرتبط بفرع.", { status: 403 });
+
+  // فرع واحد مسموح ⇒ القالب مقفول عليه؛ غير ذلك يُقبل الفرع المطلوب إن كان ضمن النطاق.
+  let branchId: number | null =
+    allowedBranchIds?.length === 1 ? allowedBranchIds[0]! : null;
+  if (branchId == null) {
+    const raw = Number(req.nextUrl.searchParams.get("branch"));
+    if (Number.isInteger(raw) && raw > 0) {
+      if (allowedBranchIds != null && !allowedBranchIds.includes(raw)) {
+        return new Response("الفرع خارج نطاق حسابك.", { status: 403 });
+      }
+      branchId = raw;
+    }
   }
 
   const rows: TemplateRow[] = [];
 
   if (branchId == null) {
     const fleet = await prisma.fleet.findMany({
+      where: fleetWhereForScope(scope),
       select: {
         modelId: true,
         branchId: true,

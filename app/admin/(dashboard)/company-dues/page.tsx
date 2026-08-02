@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireAdminPage } from "@/lib/admin-page";
+import { adminScope } from "@/lib/admin-scope";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminCard } from "@/components/admin/AdminCard";
 import { AdminStatCard } from "@/components/admin/AdminStatCard";
@@ -74,7 +75,7 @@ type Props = { searchParams: Promise<{ type?: string }> };
 
 export default async function CompanyDuesPage({ searchParams }: Props) {
   const session = await requireAdminPage();
-  const scope = { isSuperAdmin: session.isSuperAdmin, branchId: session.branchId };
+  const scope = adminScope(session);
   const sp = await searchParams;
   const filter = parseFilter(sp.type);
 

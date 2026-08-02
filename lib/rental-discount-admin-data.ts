@@ -1,3 +1,4 @@
+import { branchWhereForScope, type AdminScope } from "@/lib/admin-scope";
 import { prisma } from "@/lib/prisma";
 
 export type RentalDiscountAdminRow = {
@@ -17,8 +18,16 @@ export type RentalDiscountAdminRow = {
   sortOrder: number;
 };
 
-export async function getRentalDiscountsForAdmin(): Promise<RentalDiscountAdminRow[]> {
+/** الخصومات داخل النطاق: خصومات فروع النطاق + الخصومات العامة (branchId = null) التي تسري عليها. */
+export async function getRentalDiscountsForAdmin(
+  scope: AdminScope,
+): Promise<RentalDiscountAdminRow[]> {
+  const branchWhere = branchWhereForScope(scope);
   const rows = await prisma.rentalDiscount.findMany({
+    where:
+      Object.keys(branchWhere).length === 0
+        ? {}
+        : { OR: [{ branchId: null }, { branch: branchWhere }] },
     orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
     include: {
       brand: { select: { name: true } },
@@ -49,9 +58,10 @@ export async function getRentalDiscountsForAdmin(): Promise<RentalDiscountAdminR
 
 export async function getRentalDiscountForAdminEdit(
   id: number,
+  scope: AdminScope,
 ): Promise<RentalDiscountAdminRow | null> {
   if (!Number.isInteger(id) || id < 1) return null;
-  const rows = await getRentalDiscountsForAdmin();
+  const rows = await getRentalDiscountsForAdmin(scope);
   return rows.find((r) => r.id === id) ?? null;
 }
 
@@ -78,9 +88,9 @@ export async function getCarModelsForDiscountSelect(): Promise<DiscountModelOpti
   });
 }
 
-export async function getBranchesForDiscountSelect() {
+export async function getBranchesForDiscountSelect(scope: AdminScope) {
   return prisma.branch.findMany({
-    where: { isActive: true },
+    where: { ...branchWhereForScope(scope), isActive: true },
     select: { id: true, name: true, slug: true },
     orderBy: { sortOrder: "asc" },
   });

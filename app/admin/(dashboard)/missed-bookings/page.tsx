@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { CalendarX2, Clock, Car } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
-import { adminBranchDisplayName } from "@/lib/admin-access";
+import { adminScope, scopeLabel } from "@/lib/admin-scope";
 import { requireAdminPage } from "@/lib/admin-page";
 import {
   MISSED_PICKUP_GRACE_HOURS,
@@ -56,9 +56,7 @@ export default async function AdminMissedBookingsPage() {
   const now = new Date();
   const rows = await loadMissedBookings(session, {}, 200, now);
 
-  const branchHint = session.isSuperAdmin
-    ? "كل الفروع"
-    : `فرع ${adminBranchDisplayName(session)}`;
+  const branchHint = scopeLabel(adminScope(session));
 
   return (
     <>

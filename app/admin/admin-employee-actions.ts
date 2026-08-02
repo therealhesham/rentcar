@@ -6,6 +6,20 @@ import { hashPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
 import { isKnownAdminPermission } from "@/lib/admin-permissions";
 
+/** يقرأ حقل `jobRoleId` من الفورم ويتحقق من وجود الوظيفة — القيمة الفارغة تعني «بلا وظيفة». */
+async function resolveJobRoleId(
+  formData: FormData,
+): Promise<{ ok: true; value: number | null } | { ok: false; error: string }> {
+  const raw = Number(formData.get("jobRoleId"));
+  if (!Number.isInteger(raw) || raw < 1) return { ok: true, value: null };
+  const role = await prisma.adminJobRole.findUnique({
+    where: { id: raw },
+    select: { id: true },
+  });
+  if (!role) return { ok: false, error: "الوظيفة غير موجودة." };
+  return { ok: true, value: role.id };
+}
+
 export async function createAdminEmployee(
   _prev: { ok: boolean; error?: string } | null,
   formData: FormData,
@@ -68,6 +82,9 @@ export async function createAdminEmployee(
     finalCityId = city.id;
   }
 
+  const jobRole = await resolveJobRoleId(formData);
+  if (!jobRole.ok) return { ok: false, error: jobRole.error };
+
   const exists = await prisma.adminEmployee.findUnique({ where: { email } });
   if (exists) {
     return { ok: false, error: "هذا البريد مستخدم لحساب إداري آخر." };
@@ -80,6 +97,7 @@ export async function createAdminEmployee(
       name: name || null,
       branchId: finalBranchId,
       cityId: finalCityId,
+      jobRoleId: jobRole.value,
       isSuperAdmin: false,
       isActive: true,
       permissionsJson: JSON.stringify(permissions),
@@ -157,9 +175,12 @@ export async function updateAdminEmployeePermissions(
     return { ok: false, error: "صلاحيات مدير النظام غير قابلة للتعديل من هنا." };
   }
 
+  const jobRole = await resolveJobRoleId(formData);
+  if (!jobRole.ok) return { ok: false, error: jobRole.error };
+
   await prisma.adminEmployee.update({
     where: { id },
-    data: { permissionsJson: JSON.stringify(permissions) },
+    data: { permissionsJson: JSON.stringify(permissions), jobRoleId: jobRole.value },
   });
 
   revalidatePath("/admin/employees");

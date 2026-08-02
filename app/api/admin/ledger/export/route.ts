@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import ExcelJS from "exceljs";
 import { getAdminSession } from "@/lib/admin-auth";
+import { adminScope, isBranchIdInScope } from "@/lib/admin-scope";
 import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
 import {
   getPaymentTransactions,
@@ -33,7 +34,7 @@ export async function GET(req: NextRequest) {
     return new Response("Forbidden", { status: 403 });
   }
 
-  const scope = { isSuperAdmin: session.isSuperAdmin, branchId: session.branchId };
+  const scope = adminScope(session);
   const p = req.nextUrl.searchParams;
   const { filter, from, to, branchId } = ledgerFiltersFromParams({
     dir: p.get("dir") ?? undefined,
@@ -43,11 +44,15 @@ export async function GET(req: NextRequest) {
     branch: p.get("branch") ?? undefined,
   });
 
+  // فرع من الـ query خارج النطاق يُتجاهل — التصدير يبقى محصوراً بنطاق الحساب.
+  const scopedBranchId =
+    branchId != null && (await isBranchIdInScope(scope, branchId)) ? branchId : null;
+
   const rows = await getPaymentTransactions(scope, {
     filter,
     from,
     to,
-    branchId,
+    branchId: scopedBranchId,
     limit: 5000,
   });
 

@@ -87,7 +87,8 @@ export type AdminVehicleRow = {
 };
 
 type Props = {
-  isSuperAdmin: boolean;
+  /** عرض متعدد الفروع (عمود لكل فرع) بدل عمود مخزون فرع واحد. */
+  multiBranch: boolean;
   branchId?: number | null;
   branchName?: string | null;
   branches: { id: number; name: string; slug: string }[];
@@ -96,7 +97,7 @@ type Props = {
 };
 
 export function AdminVehiclesTable({
-  isSuperAdmin,
+  multiBranch,
   branchId,
   branchName,
   branches,
@@ -208,9 +209,9 @@ export function AdminVehiclesTable({
                 <th className="px-4 py-3.5 text-start text-xs font-bold uppercase tracking-wider">المواصفات</th>
                 <th className="px-4 py-3.5 text-start text-xs font-bold uppercase tracking-wider">السعر اليومي</th>
                 <th className="px-4 py-3.5 text-center text-xs font-bold uppercase tracking-wider">
-                  {isSuperAdmin ? "إجمالي الأسطول" : "المخزون بالفرع"}
+                  {multiBranch ? "إجمالي الأسطول" : "المخزون بالفرع"}
                 </th>
-                {!isSuperAdmin && branchName && (
+                {!multiBranch && branchName && (
                   <th className="px-4 py-3.5 text-center text-xs font-bold uppercase tracking-wider">الحجوزات النشطة</th>
                 )}
                 <th className="px-4 py-3.5 text-center text-xs font-bold uppercase tracking-wider">الإجراءات</th>
@@ -221,7 +222,7 @@ export function AdminVehiclesTable({
               {filteredVehicles.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={isSuperAdmin ? 6 : 7}
+                    colSpan={multiBranch ? 6 : 7}
                     className="px-6 py-12 text-center text-on-surface-variant"
                   >
                     <div className="flex flex-col items-center justify-center gap-2">
@@ -311,7 +312,7 @@ export function AdminVehiclesTable({
                         </td>
 
                         {/* 6. Active Bookings (Branch Admins only) */}
-                        {!isSuperAdmin && branchName && (
+                        {!multiBranch && branchName && (
                           <td className="px-4 py-3 text-center font-bold tabular-nums text-on-surface">
                             {v.bookingCount ?? 0}
                           </td>
@@ -329,7 +330,7 @@ export function AdminVehiclesTable({
                                   : "bg-surface-container-lowest border-outline-variant text-on-surface-variant hover:bg-surface-container-low"
                               }`}
                             >
-                              {isSuperAdmin ? "توزيع المخزون" : "تعديل المخزون والمواصفات"}
+                              {multiBranch ? "توزيع المخزون" : "تعديل المخزون والمواصفات"}
                               <ChevronDown
                                 className={`h-4 w-4 transition-transform duration-200 ${
                                   isExpanded ? "rotate-180 text-primary" : ""
@@ -351,7 +352,7 @@ export function AdminVehiclesTable({
                       {isExpanded && (
                         <tr className="bg-surface-container-lowest/60">
                           <td
-                            colSpan={isSuperAdmin ? 6 : 7}
+                            colSpan={multiBranch ? 6 : 7}
                             className="p-0 border-b border-outline-variant/30"
                           >
                             <div className="border-t border-outline-variant/15 bg-surface-container-lowest px-6 py-5">
@@ -359,12 +360,12 @@ export function AdminVehiclesTable({
                                 {/* RIGHT SIDE: Branch Quantities Management */}
                                 <div className="space-y-3.5">
                                   <h4 className="text-xs font-extrabold uppercase tracking-wider text-on-surface-variant/80 border-b border-outline-variant/20 pb-2">
-                                    {isSuperAdmin
+                                    {multiBranch
                                       ? "إدارة كميات المركبة في الفروع النشطة"
                                       : `إدارة الكمية في فرعك (${branchName})`}
                                   </h4>
 
-                                  {isSuperAdmin ? (
+                                  {multiBranch ? (
                                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                                       {v.branchQuantities && v.branchQuantities.length > 0 ? (
                                         v.branchQuantities.map((bq) => {

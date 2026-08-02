@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import { bookingWhereForScope, type AdminScope } from "@/lib/admin-scope";
 import { computeCheckoutTotals } from "@/lib/booking-checkout-pricing";
 import {
   parseBookingPricingSnapshot,
@@ -13,20 +14,17 @@ import { prisma } from "@/lib/prisma";
  *   • MODIFICATION_BALANCE: رصيد على حجز مدفوع (فرق تمديد/تعديل أو غرامة تأخير) يُحصَّل عند الفرع.
  * - payables (مستحقات على الشركة): مبالغ مستحقة للعملاء لم تُسوَّ بعد (refundDueToCustomerSar).
  *
- * النطاق (scope) يحدّ النتائج بفرع الموظف؛ سوبر أدمن يرى الكل.
+ * النطاق (scope) يحدّ النتائج بفرع الموظف أو مدينته؛ سوبر أدمن والإدارة المركزية يرون الكل.
  */
 
-export type DuesScope = { isSuperAdmin: boolean; branchId: number | null };
+export type DuesScope = AdminScope;
 
 /** الحالات التي يسقط عندها الاستحقاق (لا يُحتسب). */
 const RECEIVABLE_TERMINAL_STATUSES = ["CANCELLED", "REJECTED"];
 
-/** شرط تحديد الفرع — مطابق لبقية صفحات الإدارة (استلام أو إرجاع في فرع الموظف). */
+/** شرط تحديد النطاق — مطابق لبقية صفحات الإدارة (استلام أو إرجاع داخل نطاق الموظف). */
 function scopeWhere(scope: DuesScope): Prisma.BookingRequestWhereInput {
-  if (scope.isSuperAdmin || scope.branchId == null) return {};
-  return {
-    OR: [{ branchId: scope.branchId }, { returnBranchId: scope.branchId }],
-  };
+  return bookingWhereForScope(scope);
 }
 
 /** رصيد على حجز مدفوع (فرق تمديد/تعديل/غرامة) — الفئة الكلاسيكية. */

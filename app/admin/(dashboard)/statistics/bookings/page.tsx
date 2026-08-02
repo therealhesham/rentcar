@@ -6,6 +6,7 @@ import { AdminBarChart } from "@/components/admin/stats/AdminBarChart";
 import { AdminLabelBreakdown } from "@/components/admin/stats/AdminLabelBreakdown";
 import { AdminPeriodSelect } from "@/components/admin/stats/AdminPeriodSelect";
 import { requireAdminPage } from "@/lib/admin-page";
+import { adminScope } from "@/lib/admin-scope";
 import {
   getAdminBookingStats,
   parseAdminStatsPeriod,
@@ -19,10 +20,7 @@ export default async function AdminStatisticsBookingsPage({ searchParams }: Prop
   const session = await requireAdminPage();
   const sp = await searchParams;
   const days = parseAdminStatsPeriod(sp.days);
-  const stats = await getAdminBookingStats(
-    days,
-    session.isSuperAdmin ? null : session.branchSlug,
-  );
+  const stats = await getAdminBookingStats(days, adminScope(session));
 
   return (
     <>

@@ -1,5 +1,10 @@
 import "server-only";
 import type { Prisma } from "@prisma/client";
+import {
+  bookingWhereForScope,
+  scopeAllowsMultipleBranches,
+  type AdminScope,
+} from "@/lib/admin-scope";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -86,8 +91,8 @@ export async function recordPaymentTransaction(
 
 // ─── القراءة (لصفحة دفتر الحركات في لوحة الإدارة) ──────────────────────────────
 
-/** النطاق يحدّ النتائج بفرع الموظف (استلام أو إرجاع)؛ سوبر أدمن يرى الكل. */
-export type PaymentTxnScope = { isSuperAdmin: boolean; branchId: number | null };
+/** النطاق يحدّ النتائج بفرع الموظف أو مدينته (استلام أو إرجاع)؛ سوبر أدمن يرى الكل. */
+export type PaymentTxnScope = AdminScope;
 
 /** تصفية القائمة حسب الاتجاه. */
 export type PaymentTxnDirectionFilter = "all" | "credit" | "debit";
@@ -96,14 +101,11 @@ function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
-/** شرط تحديد الفرع عبر الحجز المرتبط — مطابق لمنطق بقية صفحات الإدارة. */
+/** شرط تحديد النطاق عبر الحجز المرتبط — مطابق لمنطق بقية صفحات الإدارة. */
 function txnScopeWhere(scope: PaymentTxnScope): Prisma.PaymentTransactionWhereInput {
-  if (scope.isSuperAdmin || scope.branchId == null) return {};
-  return {
-    booking: {
-      OR: [{ branchId: scope.branchId }, { returnBranchId: scope.branchId }],
-    },
-  };
+  const booking = bookingWhereForScope(scope);
+  if (Object.keys(booking).length === 0) return {};
+  return { booking };
 }
 
 export type PaymentTxnListItem = Prisma.PaymentTransactionGetPayload<{
@@ -198,8 +200,13 @@ function buildTxnWhere(
     if (f.from) where.createdAt.gte = f.from;
     if (f.to) where.createdAt.lte = f.to;
   }
-  if (f.branchId != null && (scope.isSuperAdmin || scope.branchId == null)) {
-    where.booking = { OR: [{ branchId: f.branchId }, { returnBranchId: f.branchId }] };
+  // فلتر فرع اختياري فوق النطاق (لا يوسّعه): موظف الفرع مقيّد أصلاً، ومشرف المدينة يضيّق
+  // داخل مدينته — لذلك نُضيف الشرط بـ AND بدل استبدال شرط النطاق.
+  if (f.branchId != null && scopeAllowsMultipleBranches(scope)) {
+    const branchFilter: Prisma.BookingRequestWhereInput = {
+      OR: [{ branchId: f.branchId }, { returnBranchId: f.branchId }],
+    };
+    where.booking = where.booking ? { AND: [where.booking, branchFilter] } : branchFilter;
   }
   return where;
 }

@@ -1,4 +1,5 @@
 import type { FuelType, Transmission } from "@prisma/client";
+import { branchWhereForScope, type AdminScope } from "@/lib/admin-scope";
 import { prisma } from "@/lib/prisma";
 
 export type AdminFleetBranchColumn = {
@@ -92,14 +93,16 @@ export async function listFleetVehiclesForAdmin(
   return { categories, vehicles: mapped };
 }
 
-/** سوبر أدمن: كل الموديلات + كمية كل فرع */
-export async function listFleetVehiclesForSuperAdmin(): Promise<{
+/** عرض متعدد الفروع: كل الموديلات + عمود كمية لكل فرع داخل النطاق (سوبر أدمن، إدارة مركزية، مشرف مدينة). */
+export async function listFleetVehiclesAcrossBranches(
+  scope: AdminScope,
+): Promise<{
   branches: AdminFleetBranchColumn[];
   categories: { id: number; title: string }[];
   vehicles: AdminFleetVehicleSuperRow[];
 }> {
   const branches = await prisma.branch.findMany({
-    where: { isActive: true },
+    where: { ...branchWhereForScope(scope), isActive: true },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     select: { id: true, name: true, slug: true },
   });

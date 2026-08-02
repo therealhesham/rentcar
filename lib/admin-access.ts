@@ -3,14 +3,13 @@ import type { AdminSession } from "@/lib/admin-auth";
 import { getAdminSession } from "@/lib/admin-auth";
 import { ADMIN_NAV_GROUPS, type AdminNavGroup } from "@/lib/admin-nav";
 import type { AdminPermission } from "@/lib/admin-permissions";
-import { bookingInBranchScope } from "@/lib/booking-branches";
+import {
+  adminScope,
+  andScope,
+  bookingWhereForScope,
+  isBranchSlugInScope,
+} from "@/lib/admin-scope";
 import { prisma } from "@/lib/prisma";
-
-const BRANCH_NAV_GROUP_IDS = new Set(["main", "bookings", "external"]);
-
-const BRANCH_EXTRA_NAV: AdminNavGroup["items"] = [
-  { href: "/admin/vehicles", label: "المركبات", icon: "car" },
-];
 
 export function getAdminNavGroupsForSession(session: AdminSession): AdminNavGroup[] {
   if (session.isSuperAdmin) return ADMIN_NAV_GROUPS;
@@ -31,18 +30,11 @@ export function getAdminNavGroupsForSession(session: AdminSession): AdminNavGrou
   }).filter((group) => group.items.length > 0);
 }
 
-export { adminBranchDisplayName } from "@/lib/admin-branch-display";
-
 export function bookingBranchWhere(
   session: AdminSession,
   extra?: Prisma.BookingRequestWhereInput,
 ): Prisma.BookingRequestWhereInput {
-  const base: Prisma.BookingRequestWhereInput =
-    session.isSuperAdmin || !session.branchSlug
-      ? {}
-      : bookingInBranchScope(session.branchSlug);
-  if (!extra || Object.keys(extra).length === 0) return base;
-  return { AND: [base, extra] };
+  return andScope(bookingWhereForScope(adminScope(session)), extra);
 }
 
 export async function requireAdminForAction(): Promise<
@@ -80,40 +72,64 @@ export async function assertBookingRequestInScope(
   session: AdminSession,
   bookingRequestId: number,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  if (session.isSuperAdmin) return { ok: true };
-  if (!session.branchSlug) {
-    // If they have no branchSlug, they are a headquarters employee.
-    // They are allowed to see all branches.
-    return { ok: true };
-  }
+  const scope = adminScope(session);
+  // موظف الإدارة المركزية (بلا فرع وبلا مدينة) نطاقه كل الفروع — لا فحص إضافي.
+  if (scope.kind === "all") return { ok: true };
+
   const row = await prisma.bookingRequest.findUnique({
     where: { id: bookingRequestId },
     select: {
-      branchId: true,
-      returnBranchId: true,
-      pickupBranch: { select: { slug: true } },
-      returnBranch: { select: { slug: true } },
+      pickupBranch: { select: { id: true, slug: true, cityId: true } },
+      returnBranch: { select: { id: true, slug: true, cityId: true } },
     },
   });
   if (!row) return { ok: false, error: "الطلب غير موجود." };
-  const slug = session.branchSlug.trim().toLowerCase();
-  const pickup = row.pickupBranch?.slug?.toLowerCase();
-  const ret = row.returnBranch?.slug?.toLowerCase();
-  if (pickup !== slug && ret !== slug) {
-    return { ok: false, error: "لا يمكنك تعديل حجز فرع آخر." };
+
+  const sides = [row.pickupBranch, row.returnBranch];
+  if (scope.kind === "city") {
+    if (sides.some((b) => b?.cityId === scope.cityId)) return { ok: true };
+    return { ok: false, error: "لا يمكنك تعديل حجز خارج مدينتك." };
   }
+
+  const matches =
+    scope.branchId != null
+      ? sides.some((b) => b?.id === scope.branchId)
+      : sides.some(
+          (b) => b?.slug.toLowerCase() === scope.branchSlug?.trim().toLowerCase(),
+        );
+  if (!matches) return { ok: false, error: "لا يمكنك تعديل حجز فرع آخر." };
   return { ok: true };
 }
 
+/**
+ * يتحقق أن الفرع المُرسل في الفورم داخل نطاق الموظف. لازم لنطاق المدينة تحديداً: هناك
+ * لا نفرض فرعاً بعينه (المشرف يختار من فروع مدينته) فالتحقق هو الحاجز الوحيد.
+ */
+export async function assertBranchSlugInScope(
+  session: AdminSession,
+  branchSlug: string | null | undefined,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const scope = adminScope(session);
+  if (scope.kind === "all") return { ok: true };
+  if (!branchSlug?.trim()) return { ok: false, error: "اختر فرعاً." };
+  if (await isBranchSlugInScope(scope, branchSlug)) return { ok: true };
+  return { ok: false, error: "الفرع المختار خارج نطاق حسابك." };
+}
+
+/**
+ * يثبّت حقل `branch` على فرع الموظف. في نطاق المدينة أو كل الفروع لا يوجد فرع واحد نفرضه —
+ * الفورم يختار، والتحقق يتم عبر assertBranchSlugInScope.
+ */
 export function enforceBranchOnFormData(
   session: AdminSession,
   formData: FormData,
 ): FormData {
-  if (session.isSuperAdmin || !session.branchSlug) return formData;
+  const scope = adminScope(session);
+  if (scope.kind !== "branch" || !scope.branchSlug) return formData;
   const copy = new FormData();
   for (const [key, value] of formData.entries()) {
     copy.append(key, value);
   }
-  copy.set("branch", session.branchSlug);
+  copy.set("branch", scope.branchSlug);
   return copy;
 }

@@ -1,23 +1,20 @@
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { requireAdminPage } from "@/lib/admin-page";
+import { adminScope, listScopedBranches } from "@/lib/admin-scope";
 import { prisma } from "@/lib/prisma";
 import { VehicleUnitImportClient } from "./VehicleUnitImportClient";
 
 export const dynamic = "force-dynamic";
 
 export default async function VehicleUnitImportPage() {
-  await requireAdminPage();
+  const scope = adminScope(await requireAdminPage());
 
   const [modelsRaw, branches] = await Promise.all([
     prisma.carModel.findMany({
       include: { brand: { select: { name: true } } },
       orderBy: [{ brand: { name: "asc" } }, { name: "asc" }, { year: "asc" }],
     }),
-    prisma.branch.findMany({
-      where: { isActive: true },
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-      select: { id: true, name: true },
-    }),
+    listScopedBranches(scope),
   ]);
 
   const carModels = modelsRaw.map((m) => ({

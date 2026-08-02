@@ -3,12 +3,15 @@ import { AdminCard } from "@/components/admin/AdminCard";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminStatCard } from "@/components/admin/AdminStatCard";
 import { AdminLabelBreakdown } from "@/components/admin/stats/AdminLabelBreakdown";
+import { requireAdminPage } from "@/lib/admin-page";
+import { adminScope } from "@/lib/admin-scope";
 import { getAdminFleetStats } from "@/lib/admin-statistics";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminStatisticsFleetPage() {
-  const stats = await getAdminFleetStats();
+  const session = await requireAdminPage();
+  const stats = await getAdminFleetStats(adminScope(session));
 
   return (
     <>

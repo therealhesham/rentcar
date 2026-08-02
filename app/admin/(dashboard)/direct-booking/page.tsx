@@ -7,8 +7,13 @@ import {
   Users,
 } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
-import { adminBranchDisplayName } from "@/lib/admin-access";
 import { requireAdminPage } from "@/lib/admin-page";
+import {
+  adminScope,
+  fleetWhereForScope,
+  listScopedBranches,
+  scopeLabel,
+} from "@/lib/admin-scope";
 import { prisma } from "@/lib/prisma";
 import { AdminDirectBookingForm } from "./AdminDirectBookingForm";
 
@@ -17,9 +22,9 @@ export const dynamic = "force-dynamic";
 export default async function AdminDirectBookingPage() {
   const session = await requireAdminPage();
 
-  const fleetAtBranch = session.branchId
-    ? { branchId: session.branchId, quantity: { gt: 0 } }
-    : { quantity: { gt: 0 } };
+  const scope = adminScope(session);
+  // الموديلات المعروضة = ما له كمية داخل نطاق الحساب (فرعه، أو أي فرع في مدينته، أو الكل).
+  const fleetAtBranch = { ...fleetWhereForScope(scope), quantity: { gt: 0 } };
 
   const [brandsRaw, branches] = await Promise.all([
     prisma.brand
@@ -36,11 +41,7 @@ export default async function AdminDirectBookingPage() {
         },
       })
       .catch(() => []),
-    prisma.branch.findMany({
-      where: { isActive: true },
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-      select: { slug: true, name: true },
-    }),
+    listScopedBranches(scope),
   ]);
 
   const brands = brandsRaw
@@ -55,9 +56,7 @@ export default async function AdminDirectBookingPage() {
     .filter((b) => b.models.length > 0);
 
   const bookableModelCount = brands.reduce((n, b) => n + b.models.length, 0);
-  const branchName = session.isSuperAdmin
-    ? null
-    : adminBranchDisplayName(session) || session.branchSlug;
+  const branchName = scope.kind === "all" ? null : scopeLabel(scope);
 
   return (
     <>
@@ -93,7 +92,7 @@ export default async function AdminDirectBookingPage() {
           <AdminDirectBookingForm
             brands={brands}
             branches={branches}
-            lockedBranchSlug={session.isSuperAdmin ? null : session.branchSlug}
+            lockedBranchSlug={scope.kind === "branch" ? scope.branchSlug : null}
             lockedBranchName={branchName}
           />
         </div>

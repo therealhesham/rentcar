@@ -12,7 +12,11 @@ export default async function AdminStatisticsLayout({
 
   return (
     <div className="pb-10">
-      <AdminStatisticsNav isSuperAdmin={session.isSuperAdmin} />
+      <AdminStatisticsNav
+        showFleet={
+          session.isSuperAdmin || session.permissions.includes("/admin/statistics/fleet")
+        }
+      />
       {children}
     </div>
   );

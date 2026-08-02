@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdminForAction } from "@/lib/admin-access";
+import { adminScope, isBranchIdInScope } from "@/lib/admin-scope";
 import { prisma } from "@/lib/prisma";
 
 function revalidateAll() {
@@ -30,7 +31,7 @@ export async function updateFleetVisibility(
   });
   if (!fleet) return { ok: false, error: "السجل غير موجود." };
 
-  if (!auth.session.isSuperAdmin && auth.session.branchId !== fleet.branchId) {
+  if (!(await isBranchIdInScope(adminScope(auth.session), fleet.branchId))) {
     return { ok: false, error: "لا تملك صلاحية تعديل هذا الفرع." };
   }
 
@@ -67,7 +68,7 @@ export async function updateFleetDisplayOrder(
   });
   if (!fleetRow) return { ok: false, error: "السجل غير موجود." };
 
-  if (!auth.session.isSuperAdmin && auth.session.branchId !== fleetRow.branchId) {
+  if (!(await isBranchIdInScope(adminScope(auth.session), fleetRow.branchId))) {
     return { ok: false, error: "لا تملك صلاحية تعديل هذا الفرع." };
   }
 

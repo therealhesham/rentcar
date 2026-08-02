@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireAdminPage } from "@/lib/admin-page";
+import { adminScope, fleetWhereForScope } from "@/lib/admin-scope";
 import { prisma } from "@/lib/prisma";
 import { NON_BLOCKING_BOOKING_STATUSES } from "@/lib/direct-booking";
 import { FleetVisibilityClient } from "./FleetVisibilityClient";
@@ -10,15 +11,13 @@ export const dynamic = "force-dynamic";
 export default async function FleetVisibilityPage() {
   const session = await requireAdminPage();
 
-  const branchFilter = session.isSuperAdmin
-    ? {}
-    : { branch: { id: session.branchId ?? -1 } };
+  const scope = adminScope(session);
 
-  // جلب كل سجلات الأسطول مرتّبة حسب الفرع ثم الترتيب
+  // سجلات الأسطول داخل النطاق مرتّبة حسب الفرع ثم الترتيب
   const fleetRows = await prisma.fleet.findMany({
     where: {
       quantity: { gt: 0 },
-      ...branchFilter,
+      ...fleetWhereForScope(scope),
     },
     select: {
       id: true,

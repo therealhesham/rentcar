@@ -1,12 +1,16 @@
 import Link from "next/link";
 import { requireAdminPage } from "@/lib/admin-page";
+import {
+  adminScope,
+  listScopedBranches,
+  scopeAllowsMultipleBranches,
+} from "@/lib/admin-scope";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminCard } from "@/components/admin/AdminCard";
 import { AdminStatCard } from "@/components/admin/AdminStatCard";
 import { formatSarAmount } from "@/lib/booking-checkout-pricing";
 import { bookingStatusLabelAr } from "@/lib/booking-display-labels";
 import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
-import { prisma } from "@/lib/prisma";
 import {
   getPaymentTransactions,
   getPaymentTransactionsSummary,
@@ -66,16 +70,18 @@ type Props = {
 
 export default async function LedgerPage({ searchParams }: Props) {
   const session = await requireAdminPage();
-  const scope = { isSuperAdmin: session.isSuperAdmin, branchId: session.branchId };
+  const scope = adminScope(session);
   const sp = await searchParams;
 
-  const { filter, from, to, branchId, fromStr, toStr, isToday, isMonth } =
+  const { filter, from, to, branchId: rawBranchId, fromStr, toStr, isToday, isMonth } =
     ledgerFiltersFromParams(sp);
-  const filters = { filter, from, to, branchId };
 
-  const branches = scope.isSuperAdmin
-    ? await prisma.branch.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } })
-    : [];
+  const canPickBranch = scopeAllowsMultipleBranches(scope);
+  const branches = canPickBranch ? await listScopedBranches(scope) : [];
+  // فرع من الـ query خارج النطاق يُتجاهل بدل أن يوسّع الرؤية.
+  const branchId =
+    rawBranchId != null && branches.some((b) => b.id === rawBranchId) ? rawBranchId : null;
+  const filters = { filter, from, to, branchId };
 
   const [summary, items] = await Promise.all([
     getPaymentTransactionsSummary(scope, filters),
@@ -193,7 +199,7 @@ export default async function LedgerPage({ searchParams }: Props) {
             </select>
           </label>
 
-          {scope.isSuperAdmin ? (
+          {canPickBranch ? (
             <label className="flex flex-col gap-1 text-[11px] font-bold text-on-surface-variant">
               الفرع
               <select

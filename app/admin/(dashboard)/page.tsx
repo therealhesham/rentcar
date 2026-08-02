@@ -27,7 +27,12 @@ import {
 } from "@/components/admin/AdminDashboardBookingsSection";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminStatCard } from "@/components/admin/AdminStatCard";
-import { adminBranchDisplayName, bookingBranchWhere } from "@/lib/admin-access";
+import { bookingBranchWhere } from "@/lib/admin-access";
+import {
+  adminScope,
+  fleetWhereForScope,
+  scopeLabel,
+} from "@/lib/admin-scope";
 import { requireAdminPage } from "@/lib/admin-page";
 import { missedPickupCondition } from "@/lib/admin-missed-bookings";
 import { prisma } from "@/lib/prisma";
@@ -38,6 +43,7 @@ export default async function AdminDashboardPage(props: {
   searchParams?: Promise<{ filter?: string; status?: string; q?: string }>;
 }) {
   const session = await requireAdminPage();
+  const scope = adminScope(session);
   const branchScope = (extra?: Parameters<typeof bookingBranchWhere>[1]) =>
     bookingBranchWhere(session, extra);
 
@@ -112,12 +118,13 @@ export default async function AdminDashboardPage(props: {
     bookableModelsRaw,
     fleetCategoriesForEdit,
   ] = await Promise.all([
-    session.isSuperAdmin ? prisma.fleetCategory.count() : Promise.resolve(0),
-    session.isSuperAdmin ? prisma.brand.count() : Promise.resolve(0),
-    session.isSuperAdmin ? prisma.carModel.count() : Promise.resolve(0),
-    session.isSuperAdmin
-      ? prisma.fleet.findMany({ select: { quantity: true } })
-      : Promise.resolve([]),
+    scope.kind === "all" ? prisma.fleetCategory.count() : Promise.resolve(0),
+    scope.kind === "all" ? prisma.brand.count() : Promise.resolve(0),
+    scope.kind === "all" ? prisma.carModel.count() : Promise.resolve(0),
+    prisma.fleet.findMany({
+      where: fleetWhereForScope(scope),
+      select: { quantity: true },
+    }),
     prisma.bookingRequest.count({ where: { ...branchScope(), ...qFilter } }),
     prisma.bookingRequest.count({
       where: {
@@ -314,24 +321,24 @@ export default async function AdminDashboardPage(props: {
       <AdminPageHeader
         title="لوحة التحكم"
         description={
-          session.isSuperAdmin
+          scope.kind === "all"
             ? undefined
-            : `بيانات فرع ${adminBranchDisplayName(session)} فقط. مرحباً ${session.displayName}. الحجوزات والعملاء والمركبات مرتبطة بهذا الفرع.`
+            : `بيانات ${scopeLabel(scope)} فقط. مرحباً ${session.displayName}. الحجوزات والعملاء والمركبات مرتبطة بهذا النطاق.`
         }
         backHref={undefined}
       />
 
-      {!session.isSuperAdmin && session.branchSlug ? (
+      {scope.kind === "all" ? null : (
         <div className="mb-6 flex items-start gap-3 rounded-2xl border border-primary/25 bg-primary-container/25 px-5 py-4 text-sm text-on-surface">
           <MapPin className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden />
           <div>
-            <span className="font-bold">فرعك: </span>
-            {adminBranchDisplayName(session)}
+            <span className="font-bold">نطاقك: </span>
+            {scopeLabel(scope)}
             <span className="mx-2 text-on-surface-variant">·</span>
             <span className="text-on-surface-variant">{session.displayName}</span>
           </div>
         </div>
-      ) : null}
+      )}
 
 
       <AdminCard className="mt-2" noPadding>

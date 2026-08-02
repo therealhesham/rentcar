@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdminForAction } from "@/lib/admin-access";
+import { adminScope, scopedBranchIds } from "@/lib/admin-scope";
 import { upsertBranchFleetQuantity } from "@/lib/fleet-branch-stock";
 import { prisma } from "@/lib/prisma";
 
@@ -54,16 +55,21 @@ export async function updateBranchFleetQuantity(
     }
   }
 
-  let branchId: number | null = null;
-  if (auth.session.isSuperAdmin) {
+  // فرع واحد في النطاق ⇒ مقفول عليه؛ نطاق أوسع ⇒ الفرع يأتي من الفورم ويُتحقق منه.
+  const scope = adminScope(auth.session);
+  const allowedBranchIds = await scopedBranchIds(scope);
+  let branchId: number | null =
+    allowedBranchIds?.length === 1 ? allowedBranchIds[0]! : null;
+  if (branchId == null) {
     const raw = Number(formData.get("branchId"));
     if (Number.isInteger(raw) && raw > 0) branchId = raw;
-  } else if (auth.session.branchId) {
-    branchId = auth.session.branchId;
   }
 
   if (!branchId) {
-    return { ok: false, error: "حسابك غير مرتبط بفرع." };
+    return { ok: false, error: "اختر الفرع." };
+  }
+  if (allowedBranchIds != null && !allowedBranchIds.includes(branchId)) {
+    return { ok: false, error: "الفرع خارج نطاق حسابك." };
   }
 
   const model = await prisma.carModel.findUnique({

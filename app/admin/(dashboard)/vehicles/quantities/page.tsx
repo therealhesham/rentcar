@@ -1,17 +1,20 @@
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { FleetQuantityImportClient } from "./FleetQuantityImportClient";
 import { requireAdminPage } from "@/lib/admin-page";
-import { prisma } from "@/lib/prisma";
+import { adminScope, listScopedBranches } from "@/lib/admin-scope";
 
 export const dynamic = "force-dynamic";
 
 export default async function FleetQuantitiesImportPage() {
   const session = await requireAdminPage();
-  const lockedBranchId = session.isSuperAdmin ? null : session.branchId ?? null;
+  const branches = await listScopedBranches(adminScope(session));
 
-  // موظف إدارة مركزية (لا سوبر أدمن ولا مرتبط بفرع): الكميات مملوكة للفروع، وكل إجراء
-  // هنا سيرفضه الخادم — نوضّح ذلك بدل عرض أدوات لا تعمل.
-  if (!session.isSuperAdmin && lockedBranchId == null) {
+  // فرع واحد في النطاق ⇒ يُقفل الاختيار عليه؛ أكثر من فرع ⇒ يختار المستخدم.
+  const lockedBranchId = branches.length === 1 ? branches[0]!.id : null;
+
+  // لا فرع في النطاق أصلاً: الكميات مملوكة للفروع وكل إجراء هنا سيرفضه الخادم —
+  // نوضّح ذلك بدل عرض أدوات لا تعمل.
+  if (branches.length === 0) {
     return (
       <>
         <AdminPageHeader
@@ -20,24 +23,15 @@ export default async function FleetQuantitiesImportPage() {
           backLabel="السيارات والأسطول"
         />
         <div className="rounded-2xl border border-amber-200/80 bg-amber-50 p-6">
-          <p className="font-bold text-amber-950">حسابك غير مرتبط بفرع.</p>
+          <p className="font-bold text-amber-950">حسابك غير مرتبط بأي فرع.</p>
           <p className="mt-2 text-sm text-amber-900">
-            كميات السيارات تُدار لكل فرع على حدة، فيحتاج الحساب ارتباطاً بفرع لتحديثها.
-            راجع مدير النظام لربط حسابك بفرع، أو اطلب منه تنفيذ التحديث.
+            كميات السيارات تُدار لكل فرع على حدة، فيحتاج الحساب ارتباطاً بفرع أو بمدينة
+            لتحديثها. راجع مدير النظام، أو اطلب منه تنفيذ التحديث.
           </p>
         </div>
       </>
     );
   }
-
-  const branches = await prisma.branch.findMany({
-    where: {
-      isActive: true,
-      ...(lockedBranchId != null && { id: lockedBranchId }),
-    },
-    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    select: { id: true, name: true },
-  });
 
   return (
     <>

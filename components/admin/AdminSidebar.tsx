@@ -41,7 +41,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { LogoutButton } from "@/app/admin/LogoutButton";
 import type { AdminSession } from "@/lib/admin-auth";
-import { adminBranchDisplayName } from "@/lib/admin-branch-display";
+import { adminScope, scopeLabel } from "@/lib/admin-scope-core";
 import { isAdminNavActive, type AdminNavGroup, type AdminNavItem } from "@/lib/admin-nav";
 
 const ICONS: Record<AdminNavItem["icon"], LucideIcon> = {
@@ -168,11 +168,7 @@ export function AdminSidebar({ open, onClose, session, navGroups }: Props) {
           </p>
           <p className="mt-1 text-lg font-extrabold tracking-tight text-white">روائس</p>
           <p className="mt-0.5 text-[11px] font-medium text-white/45">
-            {session.isSuperAdmin
-              ? "مدير النظام"
-              : session.branchSlug
-                ? adminBranchDisplayName(session)
-                : "لوحة التحكم"}
+            {session.isSuperAdmin ? "مدير النظام" : scopeLabel(adminScope(session))}
           </p>
         </div>
         <button

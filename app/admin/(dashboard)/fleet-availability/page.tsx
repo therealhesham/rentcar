@@ -1,5 +1,10 @@
 import Link from "next/link";
 import { requireAdminPage } from "@/lib/admin-page";
+import {
+  adminScope,
+  listScopedBranches,
+  scopeAllowsMultipleBranches,
+} from "@/lib/admin-scope";
 import { addDaysToYmd, getDirectBookingAvailability } from "@/lib/direct-booking";
 import { prisma } from "@/lib/prisma";
 
@@ -26,10 +31,19 @@ export default async function FleetAvailabilityPage({
 }) {
   const session = await requireAdminPage();
   const sp = searchParams ? await searchParams : {};
+  const scope = adminScope(session);
+  const canPickBranch = scopeAllowsMultipleBranches(scope);
+  const branchOptions = canPickBranch ? await listScopedBranches(scope) : [];
+
+  // التوفر يُحسب لفرع واحد: نطاق الفرع مقفول عليه، وغيره يختار من فروع نطاقه
+  // (أول فرع افتراضياً بدل الرجوع لفرع ثابت كان يعرض بيانات فرع غير مرتبط بالحساب).
   const branchFromQuery = sp.branch?.trim().toLowerCase();
-  const branchSlug = session.isSuperAdmin
-    ? branchFromQuery || session.branchSlug || "jeddah"
-    : session.branchSlug ?? "jeddah";
+  const branchSlug =
+    scope.kind === "branch"
+      ? scope.branchSlug
+      : (branchFromQuery && branchOptions.some((b) => b.slug === branchFromQuery)
+          ? branchFromQuery
+          : (branchOptions[0]?.slug ?? null));
 
   const startYmd = parseYmd(sp.date);
   const numberOfDays = parseDays(sp.days);
@@ -59,7 +73,7 @@ export default async function FleetAvailabilityPage({
         carModelId: m.id,
         pickupDate,
         numberOfDays,
-        branchSlug,
+        branchSlug: branchSlug ?? "",
       });
       const freeSlots = Math.max(0, av.fleetUnits - av.overlapping);
       return {
@@ -111,6 +125,22 @@ export default async function FleetAvailabilityPage({
           <span className="font-mono font-bold" dir="ltr">{endInclusiveYmd}</span>).
         </p>
         <form method="get" className="mt-4 flex flex-wrap items-end gap-4">
+          {canPickBranch && branchOptions.length > 0 ? (
+            <label className="flex flex-col gap-1 text-sm font-medium">
+              الفرع
+              <select
+                name="branch"
+                defaultValue={branchSlug ?? ""}
+                className="rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+              >
+                {branchOptions.map((b) => (
+                  <option key={b.slug} value={b.slug}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
           <label className="flex flex-col gap-1 text-sm font-medium">
             تاريخ البداية
             <input
@@ -153,7 +183,7 @@ export default async function FleetAvailabilityPage({
                   <th className="px-3 py-2">المركبة</th>
                   <th className="px-3 py-2 tabular-nums">وحدات الأسطول</th>
                   <th className="px-3 py-2 tabular-nums">
-                    {branchSlug ? "محجوز (فرعك)" : "محجوز (متزامن)"}
+                    {branchSlug ? "محجوز (هذا الفرع)" : "محجوز (متزامن)"}
                   </th>
                   <th className="px-3 py-2 tabular-nums">متاح في الفترة</th>
                   <th className="px-3 py-2">الحالة</th>

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdminForAction } from "@/lib/admin-access";
+import { adminScope } from "@/lib/admin-scope";
 import { confirmInterBranchReturn } from "@/lib/branch-return-transfer";
 import { logBookingEvent } from "@/lib/booking-audit";
 
@@ -20,8 +21,7 @@ export async function confirmInterBranchReturnAction(
   try {
     const result = await confirmInterBranchReturn({
       bookingRequestId,
-      actorReturnBranchSlug: auth.session.branchSlug,
-      isSuperAdmin: auth.session.isSuperAdmin,
+      scope: adminScope(auth.session),
     });
     if (!result.ok) return result;
   } catch (e) {

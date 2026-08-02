@@ -2,7 +2,13 @@ import Link from "next/link";
 import { BranchReturnsCalendar } from "@/components/admin/branch-returns/BranchReturnsCalendar";
 import { BranchReturnsMonthList } from "@/components/admin/branch-returns/BranchReturnsMonthList";
 import { BranchReturnsTable } from "@/components/admin/branch-returns/BranchReturnsTable";
-import { adminBranchDisplayName } from "@/lib/admin-access";
+import {
+  adminScope,
+  branchWhereForScope,
+  listScopedBranches,
+  scopeAllowsMultipleBranches,
+  scopeLabel,
+} from "@/lib/admin-scope";
 import {
   loadBranchReturnCountsForMonth,
   loadBranchReturnsForDay,
@@ -39,27 +45,29 @@ export default async function BranchReturnsPage({
   const yearMonth = parseYearMonth(sp.month, viewYmd);
   const viewMode = sp.view === "month" ? "month" : "day";
 
+  const scope = adminScope(session);
+  const canPickBranch = scopeAllowsMultipleBranches(scope);
+  const allBranches = canPickBranch ? await listScopedBranches(scope) : [];
+
+  // الفرع المختار من الـ query يُقبل فقط إن كان داخل النطاق؛ غير ذلك يُطبَّق النطاق كاملاً.
+  const requestedSlug = sp.branch?.trim().toLowerCase() || null;
   const branchFilter =
-    session.isSuperAdmin && sp.branch?.trim()
-      ? sp.branch.trim().toLowerCase()
-      : session.isSuperAdmin
-        ? null
-        : session.branchSlug;
+    scope.kind === "branch"
+      ? scope.branchSlug
+      : requestedSlug && allBranches.some((b) => b.slug === requestedSlug)
+        ? requestedSlug
+        : null;
 
   const branchQuery = branchFilter ?? "";
+  const returnBranchWhere = branchFilter
+    ? { slug: branchFilter }
+    : branchWhereForScope(scope);
 
-  const [returnCounts, returns, allBranches, branchRow] = await Promise.all([
-    loadBranchReturnCountsForMonth({ yearMonth, returnBranchSlug: branchFilter }),
+  const [returnCounts, returns, branchRow] = await Promise.all([
+    loadBranchReturnCountsForMonth({ yearMonth, returnBranchWhere }),
     viewMode === "month"
-      ? loadBranchReturnsForMonth({ yearMonth, returnBranchSlug: branchFilter })
-      : loadBranchReturnsForDay({ viewYmd, returnBranchSlug: branchFilter }),
-    session.isSuperAdmin
-      ? prisma.branch.findMany({
-          where: { isActive: true },
-          orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-          select: { slug: true, name: true },
-        })
-      : Promise.resolve([]),
+      ? loadBranchReturnsForMonth({ yearMonth, returnBranchWhere })
+      : loadBranchReturnsForDay({ viewYmd, returnBranchWhere }),
     branchFilter
       ? prisma.branch.findFirst({
           where: { slug: branchFilter },
@@ -68,11 +76,11 @@ export default async function BranchReturnsPage({
       : Promise.resolve(null),
   ]);
 
-  const showBranchColumn = session.isSuperAdmin && !branchFilter;
+  const showBranchColumn = !branchFilter;
 
-  const pageTitle = session.isSuperAdmin
-    ? "التسليم الى الفروع"
-    : `التسليم الى فرع ${adminBranchDisplayName(session)}`;
+  const pageTitle = branchFilter
+    ? `التسليم الى فرع ${branchRow?.name ?? branchFilter}`
+    : `التسليم الى الفروع — ${scopeLabel(scope)}`;
 
   const listTitle =
     viewMode === "month"
@@ -84,7 +92,7 @@ export default async function BranchReturnsPage({
       <header className="mb-8">
         <h1 className="text-3xl font-extrabold tracking-tight">{pageTitle}</h1>
         <p className="mt-2 max-w-3xl text-on-surface-variant">
-          {session.isSuperAdmin ? (
+          {canPickBranch ? (
             <>
               اختر يوماً من التقويم لعرض السيارات المسلمة بالساعة، أو اضغط «الشهر» لعرض كل تسليمات الشهر.
             </>
@@ -117,7 +125,7 @@ export default async function BranchReturnsPage({
         />
 
         <section className="rounded-2xl border border-outline-variant/30 bg-surface-container-low p-5 md:p-6">
-          {session.isSuperAdmin && allBranches.length > 0 ? (
+          {canPickBranch && allBranches.length > 0 ? (
             <form method="get" className="mb-5 flex flex-wrap items-end gap-3 border-b border-outline-variant/20 pb-5">
               <input type="hidden" name="view" value={viewMode} />
               <input type="hidden" name="date" value={viewYmd} />

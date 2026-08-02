@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { RentalDiscountCreateForm } from "@/app/admin/(dashboard)/rental-discounts/RentalDiscountCreateForm";
 import { RentalDiscountDeleteForm } from "@/app/admin/(dashboard)/rental-discounts/RentalDiscountDeleteForm";
-import { verifyAdminSession } from "@/lib/admin-auth";
+import { requireAdminPage } from "@/lib/admin-page";
+import { adminScope } from "@/lib/admin-scope";
 import { getBrandsForAdminSelect } from "@/lib/brand-data";
 import {
   getBranchesForDiscountSelect,
@@ -42,15 +42,13 @@ function formatValue(kind: string, value: number): string {
 }
 
 export default async function AdminRentalDiscountsPage() {
-  if (!(await verifyAdminSession())) {
-    redirect("/admin/login");
-  }
+  const scope = adminScope(await requireAdminPage());
 
   const [discounts, brands, models, branches] = await Promise.all([
-    getRentalDiscountsForAdmin(),
+    getRentalDiscountsForAdmin(scope),
     getBrandsForAdminSelect(),
     getCarModelsForDiscountSelect(),
-    getBranchesForDiscountSelect(),
+    getBranchesForDiscountSelect(scope),
   ]);
 
   return (

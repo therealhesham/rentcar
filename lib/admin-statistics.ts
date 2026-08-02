@@ -1,16 +1,21 @@
 import type { Prisma } from "@prisma/client";
-import { bookingPickupBranchScope } from "@/lib/booking-branches";
+import {
+  andScope,
+  bookingPickupWhereForScope,
+  branchWhereForScope,
+  fleetWhereForScope,
+  type AdminScope,
+} from "@/lib/admin-scope";
 import { prisma } from "@/lib/prisma";
 
+/** النطاق الافتراضي للدوال التي تُستدعى بلا سياق موظف (تقارير عامة). */
+const ALL_BRANCHES: AdminScope = { kind: "all" };
+
 function bookingScope(
-  branchSlug: string | null | undefined,
+  scope: AdminScope,
   extra?: Prisma.BookingRequestWhereInput,
 ): Prisma.BookingRequestWhereInput {
-  const scope: Prisma.BookingRequestWhereInput = branchSlug
-    ? bookingPickupBranchScope(branchSlug)
-    : {};
-  if (!extra || Object.keys(extra).length === 0) return scope;
-  return { AND: [scope, extra] };
+  return andScope(bookingPickupWhereForScope(scope), extra);
 }
 
 export type AdminStatsPeriod = 7 | 30 | 90 | 365;
@@ -91,12 +96,14 @@ export type AdminOverviewStats = {
 
 export async function getAdminOverviewStats(
   days: AdminStatsPeriod,
-  branchSlug?: string | null,
+  scope: AdminScope = ALL_BRANCHES,
 ): Promise<AdminOverviewStats> {
   const start = periodStart(days);
   const prevStart = new Date(start);
   prevStart.setDate(prevStart.getDate() - days);
-  const scoped = (extra?: Prisma.BookingRequestWhereInput) => bookingScope(branchSlug, extra);
+  const scoped = (extra?: Prisma.BookingRequestWhereInput) => bookingScope(scope, extra);
+  // مقاييس غير مرتبطة بفرع (اشتراكات، عملاء الموقع، حجوزات الشركات) تُخفى عند تضييق النطاق.
+  const isNarrowed = scope.kind !== "all";
 
   const [
     bookingsInPeriod,
@@ -125,12 +132,12 @@ export async function getAdminOverviewStats(
     prisma.bookingRequest.count({
       where: scoped({ createdAt: { gte: start }, kind: "DIRECT" }),
     }),
-    branchSlug
+    isNarrowed
       ? Promise.resolve(0)
       : prisma.corporateBookingLead.count({ where: { createdAt: { gte: start } } }),
-    branchSlug ? Promise.resolve(0) : prisma.userSubscription.count({ where: { status: "ACTIVE" } }),
-    branchSlug ? Promise.resolve([]) : prisma.fleet.findMany({ select: { quantity: true } }),
-    branchSlug
+    isNarrowed ? Promise.resolve(0) : prisma.userSubscription.count({ where: { status: "ACTIVE" } }),
+    prisma.fleet.findMany({ where: fleetWhereForScope(scope), select: { quantity: true } }),
+    isNarrowed
       ? prisma.bookingRequest
           .findMany({
             where: scoped(),
@@ -222,10 +229,10 @@ const STATUS_LABELS: Record<string, string> = {
 
 export async function getAdminBookingStats(
   days: AdminStatsPeriod,
-  branchSlug?: string | null,
+  scope: AdminScope = ALL_BRANCHES,
 ): Promise<AdminBookingStats> {
   const start = periodStart(days);
-  const scoped = (extra?: Prisma.BookingRequestWhereInput) => bookingScope(branchSlug, extra);
+  const scoped = (extra?: Prisma.BookingRequestWhereInput) => bookingScope(scope, extra);
 
   const [total, trendRows, byStatus, byBranch, byPickupMode, byPaymentMethod, aggregates, topModelsRaw] =
     await Promise.all([
@@ -358,14 +365,23 @@ export type AdminFleetStats = {
   topModelsByQty: LabelCount[];
 };
 
-export async function getAdminFleetStats(): Promise<AdminFleetStats> {
+export async function getAdminFleetStats(
+  scope: AdminScope = ALL_BRANCHES,
+): Promise<AdminFleetStats> {
   const [categoriesCount, brandsCount, modelsCount, fleetRows, models] = await Promise.all([
     prisma.fleetCategory.count(),
     prisma.brand.count(),
     prisma.carModel.count(),
-    prisma.fleet.findMany({ include: { model: { include: { brand: true, category: true } } } }),
+    prisma.fleet.findMany({
+      where: fleetWhereForScope(scope),
+      include: { model: { include: { brand: true, category: true } } },
+    }),
     prisma.carModel.findMany({
-      include: { brand: true, category: true, fleetItems: true },
+      include: {
+        brand: true,
+        category: true,
+        fleetItems: { where: fleetWhereForScope(scope) },
+      },
     }),
   ]);
 
@@ -446,10 +462,12 @@ export type AdminRevenueStats = {
 
 export async function getAdminRevenueStats(
   days: AdminStatsPeriod,
-  branchSlug?: string | null,
+  scope: AdminScope = ALL_BRANCHES,
 ): Promise<AdminRevenueStats> {
   const start = periodStart(days);
-  const scoped = (extra?: Prisma.BookingRequestWhereInput) => bookingScope(branchSlug, extra);
+  const scoped = (extra?: Prisma.BookingRequestWhereInput) => bookingScope(scope, extra);
+  // مقاييس غير مرتبطة بفرع (اشتراكات، عملاء الموقع، حجوزات الشركات) تُخفى عند تضييق النطاق.
+  const isNarrowed = scope.kind !== "all";
 
   const [
     subPayments,
@@ -461,14 +479,14 @@ export async function getAdminRevenueStats(
     bySubStatus,
     subPaymentsByMethod,
   ] = await Promise.all([
-    branchSlug
+    isNarrowed
       ? Promise.resolve({ _sum: { amountSar: 0 }, _count: { _all: 0 } })
       : prisma.subscriptionPayment.aggregate({
           where: { status: "PAID", paidAt: { gte: start } },
           _sum: { amountSar: true },
           _count: { _all: true },
         }),
-    branchSlug
+    isNarrowed
       ? Promise.resolve([])
       : prisma.subscriptionPayment.findMany({
           where: { status: "PAID", paidAt: { gte: start } },
@@ -493,13 +511,13 @@ export async function getAdminRevenueStats(
         cancellationRefundAmountSar: { not: null },
       }),
     }),
-    branchSlug
+    isNarrowed
       ? Promise.resolve([])
       : prisma.userSubscription.groupBy({
           by: ["status"],
           _count: { _all: true },
         }),
-    branchSlug
+    isNarrowed
       ? Promise.resolve([])
       : prisma.subscriptionPayment.groupBy({
           by: ["paymentMethod"],
@@ -602,7 +620,7 @@ export type AdminBranchStats = {
 
 export async function getAdminBranchStats(
   days: AdminStatsPeriod,
-  onlyBranchId?: number | null,
+  scope: AdminScope = ALL_BRANCHES,
 ): Promise<AdminBranchStats> {
   const start = periodStart(days);
   const prevStart = new Date(start);
@@ -621,7 +639,7 @@ export async function getAdminBranchStats(
     periodModelRows,
   ] = await Promise.all([
     prisma.branch.findMany({
-      where: { isActive: true },
+      where: { ...branchWhereForScope(scope), isActive: true },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       select: { id: true, name: true, city: { select: { name: true } } },
     }),
@@ -725,10 +743,8 @@ export async function getAdminBranchStats(
     }
   }
 
-  const visibleBranches =
-    onlyBranchId != null ? branches.filter((b) => b.id === onlyBranchId) : branches;
-
-  const rows: AdminBranchStatRow[] = visibleBranches
+  // `branches` مفلترة بالنطاق أصلاً من الاستعلام أعلاه.
+  const rows: AdminBranchStatRow[] = branches
     .map((b) => {
       const fleetUnits = fleetByBranch.find((f) => f.branchId === b.id)?._sum.quantity ?? 0;
       const activeNow = countOf(activeByBranch, b.id);

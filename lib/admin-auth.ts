@@ -12,7 +12,7 @@ const COOKIE_NAME = "admin_session";
 export { parseAdminSessionToken };
 
 export async function createAdminSessionToken(
-  session: Omit<AdminSession, "exp">,
+  session: Omit<AdminSession, "exp" | "v">,
 ): Promise<string> {
   return createAdminSessionTokenPayload(session);
 }
@@ -26,7 +26,7 @@ export async function verifyAdminSession(): Promise<boolean> {
   return (await getAdminSession()) != null;
 }
 
-export async function setAdminSessionCookie(session: Omit<AdminSession, "exp">): Promise<void> {
+export async function setAdminSessionCookie(session: Omit<AdminSession, "exp" | "v">): Promise<void> {
   const token = await createAdminSessionToken(session);
   const jar = await cookies();
   jar.set(COOKIE_NAME, token, {

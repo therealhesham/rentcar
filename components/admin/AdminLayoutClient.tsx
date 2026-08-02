@@ -5,7 +5,7 @@ import { useState } from "react";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { NotificationBell } from "@/components/admin/NotificationBell";
 import type { AdminSession } from "@/lib/admin-auth";
-import { adminBranchDisplayName } from "@/lib/admin-branch-display";
+import { adminScope, scopeLabel } from "@/lib/admin-scope-core";
 import type { AdminNavGroup } from "@/lib/admin-nav";
 
 type Props = {
@@ -50,11 +50,11 @@ export function AdminLayoutClient({ children, session, navGroups }: Props) {
               لوحة الإدارة
             </p>
             <p className="truncate text-base font-extrabold tracking-tight text-[#003749]">روائس</p>
-            {!session.isSuperAdmin && session.branchSlug ? (
+            {session.isSuperAdmin ? null : (
               <p className="truncate text-[11px] font-medium text-on-surface-variant">
-                فرع: {adminBranchDisplayName(session)}
+                {scopeLabel(adminScope(session))}
               </p>
-            ) : null}
+            )}
           </div>
           <div className="flex items-center">
             <NotificationBell />

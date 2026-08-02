@@ -4,7 +4,7 @@ import { CancelledBookingsFilters } from "@/components/admin/CancelledBookingsFi
 import { CancelledBookingsList } from "@/components/admin/CancelledBookingsList";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { ReportExportButtons } from "@/components/admin/ReportExportButtons";
-import { adminBranchDisplayName } from "@/lib/admin-access";
+import { adminScope, scopeLabel } from "@/lib/admin-scope";
 import { loadCancelledBookings } from "@/lib/admin-cancelled-bookings";
 import { requireAdminPage } from "@/lib/admin-page";
 
@@ -63,9 +63,7 @@ export default async function AdminCancelledBookingsPage({
     0,
   );
 
-  const branchHint = session.isSuperAdmin
-    ? "كل الفروع"
-    : `فرع ${adminBranchDisplayName(session)}`;
+  const branchHint = scopeLabel(adminScope(session));
 
   return (
     <>

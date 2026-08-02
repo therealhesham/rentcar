@@ -107,6 +107,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/admin/cities", label: "المدن", icon: "map-pin" },
       { href: "/admin/branches", label: "الفروع", icon: "building-2" },
       { href: "/admin/employees", label: "موظفو الفروع", icon: "user-cog" },
+      { href: "/admin/job-roles", label: "الوظائف والصلاحيات", icon: "shield-check" },
       { href: "/admin/inter-city-shipping", label: "شحن بين المدن", icon: "truck" },
       { href: "/admin/checkout-fees", label: "رسوم إتمام الحجز", icon: "receipt" },
       { href: "/admin/subscription-plans", label: "باقات اشتراك", icon: "package" },

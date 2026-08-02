@@ -6,13 +6,16 @@ import { AdminPermissionsFieldset } from "@/app/admin/(dashboard)/employees/Admi
 
 type BranchOption = { id: number; name: string; slug: string };
 type CityOption = { id: number; name: string };
+type JobRoleOption = { id: number; name: string };
 
 export function AdminEmployeeCreateForm({
   branches,
   cities,
+  jobRoles,
 }: {
   branches: BranchOption[];
   cities: CityOption[];
+  jobRoles: JobRoleOption[];
 }) {
   const [state, formAction, pending] = useActionState(createAdminEmployee, null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -132,7 +135,27 @@ export function AdminEmployeeCreateForm({
       </div>
 
       <div className="md:col-span-2 mt-2 border-t border-outline-variant/30 pt-4">
-        <label className="mb-3 block text-sm font-bold text-on-surface">الصلاحيات الممنوحة</label>
+        <label className="mb-3 block text-sm font-medium">
+          الوظيفة
+          <select
+            name="jobRoleId"
+            defaultValue=""
+            className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+          >
+            <option value="">— بدون وظيفة —</option>
+            {jobRoles.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.name}
+              </option>
+            ))}
+          </select>
+          <span className="mt-1 block text-xs font-normal text-on-surface-variant">
+            الوظيفة تمنح مجموعة صلاحيات جاهزة — تُدار من صفحة «الوظائف والصلاحيات»
+          </span>
+        </label>
+        <label className="mb-3 block text-sm font-bold text-on-surface">
+          صلاحيات إضافية (فوق صلاحيات الوظيفة)
+        </label>
         <AdminPermissionsFieldset />
       </div>
       {state?.error ? (

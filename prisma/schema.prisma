@@ -185,10 +185,13 @@ model AdminEmployee {
   /// مشرف مدينة (لا فرع واحد): TO على إيميلات كل فروع هذه المدينة. حصري مع branchId عملياً.
   cityId       Int?
   city         City?   @relation(fields: [cityId], references: [id], onDelete: SetNull)
+  /// وظيفة الموظف — قالب الصلاحيات الأساسي، مستقل عن الفرع والمدينة.
+  jobRoleId    Int?
+  jobRole      AdminJobRole? @relation(fields: [jobRoleId], references: [id], onDelete: SetNull)
   isSuperAdmin Boolean @default(false)
   isActive     Boolean @default(true)
 
-  /// مصفوفة JSON تحتوي على مفاتيح الصلاحيات الممنوحة للموظف (مثل: ["BOOKINGS", "FINANCIALS"])
+  /// مصفوفة JSON بمفاتيح صلاحيات **إضافية** فوق صلاحيات الوظيفة (الفعلي = اتحاد الاثنين).
   permissionsJson String? @db.Text
 
   /// أرسل إيميل تلقائي عند حجز جديد. النطاق: branchId (فرعه) أو cityId (كل فروع مدينته)
@@ -206,6 +209,26 @@ model AdminEmployee {
 
   @@index([branchId])
   @@index([isActive])
+  @@index([jobRoleId])
+}
+
+/// وظيفة إدارية: قالب صلاحيات صفحات يُطبَّق على الموظفين المرتبطين بها — مستقل عن الفرع والمدينة.
+/// نطاق البيانات (فرع/مدينة/الكل) يظل من AdminEmployee.branchId/cityId.
+model AdminJobRole {
+  id   Int    @id @default(autoincrement())
+  slug String @unique @db.VarChar(64)
+  name String @db.VarChar(255)
+  /// نفس صيغة AdminEmployee.permissionsJson — مصفوفة JSON من مفاتيح ADMIN_PAGE_PERMISSIONS
+  permissionsJson String?  @db.Text
+  isActive        Boolean  @default(true)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  employees AdminEmployee[]
+
+  @@index([isActive])
+  @@index([sortOrder])
 }
 
 model FleetCategory {

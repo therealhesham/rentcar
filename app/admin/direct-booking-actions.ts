@@ -2,7 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { enforceBranchOnFormData, requireAdminForAction } from "@/lib/admin-access";
+import {
+  assertBranchSlugInScope,
+  enforceBranchOnFormData,
+  requireAdminForAction,
+} from "@/lib/admin-access";
 import { isCashPaymentMethod } from "@/lib/booking-cash-flow";
 import { sendBookingInvoiceEmailAfterPayment } from "@/lib/booking-invoice-email";
 import { sendBookingReceivedNotification } from "@/lib/booking-received-notification";
@@ -27,6 +31,12 @@ export async function submitAdminDirectBooking(
   if (!auth.ok) return { ok: false, error: auth.error };
 
   const scopedForm = enforceBranchOnFormData(auth.session, formData);
+  const branchScope = await assertBranchSlugInScope(
+    auth.session,
+    String(scopedForm.get("branch") ?? ""),
+  );
+  if (!branchScope.ok) return { ok: false, error: branchScope.error };
+
   const carModelId = Number(scopedForm.get("carModelId"));
   if (!Number.isInteger(carModelId) || carModelId < 1) {
     return { ok: false, error: "اختر السيارة." };

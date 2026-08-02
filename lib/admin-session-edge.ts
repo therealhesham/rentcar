@@ -1,4 +1,5 @@
 import type { AdminSession } from "@/lib/admin-session-token";
+import { ADMIN_SESSION_VERSION } from "@/lib/admin-session-version";
 
 function getSessionSecret(): string | undefined {
   return process.env.ADMIN_SESSION_SECRET ?? process.env.ADMIN_PASSWORD;
@@ -61,17 +62,22 @@ export async function parseAdminSessionTokenEdge(
   } catch {
     return null;
   }
+  if (data.v !== ADMIN_SESSION_VERSION) return null;
   if (typeof data.exp !== "number" || data.exp <= Date.now()) return null;
   if (typeof data.isSuperAdmin !== "boolean") return null;
   if (data.employeeId != null && typeof data.employeeId !== "number") return null;
   if (data.branchId != null && typeof data.branchId !== "number") return null;
   if (data.branchSlug != null && typeof data.branchSlug !== "string") return null;
   if (data.branchName != null && typeof data.branchName !== "string") return null;
+  if (data.cityId != null && typeof data.cityId !== "number") return null;
+  if (data.cityName != null && typeof data.cityName !== "string") return null;
   if (typeof data.displayName !== "string") return null;
   if (!Array.isArray(data.permissions)) return null;
   // موظف إدارة مركزية (بلا فرع) بصلاحيات صفحات صريحة مسموح — نفس بوابة تسجيل الدخول
   // في app/admin/actions.ts. حظر الفرع الفارغ هنا بلا فحص الصلاحيات كان يرفض جلسته في
   // كل صفحة فور تسجيل الدخول رغم قبول اللوجين نفسه له، فيبدو للمستخدم كأن الدخول لا يعمل.
-  if (!data.isSuperAdmin && !data.branchSlug && data.permissions.length === 0) return null;
+  if (!data.isSuperAdmin && !data.branchSlug && !data.cityId && data.permissions.length === 0) {
+    return null;
+  }
   return data;
 }

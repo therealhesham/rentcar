@@ -7,6 +7,7 @@ import { AdminLabelBreakdown } from "@/components/admin/stats/AdminLabelBreakdow
 import { AdminPeriodSelect } from "@/components/admin/stats/AdminPeriodSelect";
 import { AdminTrendPill } from "@/components/admin/stats/AdminTrendPill";
 import { requireAdminPage } from "@/lib/admin-page";
+import { adminScope } from "@/lib/admin-scope";
 import {
   formatSar,
   getAdminBranchStats,
@@ -22,11 +23,8 @@ export default async function AdminStatisticsBranchesPage({ searchParams }: Prop
   const session = await requireAdminPage();
   const sp = await searchParams;
   const days = parseAdminStatsPeriod(sp.days);
-  // موظف الفرع يرى فرعه فقط؛ السوبر أدمن يقارن كل الفروع
-  const stats = await getAdminBranchStats(
-    days,
-    session.isSuperAdmin ? null : session.branchId,
-  );
+  // موظف الفرع يرى فرعه فقط؛ مشرف المدينة يقارن فروع مدينته؛ غيرهما يقارن كل الفروع
+  const stats = await getAdminBranchStats(days, adminScope(session));
   const top = stats.rows[0] ?? null;
 
   return (

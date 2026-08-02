@@ -1,4 +1,6 @@
+import type { Prisma } from "@prisma/client";
 import { requireAdminPage } from "@/lib/admin-page";
+import { adminScope, bookingWhereForScope } from "@/lib/admin-scope";
 import { ReportExportButtons } from "@/components/admin/ReportExportButtons";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminCard } from "@/components/admin/AdminCard";
@@ -21,8 +23,10 @@ export default async function FinancialsPage(props: {
   const session = await requireAdminPage();
   const searchParams = await props.searchParams;
 
+  const scope = adminScope(session);
+
   // We'll use 30 days for the overview stats on this page
-  const stats = await getAdminRevenueStats(30, session.isSuperAdmin ? null : session.branchSlug);
+  const stats = await getAdminRevenueStats(30, scope);
 
   const q = typeof searchParams?.q === "string" ? searchParams.q.trim() : "";
   const date = typeof searchParams?.date === "string" ? searchParams.date : "";
@@ -54,12 +58,7 @@ export default async function FinancialsPage(props: {
     };
   }
 
-  const baseWhere: any = session.isSuperAdmin ? {} : {
-    OR: [
-      { branchId: session.branchId },
-      { returnBranchId: session.branchId }
-    ]
-  };
+  const baseWhere: Prisma.BookingRequestWhereInput = bookingWhereForScope(scope);
 
   const combinedAnd = [baseWhere, searchWhere].filter(x => Object.keys(x).length > 0);
 
@@ -116,11 +115,8 @@ export default async function FinancialsPage(props: {
     refundDueToCustomerSar: { gt: 0 },
     refundDueSettledAt: null,
   };
-  if (!session.isSuperAdmin) {
-    customerDuesWhere.OR = [
-      { branchId: session.branchId },
-      { returnBranchId: session.branchId },
-    ];
+  if (Object.keys(baseWhere).length > 0) {
+    customerDuesWhere.AND = [baseWhere];
   }
   const customerDuesRows = await prisma.bookingRequest.findMany({
     where: customerDuesWhere,
@@ -133,13 +129,11 @@ export default async function FinancialsPage(props: {
   );
 
   // المركز المالي للمستحقات باتجاهين (للشركة على العملاء / على الشركة للعملاء).
-  const duesPosition = await getCompanyDuesPosition({
-    isSuperAdmin: session.isSuperAdmin,
-    branchId: session.branchId,
-  });
+  const duesPosition = await getCompanyDuesPosition(scope);
 
   // Fetch recent subscription payments
-  const recentSubPayments = session.isSuperAdmin
+  // الاشتراكات غير مرتبطة بفرع — تُعرض لمن نطاقه كل الفروع فقط.
+  const recentSubPayments = scope.kind === "all"
     ? await prisma.subscriptionPayment.findMany({
       where: { status: "PAID" },
       orderBy: { paidAt: "desc" },

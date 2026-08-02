@@ -1,12 +1,12 @@
+import { isBranchSlugInScope, type AdminScope } from "@/lib/admin-scope";
 import { prisma } from "@/lib/prisma";
 import { adjustFleetQuantityDelta } from "@/lib/fleet-branch-stock";
 import { isInterBranchPickupReturn } from "@/lib/booking-branches";
 
 export async function confirmInterBranchReturn(input: {
   bookingRequestId: number;
-  /** فرع الإرجاع لموظف الفرع (slug) — يجب أن يطابق returnBranch */
-  actorReturnBranchSlug: string | null;
-  isSuperAdmin: boolean;
+  /** نطاق الموظف — فرع الإرجاع يجب أن يقع داخله */
+  scope: AdminScope;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const booking = await prisma.bookingRequest.findUnique({
     where: { id: input.bookingRequestId },
@@ -41,11 +41,8 @@ export async function confirmInterBranchReturn(input: {
     return { ok: false, error: "فرع الإرجاع غير محدد." };
   }
 
-  if (!input.isSuperAdmin) {
-    const actor = input.actorReturnBranchSlug?.trim().toLowerCase();
-    if (!actor || actor !== returnSlug) {
-      return { ok: false, error: "يمكنك تأكيد الاستلام لفرع الإرجاع الخاص بك فقط." };
-    }
+  if (!(await isBranchSlugInScope(input.scope, returnSlug))) {
+    return { ok: false, error: "يمكنك تأكيد الاستلام لفروع نطاقك فقط." };
   }
 
   const pickupBranchId = booking.branchId;

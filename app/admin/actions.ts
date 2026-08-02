@@ -7,6 +7,7 @@ import { Prisma } from "@prisma/client";
 import { clearAdminSessionCookie, setAdminSessionCookie } from "@/lib/admin-auth";
 import { currentRequestMeta, logActivity } from "@/lib/activity-log";
 import { requireSuperAdminForAction } from "@/lib/admin-access";
+import { effectivePermissions } from "@/lib/admin-job-roles";
 import { verifyPassword } from "@/lib/password";
 import { requireGalleryFolderSlug } from "@/lib/gallery-folder";
 import { prisma } from "@/lib/prisma";
@@ -33,7 +34,11 @@ export async function loginAdmin(
 
   const employee = await prisma.adminEmployee.findUnique({
     where: { email },
-    include: { branch: { select: { id: true, slug: true, name: true } } },
+    include: {
+      branch: { select: { id: true, slug: true, name: true } },
+      city: { select: { id: true, name: true } },
+      jobRole: { select: { permissionsJson: true, isActive: true } },
+    },
   });
 
   if (employee?.isActive) {
@@ -41,16 +46,11 @@ export async function loginAdmin(
     if (!match) {
       return { ok: false, error: "البريد أو كلمة المرور غير صحيحة." };
     }
-    const permissionsJson = employee.permissionsJson;
-    let permissions: string[] = [];
-    if (permissionsJson) {
-      try {
-        permissions = JSON.parse(permissionsJson);
-        if (!Array.isArray(permissions)) permissions = [];
-      } catch {
-        permissions = [];
-      }
-    }
+    // الصلاحيات الفعلية = صلاحيات الوظيفة + الإضافات الفردية؛ الوظيفة المعطّلة لا تمنح شيئاً.
+    const permissions = effectivePermissions({
+      permissionsJson: employee.permissionsJson,
+      jobRole: employee.jobRole?.isActive ? employee.jobRole : null,
+    });
 
     if (!employee.isSuperAdmin && !employee.branch && permissions.length === 0) {
       return { ok: false, error: "حسابك غير مرتبط بفرع ولا يملك أي صلاحيات. تواصل مع مدير النظام." };
@@ -61,6 +61,8 @@ export async function loginAdmin(
       branchId: employee.branch?.id ?? null,
       branchSlug: employee.branch?.slug ?? null,
       branchName: employee.branch?.name ?? null,
+      cityId: employee.city?.id ?? null,
+      cityName: employee.city?.name ?? null,
       displayName: employee.name?.trim() || employee.email,
       permissions,
     });
@@ -82,6 +84,8 @@ export async function loginAdmin(
       branchId: null,
       branchSlug: null,
       branchName: null,
+      cityId: null,
+      cityName: null,
       displayName: "مدير النظام",
       permissions: [],
     });

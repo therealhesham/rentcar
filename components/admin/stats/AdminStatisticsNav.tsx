@@ -11,9 +11,11 @@ const LINKS: { href: string; label: string; exact?: boolean }[] = [
   { href: "/admin/statistics/revenue", label: "الإيرادات" },
 ];
 
-export function AdminStatisticsNav({ isSuperAdmin = true }: { isSuperAdmin?: boolean }) {
+/** إحصائيات الأسطول صفحة بصلاحية مستقلة (ليست في القائمة الجانبية) — نُخفي رابطها عمّن
+ *  لا يملكها بدل أن يصطدم بإعادة توجيه من الـ middleware. */
+export function AdminStatisticsNav({ showFleet = true }: { showFleet?: boolean }) {
   const pathname = usePathname() ?? "";
-  const links = isSuperAdmin ? LINKS : LINKS.filter((l) => l.href !== "/admin/statistics/fleet");
+  const links = showFleet ? LINKS : LINKS.filter((l) => l.href !== "/admin/statistics/fleet");
 
   return (
     <nav

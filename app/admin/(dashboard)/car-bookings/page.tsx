@@ -7,7 +7,8 @@ import {
 } from "@/components/admin/AdminCarBookingsList";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { ReportExportButtons } from "@/components/admin/ReportExportButtons";
-import { adminBranchDisplayName, bookingBranchWhere } from "@/lib/admin-access";
+import { bookingBranchWhere } from "@/lib/admin-access";
+import { adminScope, scopeLabel } from "@/lib/admin-scope";
 import { requireAdminPage } from "@/lib/admin-page";
 import { addDaysToYmd, NON_BLOCKING_BOOKING_STATUSES } from "@/lib/direct-booking";
 import { missedPickupCondition } from "@/lib/admin-missed-bookings";
@@ -152,9 +153,7 @@ export default async function AdminCarBookingsPage({
       rows: groupsMap.get(ymd)!,
     }));
 
-  const branchHint = session.isSuperAdmin
-    ? "كل الفروع"
-    : `فرع ${adminBranchDisplayName(session)}`;
+  const branchHint = scopeLabel(adminScope(session));
 
   return (
     <>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { bookingBranchWhere } from "@/lib/admin-access";
 import { requireAdminPage } from "@/lib/admin-page";
+import { adminScope } from "@/lib/admin-scope";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -54,8 +55,9 @@ function aggregateClientsFromBookings(
 export default async function AdminCustomersPage() {
   const session = await requireAdminPage();
 
+  // حسابات الموقع غير مرتبطة بفرع — تُعرض لمن نطاقه كل الفروع فقط.
   const [users, bookingRows] = await Promise.all([
-    session.isSuperAdmin
+    adminScope(session).kind === "all"
       ? prisma.user.findMany({
           orderBy: { createdAt: "desc" },
           take: 200,
