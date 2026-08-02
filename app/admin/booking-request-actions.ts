@@ -380,6 +380,15 @@ export async function processAdminQuickPayment(
   }
 
   try {
+    const { sendNewBookingNotificationEmails } = await import(
+      "@/lib/booking-notification-email"
+    );
+    await sendNewBookingNotificationEmails(bookingRequestId);
+  } catch (e) {
+    console.error("[booking-notification-email] بعد الدفع من الإدارة:", e);
+  }
+
+  try {
     const { sendAdminEmailForNewBooking } = await import("@/lib/booking-received-notification");
     await sendAdminEmailForNewBooking(bookingRequestId);
   } catch (e) {

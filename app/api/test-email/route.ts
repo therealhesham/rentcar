@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildReceivedHtml } from "@/lib/booking-received-notification";
 import { buildInvoiceHtml } from "@/lib/booking-invoice-email";
+import { buildNotificationHtml } from "@/lib/booking-notification-email";
 import type { BookingPaymentSnapshot } from "@/lib/booking-payment-data";
 
 export async function GET(req: NextRequest) {
@@ -55,7 +56,27 @@ export async function GET(req: NextRequest) {
     branch: "المطار",
   } as unknown as BookingPaymentSnapshot;
 
-  const html = type === "received" ? buildReceivedHtml(dummySnapshot) : buildInvoiceHtml(dummySnapshot);
+  const html =
+    type === "notification"
+      ? buildNotificationHtml({
+          id: 1247,
+          kind: "DIRECT",
+          fullName: "محمد عبدالله الحربي",
+          phone: "+966501234567",
+          carType: "سيدان",
+          carModel: { name: "اكسنت", brand: { name: "هيونداي" } },
+          branchLabel: "فرع الرياض - العليا",
+          pickupDate: new Date(),
+          numberOfDays: 5,
+          paymentStatus: req.nextUrl.searchParams.get("paymentStatus") || "PAID",
+          paymentMethod: req.nextUrl.searchParams.get("paymentMethod") || "MADA",
+          paidAmountSar: Number(req.nextUrl.searchParams.get("paid") ?? 1725),
+          snapshotTotalAmountSar: Number(req.nextUrl.searchParams.get("total") ?? 1725),
+          balanceDueAtBranchSar: Number(req.nextUrl.searchParams.get("balance") ?? 0),
+        })
+      : type === "received"
+        ? buildReceivedHtml(dummySnapshot)
+        : buildInvoiceHtml(dummySnapshot);
   return new NextResponse(html, {
     headers: { "Content-Type": "text/html; charset=utf-8" },
   });

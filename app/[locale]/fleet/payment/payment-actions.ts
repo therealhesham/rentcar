@@ -373,6 +373,15 @@ export async function confirmMockPayment(
       } catch (e) {
         console.error("[booking-received] بعد تسجيل الكاش:", e);
       }
+      // وسيلة الدفع اتحسمت (كاش عند الفرع) — الموظف محتاج يعرف دلوقتي مش بعد التحصيل.
+      try {
+        const { sendNewBookingNotificationEmails } = await import(
+          "@/lib/booking-notification-email"
+        );
+        await sendNewBookingNotificationEmails(id);
+      } catch (e) {
+        console.error("[booking-notification-email] بعد اختيار الكاش:", e);
+      }
     } else {
       try {
         await sendBookingInvoiceEmailAfterPayment(id);
@@ -384,6 +393,15 @@ export async function confirmMockPayment(
         await sendAdminEmailForNewBooking(id);
       } catch (e) {
         console.error("[sendAdminEmailForNewBooking] بعد تأكيد الدفع:", e);
+      }
+
+      try {
+        const { sendNewBookingNotificationEmails } = await import(
+          "@/lib/booking-notification-email"
+        );
+        await sendNewBookingNotificationEmails(id);
+      } catch (e) {
+        console.error("[booking-notification-email] بعد تأكيد الدفع:", e);
       }
 
       try {

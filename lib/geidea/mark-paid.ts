@@ -4,6 +4,7 @@ import { logActivity } from "@/lib/activity-log";
 import { recordPaymentTransaction } from "@/lib/payment-transaction";
 import { sendAdminEmailForNewBooking } from "@/lib/booking-received-notification";
 import { sendBookingInvoiceEmailAfterPayment } from "@/lib/booking-invoice-email";
+import { sendNewBookingNotificationEmails } from "@/lib/booking-notification-email";
 import { sendBookingCompletionWhatsAppAfterPayment } from "@/lib/evolution-whatsapp";
 import type { GeideaOrder } from "@/lib/geidea/client";
 
@@ -92,6 +93,13 @@ export async function markBookingPaidFromGeideaOrder(
     await sendAdminEmailForNewBooking(bookingId);
   } catch (e) {
     console.error(`[geidea-${source}] admin email:`, e);
+  }
+  // إشعار موظفي الفرع/المدينة — مؤجَّل لهنا لأن الحجز الإلكتروني وقت إنشائه
+  // كان لسه غير مدفوع.
+  try {
+    await sendNewBookingNotificationEmails(bookingId);
+  } catch (e) {
+    console.error(`[geidea-${source}] staff notification email:`, e);
   }
   try {
     await sendBookingCompletionWhatsAppAfterPayment(bookingId);
