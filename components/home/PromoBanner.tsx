@@ -4,6 +4,9 @@ import { PromoBannerCarousel } from "./PromoBannerCarousel";
 import { getLocale, getTranslations } from "next-intl/server";
 
 export async function PromoBanner() {
+  // سكشن العروض الحصرية مخفي بناءً على طلب المستخدم
+  return null;
+
   const slides = await getPromoBannerSlides();
   if (slides.length === 0) return null;
 

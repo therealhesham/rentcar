@@ -29,9 +29,11 @@ export function HomeScrollSections({
       <MotionSection className="relative z-0 w-full">
         {fleetCategories}
       </MotionSection>
-      <MotionSection className="relative z-0 w-full">
-        {promoBanner}
-      </MotionSection>
+      {promoBanner && (
+        <MotionSection className="relative z-0 w-full">
+          {promoBanner}
+        </MotionSection>
+      )}
       <MotionSection className="relative z-0 w-full">
         {services}
       </MotionSection>
