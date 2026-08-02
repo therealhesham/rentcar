@@ -5,8 +5,15 @@ import { createAdminEmployee } from "@/app/admin/admin-employee-actions";
 import { AdminPermissionsFieldset } from "@/app/admin/(dashboard)/employees/AdminPermissionsFieldset";
 
 type BranchOption = { id: number; name: string; slug: string };
+type CityOption = { id: number; name: string };
 
-export function AdminEmployeeCreateForm({ branches }: { branches: BranchOption[] }) {
+export function AdminEmployeeCreateForm({
+  branches,
+  cities,
+}: {
+  branches: BranchOption[];
+  cities: CityOption[];
+}) {
   const [state, formAction, pending] = useActionState(createAdminEmployee, null);
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -36,13 +43,32 @@ export function AdminEmployeeCreateForm({ branches }: { branches: BranchOption[]
           defaultValue=""
           className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
         >
-          <option value="">الإدارة المركزية (بدون فرع محدد)</option>
+          <option value="">— بدون فرع محدد —</option>
           {branches.map((b) => (
             <option key={b.id} value={b.id}>
               {b.name} ({b.slug})
             </option>
           ))}
         </select>
+      </label>
+
+      <label className="text-sm font-medium md:col-span-1">
+        أو مشرف مدينة كاملة (بدلاً من الفرع)
+        <select
+          name="cityId"
+          defaultValue=""
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+        >
+          <option value="">— الإدارة المركزية / بدون —</option>
+          {cities.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+        <span className="mt-1 block text-xs font-normal text-on-surface-variant">
+          يستقبل TO على إيميلات كل فروع هذه المدينة — لا تختره مع فرع محدد
+        </span>
       </label>
 
       <label className="text-sm font-medium md:col-span-1">
@@ -78,14 +104,32 @@ export function AdminEmployeeCreateForm({ branches }: { branches: BranchOption[]
           className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
         />
       </label>
-      <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-outline-variant/50 bg-surface-container-lowest p-3 text-sm font-medium md:col-span-2">
-        <input
-          type="checkbox"
-          name="notifyOnBookingEmail"
-          className="h-4 w-4 rounded border-outline text-primary focus:ring-primary"
-        />
-        أرسل إيميل تلقائي عند حجز جديد (لموظف الفرع، أو CC لموظف الإدارة المركزية)
-      </label>
+      <div className="grid gap-2 md:col-span-2">
+        <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-outline-variant/50 bg-surface-container-lowest p-3 text-sm font-medium">
+          <input
+            type="checkbox"
+            name="notifyOnBookingEmail"
+            className="h-4 w-4 rounded border-outline text-primary focus:ring-primary"
+          />
+          أرسل إيميل تلقائي عند حجز جديد (لموظف الفرع أو مشرف المدينة المطابق)
+        </label>
+        <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-outline-variant/50 bg-surface-container-lowest p-3 text-sm font-medium">
+          <input
+            type="checkbox"
+            name="notifyGlobalTo"
+            className="h-4 w-4 rounded border-outline text-primary focus:ring-primary"
+          />
+          TO على كل الإيميلات بلا استثناء (مثل مشرف العمليات)
+        </label>
+        <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-outline-variant/50 bg-surface-container-lowest p-3 text-sm font-medium">
+          <input
+            type="checkbox"
+            name="notifyGlobalCc"
+            className="h-4 w-4 rounded border-outline text-primary focus:ring-primary"
+          />
+          CC ثابت على كل الإيميلات (مثل المحاسب أو المدير المالي)
+        </label>
+      </div>
 
       <div className="md:col-span-2 mt-2 border-t border-outline-variant/30 pt-4">
         <label className="mb-3 block text-sm font-bold text-on-surface">الصلاحيات الممنوحة</label>

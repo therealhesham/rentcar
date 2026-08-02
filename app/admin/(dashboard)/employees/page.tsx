@@ -16,17 +16,23 @@ export default async function AdminEmployeesPage() {
     redirect("/admin");
   }
 
-  const [employees, branches] = await Promise.all([
+  const [employees, branches, cities] = await Promise.all([
     prisma.adminEmployee.findMany({
       orderBy: [{ isSuperAdmin: "desc" }, { createdAt: "desc" }],
       include: {
         branch: { select: { name: true, slug: true } },
+        city: { select: { name: true } },
       },
     }),
     prisma.branch.findMany({
       where: { isActive: true },
       orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
       select: { id: true, name: true, slug: true },
+    }),
+    prisma.city.findMany({
+      where: { isActive: true },
+      orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+      select: { id: true, name: true },
     }),
   ]);
 
@@ -48,7 +54,7 @@ export default async function AdminEmployeesPage() {
         </p>
       </header>
 
-      <AdminEmployeeCreateForm branches={branches} />
+      <AdminEmployeeCreateForm branches={branches} cities={cities} />
 
       <section className="rounded-2xl border border-outline-variant/30 bg-surface-container-lowest">
         <h2 className="border-b border-outline-variant/25 px-5 py-4 text-lg font-extrabold">
@@ -78,11 +84,29 @@ export default async function AdminEmployeesPage() {
                     {e.email}
                   </p>
                   <p className="mt-1 text-sm font-medium text-primary">
-                    فرع: {e.branch?.name ?? "الإدارة المركزية"}{" "}
+                    {e.branch
+                      ? `فرع: ${e.branch.name}`
+                      : e.city
+                        ? `مشرف مدينة: ${e.city.name}`
+                        : "الإدارة المركزية"}{" "}
                     {e.branch?.slug ? (
                       <span className="font-mono text-on-surface-variant">({e.branch.slug})</span>
                     ) : null}
                   </p>
+                  {(e.notifyGlobalTo || e.notifyGlobalCc) && (
+                    <p className="mt-1 flex flex-wrap gap-1">
+                      {e.notifyGlobalTo && (
+                        <span className="rounded bg-primary-container px-2 py-0.5 text-[10px] font-bold text-on-primary-container">
+                          TO على كل الإيميلات
+                        </span>
+                      )}
+                      {e.notifyGlobalCc && (
+                        <span className="rounded bg-surface-container-high px-2 py-0.5 text-[10px] font-bold text-on-surface-variant">
+                          CC على كل الإيميلات
+                        </span>
+                      )}
+                    </p>
+                  )}
                   {e.permissionsJson && (
                     <div className="mt-2 flex flex-wrap gap-1">
                       {(JSON.parse(e.permissionsJson) as string[]).map((p) => (
@@ -99,7 +123,12 @@ export default async function AdminEmployeesPage() {
                     />
                     <AdminEmployeeNotifyToggleForm
                       employeeId={e.id}
+                      hasBranch={e.branchId != null}
+                      cities={cities}
+                      cityId={e.cityId}
                       notifyOnBookingEmail={e.notifyOnBookingEmail}
+                      notifyGlobalTo={e.notifyGlobalTo}
+                      notifyGlobalCc={e.notifyGlobalCc}
                     />
                   </div>
                 </div>

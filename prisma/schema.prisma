@@ -53,12 +53,12 @@ model ActivityLog {
 
 /// حساب عميل على الموقع العام فقط (تسجيل / دخول / حجز). موظفو الإدارة في `AdminEmployee`.
 model User {
-  id           Int      @id @default(autoincrement())
-  email        String   @unique @db.VarChar(255)
-  passwordHash String?  @db.VarChar(255)
-  name         String?  @db.VarChar(255)
+  id                    Int       @id @default(autoincrement())
+  email                 String    @unique @db.VarChar(255)
+  passwordHash          String?   @db.VarChar(255)
+  name                  String?   @db.VarChar(255)
   /// موحّد مع الحجز: +9665XXXXXXXX
-  phone        String?  @unique @db.VarChar(16)
+  phone                 String?   @unique @db.VarChar(16)
   /// مواطن = CITIZEN، مقيم = RESIDENT، زائر = VISITOR
   idDocumentKind        String?   @db.VarChar(24)
   nationalIdNumber      String?   @db.VarChar(16)
@@ -68,8 +68,8 @@ model User {
   licenseExpiryDate     DateTime? @db.Date
   idCardImageUrl        String?   @db.Text
   driverLicenseImageUrl String?   @db.Text
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   bookingRequests BookingRequest[]
   subscriptions   UserSubscription[]
@@ -86,7 +86,8 @@ model City {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  branches Branch[]
+  branches           Branch[]
+  cityAdminEmployees AdminEmployee[]
 
   /// رسوم شحن من هذه المدينة إلى مدينة أخرى (حجز أسطول).
   interCityShippingFrom InterCityShippingFee[] @relation("InterCityShippingFrom")
@@ -98,16 +99,16 @@ model City {
 
 /// رسوم شحن لمرة واحدة عند اختلاف مدينة الاستلام/التوصيل عن مدينة إرجاع المركبة (غير شامل الضريبة).
 model InterCityShippingFee {
-  id             Int      @id @default(autoincrement())
-  fromCityId     Int
-  fromCity       City     @relation("InterCityShippingFrom", fields: [fromCityId], references: [id], onDelete: Cascade)
-  toCityId       Int
-  toCity         City     @relation("InterCityShippingTo", fields: [toCityId], references: [id], onDelete: Cascade)
-  feeExclVatSar  Int
-  isActive       Boolean  @default(true)
-  sortOrder      Int      @default(0)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id            Int      @id @default(autoincrement())
+  fromCityId    Int
+  fromCity      City     @relation("InterCityShippingFrom", fields: [fromCityId], references: [id], onDelete: Cascade)
+  toCityId      Int
+  toCity        City     @relation("InterCityShippingTo", fields: [toCityId], references: [id], onDelete: Cascade)
+  feeExclVatSar Int
+  isActive      Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@unique([fromCityId, toCityId])
   @@index([isActive, sortOrder])
@@ -130,38 +131,38 @@ model CheckoutOneTimeFee {
 
 /// فرع استلام داخل مدينة (مفتاح مستقر `slug` يطابق قيم الحجز والروابط).
 model Branch {
-  id        Int      @id @default(autoincrement())
-  cityId    Int
-  city      City     @relation(fields: [cityId], references: [id])
-  slug      String   @unique @db.VarChar(64)
-  name      String
-  nameEn    String?
-  tagline   String?  @db.VarChar(255)
-  taglineEn String?  @db.VarChar(255)
-  address   String?  @db.VarChar(255)
-  addressEn String?  @db.VarChar(255)
-  detailedAddress String? @db.Text
-  detailedAddressEn String? @db.Text
-  phone     String?  @db.VarChar(32)
-  mapUrl    String?  @db.Text
-  latitude  Float?
-  longitude Float?
-  deliveryFeePerKmSar Float @default(0)
-  image     String?  @db.Text
-  alt       String?  @db.Text
-  sortOrder Int      @default(0)
-  isActive  Boolean  @default(true)
+  id                  Int      @id @default(autoincrement())
+  cityId              Int
+  city                City     @relation(fields: [cityId], references: [id])
+  slug                String   @unique @db.VarChar(64)
+  name                String
+  nameEn              String?
+  tagline             String?  @db.VarChar(255)
+  taglineEn           String?  @db.VarChar(255)
+  address             String?  @db.VarChar(255)
+  addressEn           String?  @db.VarChar(255)
+  detailedAddress     String?  @db.Text
+  detailedAddressEn   String?  @db.Text
+  phone               String?  @db.VarChar(32)
+  mapUrl              String?  @db.Text
+  latitude            Float?
+  longitude           Float?
+  deliveryFeePerKmSar Float    @default(0)
+  image               String?  @db.Text
+  alt                 String?  @db.Text
+  sortOrder           Int      @default(0)
+  isActive            Boolean  @default(true)
   /// يظهر في قسم «فروعنا الجديدة» بالصفحة الرئيسية
-  isNew     Boolean  @default(false)
+  isNew               Boolean  @default(false)
   /// مواعيد العمل بتوقيت السعودية (JSON: { "days": { "0": { "open":"09:00","close":"22:00" }, … } })؛ null = بدون تقييد
-  openingHoursJson String? @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  openingHoursJson    String?  @db.Text
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
-  employees AdminEmployee[]
-  fleetItems Fleet[]
-  pickupBookings  BookingRequest[] @relation("BookingPickupBranch")
-  returnBookings  BookingRequest[] @relation("BookingReturnBranch")
+  employees       AdminEmployee[]
+  fleetItems      Fleet[]
+  pickupBookings  BookingRequest[]        @relation("BookingPickupBranch")
+  returnBookings  BookingRequest[]        @relation("BookingReturnBranch")
   rentalDiscounts RentalDiscount[]
   vehicleUnits    VehicleUnit[]
   maintenanceLogs VehicleMaintenanceLog[]
@@ -174,24 +175,32 @@ model Branch {
 
 /// موظفو لوحة الإدارة: سوبر أدمن ومديرو/موظفو الفروع — ليسوا في جدول `User`.
 model AdminEmployee {
-  id           Int      @id @default(autoincrement())
-  email        String   @unique @db.VarChar(255)
-  passwordHash String   @db.VarChar(255)
-  name         String?  @db.VarChar(255)
-  /// null للسوبر أدمن؛ مطلوب لموظف الفرع
+  id           Int     @id @default(autoincrement())
+  email        String  @unique @db.VarChar(255)
+  passwordHash String  @db.VarChar(255)
+  name         String? @db.VarChar(255)
+  /// null للسوبر أدمن أو مشرف مدينة/عمليات؛ مطلوب لموظف الفرع
   branchId     Int?
-  branch       Branch?  @relation(fields: [branchId], references: [id], onDelete: Restrict)
-  isSuperAdmin Boolean  @default(false)
-  isActive     Boolean  @default(true)
+  branch       Branch? @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  /// مشرف مدينة (لا فرع واحد): TO على إيميلات كل فروع هذه المدينة. حصري مع branchId عملياً.
+  cityId       Int?
+  city         City?   @relation(fields: [cityId], references: [id], onDelete: SetNull)
+  isSuperAdmin Boolean @default(false)
+  isActive     Boolean @default(true)
 
   /// مصفوفة JSON تحتوي على مفاتيح الصلاحيات الممنوحة للموظف (مثل: ["BOOKINGS", "FINANCIALS"])
   permissionsJson String? @db.Text
 
-  /// أرسل إيميل تلقائي عند حجز جديد — لموظف الفرع نفسه، أو CC لموظف الإدارة المركزية (branchId فارغ).
+  /// أرسل إيميل تلقائي عند حجز جديد. النطاق: branchId (فرعه) أو cityId (كل فروع مدينته)
+  /// أو notifyGlobalTo/notifyGlobalCc (كل الحجوزات) — أول تطابق موجود يُستخدم.
   notifyOnBookingEmail Boolean @default(false)
+  /// TO على كل إيميلات الحجوزات بلا استثناء (مثل مشرف العمليات) — بمعزل عن isSuperAdmin.
+  notifyGlobalTo       Boolean @default(false)
+  /// CC ثابت على كل إيميلات الحجوزات بلا استثناء (محاسب، مدير مالي...) — بمعزل عن isSuperAdmin.
+  notifyGlobalCc       Boolean @default(false)
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   notifications Notification[]
 
@@ -200,18 +209,18 @@ model AdminEmployee {
 }
 
 model FleetCategory {
-  id          Int        @id @default(autoincrement())
-  slug        String     @unique @db.VarChar(64)
-  title       String
-  titleEn     String?
-  description String     @db.Text
-  descriptionEn String?  @db.Text
-  image       String
-  alt         String?
-  sortOrder   Int        @default(0)
-  models      CarModel[]
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id            Int        @id @default(autoincrement())
+  slug          String     @unique @db.VarChar(64)
+  title         String
+  titleEn       String?
+  description   String     @db.Text
+  descriptionEn String?    @db.Text
+  image         String
+  alt           String?
+  sortOrder     Int        @default(0)
+  models        CarModel[]
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
 }
 
 /// مجلدات معرض الصور في Spaces: `rentcar/<slug>/`
@@ -227,78 +236,78 @@ model GalleryFolder {
 }
 
 model Brand {
-  id        Int        @id @default(autoincrement())
-  name      String     @unique
-  nameEn    String?
-  models    CarModel[]
+  id              Int              @id @default(autoincrement())
+  name            String           @unique
+  nameEn          String?
+  models          CarModel[]
   rentalDiscounts RentalDiscount[]
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 }
 
 model CarModel {
-  id            Int             @id @default(autoincrement())
-  name          String
-  nameEn        String?
-  brandId       Int
-  brand         Brand           @relation(fields: [brandId], references: [id])
-  categoryId    Int
-  category      FleetCategory   @relation(fields: [categoryId], references: [id])
+  id         Int           @id @default(autoincrement())
+  name       String
+  nameEn     String?
+  brandId    Int
+  brand      Brand         @relation(fields: [brandId], references: [id])
+  categoryId Int
+  category   FleetCategory @relation(fields: [categoryId], references: [id])
 
-  year          Int
-  chairs        Int
+  year   Int
+  chairs Int
 
-  engine        String
-  transmission  Transmission
-  fuel          FuelType
+  engine       String
+  transmission Transmission
+  fuel         FuelType
 
   /// سعر اليوم بالريال دون ضريبة (يُعرض للزائر كغير شامل للضريبة)
-  price         Int
+  price               Int
   /// سعر الإيجار الشهري الأساسي دون ضريبة (خصم منفصل عن اليومي×30) — null = لا يوجد عرض شهري لهذا الموديل.
   priceMonthlyExclTax Int?
   /// نسبة ضريبة القيمة المضافة % المسجّلة لهذا الموديل (مثلاً 15 في السعودية) — للفوترة والأرشفة
-  vatRatePercent Int @default(15)
-  image         String?
-  alt           String?
-  cta           String?
-  ctaEn         String?
-  badge         String?
-  badgeEn       String?
+  vatRatePercent      Int     @default(15)
+  image               String?
+  alt                 String?
+  cta                 String?
+  ctaEn               String?
+  badge               String?
+  badgeEn             String?
   /// ترتيب العرض في صفحة الأسطول — الأصغر يظهر أولاً. يُطبَّق على العميل والأدمن معاً.
-  displayOrder  Int             @default(0)
+  displayOrder        Int     @default(0)
 
-  fleetItems         Fleet[]
-  bookingRequests    BookingRequest[]
-  subscriptionPlans  SubscriptionPlan[]
-  rentalDiscounts    RentalDiscount[]
-  vehicleUnits       VehicleUnit[]
+  fleetItems        Fleet[]
+  bookingRequests   BookingRequest[]
+  subscriptionPlans SubscriptionPlan[]
+  rentalDiscounts   RentalDiscount[]
+  vehicleUnits      VehicleUnit[]
 
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  @@index([categoryId])
   @@unique([brandId, name, year])
+  @@index([categoryId])
 }
 
 /// كمية متاحة من موديل سيارة في فرع محدّد (التوفر يُحسب لكل فرع على حدة).
 model Fleet {
-  id         Int       @id @default(autoincrement())
-  modelId    Int
-  model      CarModel  @relation(fields: [modelId], references: [id], onDelete: Cascade)
-  branchId   Int
-  branch     Branch    @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  quantity   Int       @default(0)
+  id                  Int      @id @default(autoincrement())
+  modelId             Int
+  model               CarModel @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  branchId            Int
+  branch              Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  quantity            Int      @default(0)
   /// سعر يومي خاص بالفرع (دون ضريبة) — يتجاوز `CarModel.price` عند تحديده. null = السعر الأساسي للموديل.
-  pricePerDayExclTax Float?
+  pricePerDayExclTax  Float?
   /// سعر شهري خاص بالفرع (دون ضريبة) — يتجاوز `CarModel.priceMonthlyExclTax` عند تحديده. null = السعر الأساسي للموديل.
   priceMonthlyExclTax Float?
   /// هل تظهر هذه المركبة للعملاء في صفحة الأسطول (يمكن إخفاؤها حتى لو متاحة)
-  isVisible    Boolean  @default(true)
+  isVisible           Boolean  @default(true)
   /// ترتيب العرض في صفحة الأسطول — الأصغر يظهر أولاً (0 = افتراضي)
-  displayOrder Int      @default(0)
+  displayOrder        Int      @default(0)
 
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([modelId, branchId])
   @@index([branchId])
@@ -308,29 +317,29 @@ model Fleet {
 
 /// وحدة سيارة فعلية ذات رقم لوحة محدد في الأسطول.
 model VehicleUnit {
-  id               Int      @id @default(autoincrement())
+  id            Int     @id @default(autoincrement())
   /// رقم اللوحة (مثل: أ ب ج 1234)
-  plateNumber      String   @unique @db.VarChar(64)
+  plateNumber   String  @unique @db.VarChar(64)
   /// رقم الهيكل (اختياري)
-  chassisNumber    String?  @db.VarChar(64)
+  chassisNumber String? @db.VarChar(64)
   /// لون المركبة
-  color            String?  @db.VarChar(64)
+  color         String? @db.VarChar(64)
 
-  carModelId       Int
-  carModel         CarModel @relation(fields: [carModelId], references: [id], onDelete: Cascade)
+  carModelId Int
+  carModel   CarModel @relation(fields: [carModelId], references: [id], onDelete: Cascade)
 
-  branchId         Int?
-  branch           Branch?  @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  branchId Int?
+  branch   Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
 
   /// حالة السيارة: AVAILABLE | RENTED | MAINTENANCE | INACTIVE
-  status           String   @default("AVAILABLE") @db.VarChar(24)
-  notes            String?  @db.Text
+  status String  @default("AVAILABLE") @db.VarChar(24)
+  notes  String? @db.Text
 
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  bookingRequests  BookingRequest[]
-  maintenanceLogs  VehicleMaintenanceLog[]
+  bookingRequests BookingRequest[]
+  maintenanceLogs VehicleMaintenanceLog[]
 
   @@index([carModelId])
   @@index([branchId])
@@ -344,11 +353,11 @@ model VehicleMaintenanceLog {
   vehicleUnit   VehicleUnit @relation(fields: [vehicleUnitId], references: [id], onDelete: Cascade)
 
   /// نوع الصيانة: PERIODIC | OIL_CHANGE | TIRES | REPAIR | ACCIDENT | INSPECTION | OTHER
-  kind        String  @db.VarChar(32)
+  kind        String @db.VarChar(32)
   /// حالة العملية: IN_PROGRESS | COMPLETED | CANCELLED
-  status      String  @default("IN_PROGRESS") @db.VarChar(16)
+  status      String @default("IN_PROGRESS") @db.VarChar(16)
   /// وصف العمل المنفَّذ أو المطلوب.
-  description String  @db.Text
+  description String @db.Text
 
   /// تاريخ دخول المركبة للصيانة.
   startedAt   DateTime
@@ -356,13 +365,13 @@ model VehicleMaintenanceLog {
   completedAt DateTime?
 
   /// التكلفة بالريال (كما وردت في فاتورة الورشة). null = غير مسجّلة بعد.
-  costSar     Float?
+  costSar    Float?
   /// اسم الورشة أو مزوّد الخدمة.
-  vendorName  String? @db.VarChar(191)
+  vendorName String? @db.VarChar(191)
   /// رقم فاتورة الورشة.
-  invoiceRef  String? @db.VarChar(128)
+  invoiceRef String? @db.VarChar(128)
   /// قراءة عداد الكيلومترات عند تنفيذ الصيانة.
-  odometerKm  Int?
+  odometerKm Int?
 
   /// تاريخ الصيانة الدورية القادمة (تنبيه).
   nextDueDate       DateTime?
@@ -370,15 +379,15 @@ model VehicleMaintenanceLog {
   nextDueOdometerKm Int?
 
   /// الفرع الذي سجّل العملية (اختياري).
-  branchId    Int?
-  branch      Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  branchId Int?
+  branch   Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
 
   /// اسم الموظف الذي أنشأ السجل.
-  createdBy   String? @db.VarChar(128)
-  notes       String? @db.VarChar(500)
+  createdBy String? @db.VarChar(128)
+  notes     String? @db.VarChar(500)
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([vehicleUnitId, startedAt])
   @@index([status, startedAt])
@@ -413,26 +422,26 @@ model RentalAddon {
 
 /// خصومات تأجير يومي — تُدار من الإدارة؛ العميل يرى المبلغ المخصوم فقط دون تفاصيل الشرط.
 model RentalDiscount {
-  id          Int                  @id @default(autoincrement())
+  id         Int                @id @default(autoincrement())
   /// اسم داخلي للإدارة فقط (لا يُعرض للعميل).
-  labelAr     String               @db.VarChar(255)
-  kind        RentalDiscountKind
+  labelAr    String             @db.VarChar(255)
+  kind       RentalDiscountKind
   /// PERCENT: 1–100؛ FIXED_DAILY: مبلغ يومي بالريال (دون ضريبة).
-  value       Int
+  value      Int
   /// بداية الفترة (null = بدون بداية).
-  startsAt    DateTime?
+  startsAt   DateTime?
   /// نهاية الفترة (null = بدون نهاية).
-  endsAt      DateTime?
-  brandId     Int?
-  brand       Brand?               @relation(fields: [brandId], references: [id], onDelete: Cascade)
-  carModelId  Int?
-  carModel    CarModel?            @relation(fields: [carModelId], references: [id], onDelete: Cascade)
-  branchId    Int?
-  branch      Branch?              @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  isActive    Boolean              @default(true)
-  sortOrder   Int                  @default(0)
-  createdAt   DateTime             @default(now())
-  updatedAt   DateTime             @updatedAt
+  endsAt     DateTime?
+  brandId    Int?
+  brand      Brand?             @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  carModelId Int?
+  carModel   CarModel?          @relation(fields: [carModelId], references: [id], onDelete: Cascade)
+  branchId   Int?
+  branch     Branch?            @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  isActive   Boolean            @default(true)
+  sortOrder  Int                @default(0)
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
 
   @@index([isActive, sortOrder])
   @@index([brandId])
@@ -521,116 +530,116 @@ model CorporateBookingLead {
 }
 
 model BookingRequest {
-  id            Int                 @id @default(autoincrement())
+  id         Int                @id @default(autoincrement())
   /// INQUIRY = طلب حجز من الرئيسية (بدون سيارة محددة). DIRECT = حجز مباشر بعد اختيار سيارة.
-  kind          BookingRequestKind  @default(INQUIRY)
+  kind       BookingRequestKind @default(INQUIRY)
   /// عند الحجز المباشر فقط — ربط بموديل السيارة المختار.
-  carModelId    Int?
-  carModel      CarModel?           @relation(fields: [carModelId], references: [id])
+  carModelId Int?
+  carModel   CarModel?          @relation(fields: [carModelId], references: [id])
   /// عميل مسجّل أنشأ أو يملك الطلب (اختياري).
-  customerId    Int?
-  customer      User?               @relation(fields: [customerId], references: [id])
+  customerId Int?
+  customer   User?              @relation(fields: [customerId], references: [id])
 
-  fullName      String
-  phone         String
+  fullName                      String
+  phone                         String
   /// بريد لإرسال الفاتورة بعد إتمام الدفع (يُجمع من صفحة الإتمام).
-  contactEmail  String?   @db.VarChar(255)
+  contactEmail                  String?      @db.VarChar(255)
   /// Legacy fields: نُبقيها للتوافق مع السجلات القديمة؛ البيانات الجديدة تُحفظ في User.
-  idDocumentKind           String?   @db.VarChar(24)
-  nationalIdNumber         String?   @db.VarChar(16)
-  passportNumber           String?   @db.VarChar(32)
-  licenseNumber            String?   @db.VarChar(64)
+  idDocumentKind                String?      @db.VarChar(24)
+  nationalIdNumber              String?      @db.VarChar(16)
+  passportNumber                String?      @db.VarChar(32)
+  licenseNumber                 String?      @db.VarChar(64)
   /// Legacy.
-  licenseExpiryDate        DateTime? @db.Date
-  idCardImageUrl           String?   @db.Text
-  driverLicenseImageUrl    String?   @db.Text
-  ageRange      String
-  carType       String
+  licenseExpiryDate             DateTime?    @db.Date
+  idCardImageUrl                String?      @db.Text
+  driverLicenseImageUrl         String?      @db.Text
+  ageRange                      String
+  carType                       String
   /// Pickup branch FK. See docs/booking-request-branch-fields.md (AR: فرع الاستلام).
-  branchId      Int?
-  pickupBranch  Branch?  @relation("BookingPickupBranch", fields: [branchId], references: [id], onDelete: SetNull)
+  branchId                      Int?
+  pickupBranch                  Branch?      @relation("BookingPickupBranch", fields: [branchId], references: [id], onDelete: SetNull)
   /// Return branch FK. See docs/booking-request-branch-fields.md (AR: فرع الإرجاع).
-  returnBranchId Int?
-  returnBranch   Branch?  @relation("BookingReturnBranch", fields: [returnBranchId], references: [id], onDelete: SetNull)
+  returnBranchId                Int?
+  returnBranch                  Branch?      @relation("BookingReturnBranch", fields: [returnBranchId], references: [id], onDelete: SetNull)
   /// Inter-branch return confirmed at return branch. See docs/booking-request-branch-fields.md.
-  interBranchReturnConfirmedAt DateTime?
+  interBranchReturnConfirmedAt  DateTime?
   /// وقت تسجيل استلام العميل للسيارة من الفرع (حالة PICKED_UP).
-  vehiclePickedUpAt DateTime?
+  vehiclePickedUpAt             DateTime?
   /// وقت تسجيل إرجاع السيارة إلى الفرع (حالة RETURNED).
-  vehicleReturnedAt DateTime?
+  vehicleReturnedAt             DateTime?
   /// استلام من فرع الشركة أو توصيل للعميل (حجز مباشر من الموقع).
-  pickupMode    String?   @db.VarChar(16)
-  deliveryLat   Float?
-  deliveryLng   Float?
+  pickupMode                    String?      @db.VarChar(16)
+  deliveryLat                   Float?
+  deliveryLng                   Float?
   /// عنوان نصّي للتوصيل إن لم يُحدَّد بالخريطة (أو لتفاصيل إضافية).
-  deliveryAddress String? @db.Text
-  pickupDate    DateTime
-  numberOfDays  Int
-  termsAccepted Boolean             @default(true)
+  deliveryAddress               String?      @db.Text
+  pickupDate                    DateTime
+  numberOfDays                  Int
+  termsAccepted                 Boolean      @default(true)
   /// لقطة JSON للإضافات المختارة عند إنشاء الحجز المباشر (عناوين وأسعار وقت الطلب).
-  addonsJson    String?   @db.Text
+  addonsJson                    String?      @db.Text
   /// حالة الدفع: PENDING | PAID | REFUNDED | PARTIAL_REFUND | NO_REFUND
-  paymentStatus String    @default("PENDING") @db.VarChar(24)
+  paymentStatus                 String       @default("PENDING") @db.VarChar(24)
   /// وقت تأكيد الدفع (تجريبي).
-  paidAt        DateTime?
+  paidAt                        DateTime?
   /// طريقة الدفع المختارة عند الإتمام: TABBY | TAMARA | CARD | POINTS (ربط البوابات لاحقاً).
-  paymentMethod String?   @db.VarChar(24)
+  paymentMethod                 String?      @db.VarChar(24)
   /// اسم أو معرّف الموظف/النظام الذي سجل الدفعة
-  paymentReceivedBy String? @db.VarChar(128)
-  status        String              @default("NEW")
+  paymentReceivedBy             String?      @db.VarChar(128)
+  status                        String       @default("NEW")
   /// وقت إلغاء الطلب من الحساب (إن وُجد).
-  cancelledAt              DateTime?
+  cancelledAt                   DateTime?
   /// أيام الإيجار المخصومة عند آخر إلغاء ذاتي (حسب سياسة الشرائح في الإعدادات).
-  cancellationDeductedDays Float?
+  cancellationDeductedDays      Float?
   /// إجمالي المبلغ المسترد للعميل (شامل الضريبة) عند الإلغاء الذاتي بعد دفع ناجح.
-  cancellationRefundAmountSar Float?
+  cancellationRefundAmountSar   Float?
   /// مرجع من بوابة الاسترداد (أو محاكاة MOCK-… حتى ربط البوابات).
-  cancellationRefundExternalRef String? @db.VarChar(128)
+  cancellationRefundExternalRef String?      @db.VarChar(128)
   /// سبب الإلغاء — إلزامي عند إلغاء الإدارة مع استرداد كامل يتجاوز سياسة الشرائح.
-  cancellationReasonAr String? @db.VarChar(500)
+  cancellationReasonAr          String?      @db.VarChar(500)
   /// مرجع خارجي لعملية الدفع (رقم عملية الشبكة/التحويل) — يُدخله الموظف عند تسجيل الدفع يدوياً.
-  paymentExternalRef String? @db.VarChar(128)
+  paymentExternalRef            String?      @db.VarChar(128)
   /// مرجع عملية الدفع الأصلية من بوابة جيديا (orderId) — لازم لتنفيذ الاسترداد الإلكتروني.
-  paymentGatewayRef String? @db.VarChar(128)
+  paymentGatewayRef             String?      @db.VarChar(128)
   /// merchantReferenceId لآخر جلسة دفع جيديا — للمصالحة عند عودة العميل قبل وصول الـ webhook.
-  paymentSessionRef String? @db.VarChar(128)
+  paymentSessionRef             String?      @db.VarChar(128)
   /// المبلغ الكامل المدفوع بالريال (شامل الضريبة) — يُحفظ لحظة تأكيد الدفع ولا يتغيّر بعدها.
-  paidAmountSar Float?
+  paidAmountSar                 Float?
   /// مبلغ مستحق يُحصَّل عند الفرع بعد تعديل/تمديد العميل لحجز مدفوع (فرق السعر). يطالب به الموظف عند تسليم/إرجاع السيارة.
-  balanceDueAtBranchSar Float?
+  balanceDueAtBranchSar         Float?
   /// مستحقات للعميل (شامل الضريبة): مبلغ يُرَدّ للعميل بعد تعديل قلّص إجمالي حجز مدفوع. يسوّيه الموظف من لوحة الإدارة (قسم مستحقات للعميل).
-  refundDueToCustomerSar Float?
+  refundDueToCustomerSar        Float?
   /// وقت تسوية مستحقات العميل من الإدارة. null مع وجود مبلغ = مستحقات قائمة.
-  refundDueSettledAt DateTime?
+  refundDueSettledAt            DateTime?
   /// وسيلة تسوية المستحقات: CASH أو نفس وسيلة الدفع الأصلية (CARD/MADA/APPLE_PAY/...).
-  refundDueSettledMethod String? @db.VarChar(24)
+  refundDueSettledMethod        String?      @db.VarChar(24)
   /// مرجع عملية التسوية (مرجع بوابة الاسترداد أو مرجع يدوي للنقدي).
-  refundDueSettledRef String? @db.VarChar(128)
+  refundDueSettledRef           String?      @db.VarChar(128)
   /// الموظف الذي نفّذ تسوية المستحقات.
-  refundDueSettledBy String? @db.VarChar(128)
+  refundDueSettledBy            String?      @db.VarChar(128)
   /// إجمالي الحجز المستحق (شامل الضريبة) — snapshot مجمَّد عند إنشاء الحجز أو آخر تعديل للمدة.
   /// يُستخدم بدلاً من إعادة الحساب من السعر الحالي حتى لو تغيّر سعر الموديل لاحقاً.
-  snapshotTotalAmountSar Float?
+  snapshotTotalAmountSar        Float?
   /// إجمالي ساعات التأخير عن موعد الإرجاع الأساسي عند تسجيل الإرجاع (يُسجَّل فقط عند تجاوز السماحية).
-  lateReturnHours Float?
+  lateReturnHours               Float?
   /// غرامة الإرجاع المتأخر المطبقة (دون ضريبة) بعد خصم بند الساعات المدفوع مسبقاً. 0 = مغطاة أو معفاة.
-  lateReturnPenaltyExclTaxSar Float?
+  lateReturnPenaltyExclTaxSar   Float?
   /// أعفى الموظف العميل من غرامة الإرجاع المتأخر.
-  lateReturnPenaltyWaived Boolean @default(false)
+  lateReturnPenaltyWaived       Boolean      @default(false)
   /// الموظف الذي قرر تطبيق/إعفاء غرامة الإرجاع المتأخر.
-  lateReturnDecidedBy String? @db.VarChar(128)
+  lateReturnDecidedBy           String?      @db.VarChar(128)
   /// الوحدة الفعلية المسلّمة للعميل (اختياري)
-  vehicleUnitId       Int?
-  vehicleUnit         VehicleUnit? @relation(fields: [vehicleUnitId], references: [id], onDelete: SetNull)
+  vehicleUnitId                 Int?
+  vehicleUnit                   VehicleUnit? @relation(fields: [vehicleUnitId], references: [id], onDelete: SetNull)
   /// رقم لوحة السيارة المسلّمة للعميل (مثل: أ ب ج 1234)
-  vehiclePlateNumber  String?      @db.VarChar(64)
+  vehiclePlateNumber            String?      @db.VarChar(64)
   /// قراءة عداد الكيلومترات لحظة تسليم السيارة للعميل (اختياري — يُدخله الموظف).
-  odometerAtPickupKm  Int?
+  odometerAtPickupKm            Int?
   /// قراءة العداد لحظة إرجاع السيارة إلى الفرع. الفرق عن قراءة التسليم = المسافة المقطوعة.
-  odometerAtReturnKm  Int?
+  odometerAtReturnKm            Int?
 
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
   logs                BookingLog[]
   paymentTransactions PaymentTransaction[]
   extraCharges        BookingExtraCharge[]
@@ -653,11 +662,11 @@ model PaymentTransaction {
   booking   BookingRequest @relation(fields: [bookingId], references: [id], onDelete: Restrict)
 
   /// نوع العملية: INITIAL_PAYMENT | BALANCE_PAYMENT | LATE_PENALTY | REFUND | CUSTOMER_SETTLEMENT
-  kind      String  @db.VarChar(32)
+  kind      String @db.VarChar(32)
   /// PENDING | COMPLETED | FAILED | REVERSED
-  status    String  @default("COMPLETED") @db.VarChar(24)
+  status    String @default("COMPLETED") @db.VarChar(24)
   /// اتجاه المبلغ: CREDIT = داخل للشركة | DEBIT = خارج من الشركة
-  direction String  @db.VarChar(8)
+  direction String @db.VarChar(8)
 
   /// المبلغ بالريال — دائماً موجب، الاتجاه يُحدَّد بـ direction
   amountSar Float
@@ -665,8 +674,8 @@ model PaymentTransaction {
   method    String? @db.VarChar(24)
 
   /// من نفّذ العملية: CUSTOMER | ADMIN | GATEWAY | SYSTEM
-  actorKind  String  @db.VarChar(16)
-  actorName  String? @db.VarChar(128)
+  actorKind String  @db.VarChar(16)
+  actorName String? @db.VarChar(128)
 
   /// مرجع بوابة الدفع (orderId جيديا)
   gatewayRef  String? @db.VarChar(128)
@@ -706,7 +715,7 @@ model BookingExtraCharge {
   amountInclTaxSar Float
 
   /// ACTIVE = مستحق ومضاف للتحصيل | VOIDED = ملغى ومخصوم من التحصيل
-  status     String    @db.VarChar(16) @default("ACTIVE")
+  status     String    @default("ACTIVE") @db.VarChar(16)
   voidedAt   DateTime?
   voidedBy   String?   @db.VarChar(128)
   voidReason String?   @db.VarChar(500)
@@ -722,24 +731,24 @@ model BookingExtraCharge {
 
 /// سجل أحداث الحجز — يُدوَّن تلقائياً عند كل حدث يغيّر حالة الحجز أو بياناته.
 model BookingLog {
-  id          Int             @id @default(autoincrement())
-  booking     BookingRequest  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  bookingId   Int
+  id         Int            @id @default(autoincrement())
+  booking    BookingRequest @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingId  Int
   /// كود الحدث: BOOKING_CREATED | STATUS_CHANGED | PAYMENT_RECORDED | VEHICLE_PICKED_UP | ...
-  event       String          @db.VarChar(64)
+  event      String         @db.VarChar(64)
   /// من نفّذ الحدث: CUSTOMER | ADMIN | SYSTEM
-  actorKind   String          @db.VarChar(16)
+  actorKind  String         @db.VarChar(16)
   /// اسم المنفّذ (اسم الموظف أو العميل أو "System")
-  actorName   String?         @db.VarChar(128)
+  actorName  String?        @db.VarChar(128)
   /// حالة الحجز قبل الحدث (للأحداث التي تغيّر الحالة)
-  fromStatus  String?         @db.VarChar(32)
+  fromStatus String?        @db.VarChar(32)
   /// حالة الحجز بعد الحدث
-  toStatus    String?         @db.VarChar(32)
+  toStatus   String?        @db.VarChar(32)
   /// ملاحظة بشرية بالعربية (سبب الإلغاء، رقم مرجع الدفع...)
-  notes       String?         @db.VarChar(500)
+  notes      String?        @db.VarChar(500)
   /// JSON لبيانات إضافية مرتبطة بالحدث
-  metaJson    String?         @db.Text
-  createdAt   DateTime        @default(now())
+  metaJson   String?        @db.Text
+  createdAt  DateTime       @default(now())
 
   @@index([bookingId, createdAt])
 }
@@ -769,7 +778,7 @@ model BookingCheckoutDraft {
 /// رمز تحقق لتسجيل دخول العميل (منفصل عن رمز إتمام الحجز لتجنب التعارض).
 model CustomerLoginOtp {
   id             Int      @id @default(autoincrement())
-  destinationKey String @unique @db.VarChar(320)
+  destinationKey String   @unique @db.VarChar(320)
   codeHash       String   @db.VarChar(64)
   expiresAt      DateTime
   verifyAttempts Int      @default(0)
@@ -795,7 +804,9 @@ enum FuelType {
   ELECTRIC
 }
 
-/** اشتراك شهري بسيارة (باقات). */
+/**
+ * اشتراك شهري بسيارة (باقات).
+ */
 enum SubscriptionStatus {
   PENDING
   ACTIVE
@@ -819,28 +830,28 @@ enum SubscriptionDocumentKind {
 }
 
 model SubscriptionPlan {
-  id                     Int             @id @default(autoincrement())
-  slug                   String          @unique @db.VarChar(128)
-  carModelId             Int
-  carModel               CarModel        @relation(fields: [carModelId], references: [id])
-  marketingTitleAr       String?         @db.VarChar(255)
-  marketingTitleEn       String?         @db.VarChar(255)
-  descriptionAr          String?         @db.Text
-  descriptionEn          String?         @db.Text
+  id                  Int      @id @default(autoincrement())
+  slug                String   @unique @db.VarChar(128)
+  carModelId          Int
+  carModel            CarModel @relation(fields: [carModelId], references: [id])
+  marketingTitleAr    String?  @db.VarChar(255)
+  marketingTitleEn    String?  @db.VarChar(255)
+  descriptionAr       String?  @db.Text
+  descriptionEn       String?  @db.Text
   /// سعر شهر واحد بالريال (غير شامل الضريبة) — يُجمَّد على الاشتراك عند الطلب.
-  monthlyPriceSar        Int
-  mileageKmPerMonth      Int
-  insuranceIncluded      Boolean         @default(true)
-  maintenanceIncluded    Boolean         @default(true)
-  depositAmountSar       Int             @default(0)
+  monthlyPriceSar     Int
+  mileageKmPerMonth   Int
+  insuranceIncluded   Boolean  @default(true)
+  maintenanceIncluded Boolean  @default(true)
+  depositAmountSar    Int      @default(0)
   /// رسوم كل كيلومتر إضافي بعد استهلاك البدل (بالريال).
-  extraKmFeeSarPerKm    Int             @default(3)
+  extraKmFeeSarPerKm  Int      @default(3)
   /// أرقام شهرية اختيارية مفصولة بفواصل (عرض/إرشاد)؛ السماح الفعلي للعميل 3–6 أشهر في التطبيق
-  durationOptionsCsv      String             @default("3,6,12") @db.VarChar(32)
-  isActive               Boolean         @default(true)
-  sortOrder              Int             @default(0)
-  createdAt              DateTime        @default(now())
-  updatedAt              DateTime        @updatedAt
+  durationOptionsCsv  String   @default("3,6,12") @db.VarChar(32)
+  isActive            Boolean  @default(true)
+  sortOrder           Int      @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   subscriptions UserSubscription[]
 
@@ -849,35 +860,35 @@ model SubscriptionPlan {
 }
 
 model UserSubscription {
-  id                       Int                       @id @default(autoincrement())
-  planId                   Int
-  plan                     SubscriptionPlan          @relation(fields: [planId], references: [id])
-  userId                   Int
-  user                     User                      @relation(fields: [userId], references: [id])
-  status                   SubscriptionStatus        @default(PENDING)
-  durationMonths           Int
+  id                      Int                @id @default(autoincrement())
+  planId                  Int
+  plan                    SubscriptionPlan   @relation(fields: [planId], references: [id])
+  userId                  Int
+  user                    User               @relation(fields: [userId], references: [id])
+  status                  SubscriptionStatus @default(PENDING)
+  durationMonths          Int
   /// يوم بدء الباقة الذي اختاره العميل عند الطلب؛ عند التفعيل تُشتق `endAt` تلقائياً بعد عدد الأشهر.
-  plannedStartDate          DateTime?
-  startAt                  DateTime?
-  endAt                    DateTime?
-  monthlyPriceSnapshotSar  Int
-  mileageAllowanceKm       Int
-  mileageUsedKm            Int                       @default(0)
-  depositSnapshotSar       Int                       @default(0)
-  autoRenew                Boolean                   @default(false)
-  rejectionReasonAr        String?                   @db.VarChar(500)
-  suspendedReasonAr        String?                   @db.VarChar(500)
-  cancelReasonAr           String?                   @db.VarChar(500)
+  plannedStartDate        DateTime?
+  startAt                 DateTime?
+  endAt                   DateTime?
+  monthlyPriceSnapshotSar Int
+  mileageAllowanceKm      Int
+  mileageUsedKm           Int                @default(0)
+  depositSnapshotSar      Int                @default(0)
+  autoRenew               Boolean            @default(false)
+  rejectionReasonAr       String?            @db.VarChar(500)
+  suspendedReasonAr       String?            @db.VarChar(500)
+  cancelReasonAr          String?            @db.VarChar(500)
   cancelledAt             DateTime?
   approvedAt              DateTime?
-  lastRenewalReminderAt    DateTime?
-  nextPaymentDueAt         DateTime?
-  unpaidNotifiedAt         DateTime?
+  lastRenewalReminderAt   DateTime?
+  nextPaymentDueAt        DateTime?
+  unpaidNotifiedAt        DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  payments SubscriptionPayment[]
+  payments  SubscriptionPayment[]
   documents SubscriptionDocument[]
 
   @@index([userId, status])
@@ -886,18 +897,18 @@ model UserSubscription {
 }
 
 model SubscriptionPayment {
-  id             Int                         @id @default(autoincrement())
+  id             Int                       @id @default(autoincrement())
   subscriptionId Int
-  subscription    UserSubscription            @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  subscription   UserSubscription          @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
   amountSar      Int
-  vatRatePercent Int                         @default(15)
+  vatRatePercent Int                       @default(15)
   /// INITIAL | RENEWAL | EXTRA_MILEAGE — نص لتتبّع المنطق دون ENUM إضافي.
-  paymentKind      String                       @default("INITIAL") @db.VarChar(32)
-  status         SubscriptionPaymentStatus   @default(PENDING)
-  paymentMethod  String?                     @db.VarChar(24)
-  externalRef    String?                     @db.VarChar(255)
+  paymentKind    String                    @default("INITIAL") @db.VarChar(32)
+  status         SubscriptionPaymentStatus @default(PENDING)
+  paymentMethod  String?                   @db.VarChar(24)
+  externalRef    String?                   @db.VarChar(255)
   paidAt         DateTime?
-  idempotencyKey String?                     @unique @db.VarChar(128)
+  idempotencyKey String?                   @unique @db.VarChar(128)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -907,21 +918,21 @@ model SubscriptionPayment {
 }
 
 model SubscriptionDocument {
-  id             Int                       @id @default(autoincrement())
-  subscriptionId Int
-  subscription   UserSubscription           @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-  kind           SubscriptionDocumentKind
+  id                  Int                      @id @default(autoincrement())
+  subscriptionId      Int
+  subscription        UserSubscription         @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  kind                SubscriptionDocumentKind
   /// مسار ملف تحت دليل رفع مخزِّن على الخادم (لا يعرض مع المسار العام بدون JWT/جلسة).
   storageRelativePath String                   @db.VarChar(512)
-  originalFileName String                    @db.VarChar(255)
-  mimeType         String                    @db.VarChar(128)
-  sizeBytes        Int
+  originalFileName    String                   @db.VarChar(255)
+  mimeType            String                   @db.VarChar(128)
+  sizeBytes           Int
 
-  uploadedAt DateTime @default(now())
+  uploadedAt DateTime  @default(now())
   verifiedAt DateTime?
 
-  @@index([subscriptionId])
   @@unique([subscriptionId, kind])
+  @@index([subscriptionId])
 }
 
 /// إشعار إداري يرسل للموظفين عند وقوع أحداث هامة (مثل حجز جديد).

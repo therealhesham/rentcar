@@ -19,8 +19,13 @@ export async function createAdminEmployee(
   const password = String(formData.get("password") ?? "");
   const name = String(formData.get("name") ?? "").trim();
   const branchId = Number(formData.get("branchId"));
+  const cityId = Number(formData.get("cityId"));
   const notifyOnBookingEmail =
     formData.get("notifyOnBookingEmail") === "on" || formData.get("notifyOnBookingEmail") === "true";
+  const notifyGlobalTo =
+    formData.get("notifyGlobalTo") === "on" || formData.get("notifyGlobalTo") === "true";
+  const notifyGlobalCc =
+    formData.get("notifyGlobalCc") === "on" || formData.get("notifyGlobalCc") === "true";
   const permissions = formData
     .getAll("permissions")
     .map(String)
@@ -33,8 +38,14 @@ export async function createAdminEmployee(
     return { ok: false, error: "كلمة المرور 6 أحرف على الأقل." };
   }
 
+  const hasBranch = Number.isInteger(branchId) && branchId > 0;
+  const hasCity = Number.isInteger(cityId) && cityId > 0;
+  if (hasBranch && hasCity) {
+    return { ok: false, error: "اختر فرعاً واحداً أو مدينة كاملة، لا الاثنين معاً." };
+  }
+
   let finalBranchId: number | null = null;
-  if (Number.isInteger(branchId) && branchId > 0) {
+  if (hasBranch) {
     const branch = await prisma.branch.findUnique({
       where: { id: branchId, isActive: true },
       select: { id: true },
@@ -43,6 +54,18 @@ export async function createAdminEmployee(
       return { ok: false, error: "الفرع غير موجود أو غير نشط." };
     }
     finalBranchId = branch.id;
+  }
+
+  let finalCityId: number | null = null;
+  if (hasCity) {
+    const city = await prisma.city.findUnique({
+      where: { id: cityId, isActive: true },
+      select: { id: true },
+    });
+    if (!city) {
+      return { ok: false, error: "المدينة غير موجودة أو غير نشطة." };
+    }
+    finalCityId = city.id;
   }
 
   const exists = await prisma.adminEmployee.findUnique({ where: { email } });
@@ -56,10 +79,13 @@ export async function createAdminEmployee(
       passwordHash: await hashPassword(password),
       name: name || null,
       branchId: finalBranchId,
+      cityId: finalCityId,
       isSuperAdmin: false,
       isActive: true,
       permissionsJson: JSON.stringify(permissions),
       notifyOnBookingEmail,
+      notifyGlobalTo,
+      notifyGlobalCc,
     },
   });
 
@@ -140,7 +166,10 @@ export async function updateAdminEmployeePermissions(
   return { ok: true };
 }
 
-/** تعديل تفضيل إشعار الإيميل عند حجز جديد لموظف موجود بالفعل. */
+/**
+ * تعديل تفضيلات إشعار الإيميل لموظف موجود: تفعيل/تعطيل، مشرف مدينة (cityId)،
+ * TO عام أو CC عام على كل الحجوزات — بمعزل عن الفرع/المدينة.
+ */
 export async function updateAdminEmployeeNotificationPref(
   _prev: { ok: boolean; error?: string } | null,
   formData: FormData,
@@ -155,19 +184,38 @@ export async function updateAdminEmployeeNotificationPref(
 
   const notifyOnBookingEmail =
     formData.get("notifyOnBookingEmail") === "on" || formData.get("notifyOnBookingEmail") === "true";
+  const notifyGlobalTo =
+    formData.get("notifyGlobalTo") === "on" || formData.get("notifyGlobalTo") === "true";
+  const notifyGlobalCc =
+    formData.get("notifyGlobalCc") === "on" || formData.get("notifyGlobalCc") === "true";
+  const cityId = Number(formData.get("cityId"));
+  const hasCity = Number.isInteger(cityId) && cityId > 0;
 
   const row = await prisma.adminEmployee.findUnique({
     where: { id },
-    select: { isSuperAdmin: true },
+    select: { isSuperAdmin: true, branchId: true },
   });
   if (!row) return { ok: false, error: "الموظف غير موجود." };
   if (row.isSuperAdmin) {
     return { ok: false, error: "إعدادات مدير النظام غير قابلة للتعديل من هنا." };
   }
+  if (hasCity && row.branchId != null) {
+    return { ok: false, error: "لا يمكن ضبط مدينة لموظف مرتبط بفرع محدد." };
+  }
+
+  let finalCityId: number | null = null;
+  if (hasCity) {
+    const city = await prisma.city.findUnique({
+      where: { id: cityId, isActive: true },
+      select: { id: true },
+    });
+    if (!city) return { ok: false, error: "المدينة غير موجودة أو غير نشطة." };
+    finalCityId = city.id;
+  }
 
   await prisma.adminEmployee.update({
     where: { id },
-    data: { notifyOnBookingEmail },
+    data: { notifyOnBookingEmail, notifyGlobalTo, notifyGlobalCc, cityId: finalCityId },
   });
 
   revalidatePath("/admin/employees");

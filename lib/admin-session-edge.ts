@@ -68,6 +68,10 @@ export async function parseAdminSessionTokenEdge(
   if (data.branchSlug != null && typeof data.branchSlug !== "string") return null;
   if (data.branchName != null && typeof data.branchName !== "string") return null;
   if (typeof data.displayName !== "string") return null;
-  if (!data.isSuperAdmin && !data.branchSlug) return null;
+  if (!Array.isArray(data.permissions)) return null;
+  // موظف إدارة مركزية (بلا فرع) بصلاحيات صفحات صريحة مسموح — نفس بوابة تسجيل الدخول
+  // في app/admin/actions.ts. حظر الفرع الفارغ هنا بلا فحص الصلاحيات كان يرفض جلسته في
+  // كل صفحة فور تسجيل الدخول رغم قبول اللوجين نفسه له، فيبدو للمستخدم كأن الدخول لا يعمل.
+  if (!data.isSuperAdmin && !data.branchSlug && data.permissions.length === 0) return null;
   return data;
 }

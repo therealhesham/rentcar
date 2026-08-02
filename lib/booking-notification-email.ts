@@ -96,8 +96,11 @@ function buildNotificationText(row: {
 }
 
 /**
- * يرسل إيميل تنبيه عند حجز جديد: لموظف الفرع (branchId مطابق) وCC لموظفي الإدارة
- * المركزية (branchId فارغ) — فقط للموظفين المفعّلين اللي اختاروا notifyOnBookingEmail.
+ * يرسل إيميل تنبيه عند حجز جديد. مستلمو TO (كل تطابق يُضاف، بلا استبعاد بينها):
+ * موظف الفرع نفسه (branchId) + مشرف مدينة الفرع (cityId) + مَن مفعِّل TO عام
+ * (notifyGlobalTo، مثل مشرف العمليات). مستلمو CC: مَن مفعِّل CC عام (notifyGlobalCc،
+ * مثل المحاسب/المدير المالي) — يُستثنى مَن هو أصلاً في TO لتفادي التكرار.
+ * لو مفيش أي TO (فرع بلا موظف ولا مدينة ولا TO عام)، تُرسَل الرسالة لمستلمي CC وحدهم.
  * لا يرمي أي خطأ للخارج (فشل الإرسال ما يفشّلش تسجيل الحجز نفسه).
  */
 export async function sendNewBookingNotificationEmails(bookingRequestId: number): Promise<void> {
@@ -115,32 +118,39 @@ export async function sendNewBookingNotificationEmails(bookingRequestId: number)
         numberOfDays: true,
         branchId: true,
         returnBranchId: true,
-        pickupBranch: { select: { name: true } },
-        returnBranch: { select: { name: true } },
+        pickupBranch: { select: { name: true, cityId: true } },
+        returnBranch: { select: { name: true, cityId: true } },
       },
     });
     if (!row) return;
 
     const targetBranchId = row.branchId ?? row.returnBranchId;
+    const targetCityId = row.pickupBranch?.cityId ?? row.returnBranch?.cityId ?? null;
     const branchLabel =
       row.pickupBranch?.name?.trim() || row.returnBranch?.name?.trim() || "—";
 
     const employees = await prisma.adminEmployee.findMany({
       where: { isActive: true, notifyOnBookingEmail: true },
-      select: { email: true, branchId: true },
+      select: { email: true, branchId: true, cityId: true, notifyGlobalTo: true, notifyGlobalCc: true },
     });
     const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
-    const branchEmails = employees
-      .filter((e) => targetBranchId != null && e.branchId === targetBranchId)
-      .map((e) => e.email.trim())
-      .filter(isValidEmail);
-    const hqEmails = employees
-      .filter((e) => e.branchId == null)
-      .map((e) => e.email.trim())
-      .filter(isValidEmail);
 
-    const to = branchEmails.length > 0 ? branchEmails : hqEmails;
-    const cc = branchEmails.length > 0 ? hqEmails : [];
+    const toSet = new Set<string>();
+    const ccSet = new Set<string>();
+    for (const e of employees) {
+      const email = e.email.trim();
+      if (!isValidEmail(email)) continue;
+      const isToBranch = targetBranchId != null && e.branchId === targetBranchId;
+      const isToCity = targetCityId != null && e.cityId === targetCityId;
+      if (isToBranch || isToCity || e.notifyGlobalTo) toSet.add(email);
+      else if (e.notifyGlobalCc) ccSet.add(email);
+    }
+    for (const email of toSet) ccSet.delete(email);
+
+    // لو مفيش TO خالص (نادر — يعني notifyGlobalTo متعطّل عند الكل)، نرسل لمستلمي CC كـ TO
+    // بدل حقل To فارغ (بعض بوابات الإيميل ترفضه).
+    const to = toSet.size > 0 ? [...toSet] : [...ccSet];
+    const cc = toSet.size > 0 ? [...ccSet] : [];
     if (to.length === 0) return;
 
     const html = buildNotificationHtml({ ...row, branchLabel });
@@ -148,8 +158,8 @@ export async function sendNewBookingNotificationEmails(bookingRequestId: number)
     const kindLabel = row.kind === "DIRECT" ? "حجز مباشر" : "طلب استفسار";
 
     await sendPlainTransactionalEmail({
-      to: [...new Set(to)].join(","),
-      cc: cc.length > 0 ? [...new Set(cc)].join(",") : undefined,
+      to: to.join(","),
+      cc: cc.length > 0 ? cc.join(",") : undefined,
       subject: `${kindLabel} جديد — ${branchLabel} — #${row.id}`,
       html,
       text,
