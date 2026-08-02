@@ -62,14 +62,23 @@ function matrixToImportRows(matrix: unknown[][]): { headers: string[]; rows: Imp
   }
 
   const headerRow = asRowArray(matrix[0]);
-  const headers = headerRow.map((cell, i) => {
+  const rawHeaders = headerRow.map((cell, i) => {
     const label = cellToPlainString(cell);
     return label || `عمود_${i + 1}`;
   });
 
-  if (headers.every((h) => h.startsWith("عمود_"))) {
+  if (rawHeaders.every((h) => h.startsWith("عمود_"))) {
     throw new Error("لا توجد أعمدة في الصف الأول.");
   }
+
+  // أسماء أعمدة مكررة في الملف تُلحَق برقم — وإلا دهس عمود قيمة عمود آخر بنفس الاسم.
+  const used = new Set<string>();
+  const headers = rawHeaders.map((h) => {
+    let name = h;
+    for (let n = 2; used.has(name); n++) name = `${h} (${n})`;
+    used.add(name);
+    return name;
+  });
 
   const rows: ImportRow[] = [];
   for (let r = 1; r < matrix.length; r++) {

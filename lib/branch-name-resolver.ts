@@ -42,6 +42,29 @@ export async function buildBranchResolver(options?: {
   return (name: string) => {
     const n = normalizeBranchName(name);
     if (!n) return null;
-    return byName.get(n) ?? byCity.get(n) ?? null;
+
+    const direct = byName.get(n);
+    if (direct !== undefined) return direct;
+
+    // أسماء مركّبة «مدينة - فرع» مثل «المدينة - العريض» أو «جدة – فرع الاجاويد»
+    const parts = name
+      .split(/[-–—/|]/)
+      .map(normalizeBranchName)
+      .filter(Boolean);
+
+    for (const p of parts) {
+      const hit = byName.get(p);
+      if (hit !== undefined) return hit;
+    }
+
+    const city = byCity.get(n);
+    if (city !== undefined) return city;
+
+    for (const p of parts) {
+      const hit = byCity.get(p);
+      if (hit !== undefined) return hit;
+    }
+
+    return null;
   };
 }

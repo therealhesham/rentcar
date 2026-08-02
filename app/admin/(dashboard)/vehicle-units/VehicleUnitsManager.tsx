@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Plus, Search, Car, Hash, Building2, History, Wrench, Trash2, Edit, X, ArrowRight } from "lucide-react";
+import { Plus, Search, Car, Hash, Building2, History, Wrench, Trash2, Edit, X, ArrowRight, Upload } from "lucide-react";
 import Link from "next/link";
 import { createVehicleUnitAction, updateVehicleUnitAction, deleteVehicleUnitAction } from "@/app/admin/vehicle-units-actions";
 import type { VehicleUnitListItem } from "@/lib/vehicle-units";
@@ -107,14 +107,24 @@ export function VehicleUnitsManager({ units, carModels, branches }: Props) {
           </select>
         </div>
 
-        <button
-          type="button"
-          onClick={openCreateModal}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-extrabold text-on-primary shadow-sm hover:opacity-95"
-        >
-          <Plus className="size-4" />
-          إضافة رقم لوحة جديد
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/admin/vehicle-units/import"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-outline-variant/40 bg-white px-4 py-2.5 text-sm font-extrabold text-primary shadow-sm hover:bg-surface-container"
+          >
+            <Upload className="size-4" />
+            استيراد من Excel
+          </Link>
+
+          <button
+            type="button"
+            onClick={openCreateModal}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-extrabold text-on-primary shadow-sm hover:opacity-95"
+          >
+            <Plus className="size-4" />
+            إضافة رقم لوحة جديد
+          </button>
+        </div>
       </div>
 
       {/* ─── Vehicle Units Table ──────────────────────────────── */}
