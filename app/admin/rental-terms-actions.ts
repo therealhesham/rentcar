@@ -1,6 +1,6 @@
 "use server";
 
-import { requireSuperAdminForAction } from "@/lib/admin-access";
+import { requirePermissionForAction } from "@/lib/admin-access";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
@@ -15,7 +15,7 @@ export async function createRentalTerm(
   _prev: TermFormState,
   formData: FormData,
 ): Promise<TermFormState> {
-  const auth = await requireSuperAdminForAction();
+  const auth = await requirePermissionForAction("/admin/rental-terms");
   if (!auth.ok) return { ok: false, error: auth.error };
 
   const titleAr = (formData.get("titleAr") as string | null)?.trim() ?? "";
@@ -41,7 +41,7 @@ export async function updateRentalTerm(
   _prev: TermFormState,
   formData: FormData,
 ): Promise<TermFormState> {
-  const auth = await requireSuperAdminForAction();
+  const auth = await requirePermissionForAction("/admin/rental-terms");
   if (!auth.ok) return { ok: false, error: auth.error };
 
   const id = Number.parseInt(formData.get("id") as string, 10);
@@ -70,7 +70,7 @@ export async function deleteRentalTerm(
   _prev: TermFormState,
   formData: FormData,
 ): Promise<TermFormState> {
-  const auth = await requireSuperAdminForAction();
+  const auth = await requirePermissionForAction("/admin/rental-terms");
   if (!auth.ok) return { ok: false, error: auth.error };
 
   const id = Number.parseInt(formData.get("id") as string, 10);

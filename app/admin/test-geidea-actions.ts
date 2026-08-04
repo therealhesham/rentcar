@@ -2,7 +2,7 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { requireSuperAdminForAction } from "@/lib/admin-access";
+import { requirePermissionForAction } from "@/lib/admin-access";
 import { createGeideaCheckoutSession, refundGeideaPayment } from "@/lib/geidea/client";
 import { TEST_GEIDEA_REF_COOKIE } from "@/lib/test-geidea-constants";
 
@@ -20,7 +20,7 @@ import { TEST_GEIDEA_REF_COOKIE } from "@/lib/test-geidea-constants";
 const TEST_AMOUNT_SAR = 1;
 
 export async function startGeideaTestPaymentAction(): Promise<void> {
-  const auth = await requireSuperAdminForAction();
+  const auth = await requirePermissionForAction("/admin/test-geidea");
   if (!auth.ok) redirect("/admin/test-geidea?error=" + encodeURIComponent(auth.error));
 
   const appUrl = (process.env.APP_PUBLIC_URL ?? "").trim().replace(/\/$/, "");
@@ -66,7 +66,7 @@ export type ApplePayTestSessionResult =
  * تُرجع sessionId (لا تُحوّل) لأن زر Apple Pay يُركَّب على صفحتنا نفسها.
  */
 export async function startGeideaApplePayTestSessionAction(): Promise<ApplePayTestSessionResult> {
-  const auth = await requireSuperAdminForAction();
+  const auth = await requirePermissionForAction("/admin/test-geidea");
   if (!auth.ok) return { ok: false, error: auth.error };
 
   const appUrl = (process.env.APP_PUBLIC_URL ?? "").trim().replace(/\/$/, "");
@@ -107,7 +107,7 @@ export async function refundGeideaTestPaymentAction(
   _prev: RefundActionState | null,
   formData: FormData,
 ): Promise<RefundActionState> {
-  const auth = await requireSuperAdminForAction();
+  const auth = await requirePermissionForAction("/admin/test-geidea");
   if (!auth.ok) return { ok: false, error: auth.error };
 
   const orderId = String(formData.get("orderId") ?? "").trim();

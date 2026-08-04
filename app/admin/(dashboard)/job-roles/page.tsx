@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { AdminJobRoleCreateForm } from "@/app/admin/(dashboard)/job-roles/AdminJobRoleCreateForm";
 import { AdminJobRoleEditForm } from "@/app/admin/(dashboard)/job-roles/AdminJobRoleEditForm";
 import { AdminJobRoleToggleForm } from "@/app/admin/(dashboard)/job-roles/AdminJobRoleToggleForm";
@@ -12,9 +11,9 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminJobRolesPage() {
   const session = await requireAdminPage();
-  if (!session.isSuperAdmin) {
-    redirect("/admin");
-  }
+  // نفس منطق صفحة الموظفين: الدخول بصلاحية `/admin/job-roles`، لكن تعديل قوالب الصلاحيات
+  // نفسها مقصور على مدير النظام — وإلا قدر الموظف يضيف صلاحية لوظيفته ويرفّع نفسه.
+  const canManage = session.isSuperAdmin;
 
   const roles = await prisma.adminJobRole.findMany({
     orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
@@ -41,7 +40,13 @@ export default async function AdminJobRolesPage() {
         </p>
       </header>
 
-      <AdminJobRoleCreateForm />
+      {canManage ? (
+        <AdminJobRoleCreateForm />
+      ) : (
+        <p className="mb-8 rounded-2xl border border-outline-variant/30 bg-surface-container-lowest px-5 py-4 text-sm font-bold text-on-surface-variant">
+          للاطّلاع فقط — إنشاء الوظائف وتعديل صلاحياتها متاح لمدير النظام.
+        </p>
+      )}
 
       <section className="rounded-2xl border border-outline-variant/30 bg-surface-container-lowest">
         <h2 className="border-b border-outline-variant/25 px-5 py-4 text-lg font-extrabold">
@@ -84,15 +89,19 @@ export default async function AdminJobRolesPage() {
                         ))}
                       </div>
                     ) : null}
-                    <div className="mt-3">
-                      <AdminJobRoleEditForm
-                        jobRoleId={role.id}
-                        name={role.name}
-                        currentPermissions={permissions}
-                      />
-                    </div>
+                    {canManage && (
+                      <div className="mt-3">
+                        <AdminJobRoleEditForm
+                          jobRoleId={role.id}
+                          name={role.name}
+                          currentPermissions={permissions}
+                        />
+                      </div>
+                    )}
                   </div>
-                  <AdminJobRoleToggleForm jobRoleId={role.id} isActive={role.isActive} />
+                  {canManage && (
+                    <AdminJobRoleToggleForm jobRoleId={role.id} isActive={role.isActive} />
+                  )}
                 </li>
               );
             })}

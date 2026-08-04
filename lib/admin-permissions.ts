@@ -22,6 +22,13 @@ const EXTRA_PAGE_PERMISSIONS: AdminPagePermission[] = [
     label: "أداة اختبار بوابة جيديا",
     groupLabel: "الإدارة المالية",
   },
+  // لازم تتسجّل مستقلة: بدونها يطابقها resolveAdminPagePermissionId بـ `/admin/vehicles`
+  // فتاخد صلاحية عرض المركبات حق الاستيراد الجماعي بالغلط.
+  {
+    href: "/admin/vehicles/import",
+    label: "استيراد مركبات من Excel",
+    groupLabel: "الأسطول والفروع",
+  },
 ];
 
 /** كل صفحات الأدمن القابلة لمنح صلاحية مستقلة لها — الـ href نفسه هو معرّف الصلاحية.

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { AdminEmployeeCreateForm } from "@/app/admin/(dashboard)/employees/AdminEmployeeCreateForm";
 import { AdminEmployeePermissionsForm } from "@/app/admin/(dashboard)/employees/AdminEmployeePermissionsForm";
 import { AdminEmployeeToggleForm } from "@/app/admin/(dashboard)/employees/AdminEmployeeToggleForm";
@@ -13,9 +12,10 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminEmployeesPage() {
   const session = await requireAdminPage();
-  if (!session.isSuperAdmin) {
-    redirect("/admin");
-  }
+  // الوصول للصفحة نفسه محكوم بصلاحية `/admin/employees` في middleware. التعديل (إنشاء
+  // حساب، منح صلاحيات، تفعيل/إيقاف) مقصور على مدير النظام: أي موظف يقدر يعدّل هنا يقدر
+  // يمنح نفسه أي صلاحية، فيتجاوز نظام الصلاحيات بالكامل. غير المدير يرى القائمة للاطّلاع فقط.
+  const canManage = session.isSuperAdmin;
 
   const [employees, branches, cities, jobRoles] = await Promise.all([
     prisma.adminEmployee.findMany({
@@ -61,7 +61,13 @@ export default async function AdminEmployeesPage() {
         </p>
       </header>
 
-      <AdminEmployeeCreateForm branches={branches} cities={cities} jobRoles={jobRoles} />
+      {canManage ? (
+        <AdminEmployeeCreateForm branches={branches} cities={cities} jobRoles={jobRoles} />
+      ) : (
+        <p className="mb-8 rounded-2xl border border-outline-variant/30 bg-surface-container-lowest px-5 py-4 text-sm font-bold text-on-surface-variant">
+          للاطّلاع فقط — إنشاء الحسابات وتعديل الصلاحيات متاح لمدير النظام.
+        </p>
+      )}
 
       <section className="rounded-2xl border border-outline-variant/30 bg-surface-container-lowest">
         <h2 className="border-b border-outline-variant/25 px-5 py-4 text-lg font-extrabold">
@@ -134,25 +140,27 @@ export default async function AdminEmployeesPage() {
                       ))}
                     </div>
                   )}
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <AdminEmployeePermissionsForm
-                      employeeId={e.id}
-                      currentPermissions={parsePermissionsJson(e.permissionsJson)}
-                      jobRoles={jobRoles}
-                      jobRoleId={e.jobRoleId}
-                    />
-                    <AdminEmployeeNotifyToggleForm
-                      employeeId={e.id}
-                      hasBranch={e.branchId != null}
-                      cities={cities}
-                      cityId={e.cityId}
-                      notifyOnBookingEmail={e.notifyOnBookingEmail}
-                      notifyGlobalTo={e.notifyGlobalTo}
-                      notifyGlobalCc={e.notifyGlobalCc}
-                    />
-                  </div>
+                  {canManage && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <AdminEmployeePermissionsForm
+                        employeeId={e.id}
+                        currentPermissions={parsePermissionsJson(e.permissionsJson)}
+                        jobRoles={jobRoles}
+                        jobRoleId={e.jobRoleId}
+                      />
+                      <AdminEmployeeNotifyToggleForm
+                        employeeId={e.id}
+                        hasBranch={e.branchId != null}
+                        cities={cities}
+                        cityId={e.cityId}
+                        notifyOnBookingEmail={e.notifyOnBookingEmail}
+                        notifyGlobalTo={e.notifyGlobalTo}
+                        notifyGlobalCc={e.notifyGlobalCc}
+                      />
+                    </div>
+                  )}
                 </div>
-                <AdminEmployeeToggleForm employeeId={e.id} isActive={e.isActive} />
+                {canManage && <AdminEmployeeToggleForm employeeId={e.id} isActive={e.isActive} />}
               </li>
             ))}
           </ul>

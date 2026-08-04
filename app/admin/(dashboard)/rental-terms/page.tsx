@@ -11,16 +11,8 @@ import {
 export const dynamic = "force-dynamic";
 
 export default async function RentalTermsPage() {
-  const session = await requireAdminPage();
-
-  // Super admin only — branch employees don't manage global terms
-  if (!session.isSuperAdmin) {
-    return (
-      <div className="py-12 text-center text-sm font-bold text-on-surface-variant">
-        هذه الصفحة متاحة لمدير النظام فقط.
-      </div>
-    );
-  }
+  // الوصول محكوم بصلاحية `/admin/rental-terms` في middleware — بلا قفل سوبر أدمن إضافي.
+  await requireAdminPage();
 
   const terms = await prisma.rentalTerm.findMany({
     orderBy: [{ sortOrder: "asc" }, { id: "asc" }],

@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { VehicleImportClient } from "./VehicleImportClient";
 import { requireAdminPage } from "@/lib/admin-page";
@@ -7,8 +6,9 @@ import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 
 export default async function VehicleImportPage() {
-  const session = await requireAdminPage();
-  if (!session.isSuperAdmin) redirect("/admin/vehicles");
+  // الوصول محكوم بصلاحية `/admin/vehicles/import` المستقلة في middleware — مش وراثة من
+  // `/admin/vehicles`، عشان صلاحية عرض المركبات متديش استيراد جماعي بالغلط.
+  await requireAdminPage();
 
   const [categories, branches] = await Promise.all([
     prisma.fleetCategory.findMany({

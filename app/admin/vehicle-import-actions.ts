@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import type { FuelType, Transmission } from "@prisma/client";
-import { requireSuperAdminForAction } from "@/lib/admin-access";
+import { requirePermissionForAction } from "@/lib/admin-access";
 import { buildBranchResolver } from "@/lib/branch-name-resolver";
 import { prisma } from "@/lib/prisma";
 import type { ImportRow } from "@/lib/vehicle-import-excel";
@@ -337,7 +337,7 @@ export async function importVehiclesFromExcel(payload: {
   categoryId?: number | null;
   branchId?: number | null;
 }): Promise<ImportResult> {
-  const auth = await requireSuperAdminForAction();
+  const auth = await requirePermissionForAction("/admin/vehicles/import");
   if (!auth.ok) {
     return {
       total: 0,

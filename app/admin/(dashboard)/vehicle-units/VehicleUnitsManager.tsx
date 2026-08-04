@@ -274,9 +274,9 @@ export function VehicleUnitsManager({ units, carModels, branches }: Props) {
       {/* ─── Modal Form (Create / Edit) ───────────────────────── */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-xl ring-1 ring-black/5" dir="rtl">
-            <div className="flex items-center justify-between pb-4 border-b border-outline-variant/20">
-              <h3 className="text-lg font-black text-[#003749]">
+          <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-5 shadow-xl ring-1 ring-black/5" dir="rtl">
+            <div className="flex items-center justify-between pb-3 border-b border-outline-variant/20">
+              <h3 className="text-base font-black text-[#003749]">
                 {editingUnit ? `تعديل السيارة (لوحة: ${editingUnit.plateNumber})` : "إضافة رقم لوحة جديد"}
               </h3>
               <button
@@ -284,17 +284,17 @@ export function VehicleUnitsManager({ units, carModels, branches }: Props) {
                 onClick={() => setModalOpen(false)}
                 className="rounded-full p-1 text-on-surface-variant hover:bg-surface-container"
               >
-                <X className="size-5" />
+                <X className="size-4" />
               </button>
             </div>
 
             {formError ? (
-              <div className="mt-4 rounded-xl bg-error-container/40 p-3 text-xs font-bold text-error">
+              <div className="mt-3 rounded-xl bg-error-container/40 p-2.5 text-xs font-bold text-error">
                 {formError}
               </div>
             ) : null}
 
-            <form onSubmit={handleSubmit} className="mt-4 space-y-4 text-right">
+            <form onSubmit={handleSubmit} className="mt-3 space-y-3 text-right">
               {editingUnit ? <input type="hidden" name="unitId" value={editingUnit.id} /> : null}
 
               {/* Model */}
@@ -306,7 +306,7 @@ export function VehicleUnitsManager({ units, carModels, branches }: Props) {
                   name="carModelId"
                   defaultValue={editingUnit?.carModelId ?? carModels[0]?.id}
                   required
-                  className="w-full rounded-xl border border-outline-variant/40 bg-white p-2.5 text-sm font-bold text-on-surface outline-none focus:border-primary"
+                  className="w-full rounded-xl border border-outline-variant/40 bg-white px-3 py-2 text-xs font-bold text-on-surface outline-none focus:border-primary"
                 >
                   {carModels.map((m) => (
                     <option key={m.id} value={m.id}>
@@ -316,42 +316,42 @@ export function VehicleUnitsManager({ units, carModels, branches }: Props) {
                 </select>
               </div>
 
-              {/* Plate Number */}
-              <div>
-                <label className="block text-xs font-bold text-on-surface-variant mb-1">
-                  رقم اللوحة <span className="text-error">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="plateNumber"
-                  defaultValue={editingUnit?.plateNumber ?? ""}
-                  placeholder="مثال: أ ب ج 1234 أو 1234 ABC"
-                  required
-                  className="w-full rounded-xl border border-outline-variant/40 bg-white p-2.5 text-sm font-bold text-on-surface outline-none focus:border-primary"
-                />
+              {/* Plate & Branch (Grid 2 cols) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-on-surface-variant mb-1">
+                    رقم اللوحة <span className="text-error">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="plateNumber"
+                    defaultValue={editingUnit?.plateNumber ?? ""}
+                    placeholder="أ ب ج 1234"
+                    required
+                    className="w-full rounded-xl border border-outline-variant/40 bg-white px-3 py-2 text-xs font-bold text-on-surface outline-none focus:border-primary"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-on-surface-variant mb-1">
+                    الفرع المسجل فيه
+                  </label>
+                  <select
+                    name="branchId"
+                    defaultValue={editingUnit?.branchId ?? ""}
+                    className="w-full rounded-xl border border-outline-variant/40 bg-white px-3 py-2 text-xs font-bold text-on-surface outline-none focus:border-primary"
+                  >
+                    <option value="">— جميع الفروع —</option>
+                    {branches.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
-              {/* Branch */}
-              <div>
-                <label className="block text-xs font-bold text-on-surface-variant mb-1">
-                  الفرع المسجل فيه السيارة (اختياري)
-                </label>
-                <select
-                  name="branchId"
-                  defaultValue={editingUnit?.branchId ?? ""}
-                  className="w-full rounded-xl border border-outline-variant/40 bg-white p-2.5 text-sm font-bold text-on-surface outline-none focus:border-primary"
-                >
-                  <option value="">— جميع الفروع / غير محدد —</option>
-                  {branches.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Color & Chassis */}
-              <div className="grid grid-cols-2 gap-3">
+              {/* Color & Chassis (Grid 2 cols) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-on-surface-variant mb-1">
                     اللون
@@ -360,8 +360,8 @@ export function VehicleUnitsManager({ units, carModels, branches }: Props) {
                     type="text"
                     name="color"
                     defaultValue={editingUnit?.color ?? ""}
-                    placeholder="مثال: أبيض / أبيض لؤلؤي"
-                    className="w-full rounded-xl border border-outline-variant/40 bg-white p-2.5 text-sm font-semibold text-on-surface outline-none focus:border-primary"
+                    placeholder="مثال: أبيض"
+                    className="w-full rounded-xl border border-outline-variant/40 bg-white px-3 py-2 text-xs font-semibold text-on-surface outline-none focus:border-primary"
                   />
                 </div>
                 <div>
@@ -373,7 +373,7 @@ export function VehicleUnitsManager({ units, carModels, branches }: Props) {
                     name="chassisNumber"
                     defaultValue={editingUnit?.chassisNumber ?? ""}
                     placeholder="اختياري"
-                    className="w-full rounded-xl border border-outline-variant/40 bg-white p-2.5 text-sm font-semibold text-on-surface outline-none focus:border-primary"
+                    className="w-full rounded-xl border border-outline-variant/40 bg-white px-3 py-2 text-xs font-semibold text-on-surface outline-none focus:border-primary"
                   />
                 </div>
               </div>
@@ -386,7 +386,7 @@ export function VehicleUnitsManager({ units, carModels, branches }: Props) {
                 <select
                   name="status"
                   defaultValue={editingUnit?.status ?? "AVAILABLE"}
-                  className="w-full rounded-xl border border-outline-variant/40 bg-white p-2.5 text-sm font-bold text-on-surface outline-none focus:border-primary"
+                  className="w-full rounded-xl border border-outline-variant/40 bg-white px-3 py-2 text-xs font-bold text-on-surface outline-none focus:border-primary"
                 >
                   <option value="AVAILABLE">متاحة للحجز (AVAILABLE)</option>
                   <option value="RENTED">مؤجرة حالياً (RENTED)</option>
@@ -404,23 +404,23 @@ export function VehicleUnitsManager({ units, carModels, branches }: Props) {
                   name="notes"
                   rows={2}
                   defaultValue={editingUnit?.notes ?? ""}
-                  placeholder="أي تفاصيل أو ملاحظات عن المركبة..."
-                  className="w-full rounded-xl border border-outline-variant/40 bg-white p-2.5 text-xs font-semibold text-on-surface outline-none focus:border-primary resize-none"
+                  placeholder="أي تفاصيل أو ملاحظات..."
+                  className="w-full rounded-xl border border-outline-variant/40 bg-white px-3 py-2 text-xs font-semibold text-on-surface outline-none focus:border-primary resize-none"
                 />
               </div>
 
-              <div className="pt-3 flex gap-3">
+              <div className="pt-2 flex gap-3">
                 <button
                   type="submit"
                   disabled={isPending}
-                  className="flex-1 rounded-xl bg-primary py-3 text-sm font-extrabold text-on-primary shadow-sm hover:opacity-95 disabled:opacity-50"
+                  className="flex-1 rounded-xl bg-primary py-2.5 text-xs font-extrabold text-on-primary shadow-sm hover:opacity-95 disabled:opacity-50"
                 >
                   {isPending ? "جاري الحفظ..." : "حفظ رقم اللوحة"}
                 </button>
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="rounded-xl border border-outline-variant/40 px-4 py-3 text-sm font-bold text-on-surface-variant hover:bg-surface-container"
+                  className="rounded-xl border border-outline-variant/40 px-4 py-2.5 text-xs font-bold text-on-surface-variant hover:bg-surface-container"
                 >
                   إلغاء
                 </button>

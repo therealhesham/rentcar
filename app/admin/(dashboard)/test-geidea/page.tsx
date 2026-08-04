@@ -1,5 +1,4 @@
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminCard } from "@/components/admin/AdminCard";
 import { TestGeideaRefundForm } from "@/components/admin/TestGeideaRefundForm";
@@ -31,8 +30,8 @@ function StatusPill({ paid }: { paid: boolean }) {
 }
 
 export default async function AdminTestGeideaPage({ searchParams }: Props) {
-  const session = await requireAdminPage();
-  if (!session.isSuperAdmin) redirect("/admin");
+  // الوصول محكوم بصلاحية `/admin/test-geidea` في middleware — بلا قفل سوبر أدمن إضافي.
+  await requireAdminPage();
 
   const sp = await searchParams;
   const configured = isGeideaConfigured();
