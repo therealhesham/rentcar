@@ -81,6 +81,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     label: "المحتوى والموقع",
     collapsible: true,
     items: [
+      { href: "/admin/site-branding", label: "شعارات الموقع", icon: "image" },
       { href: "/admin/home", label: "هيرو الرئيسية", icon: "image" },
       { href: "/admin/promo-banner", label: "البانر الترويجي", icon: "megaphone" },
       { href: "/admin/rental-pricing-display", label: "عرض أسعار التأجير", icon: "badge-dollar" },

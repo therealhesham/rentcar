@@ -20,6 +20,9 @@ const MIME_TO_EXT: Record<string, string> = {
   "image/webp": "webp",
   "image/gif": "gif",
   "image/svg+xml": "svg",
+  // أيقونة المتصفح (favicon) تُرفع بصيغة ico من صفحة شعارات الموقع
+  "image/x-icon": "ico",
+  "image/vnd.microsoft.icon": "ico",
 };
 
 export function isSpacesConfigured(): boolean {

@@ -1,12 +1,13 @@
-import type { Viewport } from "next";
+import type { Metadata, Viewport } from "next";
 import { Cairo } from "next/font/google";
 import { JsonLd } from "@/components/seo/JsonLd";
 import {
+  buildRootLayoutMetadata,
   carRentalJsonLd,
   organizationJsonLd,
-  rootLayoutMetadata,
   webSiteJsonLd,
 } from "@/lib/seo";
+import { getSiteBranding } from "@/lib/site-settings";
 import "../globals.css";
 
 const cairo = Cairo({
@@ -15,14 +16,17 @@ const cairo = Cairo({
   display: "swap",
 });
 
-export const metadata = {
-  ...rootLayoutMetadata,
-  formatDetection: {
-    email: false,
-    address: false,
-    telephone: false,
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const branding = await getSiteBranding();
+  return {
+    ...buildRootLayoutMetadata(branding),
+    formatDetection: {
+      email: false,
+      address: false,
+      telephone: false,
+    },
+  };
+}
 
 export const viewport: Viewport = {
   width: "device-width",

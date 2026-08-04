@@ -21,6 +21,7 @@ export const DEFAULT_KEYWORDS = [
 ];
 
 const OG_IMAGE_PATH = "/logo.png";
+const FAVICON_PATH = "/logo.ico";
 
 /** عنوان الموقع في `<title>` — يُكمَّل تلقائياً بقالب `%s | روائس` في layout */
 export function pageTitle(segment: string): string {
@@ -98,38 +99,52 @@ export function buildPageMetadata(input: PageMetadataInput): Metadata {
   };
 }
 
-export const rootLayoutMetadata: Metadata = {
-  metadataBase: new URL(getSiteUrl()),
-  title: {
-    default: SITE_NAME_AR,
-    template: `%s | ${SITE_NAME_AR}`,
+/**
+ * الأيقونة وصورة المشاركة يديرهما الأدمن من «شعارات الموقع»، لذا تُبنى البيانات
+ * الوصفية بدالة تستقبل الروابط المحفوظة — والقيم الافتراضية للسياقات التي لا
+ * تقرأ من قاعدة البيانات.
+ */
+export function buildRootLayoutMetadata(
+  branding: { favicon: string; ogImage: string } = {
+    favicon: FAVICON_PATH,
+    ogImage: OG_IMAGE_PATH,
   },
-  description: DEFAULT_DESCRIPTION,
-  keywords: DEFAULT_KEYWORDS,
-  authors: [{ name: SITE_NAME_AR }],
-  creator: SITE_NAME_AR,
-  publisher: SITE_NAME_AR,
-  category: "travel",
-  robots: { index: true, follow: true },
-  openGraph: {
-    type: "website",
-    locale: "ar_SA",
-    siteName: SITE_NAME_AR,
-    title: SITE_NAME_AR,
+): Metadata {
+  return {
+    metadataBase: new URL(getSiteUrl()),
+    title: {
+      default: SITE_NAME_AR,
+      template: `%s | ${SITE_NAME_AR}`,
+    },
     description: DEFAULT_DESCRIPTION,
-    images: [{ url: OG_IMAGE_PATH, alt: SITE_NAME_AR }],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: SITE_NAME_AR,
-    description: DEFAULT_DESCRIPTION,
-    images: [OG_IMAGE_PATH],
-  },
-  icons: {
-    icon: "/logo.ico",
-    apple: "/logo.png",
-  },
-};
+    keywords: DEFAULT_KEYWORDS,
+    authors: [{ name: SITE_NAME_AR }],
+    creator: SITE_NAME_AR,
+    publisher: SITE_NAME_AR,
+    category: "travel",
+    robots: { index: true, follow: true },
+    openGraph: {
+      type: "website",
+      locale: "ar_SA",
+      siteName: SITE_NAME_AR,
+      title: SITE_NAME_AR,
+      description: DEFAULT_DESCRIPTION,
+      images: [{ url: branding.ogImage, alt: SITE_NAME_AR }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: SITE_NAME_AR,
+      description: DEFAULT_DESCRIPTION,
+      images: [branding.ogImage],
+    },
+    icons: {
+      icon: branding.favicon,
+      apple: branding.ogImage,
+    },
+  };
+}
+
+export const rootLayoutMetadata: Metadata = buildRootLayoutMetadata();
 
 /** مسارات عامة ثابتة للفهرسة */
 export const PUBLIC_STATIC_PATHS = [
@@ -139,7 +154,7 @@ export const PUBLIC_STATIC_PATHS = [
   "/subscriptions",
 ] as const;
 
-export function organizationJsonLd() {
+export function organizationJsonLd(logoUrl: string = OG_IMAGE_PATH) {
   const url = getSiteUrl();
   return {
     "@context": "https://schema.org",
@@ -147,7 +162,7 @@ export function organizationJsonLd() {
     name: SITE_NAME_AR,
     alternateName: SITE_NAME_EN,
     url,
-    logo: absoluteUrl("/logo.png"),
+    logo: logoUrl.startsWith("http") ? logoUrl : absoluteUrl(logoUrl),
     description: DEFAULT_DESCRIPTION,
     areaServed: {
       "@type": "Country",

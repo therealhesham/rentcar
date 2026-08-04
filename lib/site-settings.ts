@@ -17,6 +17,12 @@ import {
   parseCancellationDeductTiersJson,
   type CancellationDeductTier,
 } from "@/lib/cancellation-deduct";
+import {
+  DEFAULT_SITE_BRANDING,
+  SITE_BRANDING_SETTING_KEYS,
+  SITE_BRANDING_SLOTS,
+  type SiteBranding,
+} from "@/lib/site-branding";
 import { isTrustedSpacesImageUrl } from "@/lib/spaces-upload";
 
 /* ─── Promo Banner (Carousel) ──────────────────────────────── */
@@ -175,6 +181,41 @@ export async function getPaymentIconUrls(): Promise<PaymentIconUrls> {
       e && typeof e === "object" && "code" in e ? String((e as { code: string }).code) : "";
     if (code === "P2021" || code === "P2024") {
       return { ...DEFAULT_PAYMENT_ICON_URLS };
+    }
+    throw e;
+  }
+}
+
+/* ─── شعارات الموقع (هيدر/فوتر/أيقونة) ────────────────────── */
+
+export function isAllowedSiteBrandingUrl(url: string): boolean {
+  const u = url.trim();
+  if (!u) return false;
+  if ((Object.values(DEFAULT_SITE_BRANDING) as string[]).includes(u)) return true;
+  return isTrustedSpacesImageUrl(u);
+}
+
+export async function getSiteBranding(): Promise<SiteBranding> {
+  try {
+    const rows = await prisma.siteSetting.findMany({
+      where: { key: { in: Object.values(SITE_BRANDING_SETTING_KEYS) } },
+      select: { key: true, value: true },
+    });
+    const settings = new Map(rows.map((row) => [row.key, row.value]));
+
+    const result = {} as SiteBranding;
+    for (const slot of SITE_BRANDING_SLOTS) {
+      const candidate = settings.get(SITE_BRANDING_SETTING_KEYS[slot])?.trim() ?? "";
+      result[slot] = isAllowedSiteBrandingUrl(candidate)
+        ? candidate
+        : DEFAULT_SITE_BRANDING[slot];
+    }
+    return result;
+  } catch (e: unknown) {
+    const code =
+      e && typeof e === "object" && "code" in e ? String((e as { code: string }).code) : "";
+    if (code === "P2021" || code === "P2024") {
+      return { ...DEFAULT_SITE_BRANDING };
     }
     throw e;
   }

@@ -4,8 +4,10 @@ import Image from "next/image";
 import { Link } from "@/i18n/routing";
 import { useCallback, useEffect, useState } from "react";
 import { CustomerNavSlot } from "@/components/account/CustomerNavSlot";
+import { useSiteBranding } from "@/components/shared/SiteBrandingProvider";
+import { navLogoUrl } from "@/lib/site-branding";
 import { LanguageSwitcher } from "./LanguageSwitcher";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 type NavKey = "home" | "fleet" | "subscriptions" | "about" | "contact";
 
@@ -19,6 +21,8 @@ export function SiteNav({ active = "home" }: SiteNavProps) {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const t = useTranslations("SiteNav");
+  const locale = useLocale();
+  const logoSrc = navLogoUrl(useSiteBranding(), locale);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -62,7 +66,7 @@ export function SiteNav({ active = "home" }: SiteNavProps) {
         <div className="relative mx-auto flex h-16 w-full max-w-screen-xl items-center justify-between px-4 sm:h-24 sm:px-6">
           <Link href="/" aria-label="الصفحة الرئيسية" className="relative z-10">
             <Image
-              src="/logo.avif"
+              src={logoSrc}
               alt="Rawaes"
               width={176}
               height={58}
@@ -157,7 +161,7 @@ export function SiteNav({ active = "home" }: SiteNavProps) {
           <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-4">
             <Link href="/" onClick={closeMenu} aria-label="الصفحة الرئيسية">
               <Image
-                src="/logo.avif"
+                src={logoSrc}
                 alt="Rawaes"
                 width={140}
                 height={46}

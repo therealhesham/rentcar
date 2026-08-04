@@ -3,7 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { useSiteBranding } from "@/components/shared/SiteBrandingProvider";
+import { footerLogoUrl } from "@/lib/site-branding";
 
 function InstagramIcon({ className }: { className?: string }) {
   return (
@@ -70,6 +72,7 @@ export function SiteFooter() {
   const t = useTranslations("Footer");
   const navT = useTranslations("Navigation.siteNav");
   const siteLinks = getSiteLinks(navT);
+  const logoSrc = footerLogoUrl(useSiteBranding(), useLocale());
 
   return (
     <footer className="w-full text-white" style={{ backgroundColor: FOOTER_BG }}>
@@ -81,7 +84,7 @@ export function SiteFooter() {
         <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center md:justify-self-start">
           <div>
             <Image
-              src="/footerlogo.svg"
+              src={logoSrc}
               alt=""
               width={90}
               height={90}

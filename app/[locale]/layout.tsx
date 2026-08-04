@@ -1,18 +1,20 @@
-import type { Viewport } from "next";
+import type { Metadata, Viewport } from "next";
 import { Cairo } from "next/font/google";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { PageViewTracker } from "@/components/shared/PageViewTracker";
+import { SiteBrandingProvider } from "@/components/shared/SiteBrandingProvider";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 
 import {
+  buildRootLayoutMetadata,
   carRentalJsonLd,
   organizationJsonLd,
-  rootLayoutMetadata,
   webSiteJsonLd,
 } from "@/lib/seo";
+import { getSiteBranding } from "@/lib/site-settings";
 import "../globals.css";
 
 const cairo = Cairo({
@@ -21,14 +23,17 @@ const cairo = Cairo({
   display: "swap",
 });
 
-export const metadata = {
-  ...rootLayoutMetadata,
-  formatDetection: {
-    email: false,
-    address: false,
-    telephone: false,
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const branding = await getSiteBranding();
+  return {
+    ...buildRootLayoutMetadata(branding),
+    formatDetection: {
+      email: false,
+      address: false,
+      telephone: false,
+    },
+  };
+}
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -53,6 +58,7 @@ export default async function LocaleLayout({
 
   const messages = await getMessages();
   const dir = locale === "ar" ? "rtl" : "ltr";
+  const branding = await getSiteBranding();
 
   return (
     <html lang={locale} dir={dir} className={`light ${cairo.variable}`}>
@@ -66,11 +72,17 @@ export default async function LocaleLayout({
         className={`${cairo.className} min-h-full bg-surface text-on-surface antialiased`}
       >
         <NextIntlClientProvider messages={messages}>
-          <JsonLd
-            data={[organizationJsonLd(), webSiteJsonLd(), carRentalJsonLd()]}
-          />
-          <PageViewTracker />
-          {children}
+          <SiteBrandingProvider value={branding}>
+            <JsonLd
+              data={[
+                organizationJsonLd(branding.ogImage),
+                webSiteJsonLd(),
+                carRentalJsonLd(),
+              ]}
+            />
+            <PageViewTracker />
+            {children}
+          </SiteBrandingProvider>
         </NextIntlClientProvider>
       </body>
     </html>
