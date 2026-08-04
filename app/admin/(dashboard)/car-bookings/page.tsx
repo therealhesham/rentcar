@@ -96,12 +96,12 @@ export default async function AdminCarBookingsPage({
       NOT: missedPickupCondition(),
       ...(searchQ
         ? {
-            OR: [
-              { vehiclePlateNumber: { contains: searchQ } },
-              { fullName: { contains: searchQ } },
-              { phone: { contains: searchQ } },
-            ],
-          }
+          OR: [
+            { vehiclePlateNumber: { contains: searchQ } },
+            { fullName: { contains: searchQ } },
+            { phone: { contains: searchQ } },
+          ],
+        }
         : {}),
     }),
     include: {
@@ -180,7 +180,7 @@ export default async function AdminCarBookingsPage({
                 حجز جديد
               </Link>
             </div>
-            <ReportExportButtons reportId="today-bookings" />
+            {/* <ReportExportButtons reportId="today-bookings" /> */}
             <ReportExportButtons reportId="all-bookings-range" withDateRange />
           </div>
         }
