@@ -3,7 +3,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme inline {
-  --font-family-sans: var(--font-cairo), "Cairo", ui-sans-serif, system-ui,
+  --font-family-sans: var(--font-tajawal), "Tajawal", ui-sans-serif, system-ui,
     sans-serif;
 
   --color-surface-container: #f0eded;
@@ -61,7 +61,7 @@
 }
 
 body {
-  font-family: var(--font-cairo), "Cairo", ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-tajawal), "Tajawal", ui-sans-serif, system-ui, sans-serif;
 }
 
 /* لفّ الرمز U+20C1 بخط saudi_riyal حتى لا يظهر كمربع (tofu) مع Cairo */

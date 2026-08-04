@@ -65,10 +65,10 @@ export function buildReceivedHtml(booking: BookingPaymentSnapshot, isAdmin = fal
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width"/>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap');
   </style>
 </head>
-<body style="margin:0;padding:40px 20px;background:#f3f4f6;font-family:'Cairo',Tahoma,Arial,sans-serif;color:#111827;-webkit-font-smoothing:antialiased;">
+<body style="margin:0;padding:40px 20px;background:#f3f4f6;font-family:'Tajawal',Tahoma,Arial,sans-serif;color:#111827;-webkit-font-smoothing:antialiased;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
     
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;background:#ffffff;border-radius:24px;overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,0.08);border:1px solid #e5e7eb;margin:0 auto;">

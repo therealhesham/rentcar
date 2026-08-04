@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Cairo } from "next/font/google";
+import { Tajawal } from "next/font/google";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { PageViewTracker } from "@/components/shared/PageViewTracker";
 import { SiteBrandingProvider } from "@/components/shared/SiteBrandingProvider";
@@ -17,9 +17,10 @@ import {
 import { getSiteBranding } from "@/lib/site-settings";
 import "../globals.css";
 
-const cairo = Cairo({
+const tajawal = Tajawal({
   subsets: ["arabic", "latin"],
-  variable: "--font-cairo",
+  weight: ["200", "300", "400", "500", "700", "800", "900"],
+  variable: "--font-tajawal",
   display: "swap",
 });
 
@@ -61,7 +62,7 @@ export default async function LocaleLayout({
   const branding = await getSiteBranding();
 
   return (
-    <html lang={locale} dir={dir} className={`light ${cairo.variable}`}>
+    <html lang={locale} dir={dir} className={`light ${tajawal.variable}`}>
       <head>
         <link
           rel="stylesheet"
@@ -69,7 +70,7 @@ export default async function LocaleLayout({
         />
       </head>
       <body
-        className={`${cairo.className} min-h-full bg-surface text-on-surface antialiased`}
+        className={`${tajawal.className} min-h-full bg-surface text-on-surface antialiased`}
       >
         <NextIntlClientProvider messages={messages}>
           <SiteBrandingProvider value={branding}>
