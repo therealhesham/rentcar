@@ -49,6 +49,7 @@ export default async function AdminVehiclesPage() {
               المواصفات والأسعار مباشرة. التوفر عند الحجز يُحسب من مخزون فرع الإرجاع فقط.
             </>
           }
+          backHref="/admin"
           actions={
             <>
               <Link
@@ -159,6 +160,7 @@ export default async function AdminVehiclesPage() {
             "حسابك غير مرتبط بفرع."
           )
         }
+        backHref="/admin"
         actions={
           branchRow ? (
             <Link

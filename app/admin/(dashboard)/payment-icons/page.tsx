@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { verifyAdminSession } from "@/lib/admin-auth";
 import { getPaymentIconUrls } from "@/lib/site-settings";
 import { PaymentIconsEditForm } from "./PaymentIconsEditForm";
@@ -14,12 +15,11 @@ export default async function AdminPaymentIconsPage() {
 
   return (
     <>
-      <header className="mb-10">
-        <h1 className="text-3xl font-extrabold tracking-tight">أيقونات وسائل الدفع</h1>
-        <p className="mt-2 max-w-2xl text-on-surface-variant">
-          تعديل شعارات تابي وتمارا والبطاقة ومدى وإمكان المعروضة في صفحة إتمام الدفع.
-        </p>
-      </header>
+      <AdminPageHeader
+        title="أيقونات وسائل الدفع"
+        description="تعديل شعارات تابي وتمارا والبطاقة ومدى وإمكان المعروضة في صفحة إتمام الدفع."
+        backHref="/admin"
+      />
 
       <PaymentIconsEditForm current={icons} />
     </>

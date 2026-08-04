@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { verifyAdminSession } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
 import { CheckoutFeeCreateForm } from "./CheckoutFeeCreateForm";
@@ -17,13 +18,11 @@ export default async function AdminCheckoutFeesPage() {
 
   return (
     <>
-      <header className="mb-10">
-        <h1 className="text-3xl font-extrabold tracking-tight">رسوم إتمام الحجز</h1>
-        <p className="mt-2 max-w-2xl text-on-surface-variant">
-          رسوم لمرة واحدة تُضاف تلقائياً في صفحة إتمام حجز الأسطول والدفع (مثل تفويض أو إبرام عقد). يمكنك
-          إضافة أكثر من بند؛ المبالغ غير شاملة الضريبة. الشحن بين المدن يُدار من صفحة «شحن بين المدن».
-        </p>
-      </header>
+      <AdminPageHeader
+        title="رسوم إتمام الحجز"
+        description="رسوم لمرة واحدة تُضاف تلقائياً في صفحة إتمام حجز الأسطول والدفع (مثل تفويض أو إبرام عقد). يمكنك إضافة أكثر من بند؛ المبالغ غير شاملة الضريبة. الشحن بين المدن يُدار من صفحة «شحن بين المدن»."
+        backHref="/admin"
+      />
 
       <CheckoutFeeCreateForm />
 

@@ -19,6 +19,7 @@ const MIME_TO_EXT: Record<string, string> = {
   "image/png": "png",
   "image/webp": "webp",
   "image/gif": "gif",
+  "image/svg+xml": "svg",
 };
 
 export function isSpacesConfigured(): boolean {
@@ -111,7 +112,7 @@ function extensionForFile(file: File): string | null {
   const dot = name.lastIndexOf(".");
   if (dot >= 0) {
     const ext = name.slice(dot + 1);
-    if (["jpg", "jpeg", "png", "webp", "gif"].includes(ext)) {
+    if (["jpg", "jpeg", "png", "webp", "gif", "svg"].includes(ext)) {
       return ext === "jpeg" ? "jpg" : ext;
     }
   }
@@ -189,6 +190,7 @@ export const SPACES_MAX_IMAGE_BYTES = MAX_BYTES;
 
 function mimeForExtension(ext: string): string {
   if (ext === "jpg") return "image/jpeg";
+  if (ext === "svg") return "image/svg+xml";
   return `image/${ext}`;
 }
 
@@ -260,7 +262,7 @@ export async function uploadImageToSpaces(
 
   const ext = extensionForFile(file);
   if (!ext) {
-    throw new Error("نوع الصورة غير مدعوم (JPEG، PNG، WebP، GIF).");
+    throw new Error("نوع الصورة غير مدعوم (JPEG، PNG، WebP، GIF، SVG).");
   }
 
   const mimeFromType = file.type?.toLowerCase() ?? "";

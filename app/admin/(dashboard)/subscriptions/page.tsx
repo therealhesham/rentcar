@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import {
   approveUserSubscription,
   rejectUserSubscription,
@@ -69,28 +70,27 @@ export default async function AdminSubscriptionsDashboardPage(props: {
 
   return (
     <div className="space-y-8">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight">اشتراكات العملاء</h1>
-          <p className="mt-2 max-w-xl text-sm text-on-surface-variant">
-            الموافقة تتطلّب دفعة تجريبية ورخصة وهوية. التغيير بين الحالات يُسجل ليعكس حالة البطاقات في حساب الزائر.
-          </p>
-        </div>
-        <nav className="flex flex-wrap gap-2 text-xs font-black uppercase tracking-wide">
-          <a href="/admin/subscriptions" className={`rounded-xl px-3 py-1 ${!statusFilter ? "bg-primary-container text-on-primary-container" : "border opacity-65"}`}>
-            كل
-          </a>
-          {(["PENDING", "ACTIVE", "SUSPENDED", "EXPIRED"] as const).map((code) => (
-            <a
-              key={code}
-              href={`/admin/subscriptions?status=${code}`}
-              className={`rounded-xl px-3 py-1 ${statusFilter === code ? "bg-primary-container text-on-primary-container" : "border opacity-65"}`}
-            >
-              {code}
+      <AdminPageHeader
+        title="اشتراكات العملاء"
+        description="الموافقة تتطلّب دفعة تجريبية ورخصة وهوية. التغيير بين الحالات يُسجل ليعكس حالة البطاقات في حساب الزائر."
+        backHref="/admin"
+        actions={
+          <nav className="flex flex-wrap gap-2 text-xs font-black uppercase tracking-wide">
+            <a href="/admin/subscriptions" className={`rounded-xl px-3 py-1 ${!statusFilter ? "bg-primary-container text-on-primary-container" : "border opacity-65"}`}>
+              كل
             </a>
-          ))}
-        </nav>
-      </header>
+            {(["PENDING", "ACTIVE", "SUSPENDED", "EXPIRED"] as const).map((code) => (
+              <a
+                key={code}
+                href={`/admin/subscriptions?status=${code}`}
+                className={`rounded-xl px-3 py-1 ${statusFilter === code ? "bg-primary-container text-on-primary-container" : "border opacity-65"}`}
+              >
+                {code}
+              </a>
+            ))}
+          </nav>
+        }
+      />
 
       <div className="space-y-4">
         {rows.map((row) => {

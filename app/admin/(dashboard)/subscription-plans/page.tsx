@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { deactivateSubscriptionPlan, createSubscriptionPlan } from "@/app/admin/subscription-admin-actions";
 import { verifyAdminSession } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
@@ -41,13 +42,16 @@ export default async function AdminSubscriptionPlansPage() {
 
   return (
     <div className="space-y-10">
-      <header>
-        <h1 className="text-3xl font-extrabold tracking-tight">باقات الاشتراك الشهري</h1>
-        <p className="mt-3 max-w-2xl text-on-surface-variant">
-          اربط الباقات بمركبات فعلية، وحدّد الأسعار خارج الضريبة، العربون، وهيكل بدلات شهرية لتظهر فى{" "}
-          <code>/subscriptions</code>.
-        </p>
-      </header>
+      <AdminPageHeader
+        title="باقات الاشتراك الشهري"
+        description={
+          <>
+            اربط الباقات بمركبات فعلية، وحدّد الأسعار خارج الضريبة، العربون، وهيكل بدلات شهرية لتظهر فى{" "}
+            <code>/subscriptions</code>.
+          </>
+        }
+        backHref="/admin"
+      />
 
       <section className="rounded-2xl border border-outline-variant/30 bg-surface-container-lowest p-5 shadow-inner">
         <h2 className="text-xl font-black text-on-surface">إضافة خطة جديدة</h2>

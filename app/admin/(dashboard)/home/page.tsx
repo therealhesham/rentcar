@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { verifyAdminSession } from "@/lib/admin-auth";
 import { getHomeHeroSettings } from "@/lib/site-settings";
 import { HomeHeroEditForm } from "./HomeHeroEditForm";
@@ -14,12 +15,11 @@ export default async function AdminHomeHeroPage() {
 
   return (
     <>
-      <header className="mb-10">
-        <h1 className="text-3xl font-extrabold tracking-tight">الصفحة الرئيسية — الهيرو</h1>
-        <p className="mt-2 max-w-2xl text-on-surface-variant">
-          تعديل صورة خلفية الهيرو الكاملة والنص البديل لها.
-        </p>
-      </header>
+      <AdminPageHeader
+        title="الصفحة الرئيسية — الهيرو"
+        description="تعديل صورة خلفية الهيرو الكاملة والنص البديل لها."
+        backHref="/admin"
+      />
 
       <HomeHeroEditForm
         currentImageUrl={hero.imageUrl}

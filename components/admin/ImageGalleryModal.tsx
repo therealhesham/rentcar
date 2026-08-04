@@ -288,7 +288,7 @@ export function ImageGalleryModal({
               <input
                 ref={fileRef}
                 type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif"
+                accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
                 className="sr-only"
                 disabled={uploading || !browseFolder}
                 onChange={(e) => void handleUpload(e.target.files)}

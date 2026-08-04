@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { verifyAdminSession } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
 import { InterCityShippingCreateForm } from "./InterCityShippingCreateForm";
@@ -28,13 +29,11 @@ export default async function AdminInterCityShippingPage() {
 
   return (
     <>
-      <header className="mb-10">
-        <h1 className="text-3xl font-extrabold tracking-tight">رسوم الشحن بين المدن</h1>
-        <p className="mt-2 max-w-2xl text-on-surface-variant">
-          تُطبَّق تلقائياً في حجز الأسطول عندما تختلف مدينة الاستلام (أو مدينة عنوان التوصيل المختارة للرسوم)
-          عن مدينة فرع إرجاع المركبة. لكل اتجاه (من → إلى) سطر مستقل؛ لمسار العكس أضف سطراً ثانياً.
-        </p>
-      </header>
+      <AdminPageHeader
+        title="رسوم الشحن بين المدن"
+        description="تُطبَّق تلقائياً في حجز الأسطول عندما تختلف مدينة الاستلام (أو مدينة عنوان التوصيل المختارة للرسوم) عن مدينة فرع إرجاع المركبة. لكل اتجاه (من → إلى) سطر مستقل؛ لمسار العكس أضف سطراً ثانياً."
+        backHref="/admin"
+      />
 
       <InterCityShippingCreateForm cities={cities} />
 

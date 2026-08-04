@@ -120,7 +120,7 @@ async function downloadImage(
 
       const mime = res.headers.get("content-type")?.split(";")[0]?.trim() ?? "";
       if (!mime.startsWith("image/")) continue;
-      if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(mime)) {
+      if (!["image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml"].includes(mime)) {
         continue;
       }
 

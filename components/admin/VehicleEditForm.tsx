@@ -230,7 +230,7 @@ function ImageUploadZone({
               اسحب صورة هنا أو انقر للاختيار
             </p>
             <p className="mt-1 text-xs text-[#807568]">
-              JPEG · PNG · WebP · GIF — حد أقصى 5 MB
+              JPEG · PNG · WebP · GIF · SVG — حد أقصى 5 MB
             </p>
           </div>
         </div>
@@ -243,7 +243,7 @@ function ImageUploadZone({
         id={`${id}-file`}
         name="imageFile"
         type="file"
-        accept="image/jpeg,image/png,image/webp,image/gif"
+        accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
         className="sr-only"
         onChange={(e) => handleFileChange(e.target.files)}
       />

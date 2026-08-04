@@ -45,7 +45,7 @@ export function PromoBannerEditForm({ currentSlides }: Props) {
             currentImageUrl={slide.imageUrl || null}
             galleryFieldName={`galleryImageUrl_${i}`}
             fileFieldName={`imageFile_${i}`}
-            fileHelp="بحد أقصى 5 ميجابايت — JPEG أو PNG أو WebP. يُنصح بالعرض 1200px+"
+            fileHelp="بحد أقصى 5 ميجابايت — JPEG أو PNG أو WebP أو SVG. يُنصح بالعرض 1200px+"
           />
 
           <label className="mt-4 block text-sm font-medium">

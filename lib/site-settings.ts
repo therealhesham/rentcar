@@ -126,7 +126,7 @@ export async function getHomeHeroSettings(): Promise<HomeHeroSettings> {
 
 /* ─── أيقونات وسائل الدفع (صفحة إتمام الدفع) ──────────────── */
 
-export const PAYMENT_ICON_METHODS = ["TABBY", "TAMARA", "CARD", "MADA", "AMKAN"] as const;
+export const PAYMENT_ICON_METHODS = ["TABBY", "TAMARA", "CARD", "MADA", "AMKAN", "APPLE_PAY"] as const;
 export type PaymentIconMethod = (typeof PAYMENT_ICON_METHODS)[number];
 
 /** المسارات الأصلية في public/ — تبقى افتراضاً مسموحاً حتى لا تختفي الأيقونة قبل أول رفع إداري. */
@@ -136,6 +136,7 @@ export const DEFAULT_PAYMENT_ICON_URLS: Record<PaymentIconMethod, string> = {
   CARD: "/ايقونات خدمات الدفع/Visa_Inc._logo_(2014–2021).svg",
   MADA: "/ايقونات خدمات الدفع/شعار مدى - SVG.svg",
   AMKAN: "/ايقونات خدمات الدفع/شعار إمكان للتمويل - SVG.svg",
+  APPLE_PAY: "/ايقونات خدمات الدفع/Apple_Pay_logo.svg",
 };
 
 /** يُصدَّر لأن أكشن التحديث الإداري يحتاج نفس مفاتيح القراءة تماماً — لا تكرار للنمط. */

@@ -1177,7 +1177,7 @@ export function FleetCheckoutClient({
                         {uploadingKyc === "id" ? "جاري الرفع…" : (idCardUrl ? "تغيير" : "اختر ملفاً")}
                         <input
                           type="file"
-                          accept="image/jpeg,image/png,image/webp,image/gif"
+                          accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
                           className="absolute inset-0 cursor-pointer opacity-0"
                           disabled={uploadingKyc !== null}
                           onChange={(e) => {
@@ -1221,7 +1221,7 @@ export function FleetCheckoutClient({
                         {uploadingKyc === "license" ? "جاري الرفع…" : (licenseDocUrl ? "تغيير الرخصة" : "ارفع صورة الرخصة")}
                         <input
                           type="file"
-                          accept="image/jpeg,image/png,image/webp,image/gif"
+                          accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
                           className="absolute inset-0 cursor-pointer opacity-0"
                           disabled={uploadingKyc !== null}
                           onChange={(e) => {

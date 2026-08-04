@@ -22,7 +22,7 @@ type AdminImageFieldProps = {
 
 export function AdminImageField({
   label,
-  fileHelp = "بحد أقصى 5 ميجابايت — JPEG أو PNG أو WebP أو GIF.",
+  fileHelp = "بحد أقصى 5 ميجابايت — JPEG أو PNG أو WebP أو GIF أو SVG.",
   currentImageUrl,
   required = false,
   showFileInput = true,
@@ -83,7 +83,7 @@ export function AdminImageField({
             key={fileReset}
             name={fileFieldName}
             type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif"
+            accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
             required={Boolean(required && !galleryUrl)}
             onChange={() => {
               setGalleryUrl("");

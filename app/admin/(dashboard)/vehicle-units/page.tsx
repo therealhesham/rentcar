@@ -30,6 +30,7 @@ export default async function AdminVehicleUnitsPage() {
       <AdminPageHeader
         title="إدارة لوحات السيارات (وحدات الأسطول)"
         description="تسجيل أرقام لوحات السيارات الفعلية، تتبع حالة كل مركب وحجوزاتها السابقة."
+        backHref="/admin"
       />
       <VehicleUnitsManager
         units={units}

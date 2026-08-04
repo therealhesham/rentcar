@@ -41,6 +41,8 @@ const nextConfig: NextConfig = {
   /** يسمح بموارد التطوير عبر أنفاق cloudflared (اختبار webhook جيديا محلياً) — لا أثر له في الإنتاج. */
   allowedDevOrigins: ["*.trycloudflare.com"],
   images: {
+    dangerouslyAllowSVG: true,
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     remotePatterns: [
       {
         protocol: "https",

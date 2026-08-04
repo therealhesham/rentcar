@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Apple,
   Check,
   CheckCircle2,
   CreditCard,
@@ -183,7 +182,7 @@ function buildMethodOptions(paymentIconUrls: PaymentIconUrls): MethodOption[] {
       id: "APPLE_PAY",
       title: "Apple Pay",
       hint: "",
-      Icon: Apple,
+      logoSrc: paymentIconUrls.APPLE_PAY,
     },
     {
       id: "POINTS",

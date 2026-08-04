@@ -250,7 +250,7 @@ export function AdminAddCarForm({ categories, brands, branches }: AdminAddCarFor
 
       <AdminImageField
         label="صورة السيارة (اختياري — المعرض أو الرفع إلى Spaces)"
-        fileHelp="بحد أقصى 5 ميجابايت — JPEG أو PNG أو WebP أو GIF."
+        fileHelp="بحد أقصى 5 ميجابايت — JPEG أو PNG أو WebP أو GIF أو SVG."
       />
       <label className="text-sm font-medium md:col-span-2">
         وصف الصورة (alt)

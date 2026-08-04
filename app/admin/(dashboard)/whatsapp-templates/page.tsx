@@ -15,6 +15,7 @@ export default async function WhatsappTemplatesPage() {
       <AdminPageHeader
         title="قوالب رسائل الواتساب"
         description="تعديل محتوى الرسائل النصية التي يتم إرسالها للعملاء أو الإدارة عبر الواتساب."
+        backHref="/admin"
       />
 
       <WhatsappTemplatesForm initialState={initialState} />

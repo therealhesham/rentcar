@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { verifyAdminSession } from "@/lib/admin-auth";
 import { getBookingOtpChannel } from "@/lib/site-settings";
 import { isSmsChannelConfigured } from "@/lib/booking-checkout-otp";
@@ -17,18 +18,22 @@ export default async function AdminBookingOtpDeliveryPage() {
 
   return (
     <>
-      <header className="mb-10">
-        <h1 className="text-3xl font-extrabold tracking-tight">رمز التحقق عند إتمام الحجز</h1>
-        <p className="mt-2 max-w-2xl text-on-surface-variant">
-          اختر كيف يستلم العميل رمز التحقق قبل تأكيد الحجز المباشر من الموقع: عبر رسالة نصية،
-          واتساب (Evolution API)، أو البريد الإلكتروني الذي يُدخله في بيانات التواصل. الإرسال الفعلي
-          يعتمد على تهيئة الخادم.
-        </p>
-        <p className="mt-3 max-w-2xl text-sm font-semibold text-on-surface-variant">
-          يُطبَّق نفس الإعداد تلقائياً على تسجيل دخول العميل من صفحة «دخول العميل» (رمز إلى الجوال
-          أو البريد المسجَّلين في الحساب)، وليس فقط عند إتمام الحجز.
-        </p>
-      </header>
+      <AdminPageHeader
+        title="رمز التحقق عند إتمام الحجز"
+        description={
+          <>
+            اختر كيف يستلم العميل رمز التحقق قبل تأكيد الحجز المباشر من الموقع: عبر رسالة نصية،
+            واتساب (Evolution API)، أو البريد الإلكتروني الذي يُدخله في بيانات التواصل. الإرسال الفعلي
+            يعتمد على تهيئة الخادم.
+            <br />
+            <span className="mt-2 block font-semibold">
+              يُطبَّق نفس الإعداد تلقائياً على تسجيل دخول العميل من صفحة «دخول العميل» (رمز إلى الجوال
+              أو البريد المسجَّلين في الحساب)، وليس فقط عند إتمام الحجز.
+            </span>
+          </>
+        }
+        backHref="/admin"
+      />
 
       <BookingOtpDeliveryForm
         key={currentChannel}
