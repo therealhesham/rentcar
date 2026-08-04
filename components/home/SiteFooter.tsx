@@ -89,6 +89,7 @@ export function SiteFooter() {
               width={90}
               height={90}
               className="h-20 w-20 object-contain sm:h-[90px] sm:w-[90px]"
+              unoptimized={logoSrc.endsWith(".svg") || logoSrc.startsWith("http")}
             />
           </div>
           <div>
