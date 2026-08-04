@@ -150,6 +150,7 @@ export const rootLayoutMetadata: Metadata = buildRootLayoutMetadata();
 export const PUBLIC_STATIC_PATHS = [
   "/",
   "/about",
+  "/contact",
   "/fleet",
   "/subscriptions",
 ] as const;

@@ -552,6 +552,25 @@ model CorporateBookingLead {
   @@index([status, createdAt])
 }
 
+/// رسالة «تواصل معنا» من صفحة /contact — تُحفظ هنا ويُشعَر بها الأدمن على الإيميلات
+/// المضبوطة في SiteSetting بالمفتاح `contact_messages_emails`.
+model ContactMessage {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(255)
+  email     String   @db.VarChar(255)
+  phone     String   @db.VarChar(32)
+  subject   String   @db.VarChar(255)
+  message   String   @db.Text
+  /// NEW = لم تُقرأ بعد، READ = اطّلع عليها الأدمن، ARCHIVED = مؤرشفة.
+  status    String   @default("NEW") @db.VarChar(24)
+  /// اللغة اللي أرسل منها العميل (ar/en) — تفيد وقت الرد.
+  locale    String   @default("ar") @db.VarChar(8)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, createdAt])
+}
+
 model BookingRequest {
   id         Int                @id @default(autoincrement())
   /// INQUIRY = طلب حجز من الرئيسية (بدون سيارة محددة). DIRECT = حجز مباشر بعد اختيار سيارة.

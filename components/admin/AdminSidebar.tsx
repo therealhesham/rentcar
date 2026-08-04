@@ -21,6 +21,7 @@ import {
   LayoutDashboard,
   MapPin,
   Megaphone,
+  MessageSquare,
   Package,
   Percent,
   Puzzle,
@@ -76,6 +77,7 @@ const ICONS: Record<AdminNavItem["icon"], LucideIcon> = {
   "calendar-x": CalendarX2,
   "credit-card": CreditCard,
   "file-text": FileText,
+  "message-square": MessageSquare,
 };
 
 type Props = {

@@ -411,5 +411,36 @@
     "branchLocation": "Branch Location",
     "noBranches": "There are currently no active branches. You can add branches from the dashboard.",
     "mapLocationOf": "Map location of {name}"
+  },
+  "ContactPage": {
+    "title": "Contact Us",
+    "description": "Get in touch with Rawaes Car Rental — send us your enquiry or feedback and we will get back to you shortly.",
+    "heroTitle": "Contact Us",
+    "heroSubtitle": "Have a question, suggestion, or complaint? Fill in the form and we will reply as soon as possible.",
+    "infoTitle": "Contact Information",
+    "infoSubtitle": "We are happy to help you through any of the channels below.",
+    "workingHours": "Working Hours",
+    "workingHoursValue": "Daily from 8:00 AM to 11:00 PM",
+    "replyTime": "Response Time",
+    "replyTimeValue": "We reply to messages within 24 business hours.",
+    "branchesTitle": "Branch Numbers",
+    "form": {
+      "title": "Send your message",
+      "subtitle": "Fill in the details below and our team will contact you.",
+      "name": "Name",
+      "namePlaceholder": "Your full name",
+      "email": "Email",
+      "emailPlaceholder": "name@example.com",
+      "phone": "Mobile Number",
+      "phonePlaceholder": "05xxxxxxxx",
+      "subject": "Subject",
+      "subjectPlaceholder": "Message subject",
+      "message": "Message",
+      "messagePlaceholder": "Write the details of your message here…",
+      "submit": "Send Message",
+      "sending": "Sending…",
+      "success": "Your message has been received. Our team will contact you shortly.",
+      "genericError": "Could not send your message right now, please try again."
+    }
   }
 }

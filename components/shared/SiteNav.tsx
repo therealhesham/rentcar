@@ -35,7 +35,7 @@ export function SiteNav({ active = "home" }: SiteNavProps) {
     { href: "/", key: "home", label: t("home") },
     { href: "/fleet", key: "fleet", label: t("fleet") },
     { href: "/about", key: "about", label: t("about") },
-    { href: "#contact", key: "contact", label: t("contact") },
+    { href: "/contact", key: "contact", label: t("contact") },
   ];
 
   const closeMenu = useCallback(() => setOpen(false), []);

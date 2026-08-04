@@ -33,7 +33,8 @@ export type AdminNavItem = {
     | "ban"
     | "calendar-x"
     | "credit-card"
-    | "file-text";
+    | "file-text"
+    | "message-square";
   external?: boolean;
   /** إخفاء العنصر من القائمة الجانبية (لكن الصفحة لا تزال صالحة) */
   hidden?: boolean;
@@ -73,6 +74,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/admin/customers", label: "العملاء", icon: "users" },
       { href: "/admin/direct-booking", label: "حجز مباشر (مكتب)", icon: "calendar-plus", hidden: true },
       { href: "/admin/corporate-leads", label: "حجز الشركات", icon: "briefcase" },
+      { href: "/admin/contact-messages", label: "رسائل تواصل معنا", icon: "message-square" },
       { href: "/admin/fleet-availability", label: "توفر المركبات", icon: "activity", hidden: true },
     ],
   },

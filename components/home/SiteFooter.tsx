@@ -38,6 +38,7 @@ function getSiteLinks(t: any) {
     { href: "/", label: t("home") },
     { href: "/fleet", label: t("fleet") },
     { href: "/about", label: t("about") },
+    { href: "/contact", label: t("contact") },
     { href: "#", label: t("privacyPolicy") },
     { href: "#", label: t("termsAndConditions") },
   ];
