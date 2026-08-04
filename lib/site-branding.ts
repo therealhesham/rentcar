@@ -22,9 +22,9 @@ export type SiteBranding = Record<SiteBrandingSlot, string>;
 /** المسارات الأصلية في public/ — تبقى افتراضاً مسموحاً حتى لا يختفي الشعار قبل أول رفع إداري. */
 export const DEFAULT_SITE_BRANDING: SiteBranding = {
   navAr: "/logo.avif",
-  navEn: "/logo.avif",
+  navEn: "/logo.svg",
   footerAr: "/footerlogo.svg",
-  footerEn: "/footerlogo.svg",
+  footerEn: "/ss.svg",
   favicon: "/logo.ico",
   ogImage: "/logo.png",
 };
@@ -54,9 +54,17 @@ function isEnglish(locale: string): boolean {
 }
 
 export function navLogoUrl(branding: SiteBranding, locale: string): string {
-  return isEnglish(locale) ? branding.navEn : branding.navAr;
+  const isEn = isEnglish(locale);
+  if (isEn) {
+    return branding.navEn || branding.navAr || DEFAULT_SITE_BRANDING.navEn;
+  }
+  return branding.navAr || DEFAULT_SITE_BRANDING.navAr;
 }
 
 export function footerLogoUrl(branding: SiteBranding, locale: string): string {
-  return isEnglish(locale) ? branding.footerEn : branding.footerAr;
+  const isEn = isEnglish(locale);
+  if (isEn) {
+    return branding.footerEn || branding.footerAr || DEFAULT_SITE_BRANDING.footerEn;
+  }
+  return branding.footerAr || DEFAULT_SITE_BRANDING.footerAr;
 }

@@ -191,7 +191,7 @@ export async function getPaymentIconUrls(): Promise<PaymentIconUrls> {
 export function isAllowedSiteBrandingUrl(url: string): boolean {
   const u = url.trim();
   if (!u) return false;
-  if ((Object.values(DEFAULT_SITE_BRANDING) as string[]).includes(u)) return true;
+  if (u.startsWith("/") || u.startsWith("http://") || u.startsWith("https://") || u.startsWith("data:")) return true;
   return isTrustedSpacesImageUrl(u);
 }
 

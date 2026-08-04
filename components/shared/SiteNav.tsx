@@ -72,6 +72,7 @@ export function SiteNav({ active = "home" }: SiteNavProps) {
               height={58}
               className="h-12 w-auto object-contain sm:h-14"
               priority
+              unoptimized={logoSrc.endsWith(".svg") || logoSrc.startsWith("http")}
             />
           </Link>
 
@@ -166,6 +167,7 @@ export function SiteNav({ active = "home" }: SiteNavProps) {
                 width={140}
                 height={46}
                 className="h-10 w-auto object-contain brightness-0 invert"
+                unoptimized={logoSrc.endsWith(".svg") || logoSrc.startsWith("http")}
               />
             </Link>
             <button
