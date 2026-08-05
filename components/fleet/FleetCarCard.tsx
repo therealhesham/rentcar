@@ -84,10 +84,11 @@ export function FleetCarCard({
         {/* الاسم + السنة + أو مشابهة */}
         <div className="min-w-0">
           <h3 className="truncate text-base font-bold leading-snug text-gray-900">
-            {car.brand} {car.name}
+            <bdi>{car.brand}</bdi>{" "}
+            <bdi>{car.name}</bdi>
             {car.year ? (
               <span className="mx-1 text-sm font-normal text-gray-400">
-                {car.year}
+                <bdi>{car.year}</bdi>
               </span>
             ) : null}
           </h3>

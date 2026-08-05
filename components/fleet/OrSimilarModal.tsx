@@ -118,7 +118,7 @@ export function OrSimilarModal({ open, carName, onConfirm, onClose }: Props) {
             id="or-similar-title"
             className="text-[1.25rem] font-extrabold tracking-tight text-white sm:text-[1.35rem]"
           >
-            {carName}
+            <bdi>{carName}</bdi>
           </h2>
           <p className="mt-1 text-[14px] font-semibold" style={{ color: GOLD }}>
             {t("subtitle")}
