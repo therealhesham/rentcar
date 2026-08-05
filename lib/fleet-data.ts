@@ -9,6 +9,7 @@ import {
   resolveBestRentalDiscount,
   type RentalDiscountRule,
 } from "@/lib/rental-discount";
+import { applyPriceFloorPerDay, type ResolvedPriceFloor } from "@/lib/min-price-floor";
 
 const FUEL_AR: Record<FuelType, string> = {
   GASOLINE: "بنزين",
@@ -57,13 +58,26 @@ function rowBasePrice(row: FleetRowWithModel): number {
   return row.pricePerDayExclTax ?? row.model.price;
 }
 
-/** السعر الفعلي للصف بعد الخصم (لاختيار أرخص فرع للعرض). */
-function rowEffectivePrice(
+/** أرضية السعر الأدنى للصف: تجاوز الفرع إن وُجد وإلا حد الموديل. */
+function rowPriceFloor(row: FleetRowWithModel): ResolvedPriceFloor {
+  return {
+    minPricePerDayExclTax:
+      row.minPricePerDayExclTax ?? row.model.minPricePerDayExclTax,
+    minPriceMonthlyExclTax:
+      row.minPriceMonthlyExclTax ?? row.model.minPriceMonthlyExclTax,
+  };
+}
+
+/**
+ * السعر اليومي المعروض للصف بعد الخصم والأرضية — الأرضية تُطبَّق هنا كذلك
+ * حتى لا تعرض بطاقة الأسطول سعراً أقل مما سيدفعه العميل في صفحة الإتمام.
+ */
+function rowDiscountedPrice(
   row: FleetRowWithModel,
   discountRules: ReadonlyArray<RentalDiscountRule>,
   referenceDate?: Date | null,
-): number {
-  const base = rowBasePrice(row);
+): { basePrice: number; effectivePrice: number; displayLabelAr: string | null } {
+  const basePrice = rowBasePrice(row);
   const resolved = resolveBestRentalDiscount(
     discountRules,
     {
@@ -72,9 +86,30 @@ function rowEffectivePrice(
       branchId: row.branchId,
       referenceDate,
     },
-    base,
+    basePrice,
   );
-  return resolved?.discountedPricePerDayExclTax ?? base;
+  const effectivePrice = applyPriceFloorPerDay(
+    resolved?.discountedPricePerDayExclTax ?? basePrice,
+    basePrice,
+    rowPriceFloor(row),
+    "DAILY",
+    1,
+  ).finalPricePerDayExclTax;
+  return {
+    basePrice,
+    effectivePrice,
+    // خصم مبلوع بالكامل بواسطة الأرضية = لا شارة خصم.
+    displayLabelAr: effectivePrice < basePrice ? (resolved?.displayLabelAr ?? null) : null,
+  };
+}
+
+/** السعر الفعلي للصف بعد الخصم (لاختيار أرخص فرع للعرض). */
+function rowEffectivePrice(
+  row: FleetRowWithModel,
+  discountRules: ReadonlyArray<RentalDiscountRule>,
+  referenceDate?: Date | null,
+): number {
+  return rowDiscountedPrice(row, discountRules, referenceDate).effectivePrice;
 }
 
 /** السعر الشهري للصف: تجاوز الفرع إن وُجد وإلا سعر الموديل الشهري. null = لا يوجد عرض شهري. */
@@ -110,22 +145,15 @@ function mapFleetRowToFleetCar(
       locale,
     });
   } else {
-    const basePrice = rowBasePrice(row);
-    const resolved = resolveBestRentalDiscount(
+    const { basePrice, effectivePrice, displayLabelAr } = rowDiscountedPrice(
+      row,
       discountRules,
-      {
-        brandId: m.brandId,
-        carModelId: m.id,
-        branchId: row.branchId,
-        referenceDate,
-      },
-      basePrice,
+      referenceDate,
     );
-    const effectivePrice = resolved?.discountedPricePerDayExclTax ?? basePrice;
     priceUi = buildFleetCardPriceParts(effectivePrice, m.vatRatePercent, priceMode, {
-      originalPriceExclTaxSar: resolved?.originalPricePerDayExclTax,
-      discountLabelAr: resolved?.displayLabelAr,
-      discountLabelEn: resolved?.displayLabelAr,
+      originalPriceExclTaxSar: basePrice,
+      discountLabelAr: displayLabelAr,
+      discountLabelEn: displayLabelAr,
       startingFrom,
       locale,
     });

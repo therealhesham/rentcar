@@ -6,6 +6,7 @@ import {
   resolveBranchMonthlyPriceForModel,
 } from "@/lib/fleet-branch-stock";
 import { resolveRentalDiscountForModel } from "@/lib/rental-discount";
+import { applyPriceFloorPerDay, resolvePriceFloorForModel } from "@/lib/min-price-floor";
 
 const PLACEHOLDER_IMG =
   "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=1200&q=80";
@@ -84,7 +85,22 @@ export async function getCarModelForCheckout(
 
   const brandName = m.brand.name.trim();
   const modelName = m.name.trim();
-  const effectivePrice = resolved?.discountedPricePerDayExclTax ?? basePrice;
+  // أرضية السعر الأدنى تُطبَّق هنا كذلك — السعر المعروض في صفحة الإتمام لازم
+  // يطابق اللي هيتحسب وقت الحجز في `createDirectBooking`.
+  const priceFloor = await resolvePriceFloorForModel(m.id, branchId, {
+    minPricePerDayExclTax: m.minPricePerDayExclTax,
+    minPriceMonthlyExclTax: m.minPriceMonthlyExclTax,
+  });
+  const floorOutcome = applyPriceFloorPerDay(
+    resolved?.discountedPricePerDayExclTax ?? basePrice,
+    basePrice,
+    priceFloor,
+    "DAILY",
+    1,
+  );
+  const effectivePrice = floorOutcome.finalPricePerDayExclTax;
+  // لو الأرضية بلعت الخصم بالكامل، ما نعرضش شارة خصم كاذبة.
+  const showDiscount = effectivePrice < basePrice;
 
   return {
     modelId: m.id,
@@ -95,8 +111,8 @@ export async function getCarModelForCheckout(
     fullTitle: `${brandName} ${modelName}`.trim(),
     categoryTitle: m.category.title.trim(),
     pricePerDayExclTax: effectivePrice,
-    originalPricePerDayExclTax: resolved?.originalPricePerDayExclTax ?? basePrice,
-    discountLabelAr: resolved?.displayLabelAr ?? null,
+    originalPricePerDayExclTax: basePrice,
+    discountLabelAr: showDiscount ? (resolved?.displayLabelAr ?? null) : null,
     pricePerMonthExclTax: monthlyPrice,
     vatRatePercent: m.vatRatePercent,
     image: m.image?.trim() || PLACEHOLDER_IMG,

@@ -1,10 +1,12 @@
-import type { RentalDiscountKind } from "@prisma/client";
+import type { DiscountAppliesTo, RentalDiscountKind } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import type { RentalPeriodKind } from "@/lib/min-price-floor";
 
 export type RentalDiscountRule = {
   id: number;
   kind: RentalDiscountKind;
   value: number;
+  appliesTo: DiscountAppliesTo;
   startsAt: Date | null;
   endsAt: Date | null;
   brandId: number | null;
@@ -19,6 +21,8 @@ export type RentalDiscountContext = {
   branchId?: number | null;
   /** تاريخ الاستلام أو «الآن» لعرض الأسطول */
   referenceDate?: Date | null;
+  /** نوع التأجير — الخصم الشهري يتطلب `appliesTo = DAILY_AND_MONTHLY`. الافتراضي يومي. */
+  periodKind?: RentalPeriodKind | null;
 };
 
 /** نتيجة الخصم للعميل — بدون تفاصيل الشرط (فترة/ماركة/فرع). */
@@ -46,6 +50,7 @@ export async function getActiveRentalDiscounts(): Promise<RentalDiscountRule[]> 
       id: true,
       kind: true,
       value: true,
+      appliesTo: true,
       startsAt: true,
       endsAt: true,
       brandId: true,
@@ -85,6 +90,10 @@ function isWithinDiscountPeriod(
 }
 
 function discountMatchesContext(rule: RentalDiscountRule, ctx: RentalDiscountContext): boolean {
+  // تبويب «شهري» لا يأخذ إلا الخصومات المسموح لها صراحةً بالشهري.
+  if ((ctx.periodKind ?? "DAILY") === "MONTHLY" && rule.appliesTo !== "DAILY_AND_MONTHLY") {
+    return false;
+  }
   if (rule.brandId != null && rule.brandId !== ctx.brandId) return false;
   if (rule.carModelId != null && rule.carModelId !== ctx.carModelId) return false;
   if (rule.branchId != null) {
@@ -168,6 +177,86 @@ export async function resolveRentalDiscountForModel(
 ): Promise<ResolvedRentalDiscount | null> {
   const rules = await getActiveRentalDiscounts();
   return resolveBestRentalDiscount(rules, ctx, basePricePerDayExclTax);
+}
+
+/** خصم مبلغ الفترة الشهرية — يُحسب على **إجمالي الشهر** لتفادي خسارة الكسور. */
+export type ResolvedPeriodDiscount = {
+  /** المبلغ بعد الخصم: إجمالي الشهر للشهري، وسعر اليوم لليومي. */
+  discountedAmountExclTax: number;
+  originalAmountExclTax: number;
+  savingsExclTax: number;
+  displayLabelAr: string;
+};
+
+function computeMonthlySavings(
+  monthlyTotalExclTax: number,
+  kind: RentalDiscountKind,
+  value: number,
+  days: number,
+): number {
+  const base = Math.max(0, monthlyTotalExclTax);
+  if (base <= 0) return 0;
+  if (kind === "PERCENT") {
+    const pct = Math.min(100, Math.max(1, Math.round(value)));
+    return Math.round(((base * pct) / 100) * 100) / 100;
+  }
+  // FIXED_DAILY = مبلغ يومي بالريال → يُضرب في عدد أيام الشهر المحجوز.
+  return Math.min(base, Math.max(0, Math.round(value)) * Math.max(1, Math.round(days)));
+}
+
+/**
+ * أفضل خصم لفترة التأجير.
+ *
+ * - `DAILY`: نفس منطق `resolveBestRentalDiscount` بالضبط (سلوك غير متغيّر).
+ * - `MONTHLY`: يُحسب على إجمالي الشهر مباشرةً — لأن قسمة السعر الشهري على الأيام
+ *   أولاً ثم التقريب لريال كامل تضيّع فروقاً ملموسة على مدى شهر.
+ *
+ * الخصومات المقيَّدة بـ `DAILY_ONLY` مستبعَدة تلقائياً في السياق الشهري.
+ */
+export async function resolveRentalDiscountForPeriod(
+  baseAmountExclTax: number,
+  ctx: RentalDiscountContext & { periodKind: RentalPeriodKind; days: number },
+): Promise<ResolvedPeriodDiscount | null> {
+  if (ctx.periodKind !== "MONTHLY") {
+    const resolved = await resolveRentalDiscountForModel(baseAmountExclTax, ctx);
+    if (!resolved) return null;
+    return {
+      discountedAmountExclTax: resolved.discountedPricePerDayExclTax,
+      originalAmountExclTax: resolved.originalPricePerDayExclTax,
+      savingsExclTax: resolved.discountPerDayExclTax,
+      displayLabelAr: resolved.displayLabelAr,
+    };
+  }
+
+  const base = Math.max(0, baseAmountExclTax);
+  if (base <= 0) return null;
+
+  const rules = await getActiveRentalDiscounts();
+  let best: { resolved: ResolvedPeriodDiscount; sortOrder: number } | null = null;
+
+  for (const rule of rules) {
+    if (!discountMatchesContext(rule, ctx)) continue;
+    const savings = computeMonthlySavings(base, rule.kind, rule.value, ctx.days);
+    if (savings <= 0) continue;
+
+    const candidate: ResolvedPeriodDiscount = {
+      discountedAmountExclTax: Math.round((base - savings) * 100) / 100,
+      originalAmountExclTax: base,
+      savingsExclTax: savings,
+      displayLabelAr: buildCustomerDiscountLabelAr(rule.kind, rule.value, savings),
+    };
+
+    if (
+      !best ||
+      candidate.savingsExclTax > best.resolved.savingsExclTax ||
+      (candidate.savingsExclTax === best.resolved.savingsExclTax &&
+        rule.sortOrder < best.sortOrder)
+    ) {
+      best = { resolved: candidate, sortOrder: rule.sortOrder };
+    }
+  }
+
+  return best?.resolved ?? null;
 }
 
 export type RentalDiscountPriceSnap = {

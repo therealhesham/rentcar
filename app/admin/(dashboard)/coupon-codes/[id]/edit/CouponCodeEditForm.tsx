@@ -34,6 +34,7 @@ export function CouponCodeEditForm({ coupon }: { coupon: CouponCodeAdminRow }) {
           kind: coupon.kind,
           value: coupon.value,
           scope: coupon.scope,
+          appliesTo: coupon.appliesTo,
           startsAt: dateInputValue(coupon.startsAt),
           endsAt: dateInputValue(coupon.endsAt),
           maxUses: coupon.maxUses ?? "",

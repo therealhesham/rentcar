@@ -516,6 +516,36 @@ export function VehicleEditForm({ vehicle }: Props) {
                   dir="ltr"
                 />
               </Field>
+              <Field
+                label="أدنى سعر / يوم (ر.س)"
+                help="لا ينزل السعر اليومي بعد الخصم تحت هذا الحد. فارغ = بلا حد."
+              >
+                <input
+                  name="minPricePerDayExclTax"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  defaultValue={vehicle.minPricePerDayExclTax ?? ""}
+                  placeholder="بلا حد"
+                  className={inputCls}
+                  dir="ltr"
+                />
+              </Field>
+              <Field
+                label="أدنى سعر / شهر (ر.س)"
+                help="لا ينزل إجمالي الشهر بعد الخصم تحت هذا الحد. فارغ = بلا حد."
+              >
+                <input
+                  name="minPriceMonthlyExclTax"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  defaultValue={vehicle.minPriceMonthlyExclTax ?? ""}
+                  placeholder="بلا حد"
+                  className={inputCls}
+                  dir="ltr"
+                />
+              </Field>
             </div>
           </div>
 

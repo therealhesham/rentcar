@@ -15,6 +15,14 @@ type Props = {
   defaultMonthlyPrice?: number | null;
   /** السعر الشهري الأساسي للموديل — يُعرض placeholder عند غياب سعر خاص للفرع؛ null = لا يوجد عرض شهري */
   baseMonthlyPrice?: number | null;
+  /** الحد الأدنى اليومي للفرع دون ضريبة — null = حد الموديل */
+  defaultMinPrice?: number | null;
+  /** الحد الأدنى اليومي للموديل — placeholder عند غياب حد خاص للفرع؛ null = بلا حد */
+  baseMinPrice?: number | null;
+  /** الحد الأدنى الشهري للفرع دون ضريبة — null = حد الموديل */
+  defaultMinMonthlyPrice?: number | null;
+  /** الحد الأدنى الشهري للموديل — placeholder عند غياب حد خاص للفرع؛ null = بلا حد */
+  baseMinMonthlyPrice?: number | null;
   /** عرض مضغوط داخل جدول السوبر أدمن */
   compact?: boolean;
 };
@@ -27,6 +35,10 @@ export function BranchFleetQuantityForm({
   basePrice,
   defaultMonthlyPrice,
   baseMonthlyPrice,
+  defaultMinPrice,
+  baseMinPrice,
+  defaultMinMonthlyPrice,
+  baseMinMonthlyPrice,
   compact = false,
 }: Props) {
   const [state, formAction, pending] = useActionState(updateBranchFleetQuantity, null);
@@ -82,6 +94,34 @@ export function BranchFleetQuantityForm({
           defaultValue={defaultMonthlyPrice ?? ""}
           placeholder={baseMonthlyPrice != null ? String(baseMonthlyPrice) : "لا يوجد"}
           title="فارغ = السعر الشهري الأساسي للموديل (أو لا يوجد عرض شهري)"
+          className={inputClass}
+          dir="ltr"
+        />
+      </label>
+      <label className={compact ? "flex flex-col gap-0.5" : "flex items-center gap-1"}>
+        <span className="text-[9px] font-bold text-on-surface-variant">أدنى سعر يوم</span>
+        <input
+          type="number"
+          name="branchMinPrice"
+          min={0}
+          step="0.01"
+          defaultValue={defaultMinPrice ?? ""}
+          placeholder={baseMinPrice != null ? String(baseMinPrice) : "بلا حد"}
+          title="لا ينزل السعر اليومي بعد الخصم تحت هذا الحد (دون ضريبة). فارغ = حد الموديل."
+          className={inputClass}
+          dir="ltr"
+        />
+      </label>
+      <label className={compact ? "flex flex-col gap-0.5" : "flex items-center gap-1"}>
+        <span className="text-[9px] font-bold text-on-surface-variant">أدنى سعر شهر</span>
+        <input
+          type="number"
+          name="branchMinMonthlyPrice"
+          min={0}
+          step="0.01"
+          defaultValue={defaultMinMonthlyPrice ?? ""}
+          placeholder={baseMinMonthlyPrice != null ? String(baseMinMonthlyPrice) : "بلا حد"}
+          title="لا ينزل إجمالي الشهر بعد الخصم تحت هذا الحد (دون ضريبة). فارغ = حد الموديل."
           className={inputClass}
           dir="ltr"
         />

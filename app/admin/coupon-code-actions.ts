@@ -33,6 +33,7 @@ function readCouponFormFields(formData: FormData):
         kind: "PERCENT" | "FIXED";
         value: number;
         scope: "RENTAL_ONLY" | "FULL_TOTAL";
+        appliesTo: "DAILY_ONLY" | "DAILY_AND_MONTHLY";
         startsAt: Date | null;
         endsAt: Date | null;
         maxUses: number | null;
@@ -44,6 +45,7 @@ function readCouponFormFields(formData: FormData):
   const code = String(formData.get("code") ?? "").trim().toUpperCase();
   const kindRaw = String(formData.get("kind") ?? "").trim().toUpperCase();
   const scopeRaw = String(formData.get("scope") ?? "").trim().toUpperCase();
+  const appliesToRaw = String(formData.get("appliesTo") ?? "DAILY_ONLY").trim().toUpperCase();
   const value = Number(formData.get("value"));
   const startsAt = parseOptionalDate(formData.get("startsAt"));
   const endsAt = parseOptionalDate(formData.get("endsAt"));
@@ -56,6 +58,9 @@ function readCouponFormFields(formData: FormData):
   }
   if (kindRaw !== "PERCENT" && kindRaw !== "FIXED") {
     return { ok: false, error: "نوع الخصم غير صالح." };
+  }
+  if (appliesToRaw !== "DAILY_ONLY" && appliesToRaw !== "DAILY_AND_MONTHLY") {
+    return { ok: false, error: "نطاق تطبيق الكود غير صالح." };
   }
   if (scopeRaw !== "RENTAL_ONLY" && scopeRaw !== "FULL_TOTAL") {
     return { ok: false, error: "نطاق التطبيق غير صالح." };
@@ -80,6 +85,7 @@ function readCouponFormFields(formData: FormData):
       kind: kindRaw,
       value: Math.round(value),
       scope: scopeRaw,
+      appliesTo: appliesToRaw,
       startsAt,
       endsAt,
       maxUses,

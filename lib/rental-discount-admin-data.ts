@@ -5,6 +5,7 @@ export type RentalDiscountAdminRow = {
   id: number;
   labelAr: string;
   kind: "PERCENT" | "FIXED_DAILY";
+  appliesTo: "DAILY_ONLY" | "DAILY_AND_MONTHLY";
   value: number;
   startsAt: Date | null;
   endsAt: Date | null;
@@ -40,6 +41,7 @@ export async function getRentalDiscountsForAdmin(
     id: r.id,
     labelAr: r.labelAr,
     kind: r.kind,
+    appliesTo: r.appliesTo,
     value: r.value,
     startsAt: r.startsAt,
     endsAt: r.endsAt,

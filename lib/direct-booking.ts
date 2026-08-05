@@ -45,7 +45,7 @@ import {
 import { formatDailyBookingDurationFromIso } from "@/lib/booking-duration-display";
 import {
   rentalDiscountSnapFromResolved,
-  resolveRentalDiscountForModel,
+  resolveRentalDiscountForPeriod,
   type RentalDiscountPriceSnap,
 } from "@/lib/rental-discount";
 import { computeCheckoutTotals } from "@/lib/booking-checkout-pricing";
@@ -53,9 +53,16 @@ import { parseBookingPricingSnapshot, type CouponCodeSnap } from "@/lib/booking-
 import { logBookingEvent } from "@/lib/booking-audit";
 import {
   computeCouponDiscountOnSubtotal,
-  computeCouponDiscountPerDay,
+  computeCouponDiscountForPeriod,
   resolveCouponCode,
 } from "@/lib/coupon-code";
+import {
+  applyPriceFloorPerDay,
+  capFullTotalDiscountToFloor,
+  resolvePriceFloorForModel,
+  type RentalPeriodKind,
+} from "@/lib/min-price-floor";
+import { recordMinPriceFloorApplied } from "@/lib/min-price-floor-audit";
 
 export { addDaysToYmd, lastInclusiveBookingDayYmd } from "@/lib/booking-calendar-ymd";
 
@@ -1257,56 +1264,97 @@ export async function createDirectBooking(
   );
   const isMonthlyBooking =
     commonNormalized.rentalTab?.trim().toLowerCase() === "monthly" && branchMonthlyPrice != null;
+  const periodKind: RentalPeriodKind = isMonthlyBooking ? "MONTHLY" : "DAILY";
 
-  let effectivePricePerDay: number;
+  // أرضية السعر الأدنى (دون ضريبة): تجاوز الفرع إن وُجد وإلا حد الموديل.
+  const priceFloor = await resolvePriceFloorForModel(model.id, returnBranchRow?.id ?? null, {
+    minPricePerDayExclTax: model.minPricePerDayExclTax,
+    minPriceMonthlyExclTax: model.minPriceMonthlyExclTax,
+  });
+
+  // مبلغ الفترة قبل أي خصم: إجمالي الشهر للشهري، وسعر اليوم لليومي.
+  // الحساب الشهري يتم على الإجمالي ثم يُقسم على الأيام في الآخر — القسمة أولاً
+  // ثم التقريب لريال كامل كانت تضيّع فروقاً ملموسة على مدى شهر.
+  const basePeriodAmountExclTax = isMonthlyBooking ? branchMonthlyPrice! : branchBasePrice;
+  const toPerDay = (periodAmount: number) =>
+    isMonthlyBooking ? periodAmount / days : periodAmount;
+
+  let discountedPeriodAmountExclTax = basePeriodAmountExclTax;
   let rentalDiscountSnap: ReturnType<typeof rentalDiscountSnapFromResolved> | null = null;
   let couponApplication:
     | { id: number; maxUses: number | null; kind: "PERCENT" | "FIXED"; value: number; snap: CouponCodeSnap }
     | null = null;
 
-  if (isMonthlyBooking) {
-    effectivePricePerDay = branchMonthlyPrice! / days;
+  const couponCodeRaw = prepared.couponCode?.trim();
+  if (couponCodeRaw) {
+    // كود الخصم يحل محل الخصم التلقائي (RentalDiscount) عند صلاحيته.
+    // `periodKind` يمنع أكواد DAILY_ONLY من السريان على التأجير الشهري.
+    const resolvedCoupon = await resolveCouponCode(couponCodeRaw, {
+      customerPhone: commonNormalized.phone,
+      periodKind,
+    });
+    if (!resolvedCoupon.ok) {
+      return { ok: false, error: resolvedCoupon.error };
+    }
+    const c = resolvedCoupon.coupon;
+    if (c.scope === "RENTAL_ONLY") {
+      const { discountedAmountExclTax } = computeCouponDiscountForPeriod(
+        basePeriodAmountExclTax,
+        c.kind,
+        c.value,
+        periodKind,
+      );
+      discountedPeriodAmountExclTax = discountedAmountExclTax;
+    }
+    couponApplication = {
+      id: c.id,
+      maxUses: c.maxUses,
+      kind: c.kind,
+      value: c.value,
+      // discountExclTax يبدأ صفر ويُملأ لاحقاً لنطاق FULL_TOTAL بعد معرفة الإجمالي الفرعي.
+      snap: { code: c.code, kind: c.kind, scope: c.scope, discountExclTax: 0 },
+    };
   } else {
-    const couponCodeRaw = prepared.couponCode?.trim();
-    if (couponCodeRaw) {
-      // كود الخصم يحل محل الخصم التلقائي (RentalDiscount) عند صلاحيته.
-      const resolvedCoupon = await resolveCouponCode(couponCodeRaw, {
-        customerPhone: commonNormalized.phone,
-      });
-      if (!resolvedCoupon.ok) {
-        return { ok: false, error: resolvedCoupon.error };
-      }
-      const c = resolvedCoupon.coupon;
-      if (c.scope === "RENTAL_ONLY") {
-        const { discountedPricePerDayExclTax } = computeCouponDiscountPerDay(
-          branchBasePrice,
-          c.kind,
-          c.value,
-        );
-        effectivePricePerDay = discountedPricePerDayExclTax;
-      } else {
-        effectivePricePerDay = branchBasePrice;
-      }
-      couponApplication = {
-        id: c.id,
-        maxUses: c.maxUses,
-        kind: c.kind,
-        value: c.value,
-        // discountExclTax يبدأ صفر ويُملأ لاحقاً لنطاق FULL_TOTAL بعد معرفة الإجمالي الفرعي.
-        snap: { code: c.code, kind: c.kind, scope: c.scope, discountExclTax: 0 },
-      };
-    } else {
-      const rentalDiscountResolved = await resolveRentalDiscountForModel(branchBasePrice, {
+    const rentalDiscountResolved = await resolveRentalDiscountForPeriod(
+      basePeriodAmountExclTax,
+      {
         brandId: model.brandId,
         carModelId: model.id,
         branchId: returnBranchRow?.id ?? null,
         referenceDate: commonNormalized.pickupDate,
-      });
-      effectivePricePerDay = rentalDiscountResolved?.discountedPricePerDayExclTax ?? branchBasePrice;
-      rentalDiscountSnap = rentalDiscountResolved
-        ? rentalDiscountSnapFromResolved(rentalDiscountResolved)
+        periodKind,
+        days,
+      },
+    );
+    discountedPeriodAmountExclTax =
+      rentalDiscountResolved?.discountedAmountExclTax ?? basePeriodAmountExclTax;
+  }
+
+  // الأرضية تُقارَن قبل الضريبة دائماً — `computeCheckoutTotals` تحسب الضريبة
+  // على الناتج النهائي بعدها.
+  const floorOutcome = applyPriceFloorPerDay(
+    toPerDay(discountedPeriodAmountExclTax),
+    toPerDay(basePeriodAmountExclTax),
+    priceFloor,
+    periodKind,
+    days,
+  );
+  const effectivePricePerDay = floorOutcome.finalPricePerDayExclTax;
+
+  // اللقطة تعكس الخصم **الفعلي** بعد الأرضية، مش الخصم النظري قبلها — وإلا
+  // تعرض الفاتورة خصماً ما حصلش.
+  if (!couponApplication) {
+    const actualDiscountPerDay = Math.round(
+      (floorOutcome.basePricePerDayExclTax - effectivePricePerDay) * 100,
+    ) / 100;
+    rentalDiscountSnap =
+      actualDiscountPerDay > 0
+        ? {
+            originalPricePerDayExclTax: floorOutcome.basePricePerDayExclTax,
+            discountedPricePerDayExclTax: effectivePricePerDay,
+            discountPerDayExclTax: actualDiscountPerDay,
+          }
         : null;
-    }
   }
 
   const addonsSnap = await buildBookingAddonsJsonSnapshot(
@@ -1342,6 +1390,8 @@ export async function createDirectBooking(
 
   // كوبون FULL_TOTAL: يُطرح من الإجمالي الفرعي (إيجار+إضافات+رسوم) بعد ما بقى معروف.
   let couponDiscountExclTax = 0;
+  let fullTotalFloorApplied = false;
+  let fullTotalWithheldExclTax = 0;
   if (couponApplication && couponApplication.snap.scope === "FULL_TOTAL") {
     const preDiscountTotals = computeCheckoutTotals(
       effectivePricePerDay,
@@ -1350,11 +1400,22 @@ export async function createDirectBooking(
       addonsForTotals.map((a: { pricePerDayExclTax: number }) => ({ pricePerDay: a.pricePerDayExclTax })),
       { oneTimeFeesExclTax: oneTimeFeesExclTaxSum },
     );
-    couponDiscountExclTax = computeCouponDiscountOnSubtotal(
+    const requestedDiscount = computeCouponDiscountOnSubtotal(
       preDiscountTotals.subtotalExclTax,
       couponApplication.kind,
       couponApplication.value,
     );
+    // الأرضية تحمي بند الإيجار: الإضافات والرسوم قابلة للخصم بالكامل لكن
+    // المتبقي لا ينزل تحت أرضية الإيجار لكامل المدة.
+    const capped = capFullTotalDiscountToFloor(
+      requestedDiscount,
+      preDiscountTotals.subtotalExclTax,
+      floorOutcome.floorPerDayExclTax,
+      days,
+    );
+    couponDiscountExclTax = capped.discountExclTax;
+    fullTotalFloorApplied = capped.floorApplied;
+    fullTotalWithheldExclTax = capped.withheldDiscountExclTax;
   }
 
   const bookingTotals = computeCheckoutTotals(
@@ -1572,6 +1633,27 @@ export async function createDirectBooking(
     toStatus: payNow ? "CONFIRMED" : "NEW",
     notes: payNow ? `${paymentMethodStored}${cashPayNow ? " (كاش)" : ""}` : undefined,
   });
+
+  // الحد الأدنى ألغى جزءاً من الخصم → أثر تدقيق + تنبيه المحاسبة والمشرفين.
+  if (floorOutcome.floorApplied || fullTotalFloorApplied) {
+    await recordMinPriceFloorApplied({
+      bookingId: bookingRequestId,
+      branchId: returnBranchRow?.id ?? null,
+      carLabel: `${model.name} ${model.year}`.trim(),
+      periodKind,
+      basePricePerDayExclTax: floorOutcome.basePricePerDayExclTax,
+      discountedPricePerDayExclTax: floorOutcome.discountedPricePerDayExclTax,
+      floorPerDayExclTax: floorOutcome.floorPerDayExclTax ?? 0,
+      finalPricePerDayExclTax: floorOutcome.finalPricePerDayExclTax,
+      withheldDiscountExclTax:
+        floorOutcome.withheldDiscountExclTax + fullTotalWithheldExclTax,
+      days,
+      discountSource: couponApplication
+        ? { kind: "COUPON", code: couponApplication.snap.code }
+        : { kind: "RENTAL_DISCOUNT" },
+      floorExceedsBasePrice: floorOutcome.floorExceedsBasePrice,
+    });
+  }
 
   return { ok: true, bookingRequestId };
 }

@@ -31,6 +31,7 @@ export const BOOKING_EVENTS = {
   CONVERTED_TO_DIRECT: "CONVERTED_TO_DIRECT",
   REVERTED_TO_INQUIRY: "REVERTED_TO_INQUIRY",
   INTER_BRANCH_RETURN: "INTER_BRANCH_RETURN",
+  MIN_PRICE_FLOOR_APPLIED: "MIN_PRICE_FLOOR_APPLIED",
 } as const;
 
 export type BookingEvent = (typeof BOOKING_EVENTS)[keyof typeof BOOKING_EVENTS];
@@ -53,6 +54,7 @@ export const BOOKING_EVENT_LABELS: Record<BookingEvent, string> = {
   CONVERTED_TO_DIRECT: "تحويل لحجز مباشر",
   REVERTED_TO_INQUIRY: "إعادة لطلب استفسار",
   INTER_BRANCH_RETURN: "تأكيد إرجاع بين الفروع",
+  MIN_PRICE_FLOOR_APPLIED: "تفعيل الحد الأدنى للسعر",
 };
 
 export async function logBookingEvent(input: BookingEventInput): Promise<void> {

@@ -1,13 +1,22 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { computeCheckoutTotals } from "@/lib/booking-checkout-pricing";
-import { resolveBranchBasePriceForModel } from "@/lib/fleet-branch-stock";
+import {
+  resolveBranchBasePriceForModel,
+  resolveBranchMonthlyPriceForModel,
+} from "@/lib/fleet-branch-stock";
 import {
   buildCouponDiscountLabelAr,
   computeCouponDiscountOnSubtotal,
-  computeCouponDiscountPerDay,
+  computeCouponDiscountForPeriod,
   resolveCouponCode,
 } from "@/lib/coupon-code";
+import {
+  applyPriceFloorPerDay,
+  capFullTotalDiscountToFloor,
+  resolvePriceFloorForModel,
+  type RentalPeriodKind,
+} from "@/lib/min-price-floor";
 
 export const dynamic = "force-dynamic";
 
@@ -52,16 +61,17 @@ export async function POST(request: Request) {
     : [];
 
   const branchSlug = String(obj.branchSlug ?? "").trim().toLowerCase();
-
-  const resolved = await resolveCouponCode(code, { customerPhone });
-  if (!resolved.ok) {
-    return NextResponse.json({ ok: false, error: resolved.error }, { status: 400 });
-  }
-  const coupon = resolved.coupon;
+  const rentalTab = String(obj.rentalTab ?? "daily").trim().toLowerCase();
 
   const model = await prisma.carModel.findUnique({
     where: { id: carModelId },
-    select: { price: true, vatRatePercent: true },
+    select: {
+      price: true,
+      priceMonthlyExclTax: true,
+      vatRatePercent: true,
+      minPricePerDayExclTax: true,
+      minPriceMonthlyExclTax: true,
+    },
   });
   if (!model) {
     return NextResponse.json({ ok: false, error: "السيارة غير موجودة." }, { status: 400 });
@@ -71,19 +81,59 @@ export async function POST(request: Request) {
     ? await prisma.branch.findFirst({ where: { slug: branchSlug, isActive: true }, select: { id: true } })
     : null;
   const branchBasePrice = await resolveBranchBasePriceForModel(carModelId, branchRow?.id ?? null, model.price);
+  const branchMonthlyPrice = await resolveBranchMonthlyPriceForModel(
+    carModelId,
+    branchRow?.id ?? null,
+    model.priceMonthlyExclTax,
+  );
+
+  const isMonthly = rentalTab === "monthly" && branchMonthlyPrice != null;
+  const periodKind: RentalPeriodKind = isMonthly ? "MONTHLY" : "DAILY";
+
+  // نفس ترتيب `createDirectBooking`: صلاحية الكود لنوع التأجير أولاً، ثم الخصم،
+  // ثم أرضية السعر — وإلا يشوف العميل خصماً أعمق مما سيُطبَّق فعلاً.
+  const resolved = await resolveCouponCode(code, { customerPhone, periodKind });
+  if (!resolved.ok) {
+    return NextResponse.json({ ok: false, error: resolved.error }, { status: 400 });
+  }
+  const coupon = resolved.coupon;
+
+  const priceFloor = await resolvePriceFloorForModel(carModelId, branchRow?.id ?? null, {
+    minPricePerDayExclTax: model.minPricePerDayExclTax,
+    minPriceMonthlyExclTax: model.minPriceMonthlyExclTax,
+  });
+  const basePeriodAmount = isMonthly ? branchMonthlyPrice! : branchBasePrice;
+  const toPerDay = (amount: number) => (isMonthly ? amount / numberOfDays : amount);
+  const basePricePerDay = toPerDay(basePeriodAmount);
 
   if (coupon.scope === "RENTAL_ONLY") {
-    const { discountedPricePerDayExclTax, discountPerDayExclTax } = computeCouponDiscountPerDay(
-      branchBasePrice,
+    const { discountedAmountExclTax } = computeCouponDiscountForPeriod(
+      basePeriodAmount,
       coupon.kind,
       coupon.value,
+      periodKind,
     );
+    const floorOutcome = applyPriceFloorPerDay(
+      toPerDay(discountedAmountExclTax),
+      basePricePerDay,
+      priceFloor,
+      periodKind,
+      numberOfDays,
+    );
+    const effectiveDiscountPerDay =
+      Math.round((basePricePerDay - floorOutcome.finalPricePerDayExclTax) * 100) / 100;
+    if (effectiveDiscountPerDay <= 0) {
+      return NextResponse.json(
+        { ok: false, error: "لا يمكن تطبيق هذا الكود على هذا السعر." },
+        { status: 400 },
+      );
+    }
     return NextResponse.json({
       ok: true,
       scope: coupon.scope,
-      discountedPricePerDayExclTax,
+      discountedPricePerDayExclTax: floorOutcome.finalPricePerDayExclTax,
       discountExclTax: 0,
-      labelAr: buildCouponDiscountLabelAr(coupon.kind, coupon.value, discountPerDayExclTax),
+      labelAr: buildCouponDiscountLabelAr(coupon.kind, coupon.value, effectiveDiscountPerDay),
     });
   }
 
@@ -101,22 +151,42 @@ export async function POST(request: Request) {
   const oneTimeFeesExclTax = checkoutFees.reduce((s, f) => s + f.feeExclVatSar, 0);
 
   const preDiscountTotals = computeCheckoutTotals(
-    branchBasePrice,
+    basePricePerDay,
     numberOfDays,
     model.vatRatePercent,
     addons.map((a) => ({ pricePerDay: a.pricePerDay })),
     { oneTimeFeesExclTax },
   );
-  const discountExclTax = computeCouponDiscountOnSubtotal(
+  const requestedDiscount = computeCouponDiscountOnSubtotal(
     preDiscountTotals.subtotalExclTax,
     coupon.kind,
     coupon.value,
   );
+  // الأرضية تحمي بند الإيجار — نفس السقف المطبَّق وقت الحجز.
+  const floorPerDay =
+    periodKind === "MONTHLY"
+      ? priceFloor.minPriceMonthlyExclTax != null
+        ? priceFloor.minPriceMonthlyExclTax / numberOfDays
+        : null
+      : priceFloor.minPricePerDayExclTax;
+  const { discountExclTax } = capFullTotalDiscountToFloor(
+    requestedDiscount,
+    preDiscountTotals.subtotalExclTax,
+    floorPerDay,
+    numberOfDays,
+  );
+
+  if (discountExclTax <= 0) {
+    return NextResponse.json(
+      { ok: false, error: "لا يمكن تطبيق هذا الكود على هذا السعر." },
+      { status: 400 },
+    );
+  }
 
   return NextResponse.json({
     ok: true,
     scope: coupon.scope,
-    discountedPricePerDayExclTax: branchBasePrice,
+    discountedPricePerDayExclTax: basePricePerDay,
     discountExclTax,
     labelAr: buildCouponDiscountLabelAr(coupon.kind, coupon.value, discountExclTax),
   });

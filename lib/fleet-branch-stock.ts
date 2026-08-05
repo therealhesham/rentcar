@@ -45,8 +45,21 @@ export async function upsertBranchFleetQuantity(input: {
   pricePerDayExclTax?: number | null;
   /** undefined = لا تغيير؛ null = مسح السعر الشهري الخاص بالفرع؛ رقم = سعر شهري خاص بالفرع دون ضريبة. */
   priceMonthlyExclTax?: number | null;
+  /** undefined = لا تغيير؛ null = مسح الحد الأدنى اليومي للفرع (يرجع لحد الموديل). */
+  minPricePerDayExclTax?: number | null;
+  /** undefined = لا تغيير؛ null = مسح الحد الأدنى الشهري للفرع (يرجع لحد الموديل). */
+  minPriceMonthlyExclTax?: number | null;
 }): Promise<void> {
   const qty = Math.max(0, Math.round(input.quantity));
+  const optionalMoneyPatch = <K extends string>(
+    key: K,
+    value: number | null | undefined,
+  ): Partial<Record<K, number | null>> =>
+    value === undefined
+      ? {}
+      : ({ [key]: value == null ? null : Math.max(0, Math.round(value * 100) / 100) } as Partial<
+          Record<K, number | null>
+        >);
   const pricePatch =
     input.pricePerDayExclTax === undefined
       ? {}
@@ -56,15 +69,14 @@ export async function upsertBranchFleetQuantity(input: {
               ? null
               : Math.max(0, Math.round(input.pricePerDayExclTax * 100) / 100),
         };
-  const monthlyPatch =
-    input.priceMonthlyExclTax === undefined
-      ? {}
-      : {
-          priceMonthlyExclTax:
-            input.priceMonthlyExclTax == null
-              ? null
-              : Math.max(0, Math.round(input.priceMonthlyExclTax * 100) / 100),
-        };
+  const monthlyPatch = optionalMoneyPatch(
+    "priceMonthlyExclTax",
+    input.priceMonthlyExclTax,
+  );
+  const floorPatch = {
+    ...optionalMoneyPatch("minPricePerDayExclTax", input.minPricePerDayExclTax),
+    ...optionalMoneyPatch("minPriceMonthlyExclTax", input.minPriceMonthlyExclTax),
+  };
   await prisma.fleet.upsert({
     where: {
       modelId_branchId: {
@@ -78,8 +90,9 @@ export async function upsertBranchFleetQuantity(input: {
       quantity: qty,
       ...pricePatch,
       ...monthlyPatch,
+      ...floorPatch,
     },
-    update: { quantity: qty, ...pricePatch, ...monthlyPatch },
+    update: { quantity: qty, ...pricePatch, ...monthlyPatch, ...floorPatch },
   });
 }
 

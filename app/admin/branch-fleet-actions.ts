@@ -55,6 +55,49 @@ export async function updateBranchFleetQuantity(
     }
   }
 
+  // حدّا السعر الأدنى للفرع (دون ضريبة): اختياريان — فارغ = الرجوع لحد الموديل.
+  const parseOptionalFloor = (
+    field: string,
+    label: string,
+    max: number,
+  ): { ok: true; value: number | null | undefined } | { ok: false; error: string } => {
+    const raw = formData.get(field);
+    if (raw == null) return { ok: true, value: undefined };
+    const trimmed = String(raw).trim();
+    if (trimmed === "") return { ok: true, value: null };
+    const parsed = Number(trimmed);
+    if (!Number.isFinite(parsed) || parsed < 0 || parsed > max) {
+      return { ok: false, error: `${label} غير صالح.` };
+    }
+    return { ok: true, value: parsed };
+  };
+
+  const minDaily = parseOptionalFloor("branchMinPrice", "الحد الأدنى اليومي للفرع", 100000);
+  if (!minDaily.ok) return minDaily;
+  const minMonthly = parseOptionalFloor(
+    "branchMinMonthlyPrice",
+    "الحد الأدنى الشهري للفرع",
+    1000000,
+  );
+  if (!minMonthly.ok) return minMonthly;
+
+  // حد أدنى أعلى من السعر نفسه إعداد متناقض — يُرفض عند الإدخال بدل ما يتحوّل
+  // لتنبيه صامت في كل حجز.
+  if (
+    minDaily.value != null &&
+    pricePerDayExclTax != null &&
+    minDaily.value > pricePerDayExclTax
+  ) {
+    return { ok: false, error: "الحد الأدنى اليومي أعلى من سعر الفرع اليومي." };
+  }
+  if (
+    minMonthly.value != null &&
+    priceMonthlyExclTax != null &&
+    minMonthly.value > priceMonthlyExclTax
+  ) {
+    return { ok: false, error: "الحد الأدنى الشهري أعلى من سعر الفرع الشهري." };
+  }
+
   // فرع واحد في النطاق ⇒ مقفول عليه؛ نطاق أوسع ⇒ الفرع يأتي من الفورم ويُتحقق منه.
   const scope = adminScope(auth.session);
   const allowedBranchIds = await scopedBranchIds(scope);
@@ -86,6 +129,8 @@ export async function updateBranchFleetQuantity(
     quantity: Math.round(quantity),
     pricePerDayExclTax,
     priceMonthlyExclTax,
+    minPricePerDayExclTax: minDaily.value,
+    minPriceMonthlyExclTax: minMonthly.value,
   });
 
   revalidatePath("/admin/vehicles");

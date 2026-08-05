@@ -46,6 +46,7 @@ export function RentalDiscountEditForm({ discount, brands, models, branches }: P
         defaults={{
           labelAr: discount.labelAr,
           kind: discount.kind,
+          appliesTo: discount.appliesTo,
           value: discount.value,
           startsAt: dateInputValue(discount.startsAt),
           endsAt: dateInputValue(discount.endsAt),

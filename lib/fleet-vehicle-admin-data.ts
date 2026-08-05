@@ -176,6 +176,10 @@ export type AdminFleetVehicleEditPayload = {
   fuel: FuelType;
   price: number;
   vatRatePercent: number;
+  /** الحد الأدنى للسعر اليومي دون ضريبة — null = بلا حد. */
+  minPricePerDayExclTax: number | null;
+  /** الحد الأدنى للسعر الشهري دون ضريبة — null = بلا حد. */
+  minPriceMonthlyExclTax: number | null;
   quantity: number;
   image: string | null;
   alt: string | null;
@@ -219,6 +223,8 @@ export async function getFleetVehicleForAdminEdit(
     fuel: row.fuel,
     price: row.price,
     vatRatePercent: row.vatRatePercent,
+    minPricePerDayExclTax: row.minPricePerDayExclTax,
+    minPriceMonthlyExclTax: row.minPriceMonthlyExclTax,
     quantity: totalQty,
     image: row.image?.trim() || null,
     alt: row.alt?.trim() || null,

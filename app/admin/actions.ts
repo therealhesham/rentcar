@@ -19,6 +19,25 @@ import {
 
 export type AdminLoginState = { ok: true } | { ok: false; error: string };
 
+/**
+ * حد أدنى اختياري للسعر (دون ضريبة) من الفورم.
+ * غياب الحقل = لا تغيير (undefined)؛ حقل فارغ = مسح الحد (null).
+ */
+function parseOptionalPriceFloor(
+  raw: FormDataEntryValue | null,
+  label: string,
+  max: number,
+): { ok: true; value: number | null | undefined } | { ok: false; error: string } {
+  if (raw == null) return { ok: true, value: undefined };
+  const trimmed = String(raw).trim();
+  if (trimmed === "") return { ok: true, value: null };
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > max) {
+    return { ok: false, error: `${label} غير صالح.` };
+  }
+  return { ok: true, value: Math.round(parsed * 100) / 100 };
+}
+
 export async function loginAdmin(
   _prev: AdminLoginState | null,
   formData: FormData,
@@ -180,6 +199,22 @@ export async function createFleetVehicle(
   if (vatRatePercent < 0 || vatRatePercent > 100) {
     return { ok: false, error: "نسبة الضريبة يجب أن تكون بين 0 و 100." };
   }
+
+  const minDailyFloor = parseOptionalPriceFloor(
+    formData.get("minPricePerDayExclTax"),
+    "الحد الأدنى للسعر اليومي",
+    100000,
+  );
+  if (!minDailyFloor.ok) return minDailyFloor;
+  const minMonthlyFloor = parseOptionalPriceFloor(
+    formData.get("minPriceMonthlyExclTax"),
+    "الحد الأدنى للسعر الشهري",
+    1000000,
+  );
+  if (!minMonthlyFloor.ok) return minMonthlyFloor;
+  if (minDailyFloor.value != null && minDailyFloor.value > price) {
+    return { ok: false, error: "الحد الأدنى للسعر اليومي أعلى من السعر اليومي نفسه." };
+  }
   if (!Number.isFinite(quantity) || quantity < 1) {
     return { ok: false, error: "الكمية غير صالحة." };
   }
@@ -232,6 +267,8 @@ export async function createFleetVehicle(
           fuel,
           price: Math.round(price),
           vatRatePercent,
+          minPricePerDayExclTax: minDailyFloor.value ?? null,
+          minPriceMonthlyExclTax: minMonthlyFloor.value ?? null,
           image,
           alt,
           cta,
@@ -329,6 +366,22 @@ export async function updateFleetVehicle(
   if (vatRatePercent < 0 || vatRatePercent > 100) {
     return { ok: false, error: "نسبة الضريبة يجب أن تكون بين 0 و 100." };
   }
+
+  const minDailyFloor = parseOptionalPriceFloor(
+    formData.get("minPricePerDayExclTax"),
+    "الحد الأدنى للسعر اليومي",
+    100000,
+  );
+  if (!minDailyFloor.ok) return minDailyFloor;
+  const minMonthlyFloor = parseOptionalPriceFloor(
+    formData.get("minPriceMonthlyExclTax"),
+    "الحد الأدنى للسعر الشهري",
+    1000000,
+  );
+  if (!minMonthlyFloor.ok) return minMonthlyFloor;
+  if (minDailyFloor.value != null && minDailyFloor.value > price) {
+    return { ok: false, error: "الحد الأدنى للسعر اليومي أعلى من السعر اليومي نفسه." };
+  }
   if (!Number.isFinite(quantity) || quantity < 0) {
     return { ok: false, error: "الكمية غير صالحة." };
   }
@@ -369,6 +422,13 @@ export async function updateFleetVehicle(
           fuel,
           price: Math.round(price),
           vatRatePercent,
+          // غياب الحقل من الفورم = لا تغيير، حتى لا يمسح فورمٌ آخر الحدود المضبوطة.
+          ...(minDailyFloor.value === undefined
+            ? {}
+            : { minPricePerDayExclTax: minDailyFloor.value }),
+          ...(minMonthlyFloor.value === undefined
+            ? {}
+            : { minPriceMonthlyExclTax: minMonthlyFloor.value }),
           image,
           alt,
           cta,

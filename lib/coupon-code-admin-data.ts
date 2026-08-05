@@ -1,4 +1,4 @@
-import type { CouponDiscountKind, CouponScope } from "@prisma/client";
+import type { CouponDiscountKind, CouponScope, DiscountAppliesTo } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 export type CouponCodeAdminRow = {
@@ -7,6 +7,7 @@ export type CouponCodeAdminRow = {
   kind: CouponDiscountKind;
   value: number;
   scope: CouponScope;
+  appliesTo: DiscountAppliesTo;
   startsAt: Date | null;
   endsAt: Date | null;
   isActive: boolean;
@@ -25,6 +26,7 @@ export async function getCouponCodesForAdmin(): Promise<CouponCodeAdminRow[]> {
       kind: true,
       value: true,
       scope: true,
+      appliesTo: true,
       startsAt: true,
       endsAt: true,
       isActive: true,
@@ -45,6 +47,7 @@ export async function getCouponCodeForAdminEdit(id: number): Promise<CouponCodeA
       kind: true,
       value: true,
       scope: true,
+      appliesTo: true,
       startsAt: true,
       endsAt: true,
       isActive: true,

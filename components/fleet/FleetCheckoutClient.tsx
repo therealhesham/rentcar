@@ -643,6 +643,9 @@ export function FleetCheckoutClient({
           branchSlug: trip.branchSlug,
           numberOfDays: trip.days,
           addonIds: [...selected],
+          // نوع التأجير يحدّد صلاحية الكود (يومي فقط أم شهري كذلك) وأرضية السعر
+          // المطبَّقة — لازم يطابق ما يحسبه الخادم وقت الحجز.
+          rentalTab,
         }),
       });
       const data = (await res.json()) as

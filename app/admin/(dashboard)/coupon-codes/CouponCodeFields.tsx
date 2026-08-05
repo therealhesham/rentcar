@@ -7,6 +7,7 @@ type Defaults = {
   kind?: "PERCENT" | "FIXED";
   value?: number | "";
   scope?: "RENTAL_ONLY" | "FULL_TOTAL";
+  appliesTo?: "DAILY_ONLY" | "DAILY_AND_MONTHLY";
   startsAt?: string;
   endsAt?: string;
   maxUses?: number | "";
@@ -56,6 +57,22 @@ export function CouponCodeFields({ defaults, lockCode }: Props) {
           <option value="RENTAL_ONLY">سعر الإيجار فقط</option>
           <option value="FULL_TOTAL">الإجمالي كامل (إيجار + إضافات + رسوم)</option>
         </select>
+      </label>
+
+      <label className="text-sm font-medium">
+        نوع التأجير
+        <select
+          name="appliesTo"
+          required
+          defaultValue={defaults?.appliesTo ?? "DAILY_ONLY"}
+          className={inputCls}
+        >
+          <option value="DAILY_ONLY">التأجير اليومي فقط</option>
+          <option value="DAILY_AND_MONTHLY">اليومي والشهري معاً</option>
+        </select>
+        <span className="mt-1 block text-[11px] font-normal text-on-surface-variant">
+          «اليومي فقط» = الكود يُرفض لو العميل حاجز من تبويب «شهري».
+        </span>
       </label>
 
       <label className="text-sm font-medium">

@@ -38,6 +38,7 @@ export async function createRentalDiscount(
 
   const labelAr = String(formData.get("labelAr") ?? "").trim();
   const kindRaw = String(formData.get("kind") ?? "").trim().toUpperCase();
+  const appliesToRaw = String(formData.get("appliesTo") ?? "DAILY_ONLY").trim().toUpperCase();
   const value = Number(formData.get("value"));
   const sortOrder = Number(formData.get("sortOrder") ?? 0);
   const startsAt = parseOptionalDate(formData.get("startsAt"));
@@ -52,6 +53,9 @@ export async function createRentalDiscount(
   }
   if (kindRaw !== "PERCENT" && kindRaw !== "FIXED_DAILY") {
     return { ok: false, error: "نوع الخصم غير صالح." };
+  }
+  if (appliesToRaw !== "DAILY_ONLY" && appliesToRaw !== "DAILY_AND_MONTHLY") {
+    return { ok: false, error: "نطاق تطبيق الخصم غير صالح." };
   }
   if (!Number.isFinite(value) || value < 1) {
     return { ok: false, error: "قيمة الخصم غير صالحة." };
@@ -83,6 +87,7 @@ export async function createRentalDiscount(
       data: {
         labelAr: labelAr.slice(0, 255),
         kind: kindRaw,
+        appliesTo: appliesToRaw,
         value: Math.round(value),
         startsAt,
         endsAt,
@@ -112,6 +117,7 @@ export async function updateRentalDiscount(
   const id = Number(formData.get("id"));
   const labelAr = String(formData.get("labelAr") ?? "").trim();
   const kindRaw = String(formData.get("kind") ?? "").trim().toUpperCase();
+  const appliesToRaw = String(formData.get("appliesTo") ?? "DAILY_ONLY").trim().toUpperCase();
   const value = Number(formData.get("value"));
   const sortOrder = Number(formData.get("sortOrder") ?? 0);
   const startsAt = parseOptionalDate(formData.get("startsAt"));
@@ -129,6 +135,9 @@ export async function updateRentalDiscount(
   }
   if (kindRaw !== "PERCENT" && kindRaw !== "FIXED_DAILY") {
     return { ok: false, error: "نوع الخصم غير صالح." };
+  }
+  if (appliesToRaw !== "DAILY_ONLY" && appliesToRaw !== "DAILY_AND_MONTHLY") {
+    return { ok: false, error: "نطاق تطبيق الخصم غير صالح." };
   }
   if (!Number.isFinite(value) || value < 1) {
     return { ok: false, error: "قيمة الخصم غير صالحة." };
@@ -155,6 +164,7 @@ export async function updateRentalDiscount(
       data: {
         labelAr: labelAr.slice(0, 255),
         kind: kindRaw,
+        appliesTo: appliesToRaw,
         value: Math.round(value),
         startsAt,
         endsAt,

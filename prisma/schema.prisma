@@ -290,6 +290,12 @@ model CarModel {
   priceMonthlyExclTax Int?
   /// نسبة ضريبة القيمة المضافة % المسجّلة لهذا الموديل (مثلاً 15 في السعودية) — للفوترة والأرشفة
   vatRatePercent      Int     @default(15)
+  /// الحد الأدنى للسعر اليومي دون ضريبة — لا ينزل السعر بعد الخصم تحته. null = بلا حد.
+  /// يمكن تجاوزه لكل فرع عبر `Fleet.minPricePerDayExclTax`.
+  minPricePerDayExclTax  Float?
+  /// الحد الأدنى للسعر الشهري دون ضريبة — لا ينزل السعر الشهري بعد الخصم تحته. null = بلا حد.
+  /// يمكن تجاوزه لكل فرع عبر `Fleet.minPriceMonthlyExclTax`.
+  minPriceMonthlyExclTax Float?
   image               String?
   alt                 String?
   cta                 String?
@@ -324,6 +330,10 @@ model Fleet {
   pricePerDayExclTax  Float?
   /// سعر شهري خاص بالفرع (دون ضريبة) — يتجاوز `CarModel.priceMonthlyExclTax` عند تحديده. null = السعر الأساسي للموديل.
   priceMonthlyExclTax Float?
+  /// حد أدنى يومي خاص بالفرع (دون ضريبة) — يتجاوز `CarModel.minPricePerDayExclTax`. null = حد الموديل.
+  minPricePerDayExclTax  Float?
+  /// حد أدنى شهري خاص بالفرع (دون ضريبة) — يتجاوز `CarModel.minPriceMonthlyExclTax`. null = حد الموديل.
+  minPriceMonthlyExclTax Float?
   /// هل تظهر هذه المركبة للعملاء في صفحة الأسطول (يمكن إخفاؤها حتى لو متاحة)
   isVisible           Boolean  @default(true)
   /// ترتيب العرض في صفحة الأسطول — الأصغر يظهر أولاً (0 = افتراضي)
@@ -451,6 +461,8 @@ model RentalDiscount {
   kind       RentalDiscountKind
   /// PERCENT: 1–100؛ FIXED_DAILY: مبلغ يومي بالريال (دون ضريبة).
   value      Int
+  /// هل يسري الخصم على التأجير اليومي فقط أم على اليومي والشهري معاً.
+  appliesTo  DiscountAppliesTo  @default(DAILY_ONLY)
   /// بداية الفترة (null = بدون بداية).
   startsAt   DateTime?
   /// نهاية الفترة (null = بدون نهاية).
@@ -488,6 +500,8 @@ model CouponCode {
   value               Int
   /// نطاق التطبيق: سعر الإيجار فقط أو الإجمالي كامل (إيجار + إضافات + رسوم).
   scope               CouponScope
+  /// هل يسري الكود على التأجير اليومي فقط أم على اليومي والشهري معاً.
+  appliesTo           DiscountAppliesTo  @default(DAILY_ONLY)
   /// بداية الفترة (null = بدون بداية).
   startsAt            DateTime?
   /// نهاية الفترة (null = بدون نهاية).
@@ -535,6 +549,14 @@ enum CouponDiscountKind {
 enum CouponScope {
   RENTAL_ONLY
   FULL_TOTAL
+}
+
+/// نطاق الخصم بحسب نوع التأجير — يُستخدم في `RentalDiscount` و`CouponCode` معاً.
+/// DAILY_ONLY = التأجير اليومي فقط (السلوك الافتراضي التاريخي).
+/// DAILY_AND_MONTHLY = يسري كذلك على تبويب «شهري».
+enum DiscountAppliesTo {
+  DAILY_ONLY
+  DAILY_AND_MONTHLY
 }
 
 /// طلب تواصل لحجز شركات (من الصفحة الرئيسية) — يتابعه المشرف يدوياً.

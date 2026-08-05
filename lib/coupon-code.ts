@@ -1,5 +1,6 @@
-import type { CouponDiscountKind, CouponScope } from "@prisma/client";
+import type { CouponDiscountKind, CouponScope, DiscountAppliesTo } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import type { RentalPeriodKind } from "@/lib/min-price-floor";
 
 export type ResolvedCoupon = {
   id: number;
@@ -7,6 +8,7 @@ export type ResolvedCoupon = {
   kind: CouponDiscountKind;
   value: number;
   scope: CouponScope;
+  appliesTo: DiscountAppliesTo;
   maxUses: number | null;
 };
 
@@ -16,11 +18,15 @@ const ERROR_NOT_STARTED = "كود الخصم لم تبدأ صلاحيته بعد
 const ERROR_EXPIRED = "انتهت صلاحية كود الخصم.";
 const ERROR_MAX_USES_REACHED = "نفد الحد الأقصى لاستخدام هذا الكود.";
 const ERROR_CUSTOMER_LIMIT_REACHED = "لقد استخدمت هذا الكود من قبل.";
+const ERROR_DAILY_ONLY = "هذا الكود يسري على التأجير اليومي فقط.";
 
-/** يتحقق من صلاحية كود الخصم: مفعّل، داخل الفترة، لم يتجاوز حد الاستخدام الإجمالي أو حد هذا العميل. */
+/**
+ * يتحقق من صلاحية كود الخصم: مفعّل، داخل الفترة، مسموح لنوع التأجير المطلوب،
+ * ولم يتجاوز حد الاستخدام الإجمالي أو حد هذا العميل.
+ */
 export async function resolveCouponCode(
   rawCode: string,
-  ctx: { customerPhone: string; now?: Date },
+  ctx: { customerPhone: string; now?: Date; periodKind?: RentalPeriodKind | null },
 ): Promise<{ ok: true; coupon: ResolvedCoupon } | { ok: false; error: string }> {
   const code = rawCode.trim().toUpperCase();
   if (!code) return { ok: false, error: ERROR_NOT_FOUND };
@@ -35,6 +41,12 @@ export async function resolveCouponCode(
   }
   if (row.endsAt && now.getTime() > row.endsAt.getTime()) {
     return { ok: false, error: ERROR_EXPIRED };
+  }
+  if (
+    (ctx.periodKind ?? "DAILY") === "MONTHLY" &&
+    row.appliesTo !== "DAILY_AND_MONTHLY"
+  ) {
+    return { ok: false, error: ERROR_DAILY_ONLY };
   }
   if (row.maxUses != null && row.usesCount >= row.maxUses) {
     return { ok: false, error: ERROR_MAX_USES_REACHED };
@@ -56,6 +68,7 @@ export async function resolveCouponCode(
       kind: row.kind,
       value: row.value,
       scope: row.scope,
+      appliesTo: row.appliesTo,
       maxUses: row.maxUses,
     },
   };
@@ -78,6 +91,46 @@ export function computeCouponDiscountPerDay(
     savings = Math.min(base, Math.max(0, Math.round(value)));
   }
   return { discountedPricePerDayExclTax: base - savings, discountPerDayExclTax: savings };
+}
+
+/**
+ * خصم كوبون `RENTAL_ONLY` على مبلغ الفترة.
+ *
+ * - `DAILY`: نفس `computeCouponDiscountPerDay` بالضبط (سلوك غير متغيّر).
+ * - `MONTHLY`: يُحسب على **إجمالي الشهر** لتفادي خسارة الكسور عند القسمة
+ *   على الأيام والتقريب لريال كامل.
+ *
+ * ملاحظة: `FIXED` في الكوبون مبلغ ثابت (مش يومي مثل `RentalDiscount.FIXED_DAILY`)،
+ * فيُطرح مرة واحدة من إجمالي الشهر.
+ */
+export function computeCouponDiscountForPeriod(
+  baseAmountExclTax: number,
+  kind: CouponDiscountKind,
+  value: number,
+  periodKind: RentalPeriodKind,
+): { discountedAmountExclTax: number; discountAmountExclTax: number } {
+  if (periodKind !== "MONTHLY") {
+    const r = computeCouponDiscountPerDay(baseAmountExclTax, kind, value);
+    return {
+      discountedAmountExclTax: r.discountedPricePerDayExclTax,
+      discountAmountExclTax: r.discountPerDayExclTax,
+    };
+  }
+
+  const base = Math.max(0, baseAmountExclTax);
+  if (base <= 0) return { discountedAmountExclTax: 0, discountAmountExclTax: 0 };
+
+  let savings: number;
+  if (kind === "PERCENT") {
+    const pct = Math.min(100, Math.max(1, Math.round(value)));
+    savings = Math.round(((base * pct) / 100) * 100) / 100;
+  } else {
+    savings = Math.min(base, Math.max(0, Math.round(value)));
+  }
+  return {
+    discountedAmountExclTax: Math.round((base - savings) * 100) / 100,
+    discountAmountExclTax: savings,
+  };
 }
 
 /** خصم كوبون بنطاق FULL_TOTAL — مبلغ يُطرح من الإجمالي الفرعي (إيجار + إضافات + رسوم) قبل الضريبة. */

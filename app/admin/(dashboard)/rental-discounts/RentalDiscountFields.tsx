@@ -17,6 +17,7 @@ export type BranchOpt = { id: number; name: string; slug: string };
 type Defaults = {
   labelAr?: string;
   kind?: "PERCENT" | "FIXED_DAILY";
+  appliesTo?: "DAILY_ONLY" | "DAILY_AND_MONTHLY";
   value?: number | "";
   startsAt?: string;
   endsAt?: string;
@@ -168,6 +169,23 @@ export function RentalDiscountFields({ brands, models, branches, defaults }: Pro
           <option value="PERCENT">نسبة مئوية (%)</option>
           <option value="FIXED_DAILY">مبلغ ثابت يومي (ريال)</option>
         </select>
+      </label>
+
+      <label className="text-sm font-medium">
+        نوع التأجير
+        <select
+          name="appliesTo"
+          required
+          defaultValue={defaults?.appliesTo ?? "DAILY_ONLY"}
+          className={inputCls}
+        >
+          <option value="DAILY_ONLY">التأجير اليومي فقط</option>
+          <option value="DAILY_AND_MONTHLY">اليومي والشهري معاً</option>
+        </select>
+        <span className="mt-1 block text-[11px] font-normal text-on-surface-variant">
+          «اليومي فقط» = الخصم لا يمسّ أسعار تبويب «شهري» إطلاقاً.
+          {" "}المبلغ الثابت اليومي يُضرب في عدد أيام الشهر عند السريان على الشهري.
+        </span>
       </label>
 
       <label className="text-sm font-medium">
