@@ -98,7 +98,7 @@ export function FleetCategoriesShowcase({ tabs, cities, allowHolidayBooking = fa
       <header className="mb-8 flex flex-col items-center text-center sm:mb-14">
         <div className="mb-3 flex items-center gap-3">
           <span className="h-px w-10 bg-gradient-to-l from-[#dbb878] to-transparent" />
-          <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#dbb878]">
+          <span className="text-xs sm:text-[13.5px] font-black uppercase tracking-[0.2em] text-[#dbb878]">
             {t("ourFleet")}
           </span>
           <span className="h-px w-10 bg-gradient-to-r from-[#dbb878] to-transparent" />

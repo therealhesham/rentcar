@@ -79,14 +79,7 @@ export function FleetFooter() {
                 تواصل مع الدعم
               </a>
             </li>
-            <li>
-              <a
-                className="text-stone-500 opacity-90 decoration-primary-container underline-offset-4 transition-opacity hover:opacity-100 hover:underline dark:text-stone-400"
-                href="#"
-              >
-                سياسة الخصوصية
-              </a>
-            </li>
+
             <li>
               <a
                 className="text-stone-500 opacity-90 decoration-primary-container underline-offset-4 transition-opacity hover:opacity-100 hover:underline dark:text-stone-400"

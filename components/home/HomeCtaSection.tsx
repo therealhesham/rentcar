@@ -23,7 +23,7 @@ export function HomeCtaSection() {
       <Reveal className="relative z-[1] mx-auto max-w-screen-xl text-center">
         <div className="mb-4 flex items-center justify-center gap-3">
           <span className="h-px w-10 bg-gradient-to-l from-[#dbb878]/60 to-transparent sm:w-14" />
-          <span className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#dbb878]">
+          <span className="text-xs sm:text-[13.5px] font-black uppercase tracking-[0.22em] text-[#dbb878]">
             {t("readyToGo")}
           </span>
           <span className="h-px w-10 bg-gradient-to-r from-[#dbb878]/60 to-transparent sm:w-14" />

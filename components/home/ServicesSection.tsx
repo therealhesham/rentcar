@@ -118,7 +118,7 @@ export function ServicesSection() {
     <div className="mb-10 flex flex-col items-center justify-center px-1 text-center sm:mb-16">
       <div className="mb-4 flex items-center justify-center gap-3">
         <span className="h-[1.5px] w-12 rounded-full bg-gradient-to-l from-[#dbb878] to-transparent" />
-        <span className="text-[12px] font-bold uppercase tracking-[0.2em] text-[#dbb878]">
+        <span className="text-xs sm:text-[14px] font-black uppercase tracking-[0.2em] text-[#dbb878]">
           {t("addedValue")}
         </span>
         <span className="h-[1.5px] w-12 rounded-full bg-gradient-to-r from-[#dbb878] to-transparent" />

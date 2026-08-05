@@ -6,6 +6,8 @@
  * باختلاف اللغة، بينما الأيقونة وصورة المشاركة (OG) نسخة واحدة لكل الموقع.
  */
 
+import { DEFAULT_SOCIAL_LINKS, type SocialLinkItem } from "@/lib/social-links";
+
 export const SITE_BRANDING_SLOTS = [
   "navAr",
   "navEn",
@@ -17,7 +19,9 @@ export const SITE_BRANDING_SLOTS = [
 
 export type SiteBrandingSlot = (typeof SITE_BRANDING_SLOTS)[number];
 
-export type SiteBranding = Record<SiteBrandingSlot, string>;
+export type SiteBranding = Record<SiteBrandingSlot, string> & {
+  socialLinks: SocialLinkItem[];
+};
 
 /** المسارات الأصلية في public/ — تبقى افتراضاً مسموحاً حتى لا يختفي الشعار قبل أول رفع إداري. */
 export const DEFAULT_SITE_BRANDING: SiteBranding = {
@@ -27,6 +31,7 @@ export const DEFAULT_SITE_BRANDING: SiteBranding = {
   footerEn: "/ss.svg",
   favicon: "/logo.ico",
   ogImage: "/logo.png",
+  socialLinks: DEFAULT_SOCIAL_LINKS,
 };
 
 /** مفاتيح SiteSetting — يُصدَّر لأن أكشن التحديث الإداري يحتاج نفس مفاتيح القراءة تماماً. */

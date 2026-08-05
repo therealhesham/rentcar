@@ -20,7 +20,7 @@ export async function PromoBanner() {
           <header className="mb-6 flex flex-col items-center text-center sm:mb-8">
             <div className="mb-3 flex items-center gap-3">
               <span className="h-px w-10 bg-gradient-to-l from-[#dbb878] to-transparent" />
-              <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#dbb878]">
+              <span className="text-xs sm:text-[13.5px] font-black uppercase tracking-[0.2em] text-[#dbb878]">
                 {t("exclusiveOffers")}
               </span>
               <span className="h-px w-10 bg-gradient-to-r from-[#dbb878] to-transparent" />

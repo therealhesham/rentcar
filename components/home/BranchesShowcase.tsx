@@ -52,7 +52,7 @@ export async function BranchesShowcase() {
           <div className="mb-10 text-center sm:mb-12">
             <div className="mb-4 flex items-center justify-center gap-3">
               <span className="h-px w-10 bg-gradient-to-l from-[#dbb878] to-transparent sm:w-14" aria-hidden />
-              <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#dbb878]">
+              <p className="text-xs sm:text-[13.5px] font-black uppercase tracking-[0.22em] text-[#dbb878]">
                 {t("eyebrow")}
               </p>
               <span className="h-px w-10 bg-gradient-to-r from-[#dbb878] to-transparent sm:w-14" aria-hidden />

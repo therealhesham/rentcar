@@ -23,6 +23,11 @@ import {
   SITE_BRANDING_SLOTS,
   type SiteBranding,
 } from "@/lib/site-branding";
+import {
+  DEFAULT_SOCIAL_LINKS,
+  parseSocialLinksJson,
+  type SocialLinkItem,
+} from "@/lib/social-links";
 import { isTrustedSpacesImageUrl } from "@/lib/spaces-upload";
 
 /* ─── Promo Banner (Carousel) ──────────────────────────────── */
@@ -186,6 +191,21 @@ export async function getPaymentIconUrls(): Promise<PaymentIconUrls> {
   }
 }
 
+/* ─── وسائل التواصل الاجتماعي (الفوتر) ────────────────────── */
+export const SITE_KEY_SOCIAL_LINKS = "site_social_links";
+
+export async function getSocialLinks(): Promise<SocialLinkItem[]> {
+  try {
+    const row = await prisma.siteSetting.findUnique({
+      where: { key: SITE_KEY_SOCIAL_LINKS },
+      select: { value: true },
+    });
+    return parseSocialLinksJson(row?.value);
+  } catch {
+    return DEFAULT_SOCIAL_LINKS;
+  }
+}
+
 /* ─── شعارات الموقع (هيدر/فوتر/أيقونة) ────────────────────── */
 
 export function isAllowedSiteBrandingUrl(url: string): boolean {
@@ -196,6 +216,7 @@ export function isAllowedSiteBrandingUrl(url: string): boolean {
 }
 
 export async function getSiteBranding(): Promise<SiteBranding> {
+  const socialLinks = await getSocialLinks();
   try {
     const rows = await prisma.siteSetting.findMany({
       where: { key: { in: Object.values(SITE_BRANDING_SETTING_KEYS) } },
@@ -210,12 +231,13 @@ export async function getSiteBranding(): Promise<SiteBranding> {
         ? candidate
         : DEFAULT_SITE_BRANDING[slot];
     }
+    result.socialLinks = socialLinks;
     return result;
   } catch (e: unknown) {
     const code =
       e && typeof e === "object" && "code" in e ? String((e as { code: string }).code) : "";
     if (code === "P2021" || code === "P2024") {
-      return { ...DEFAULT_SITE_BRANDING };
+      return { ...DEFAULT_SITE_BRANDING, socialLinks };
     }
     throw e;
   }

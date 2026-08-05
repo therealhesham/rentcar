@@ -53,7 +53,7 @@ export function FleetBanner() {
       <div className="relative z-10 flex h-full flex-col items-center justify-center gap-4 px-4 text-center">
         <div className="flex items-center justify-center gap-3">
           <span className="h-px w-8 bg-gradient-to-l from-[#dbb878] to-transparent sm:w-12" aria-hidden />
-          <span className="text-[11px] font-bold uppercase tracking-[0.24em] text-[#dbb878]">
+          <span className="text-xs sm:text-[13.5px] font-black uppercase tracking-[0.24em] text-[#dbb878]">
             {t("ourFleet")}
           </span>
           <span className="h-px w-8 bg-gradient-to-r from-[#dbb878] to-transparent sm:w-12" aria-hidden />

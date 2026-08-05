@@ -11,9 +11,10 @@ type Props = {
   open: boolean;
   onClose: () => void;
   terms: RentalTermDTO[];
+  loading?: boolean;
 };
 
-export function RentalTermsModal({ open, onClose, terms }: Props) {
+export function RentalTermsModal({ open, onClose, terms, loading }: Props) {
   const locale = useLocale();
   const isEn = locale === "en";
 
@@ -78,7 +79,14 @@ export function RentalTermsModal({ open, onClose, terms }: Props) {
         </div>
 
         <div className="overflow-y-auto px-6 py-6 sm:px-8">
-          {terms.length === 0 ? (
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
+              <div className="h-7 w-7 animate-spin rounded-full border-2 border-[#003749] border-t-transparent" />
+              <p className="text-xs font-bold text-[#8a7752]">
+                {isEn ? "Loading terms..." : "جاري تحميل الشروط والأحكام..."}
+              </p>
+            </div>
+          ) : terms.length === 0 ? (
             <p className="text-center text-[14px] font-semibold text-[#aaa08e]">
               {isEn
                 ? "Terms and conditions are not available at the moment."

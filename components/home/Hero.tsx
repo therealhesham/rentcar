@@ -44,7 +44,7 @@ export function Hero({ imageUrl, imageAlt, cities, tabFlags }: HeroProps) {
         <HeroEntrance>
           <div className="mb-4 flex items-center justify-center gap-3">
             <span className="h-px w-10 bg-gradient-to-l from-[#c9a356] to-transparent sm:w-16" />
-            <span className="text-[11px] font-bold uppercase tracking-[0.24em] text-[#a8874f]">
+            <span className="text-xs sm:text-[13.5px] font-black uppercase tracking-[0.24em] text-[#a8874f]">
               {t("description")}
             </span>
             <span className="h-px w-10 bg-gradient-to-r from-[#c9a356] to-transparent sm:w-16" />
