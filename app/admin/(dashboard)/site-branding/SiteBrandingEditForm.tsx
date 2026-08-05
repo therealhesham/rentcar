@@ -21,6 +21,11 @@ const GROUPS: { title: string; hint: string; slots: SiteBrandingSlot[] }[] = [
     slots: ["footerAr", "footerEn"],
   },
   {
+    title: "شعار السايدبار (القائمة الجانبية)",
+    hint: "يُعرض في أعلى السايدبار (القائمة الجانبية) للوحة الإدارة وقوائم التنقل.",
+    slots: ["sidebarLogo"],
+  },
+  {
     title: "الأيقونة وصورة المشاركة",
     hint: "أيقونة تبويب المتصفح، والصورة التي تظهر عند مشاركة رابط الموقع على واتساب وتويتر.",
     slots: ["favicon", "ogImage"],

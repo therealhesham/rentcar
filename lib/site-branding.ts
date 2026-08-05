@@ -13,6 +13,7 @@ export const SITE_BRANDING_SLOTS = [
   "navEn",
   "footerAr",
   "footerEn",
+  "sidebarLogo",
   "favicon",
   "ogImage",
 ] as const;
@@ -29,6 +30,7 @@ export const DEFAULT_SITE_BRANDING: SiteBranding = {
   navEn: "/logo.svg",
   footerAr: "/footerlogo.svg",
   footerEn: "/ss.svg",
+  sidebarLogo: "/logo.avif",
   favicon: "/logo.ico",
   ogImage: "/logo.png",
   socialLinks: DEFAULT_SOCIAL_LINKS,
@@ -40,6 +42,7 @@ export const SITE_BRANDING_SETTING_KEYS: Record<SiteBrandingSlot, string> = {
   navEn: "site_logo_nav_en_url",
   footerAr: "site_logo_footer_ar_url",
   footerEn: "site_logo_footer_en_url",
+  sidebarLogo: "site_logo_sidebar_url",
   favicon: "site_favicon_url",
   ogImage: "site_og_image_url",
 };
@@ -49,6 +52,7 @@ export const SITE_BRANDING_SLOT_LABELS_AR: Record<SiteBrandingSlot, string> = {
   navEn: "شعار الهيدر — الإنجليزية",
   footerAr: "شعار الفوتر — العربية",
   footerEn: "شعار الفوتر — الإنجليزية",
+  sidebarLogo: "شعار السايدبار (لوحة الإدارة والقوائم)",
   favicon: "أيقونة المتصفح (favicon)",
   ogImage: "صورة المشاركة (OG)",
 };
@@ -72,4 +76,8 @@ export function footerLogoUrl(branding: SiteBranding, locale: string): string {
     return branding.footerEn || branding.footerAr || DEFAULT_SITE_BRANDING.footerEn;
   }
   return branding.footerAr || DEFAULT_SITE_BRANDING.footerAr;
+}
+
+export function sidebarLogoUrl(branding: SiteBranding): string {
+  return branding.sidebarLogo || branding.navAr || DEFAULT_SITE_BRANDING.sidebarLogo;
 }

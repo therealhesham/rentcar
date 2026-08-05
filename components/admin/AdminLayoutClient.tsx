@@ -8,14 +8,20 @@ import type { AdminSession } from "@/lib/admin-auth";
 import { adminScope, scopeLabel } from "@/lib/admin-scope-core";
 import type { AdminNavGroup } from "@/lib/admin-nav";
 
+import Image from "next/image";
+import type { SiteBranding } from "@/lib/site-branding";
+import { sidebarLogoUrl } from "@/lib/site-branding";
+
 type Props = {
   children: React.ReactNode;
   session: AdminSession;
   navGroups: AdminNavGroup[];
+  branding?: SiteBranding;
 };
 
-export function AdminLayoutClient({ children, session, navGroups }: Props) {
+export function AdminLayoutClient({ children, session, navGroups, branding }: Props) {
   const [navOpen, setNavOpen] = useState(false);
+  const logoUrl = branding ? sidebarLogoUrl(branding) : "/logo.avif";
 
   return (
     <div className="flex min-h-screen bg-[#f4f1ee] text-on-surface print:bg-white">
@@ -33,6 +39,7 @@ export function AdminLayoutClient({ children, session, navGroups }: Props) {
         onClose={() => setNavOpen(false)}
         session={session}
         navGroups={navGroups}
+        branding={branding}
       />
 
       <div className="flex min-h-screen min-w-0 flex-1 flex-col">
@@ -45,16 +52,25 @@ export function AdminLayoutClient({ children, session, navGroups }: Props) {
           >
             <Menu className="size-5" aria-hidden />
           </button>
-          <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">
-              لوحة الإدارة
-            </p>
-            <p className="truncate text-base font-extrabold tracking-tight text-[#003749]">روائس</p>
-            {session.isSuperAdmin ? null : (
-              <p className="truncate text-[11px] font-medium text-on-surface-variant">
-                {scopeLabel(adminScope(session))}
+          <div className="flex min-w-0 flex-1 items-center gap-2.5">
+            <Image
+              src={logoUrl}
+              alt="Logo"
+              width={100}
+              height={32}
+              className="h-7 w-auto object-contain"
+              unoptimized={logoUrl.endsWith(".svg") || logoUrl.startsWith("http")}
+            />
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">
+                لوحة الإدارة
               </p>
-            )}
+              {session.isSuperAdmin ? null : (
+                <p className="truncate text-[11px] font-medium text-on-surface-variant">
+                  {scopeLabel(adminScope(session))}
+                </p>
+              )}
+            </div>
           </div>
           <div className="flex items-center">
             <NotificationBell />

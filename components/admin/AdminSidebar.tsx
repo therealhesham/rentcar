@@ -17,7 +17,7 @@ import {
   ExternalLink,
   FileText,
   Home,
-  Image,
+  Image as ImageIcon,
   LayoutDashboard,
   MapPin,
   Megaphone,
@@ -50,7 +50,7 @@ const ICONS: Record<AdminNavItem["icon"], LucideIcon> = {
   users: Users,
   "calendar-plus": CalendarPlus,
   car: Car,
-  image: Image,
+  image: ImageIcon,
   megaphone: Megaphone,
   "badge-dollar": BadgeDollarSign,
   "shield-check": ShieldCheck,
@@ -80,11 +80,16 @@ const ICONS: Record<AdminNavItem["icon"], LucideIcon> = {
   "message-square": MessageSquare,
 };
 
+import Image from "next/image";
+import type { SiteBranding } from "@/lib/site-branding";
+import { sidebarLogoUrl } from "@/lib/site-branding";
+
 type Props = {
   open: boolean;
   onClose: () => void;
   session: AdminSession;
   navGroups: AdminNavGroup[];
+  branding?: SiteBranding;
 };
 
 function CollapsibleNavGroup({
@@ -153,8 +158,9 @@ function CollapsibleNavGroup({
   );
 }
 
-export function AdminSidebar({ open, onClose, session, navGroups }: Props) {
+export function AdminSidebar({ open, onClose, session, navGroups, branding }: Props) {
   const pathname = usePathname() ?? "";
+  const logoUrl = branding ? sidebarLogoUrl(branding) : "/logo.avif";
 
   return (
     <aside
@@ -163,15 +169,26 @@ export function AdminSidebar({ open, onClose, session, navGroups }: Props) {
       }`}
       aria-label="قائمة الإدارة"
     >
-      <div className="flex items-start justify-between gap-2 border-b border-white/10 px-4 py-5">
-        <div className="min-w-0">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#e8c084]/80">
-            إدارة
-          </p>
-          <p className="mt-1 text-lg font-extrabold tracking-tight text-white">روائس</p>
-          <p className="mt-0.5 text-[11px] font-medium text-white/45">
-            {session.isSuperAdmin ? "مدير النظام" : scopeLabel(adminScope(session))}
-          </p>
+      <div className="flex items-center justify-between gap-2 border-b border-white/10 px-4 py-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <Link href="/admin" className="shrink-0" title="لوحة الإدارة">
+            <Image
+              src={logoUrl}
+              alt="Logo"
+              width={120}
+              height={40}
+              className="h-8 w-auto max-w-[120px] object-contain"
+              unoptimized={logoUrl.endsWith(".svg") || logoUrl.startsWith("http")}
+            />
+          </Link>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#e8c084]/80">
+              إدارة
+            </p>
+            <p className="truncate text-[11px] font-medium text-white/45">
+              {session.isSuperAdmin ? "مدير النظام" : scopeLabel(adminScope(session))}
+            </p>
+          </div>
         </div>
         <button
           type="button"

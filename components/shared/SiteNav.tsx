@@ -5,7 +5,7 @@ import { Link } from "@/i18n/routing";
 import { useCallback, useEffect, useState } from "react";
 import { CustomerNavSlot } from "@/components/account/CustomerNavSlot";
 import { useSiteBranding } from "@/components/shared/SiteBrandingProvider";
-import { navLogoUrl } from "@/lib/site-branding";
+import { navLogoUrl, sidebarLogoUrl } from "@/lib/site-branding";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { useLocale, useTranslations } from "next-intl";
 
@@ -22,7 +22,9 @@ export function SiteNav({ active = "home" }: SiteNavProps) {
   const [scrolled, setScrolled] = useState(false);
   const t = useTranslations("SiteNav");
   const locale = useLocale();
-  const logoSrc = navLogoUrl(useSiteBranding(), locale);
+  const branding = useSiteBranding();
+  const logoSrc = navLogoUrl(branding, locale);
+  const sidebarLogoSrc = sidebarLogoUrl(branding);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -57,11 +59,10 @@ export function SiteNav({ active = "home" }: SiteNavProps) {
   return (
     <nav className="fixed left-0 right-0 top-0 z-50">
       <div
-        className={`w-full border-b bg-white/95 backdrop-blur transition-[box-shadow,border-color] duration-300 ${
-          scrolled
+        className={`w-full border-b bg-white/95 backdrop-blur transition-[box-shadow,border-color] duration-300 ${scrolled
             ? "border-transparent shadow-[0_8px_30px_-12px_rgba(0,55,73,0.22)]"
             : "border-neutral-200 shadow-none"
-        }`}
+          }`}
       >
         <div className="relative mx-auto flex h-16 w-full max-w-screen-xl items-center justify-between px-4 sm:h-24 sm:px-6">
           <Link href="/" aria-label="الصفحة الرئيسية" className="relative z-10">
@@ -83,11 +84,10 @@ export function SiteNav({ active = "home" }: SiteNavProps) {
                 <Link
                   key={l.key}
                   href={l.href}
-                  className={`whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-bold transition-all duration-300 lg:px-7 ${
-                    isActive
+                  className={`whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-bold transition-all duration-300 lg:px-7 ${isActive
                       ? "bg-[#003749] text-white shadow-sm"
                       : "text-[#2a2520] hover:bg-[#003749]/10"
-                  }`}
+                    }`}
                 >
                   {l.label}
                 </Link>
@@ -145,9 +145,8 @@ export function SiteNav({ active = "home" }: SiteNavProps) {
           tabIndex={open ? 0 : -1}
           aria-label="إغلاق القائمة"
           onClick={closeMenu}
-          className={`fixed inset-0 z-40 bg-[#003749]/40 backdrop-blur-[2px] transition-opacity duration-300 ${
-            open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
-          }`}
+          className={`fixed inset-0 z-40 bg-[#003749]/40 backdrop-blur-[2px] transition-opacity duration-300 ${open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+            }`}
         />
 
         <aside
@@ -155,19 +154,18 @@ export function SiteNav({ active = "home" }: SiteNavProps) {
           role="dialog"
           aria-modal="true"
           aria-label="قائمة التنقل"
-          className={`fixed inset-y-0 left-0 z-50 flex w-[min(100vw-2.5rem,18rem)] flex-col border-e border-white/10 bg-[#003749] shadow-[4px_0_40px_rgba(0,0,0,0.35)] transition-transform duration-300 ease-out ${
-            open ? "translate-x-0" : "-translate-x-full"
-          }`}
+          className={`fixed inset-y-0 left-0 z-50 flex w-[min(100vw-2.5rem,18rem)] flex-col border-e border-white/10 bg-[#003749] shadow-[4px_0_40px_rgba(0,0,0,0.35)] transition-transform duration-300 ease-out ${open ? "translate-x-0" : "-translate-x-full"
+            }`}
         >
           <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-4">
             <Link href="/" onClick={closeMenu} aria-label="الصفحة الرئيسية">
               <Image
-                src={logoSrc}
+                src={sidebarLogoSrc}
                 alt="Rawaes"
                 width={140}
                 height={46}
-                className="h-10 w-auto object-contain brightness-0 invert"
-                unoptimized={logoSrc.endsWith(".svg") || logoSrc.startsWith("http")}
+                className="h-10 w-auto object-contain"
+                unoptimized={sidebarLogoSrc.endsWith(".svg") || sidebarLogoSrc.startsWith("http")}
               />
             </Link>
             <button
@@ -198,11 +196,10 @@ export function SiteNav({ active = "home" }: SiteNavProps) {
                   key={l.key}
                   href={l.href}
                   onClick={closeMenu}
-                  className={`rounded-xl px-4 py-3.5 text-base font-bold transition-colors ${
-                    isActive
+                  className={`rounded-xl px-4 py-3.5 text-base font-bold transition-colors ${isActive
                       ? "bg-[#dbb878] text-[#2a2520] shadow-[0_4px_16px_rgba(219,184,120,0.35)]"
                       : "text-white hover:bg-white/10 active:bg-white/15"
-                  }`}
+                    }`}
                 >
                   {l.label}
                 </Link>
