@@ -77,9 +77,9 @@ export function ServicesSection() {
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#dbb878]/10 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
             <Icon className="relative z-10 size-6 text-[#003749] transition-colors duration-300 group-hover:text-[#dbb878] sm:size-7" />
           </div>
-          <div className="text-3xl font-black text-[#003749]/[0.03] transition-colors duration-500 group-hover:text-[#dbb878]/10 sm:text-4xl">
+          {/* <div className="text-3xl font-black text-[#003749]/[0.03] transition-colors duration-500 group-hover:text-[#dbb878]/10 sm:text-4xl">
             0{index + 1}
-          </div>
+          </div> */}
         </div>
 
         <div className="flex-1">
