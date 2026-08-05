@@ -6,6 +6,7 @@ import { requireCustomerPaymentPageAccess } from "@/lib/customer-booking-access"
 import { getBookingForPayment } from "@/lib/booking-payment-data";
 import { geideaCheckoutScriptUrl, isGeideaConfigured } from "@/lib/geidea/client";
 import { reconcilePendingGeideaPaymentById } from "@/lib/geidea/mark-paid";
+import { reconcilePendingTabbyPaymentById } from "@/lib/tabby/mark-paid";
 import {
   getApplePayExpressEnabled,
   getCheckoutPaymentMethodFlags,
@@ -32,9 +33,12 @@ export default async function FleetPaymentPage({
 
   await requireCustomerPaymentPageAccess(id);
 
-  // مصالحة: لو العميل عاد من جيديا قبل وصول الـ webhook، تُجلب حالة الدفع
+  // مصالحة: لو العميل عاد من البوابة (جيديا أو تابي) قبل وصول الـ webhook، تُجلب حالة الدفع
   // مباشرةً من البوابة ويُعلَّم الحجز مدفوعاً قبل عرض الصفحة.
-  await reconcilePendingGeideaPaymentById(id);
+  await Promise.all([
+    reconcilePendingGeideaPaymentById(id),
+    reconcilePendingTabbyPaymentById(id),
+  ]);
 
   const [booking, paymentMethodFlags, applePayExpress, paymentIconUrls] = await Promise.all([
     getBookingForPayment(id),

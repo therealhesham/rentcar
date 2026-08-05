@@ -87,3 +87,8 @@ export function isGeideaHostedCheckoutMethod(method: string): boolean {
     method.trim().toUpperCase(),
   );
 }
+
+export function isTabbyMethod(method: string): boolean {
+  return method.trim().toUpperCase() === "TABBY";
+}
+

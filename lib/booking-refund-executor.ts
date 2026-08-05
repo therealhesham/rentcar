@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
 import { isGeideaConfigured, refundGeideaPayment } from "@/lib/geidea/client";
+import { isTabbyConfigured, refundTabbyPayment } from "@/lib/tabby/client";
 
 export type CancellationRefundExecutionResult =
   | { ok: true; externalRef: string }
@@ -12,9 +13,10 @@ const GEIDEA_METHODS = new Set(["CARD", "MADA", "APPLE_PAY"]);
 /**
  * يُنفَّذ الاسترداد حسب وسيلة الدفع:
  * - CARD/MADA/APPLE_PAY → Geidea Refund API على مرجع العملية الأصلية (paymentGatewayRef).
+ * - TABBY → Tabby Refund API على مرجع العملية الأصلية (paymentGatewayRef).
  * - CASH → لا استرداد إلكتروني؛ يُسلَّم نقداً في الفرع ويُسجَّل بمرجع يدوي.
- * - TABBY/TAMARA/POINTS → لم تُربط بعد؛ تُرفض صراحةً بدل استرداد وهمي.
- * - بدون مفاتيح جيديا (بيئة تطوير) → محاكاة كما قبل الربط.
+ * - TAMARA/POINTS → لم تُربط بعد؛ تُرفض صراحةً بدل استرداد وهمي.
+ * - بدون مفاتيح البوابة (بيئة تطوير) → محاكاة كما قبل الربط.
  */
 export async function executeCancellationRefundByPaymentMethod(args: {
   bookingRequestId: number;
@@ -28,6 +30,44 @@ export async function executeCancellationRefundByPaymentMethod(args: {
 
   const method = (args.paymentMethod ?? "").trim().toUpperCase() || "UNKNOWN";
   const label = bookingPaymentMethodLabelAr(method);
+
+  if (method === "TABBY") {
+    if (!isTabbyConfigured()) {
+      console.info(
+        `[booking-refund] simulated Tabby refund booking=${args.bookingRequestId} amountSar=${amount}`,
+      );
+      return {
+        ok: true,
+        externalRef: `MOCK-TABBY-${args.bookingRequestId}-${Date.now()}`,
+      };
+    }
+    const booking = await prisma.bookingRequest.findUnique({
+      where: { id: args.bookingRequestId },
+      select: { paymentGatewayRef: true },
+    });
+    if (!booking?.paymentGatewayRef) {
+      return {
+        ok: false,
+        error: "لا يوجد مرجع دفع من بوابة تابي لهذا الحجز.",
+      };
+    }
+    try {
+      const res = await refundTabbyPayment({
+        paymentId: booking.paymentGatewayRef,
+        amountSar: amount,
+      });
+      return { ok: true, externalRef: res.refundId };
+    } catch (e) {
+      console.error(
+        `[booking-refund] Tabby refund failed booking=${args.bookingRequestId}:`,
+        e,
+      );
+      return {
+        ok: false,
+        error: "فشل تنفيذ الاسترداد عبر بوابة تابي. حاول لاحقاً أو تواصل مع الدعم.",
+      };
+    }
+  }
 
   if (!isGeideaConfigured()) {
     console.info(

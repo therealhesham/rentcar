@@ -145,7 +145,7 @@ function buildMethodOptions(paymentIconUrls: PaymentIconUrls): MethodOption[] {
     {
       id: "TABBY",
       title: "تابي",
-      hint: "تقسيط على دفعات — يُفعَّل ربط بوابة تابي لاحقاً",
+      hint: "4 أقساط شهرية بدون فوائد — تُحوَّل لصفحة تابي لإتمام الموافقة",
       logoSrc: paymentIconUrls.TABBY,
     },
     {
@@ -343,7 +343,7 @@ export function PaymentClient({
 
   const submitLabel: ReactNode =
     method === "TABBY"
-      ? "المتابعة عبر تابي (تجريبي)"
+      ? "المتابعة عبر تابي — 4 أقساط"
       : method === "TAMARA"
         ? "المتابعة عبر تمارا (تجريبي)"
         : method === "AMKAN"
@@ -650,10 +650,10 @@ export function PaymentClient({
 
               {method === "TABBY" ? (
                 <div className="rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-950">
-                  <p className="font-bold">تابي</p>
+                  <p className="font-bold">تابي — ادفع على 4 أقساط شهرية</p>
                   <p className="mt-1 text-xs leading-relaxed opacity-90">
-                    بعد التفعيل، سيتم تحويل العميل إلى صفحة تابي لاختيار خطة التقسيط والموافقة على الشروط.
-                    المبلغ المعروض هنا هو الإجمالي شاملاً الضريبة.
+                    سيتم تحويلك إلى صفحة تابي لاختيار خطة التقسيط والموافقة على الشروط.
+                    المبلغ المعروض هو الإجمالي شاملاً الضريبة — بدون فوائد أو رسوم إضافية.
                   </p>
                 </div>
               ) : null}

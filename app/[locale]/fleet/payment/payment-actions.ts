@@ -7,6 +7,10 @@ import {
   createGeideaCheckoutSession,
   isGeideaConfigured,
 } from "@/lib/geidea/client";
+import {
+  createTabbyCheckoutSession,
+  isTabbyConfigured,
+} from "@/lib/tabby/client";
 import { BOOKING_STATUS_UNDER_REVIEW } from "@/lib/booking-cash-flow";
 import { sendBookingReceivedNotification, sendAdminEmailForNewBooking } from "@/lib/booking-received-notification";
 import {
@@ -128,6 +132,11 @@ export async function confirmMockPayment(
       paidAmountSar: true,
       balanceDueAtBranchSar: true,
       paymentGatewayRef: true,
+      fullName: true,
+      phone: true,
+      contactEmail: true,
+      customer: { select: { email: true } },
+      carModel: { select: { name: true, brand: { select: { name: true } } } },
     },
   });
   if (!bookingGate) {
@@ -159,6 +168,47 @@ export async function confirmMockPayment(
         ok: false,
         error: "فرق التمديد يُسدَّد أونلاين من هذه الصفحة، أو نقداً لدى موظف الفرع.",
       };
+    }
+
+    const tabbyBalanceHosted = isTabbyConfigured() && paymentMethod === "TABBY";
+    if (tabbyBalanceHosted) {
+      const appUrl = (process.env.APP_PUBLIC_URL ?? "").trim().replace(/\/$/, "");
+      let redirectUrl: string;
+      try {
+        const session = await createTabbyCheckoutSession({
+          bookingRequestId: id,
+          amountSar: balanceDueSar,
+          buyer: {
+            phone: bookingGate.phone,
+            email: bookingGate.contactEmail || bookingGate.customer?.email || undefined,
+            name: bookingGate.fullName || undefined,
+          },
+          items: [
+            {
+              title: `${bookingGate.carModel?.brand?.name ?? ""} ${bookingGate.carModel?.name ?? ""}`.trim() || `فرق تمديد حجز #${id}`,
+              quantity: 1,
+              unitPriceSar: balanceDueSar,
+            },
+          ],
+          successUrl: `${appUrl}/fleet/payment/${id}?status=success`,
+          cancelUrl: `${appUrl}/fleet/payment/${id}?status=cancel`,
+          failureUrl: `${appUrl}/fleet/payment/${id}?status=failure`,
+          language: "ar",
+        });
+        await prisma.bookingRequest.update({
+          where: { id },
+          data: {
+            paymentSessionRef: session.merchantReferenceId,
+            paymentGatewayRef: session.paymentId,
+            paymentMethod: "TABBY",
+          },
+        });
+        redirectUrl = session.webUrl;
+      } catch (e) {
+        console.error("[tabby] balance session creation failed:", e);
+        return { ok: false, error: "تعذّر فتح صفحة تابي للدفع. حاول مجدداً." };
+      }
+      redirect(redirectUrl);
     }
 
     const geideaBalanceHosted =
@@ -242,6 +292,51 @@ export async function confirmMockPayment(
       id,
       customerBookingOwnershipWhere(profile.id, profile.phone),
     );
+  }
+
+  // جلسة تابي للدفع بالتقسيط
+  const tabbyHosted = !isCash && isTabbyConfigured() && paymentMethod === "TABBY";
+  if (tabbyHosted) {
+    if (paidTotalSar == null || paidTotalSar <= 0) {
+      return { ok: false, error: "تعذّر احتساب مبلغ الحجز. تواصل مع الدعم." };
+    }
+    const appUrl = (process.env.APP_PUBLIC_URL ?? "").trim().replace(/\/$/, "");
+    let redirectUrl: string;
+    try {
+      const session = await createTabbyCheckoutSession({
+        bookingRequestId: id,
+        amountSar: paidTotalSar,
+        buyer: {
+          phone: bookingGate.phone,
+          email: bookingGate.contactEmail || bookingGate.customer?.email || undefined,
+          name: bookingGate.fullName || undefined,
+        },
+        items: [
+          {
+            title: `${bookingGate.carModel?.brand?.name ?? ""} ${bookingGate.carModel?.name ?? ""}`.trim() || `حجز سيارة #${id}`,
+            quantity: 1,
+            unitPriceSar: paidTotalSar,
+          },
+        ],
+        successUrl: `${appUrl}/fleet/payment/${id}?status=success`,
+        cancelUrl: `${appUrl}/fleet/payment/${id}?status=cancel`,
+        failureUrl: `${appUrl}/fleet/payment/${id}?status=failure`,
+        language: "ar",
+      });
+      await prisma.bookingRequest.update({
+        where: { id },
+        data: {
+          paymentSessionRef: session.merchantReferenceId,
+          paymentGatewayRef: session.paymentId,
+          paymentMethod: "TABBY",
+        },
+      });
+      redirectUrl = session.webUrl;
+    } catch (e) {
+      console.error("[tabby] session creation failed:", e);
+      return { ok: false, error: "تعذّر فتح صفحة تابي للدفع. حاول مجدداً." };
+    }
+    redirect(redirectUrl);
   }
 
   // بطاقة/مدى/Apple Pay مع مفاتيح جيديا: جلسة دفع مستضافة (HPP) — التأكيد الفعلي
