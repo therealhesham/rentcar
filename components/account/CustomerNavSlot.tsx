@@ -45,7 +45,7 @@ export function CustomerNavSlot({ variant = "light" }: { variant?: "light" | "da
     return (
       <span
         className={`h-10 w-10 shrink-0 animate-pulse rounded-full sm:h-11 sm:w-11 ${
-          variant === "dark" ? "bg-white/10" : "bg-[#163332]/10"
+          variant === "dark" ? "bg-white/10" : "bg-[#003749]/10"
         }`}
         aria-hidden
       />

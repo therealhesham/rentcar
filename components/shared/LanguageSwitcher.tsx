@@ -38,7 +38,7 @@ export function LanguageSwitcher({ variant = "light" }: { variant?: "light" | "d
         isPending ? "pointer-events-none opacity-50" : ""
       } ${
         variant === "light"
-          ? "text-[#163332] hover:bg-[#dbb878]/25"
+          ? "text-[#003749] hover:bg-[#dbb878]/25"
           : "text-white hover:bg-white/10 hover:text-[#dbb878]"
       }`}
     >

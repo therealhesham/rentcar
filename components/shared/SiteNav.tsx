@@ -85,8 +85,8 @@ export function SiteNav({ active = "home" }: SiteNavProps) {
                   href={l.href}
                   className={`whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-bold transition-all duration-300 lg:px-7 ${
                     isActive
-                      ? "bg-[#163332] text-white shadow-sm"
-                      : "text-[#2a2520] hover:bg-[#163332]/10"
+                      ? "bg-[#003749] text-white shadow-sm"
+                      : "text-[#2a2520] hover:bg-[#003749]/10"
                   }`}
                 >
                   {l.label}
@@ -145,7 +145,7 @@ export function SiteNav({ active = "home" }: SiteNavProps) {
           tabIndex={open ? 0 : -1}
           aria-label="إغلاق القائمة"
           onClick={closeMenu}
-          className={`fixed inset-0 z-40 bg-[#163332]/40 backdrop-blur-[2px] transition-opacity duration-300 ${
+          className={`fixed inset-0 z-40 bg-[#003749]/40 backdrop-blur-[2px] transition-opacity duration-300 ${
             open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
           }`}
         />
@@ -155,7 +155,7 @@ export function SiteNav({ active = "home" }: SiteNavProps) {
           role="dialog"
           aria-modal="true"
           aria-label="قائمة التنقل"
-          className={`fixed inset-y-0 left-0 z-50 flex w-[min(100vw-2.5rem,18rem)] flex-col border-e border-white/10 bg-[#163332] shadow-[4px_0_40px_rgba(0,0,0,0.35)] transition-transform duration-300 ease-out ${
+          className={`fixed inset-y-0 left-0 z-50 flex w-[min(100vw-2.5rem,18rem)] flex-col border-e border-white/10 bg-[#003749] shadow-[4px_0_40px_rgba(0,0,0,0.35)] transition-transform duration-300 ease-out ${
             open ? "translate-x-0" : "-translate-x-full"
           }`}
         >
