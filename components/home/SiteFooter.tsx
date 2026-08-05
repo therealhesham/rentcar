@@ -97,7 +97,7 @@ export function SiteFooter() {
             <p className="text-lg font-bold leading-tight text-white">
               روائس لتأجير السيارات
             </p>
-            <p className="text-sm text-white/80">Rawaes Rent Car</p>
+            <p className="text-sm text-white/80">Rawaes Car Rental</p>
           </div>
         </div>
 
@@ -110,11 +110,10 @@ export function SiteFooter() {
                 <li key={link.label}>
                   <Link
                     href={link.href}
-                    className={`text-sm transition-colors ${
-                      active
+                    className={`text-sm transition-colors ${active
                         ? "font-bold"
                         : "text-white hover:text-[#dbb878]"
-                    }`}
+                      }`}
                     style={
                       active
                         ? { color: FOOTER_GOLD }
