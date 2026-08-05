@@ -11,9 +11,22 @@ type BranchWithCity = ExplorerBranch & {
   city: { id: number; name: string; slug: string; sortOrder: number };
 };
 
-function groupBranchesByCity(branches: BranchWithCity[]): ExplorerCityGroup[] {
+import { expandMapUrlToCoords } from "@/lib/map-url-resolver";
+
+async function groupBranchesByCity(branches: BranchWithCity[]): Promise<ExplorerCityGroup[]> {
   const map = new Map<number, { cityName: string; citySort: number; branches: ExplorerBranch[] }>();
-  for (const b of branches) {
+  
+  const branchesWithResolved = await Promise.all(
+    branches.map(async (b) => {
+      const coords = await expandMapUrlToCoords(b.mapUrl);
+      const resolvedMapUrl = coords
+        ? `https://maps.google.com/maps?q=${coords.lat},${coords.lng}`
+        : b.mapUrl;
+      return { ...b, resolvedMapUrl };
+    })
+  );
+
+  for (const b of branchesWithResolved) {
     const cid = b.city.id;
     if (!map.has(cid)) {
       map.set(cid, { cityName: b.city.name, citySort: b.city.sortOrder, branches: [] });
@@ -26,6 +39,7 @@ function groupBranchesByCity(branches: BranchWithCity[]): ExplorerCityGroup[] {
       address: b.address,
       phone: b.phone,
       mapUrl: b.mapUrl,
+      resolvedMapUrl: b.resolvedMapUrl,
     });
   }
   return [...map.values()]
@@ -42,8 +56,7 @@ export async function BranchesShowcase() {
   if (branchesRaw.length === 0) {
     return null;
   }
-
-  const groups = groupBranchesByCity(branchesRaw as BranchWithCity[]);
+  const groups = await groupBranchesByCity(branchesRaw as BranchWithCity[]);
 
   return (
     <section id="branches-new" className="overflow-x-clip bg-gradient-to-b from-white to-[#fdfbf6]">

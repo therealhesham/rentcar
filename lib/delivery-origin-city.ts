@@ -56,46 +56,11 @@ function normalizeMatchText(s: string): string {
     .toLowerCase();
 }
 
+import { parseCoordsFromLocationString } from "./map-url-resolver";
+
 /** يستخرج lat/lng من روابط خرائط جوجل الشائعة. */
 export function parseLatLngFromMapUrl(url: string | null | undefined): CityGeoPoint | null {
-  const raw = url?.trim();
-  if (!raw) return null;
-
-  const atMatch = raw.match(/@(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/);
-  if (atMatch) {
-    const lat = Number(atMatch[1]);
-    const lng = Number(atMatch[2]);
-    if (isValidCoord(lat, lng)) return { lat, lng };
-  }
-
-  const llMatch = raw.match(/[?&]ll=(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/i);
-  if (llMatch) {
-    const lat = Number(llMatch[1]);
-    const lng = Number(llMatch[2]);
-    if (isValidCoord(lat, lng)) return { lat, lng };
-  }
-
-  try {
-    const u = new URL(raw);
-    const q = u.searchParams.get("q")?.trim() ?? "";
-    const coordInQ = q.match(/^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)$/);
-    if (coordInQ) {
-      const lat = Number(coordInQ[1]);
-      const lng = Number(coordInQ[2]);
-      if (isValidCoord(lat, lng)) return { lat, lng };
-    }
-  } catch {
-    /* ليس رابطاً مطلقاً */
-  }
-
-  const qMatch = raw.match(/[?&]q=(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/i);
-  if (qMatch) {
-    const lat = Number(qMatch[1]);
-    const lng = Number(qMatch[2]);
-    if (isValidCoord(lat, lng)) return { lat, lng };
-  }
-
-  return null;
+  return parseCoordsFromLocationString(url);
 }
 
 function isValidCoord(lat: number, lng: number): boolean {

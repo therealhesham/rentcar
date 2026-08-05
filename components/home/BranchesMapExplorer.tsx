@@ -4,6 +4,8 @@ import { MapPin, Phone, Navigation } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
+import { parseLatLngFromMapUrl } from "@/lib/delivery-origin-city";
+
 export type ExplorerBranch = {
   id: number;
   slug: string;
@@ -12,6 +14,7 @@ export type ExplorerBranch = {
   address: string | null;
   phone: string | null;
   mapUrl: string | null;
+  resolvedMapUrl?: string | null;
 };
 
 export type ExplorerCityGroup = {
@@ -26,6 +29,39 @@ function resolveBranchMapUrl(branch: ExplorerBranch) {
 }
 
 function resolveBranchEmbedUrl(branch: ExplorerBranch, locale: string) {
+  // نعتمد على الرابط الذي تم تحليله إذا كان موجوداً
+  const mapUrl = branch.resolvedMapUrl?.trim() || branch.mapUrl?.trim();
+  
+  if (mapUrl) {
+    if (mapUrl.includes("output=embed") || mapUrl.includes("/embed")) {
+      return mapUrl;
+    }
+
+    const coords = parseLatLngFromMapUrl(mapUrl);
+    if (coords) {
+      return `https://maps.google.com/maps?q=${coords.lat},${coords.lng}&hl=${locale}&z=15&output=embed`;
+    }
+
+    const cidMatch = mapUrl.match(/[?&]cid=(\d+)/i);
+    if (cidMatch) {
+      return `https://maps.google.com/maps?cid=${cidMatch[1]}&hl=${locale}&z=15&output=embed`;
+    }
+
+    const placeMatch = mapUrl.match(/\/maps\/place\/([^/@?]+)/i);
+    if (placeMatch && placeMatch[1]) {
+      const placeName = decodeURIComponent(placeMatch[1]).replace(/\+/g, " ");
+      return `https://maps.google.com/maps?q=${encodeURIComponent(placeName)}&hl=${locale}&z=15&output=embed`;
+    }
+
+    try {
+      const u = new URL(mapUrl);
+      const qParam = u.searchParams.get("q")?.trim() || u.searchParams.get("query")?.trim();
+      if (qParam && !qParam.startsWith("http")) {
+        return `https://maps.google.com/maps?q=${encodeURIComponent(qParam)}&hl=${locale}&z=15&output=embed`;
+      }
+    } catch {}
+  }
+
   const queryParts = [branch.name, branch.address?.trim()].filter(Boolean);
   const query = queryParts.join(" ، ") || branch.name;
   return `https://maps.google.com/maps?q=${encodeURIComponent(query)}&hl=${locale}&z=14&output=embed`;
