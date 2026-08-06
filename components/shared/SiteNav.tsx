@@ -9,7 +9,8 @@ import { navLogoUrl, sidebarLogoUrl } from "@/lib/site-branding";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { useLocale, useTranslations } from "next-intl";
 
-type NavKey = "home" | "fleet" | "subscriptions" | "about" | "contact";
+/** `none` لصفحات ثانوية خارج قائمة التنقل (سياسة الخصوصية مثلاً) — بلا رابط مُفعّل. */
+type NavKey = "home" | "fleet" | "subscriptions" | "about" | "contact" | "none";
 
 // links are now defined inside the component to use translations
 

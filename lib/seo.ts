@@ -153,6 +153,7 @@ export const PUBLIC_STATIC_PATHS = [
   "/contact",
   "/fleet",
   "/subscriptions",
+  "/privacy-policy",
 ] as const;
 
 export function organizationJsonLd(logoUrl: string = OG_IMAGE_PATH) {

@@ -379,6 +379,11 @@
     "ctaDescription": "Choose the branch, dates, and explore the available fleet — a fast and clear booking experience from start to finish.",
     "browseFleet": "Browse Fleet"
   },
+  "PrivacyPolicyPage": {
+    "title": "Privacy Policy",
+    "description": "Privacy policy and data protection at Rawaes Car Rental.",
+    "empty": "The privacy policy has not been published yet."
+  },
   "AboutPage": {
     "title": "About Us",
     "description": "Learn about Rawaes Car Rental: our vision, mission, values, and branches in the Kingdom.",

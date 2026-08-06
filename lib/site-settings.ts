@@ -403,6 +403,39 @@ export async function getRentalPriceDisplayMode(): Promise<RentalPriceDisplayMod
   }
 }
 
+/** نص سياسة الخصوصية المعروض في صفحة /privacy-policy — يحرره المسؤول من لوحة التحكم. */
+export const SITE_KEY_PRIVACY_POLICY_AR = "privacy_policy_ar";
+export const SITE_KEY_PRIVACY_POLICY_EN = "privacy_policy_en";
+
+export type PrivacyPolicyContent = { ar: string; en: string };
+
+/** نصّا سياسة الخصوصية بالعربية والإنجليزية (فارغان إن لم يكتبهما المسؤول بعد). */
+export async function getPrivacyPolicyContent(): Promise<PrivacyPolicyContent> {
+  try {
+    const rows = await prisma.siteSetting.findMany({
+      where: { key: { in: [SITE_KEY_PRIVACY_POLICY_AR, SITE_KEY_PRIVACY_POLICY_EN] } },
+      select: { key: true, value: true },
+    });
+    const valueOf = (key: string) =>
+      (rows.find((r) => r.key === key)?.value ?? "").trim();
+    return {
+      ar: valueOf(SITE_KEY_PRIVACY_POLICY_AR),
+      en: valueOf(SITE_KEY_PRIVACY_POLICY_EN),
+    };
+  } catch {
+    return { ar: "", en: "" };
+  }
+}
+
+/** النص حسب لغة الزائر — الإنجليزي يسقط للعربي إن لم يُكتب (نفس سلوك بقية الحقول ثنائية اللغة). */
+export function localizePrivacyPolicy(
+  content: PrivacyPolicyContent,
+  locale: string,
+): string {
+  if (locale.toLowerCase().startsWith("en")) return content.en || content.ar;
+  return content.ar;
+}
+
 /** نص سياسات الإلغاء للعميل (فارغ إن لم يُضبط بعد). */
 export async function getCustomerCancellationPolicyAr(): Promise<string> {
   try {

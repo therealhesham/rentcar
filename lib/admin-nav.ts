@@ -124,6 +124,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     items: [
       { href: "/admin/cancellation-policy", label: "إلغاء الحجز", icon: "scale" },
       { href: "/admin/rental-terms", label: "الشروط والأحكام", icon: "file-text" },
+      { href: "/admin/privacy-policy", label: "سياسة الخصوصية", icon: "file-text" },
     ],
   },
   {
