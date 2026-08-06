@@ -10,6 +10,7 @@ import { formatSarAmountHtml, formatSarAmountPlain, SAUDI_RIYAL_FONT_CSS_URL } f
 import type { BookingPaymentSnapshot } from "@/lib/booking-payment-data";
 import { getBookingForPayment } from "@/lib/booking-payment-data";
 import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
+import { EMAIL_RESPONSIVE_CSS } from "@/lib/email-layout";
 import { prisma } from "@/lib/prisma";
 
 function escapeHtml(s: string): string {
@@ -51,38 +52,38 @@ export function buildInvoiceHtml(booking: BookingPaymentSnapshot): string {
     "padding:16px 20px; border-bottom:1px solid #f0f0f0; text-align:left; font-weight:600; color:#111827; font-size:15px;";
 
   rows.push(
-    `<tr><td style="${rowStyle}">الإيجار (${escapeHtml(rentalDuration)}) — ${escapeHtml(booking.car.fullTitle)}</td><td dir="ltr" style="${valStyle}">${formatSarAmountHtml(t.rentalExclTax)}</td></tr>`,
+    `<tr><td class="em-cell" style="${rowStyle}">الإيجار (${escapeHtml(rentalDuration)}) — ${escapeHtml(booking.car.fullTitle)}</td><td dir="ltr" class="em-val" style="${valStyle}">${formatSarAmountHtml(t.rentalExclTax)}</td></tr>`,
   );
 
   for (const a of booking.addons) {
     rows.push(
-      `<tr><td style="${rowStyle}">${escapeHtml(a.titleAr)}</td><td dir="ltr" style="${valStyle}">${formatSarAmountHtml(a.lineTotalExclTax)}</td></tr>`,
+      `<tr><td class="em-cell" style="${rowStyle}">${escapeHtml(a.titleAr)}</td><td dir="ltr" class="em-val" style="${valStyle}">${formatSarAmountHtml(a.lineTotalExclTax)}</td></tr>`,
     );
   }
 
   if (booking.interCityShipping && booking.interCityShipping.feeExclVatSar > 0) {
     rows.push(
-      `<tr><td style="${rowStyle}">شحن بين المدن</td><td dir="ltr" style="${valStyle}">${formatSarAmountHtml(booking.interCityShipping.feeExclVatSar)}</td></tr>`,
+      `<tr><td class="em-cell" style="${rowStyle}">شحن بين المدن</td><td dir="ltr" class="em-val" style="${valStyle}">${formatSarAmountHtml(booking.interCityShipping.feeExclVatSar)}</td></tr>`,
     );
   }
 
   for (const f of booking.checkoutOneTimeFees) {
     rows.push(
-      `<tr><td style="${rowStyle}">${escapeHtml(f.labelAr)}</td><td dir="ltr" style="${valStyle}">${formatSarAmountHtml(f.feeExclVatSar)}</td></tr>`,
+      `<tr><td class="em-cell" style="${rowStyle}">${escapeHtml(f.labelAr)}</td><td dir="ltr" class="em-val" style="${valStyle}">${formatSarAmountHtml(f.feeExclVatSar)}</td></tr>`,
     );
   }
 
   if (booking.delayPenalty && booking.delayPenalty.feeExclVatSar > 0) {
     rows.push(
-      `<tr><td style="${rowStyle}">${escapeHtml(booking.delayPenalty.labelAr)}</td><td dir="ltr" style="${valStyle}">${formatSarAmountHtml(booking.delayPenalty.feeExclVatSar)}</td></tr>`,
+      `<tr><td class="em-cell" style="${rowStyle}">${escapeHtml(booking.delayPenalty.labelAr)}</td><td dir="ltr" class="em-val" style="${valStyle}">${formatSarAmountHtml(booking.delayPenalty.feeExclVatSar)}</td></tr>`,
     );
   }
 
   rows.push(
-    `<tr><td style="padding:16px 20px; border-bottom:1px solid #f0f0f0; color:#111827; font-weight:700; font-size:15px;">المجموع غير شامل الضريبة</td><td dir="ltr" style="${valStyle}">${formatSarAmountHtml(t.subtotalExclTax)}</td></tr>`,
+    `<tr><td class="em-cell" style="padding:16px 20px; border-bottom:1px solid #f0f0f0; color:#111827; font-weight:700; font-size:15px;">المجموع غير شامل الضريبة</td><td dir="ltr" class="em-val" style="${valStyle}">${formatSarAmountHtml(t.subtotalExclTax)}</td></tr>`,
   );
   rows.push(
-    `<tr><td style="${rowStyle}">ضريبة القيمة المضافة (${vatPct}%)</td><td dir="ltr" style="${valStyle}">${formatSarAmountHtml(t.vatAmount)}</td></tr>`,
+    `<tr><td class="em-cell" style="${rowStyle}">ضريبة القيمة المضافة (${vatPct}%)</td><td dir="ltr" class="em-val" style="${valStyle}">${formatSarAmountHtml(t.vatAmount)}</td></tr>`,
   );
 
   const deliveryBlock =
@@ -100,22 +101,23 @@ export function buildInvoiceHtml(booking: BookingPaymentSnapshot): string {
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap');
     @import url('${SAUDI_RIYAL_FONT_CSS_URL}');
+${EMAIL_RESPONSIVE_CSS}
   </style>
 </head>
-<body style="margin:0;padding:40px 20px;background:#f3f4f6;font-family:'Tajawal',Tahoma,Arial,sans-serif;color:#111827;-webkit-font-smoothing:antialiased;">
+<body class="em-outer" style="margin:0;padding:40px 20px;background:#f3f4f6;font-family:'Tajawal',Tahoma,Arial,sans-serif;color:#111827;-webkit-font-smoothing:antialiased;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
-    
+
     <!-- Main Container -->
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;background:#ffffff;border-radius:24px;overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,0.08);border:1px solid #e5e7eb;margin:0 auto;">
-      
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="em-card" style="max-width:640px;background:#ffffff;border-radius:24px;overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,0.08);border:1px solid #e5e7eb;margin:0 auto;">
+
       <!-- Header -->
-      <tr><td style="background:linear-gradient(135deg, #003749 0%, #001f29 100%);padding:48px 40px;text-align:center;">
+      <tr><td class="em-head" style="background:linear-gradient(135deg, #003749 0%, #001f29 100%);padding:48px 40px;text-align:center;">
         <div style="margin-bottom:24px;">
-          <h2 style="margin:0;color:#dfb163;font-size:28px;font-weight:800;letter-spacing:-0.5px;">روائس</h2>
+          <h2 class="em-brand" style="margin:0;color:#dfb163;font-size:28px;font-weight:800;letter-spacing:-0.5px;">روائس</h2>
           <p style="margin:4px 0 0;color:#9ca3af;font-size:14px;">لتأجير السيارات</p>
         </div>
         
@@ -125,33 +127,33 @@ export function buildInvoiceHtml(booking: BookingPaymentSnapshot): string {
           </span>
         </div>
         
-        <h1 style="margin:0 0 12px;font-size:36px;font-weight:800;color:#ffffff;">${escapeHtml(header.title)}</h1>
+        <h1 class="em-title" style="margin:0 0 12px;font-size:36px;font-weight:800;color:#ffffff;">${escapeHtml(header.title)}</h1>
         <p style="margin:0;font-size:16px;color:#cbd5e1;opacity:0.9">رقم المرجع: <span dir="ltr" style="font-family:monospace;background:rgba(0,0,0,0.2);padding:4px 8px;border-radius:6px;font-weight:600;">#${booking.id}</span></p>
       </td></tr>
       
       <!-- Body -->
-      <tr><td style="padding:48px 40px;">
+      <tr><td class="em-body" style="padding:48px 40px;">
         <p style="margin:0 0 12px;font-size:18px;color:#111827;">مرحباً <strong>${escapeHtml(booking.fullName)}</strong>،</p>
         <p style="margin:0 0 36px;line-height:1.7;color:#6b7280;font-size:15px;">${escapeHtml(header.intro)}</p>
         
         <!-- Info Grid -->
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:32px;">
           <tr>
-            <td width="50%" style="padding-bottom:24px;padding-left:12px;">
+            <td width="50%" class="em-col" style="padding-bottom:24px;padding-left:12px;">
               <p style="margin:0 0 6px;font-size:13px;color:#6b7280;">المركبة</p>
               <p style="margin:0;font-size:15px;color:#111827;font-weight:700;">${escapeHtml(booking.car.fullTitle)} <span style="color:#9ca3af;font-weight:400;">(${escapeHtml(booking.car.categoryTitle)})</span></p>
             </td>
-            <td width="50%" style="padding-bottom:24px;padding-right:12px;">
+            <td width="50%" class="em-col" style="padding-bottom:24px;padding-right:12px;">
               <p style="margin:0 0 6px;font-size:13px;color:#6b7280;">طريقة الدفع</p>
               <p style="margin:0;font-size:15px;color:#111827;font-weight:700;">${escapeHtml(bookingPaymentMethodLabelAr(booking.paymentMethod))}</p>
             </td>
           </tr>
           <tr>
-            <td width="50%" style="padding-bottom:24px;padding-left:12px;">
+            <td width="50%" class="em-col" style="padding-bottom:24px;padding-left:12px;">
               <p style="margin:0 0 6px;font-size:13px;color:#6b7280;">تاريخ ووقت الاستلام</p>
               <p style="margin:0;font-size:15px;color:#111827;font-weight:700;" dir="ltr">${escapeHtml(pickup)}</p>
             </td>
-            <td width="50%" style="padding-bottom:24px;padding-right:12px;">
+            <td width="50%" class="em-col" style="padding-bottom:24px;padding-right:12px;">
               <p style="margin:0 0 6px;font-size:13px;color:#6b7280;">تاريخ ووقت التسليم</p>
               <p style="margin:0;font-size:15px;color:#111827;font-weight:700;" dir="ltr">${escapeHtml(dropoff)}</p>
             </td>
@@ -159,11 +161,11 @@ export function buildInvoiceHtml(booking: BookingPaymentSnapshot): string {
           ${
             booking.paidAt
               ? `<tr>
-            <td width="50%" style="padding-left:12px;">
+            <td width="50%" class="em-col" style="padding-left:12px;">
               <p style="margin:0 0 6px;font-size:13px;color:#6b7280;">تاريخ الدفع</p>
               <p style="margin:0;font-size:15px;color:#111827;font-weight:700;" dir="ltr">${escapeHtml(fmtDateTime(booking.paidAt))}</p>
             </td>
-            <td width="50%" style="padding-right:12px;">
+            <td width="50%" class="em-col" style="padding-right:12px;">
               <p style="margin:0 0 6px;font-size:13px;color:#6b7280;">رقم الجوال</p>
               <p style="margin:0;font-size:15px;color:#111827;font-weight:700;" dir="ltr">${escapeHtml(booking.phone)}</p>
             </td>
@@ -182,8 +184,8 @@ export function buildInvoiceHtml(booking: BookingPaymentSnapshot): string {
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
           ${rows.join("")}
           <tr>
-            <td style="padding:24px 20px; background:#f9fafb; font-size:18px; font-weight:800; color:#003749;">${escapeHtml(totalLabel)}</td>
-            <td dir="ltr" style="padding:24px 20px; background:#f9fafb; text-align:left; font-size:22px; font-weight:800; color:#dfb163;">${formatSarAmountHtml(t.totalInclTax)}</td>
+            <td class="em-total" style="padding:24px 20px; background:#f9fafb; font-size:18px; font-weight:800; color:#003749;">${escapeHtml(totalLabel)}</td>
+            <td dir="ltr" class="em-total-val" style="padding:24px 20px; background:#f9fafb; text-align:left; font-size:22px; font-weight:800; color:#dfb163;">${formatSarAmountHtml(t.totalInclTax)}</td>
           </tr>
         </table>
         
@@ -194,7 +196,7 @@ export function buildInvoiceHtml(booking: BookingPaymentSnapshot): string {
       </td></tr>
       
       <!-- Footer -->
-      <tr><td style="background:#f9fafb;padding:24px;text-align:center;border-top:1px solid #e5e7eb;">
+      <tr><td class="em-foot" style="background:#f9fafb;padding:24px;text-align:center;border-top:1px solid #e5e7eb;">
         <p style="margin:0;font-size:13px;color:#6b7280;font-weight:600;">© ${new Date().getFullYear()} روائس لتأجير السيارات. جميع الحقوق محفوظة.</p>
       </td></tr>
       

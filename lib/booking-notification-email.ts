@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { sendPlainTransactionalEmail } from "@/lib/booking-invoice-email";
 import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
 import { absoluteUrl } from "@/lib/seo";
+import { EMAIL_RESPONSIVE_CSS } from "@/lib/email-layout";
 
 function escapeHtml(s: string): string {
   return s
@@ -117,7 +118,7 @@ export function buildNotificationHtml(row: {
   const rowsHtml = rows
     .map(
       ([label, value, ltr]) =>
-        `<tr><td style="${rowStyle}">${escapeHtml(label)}</td><td${ltr ? ' dir="ltr"' : ""} style="${valStyle}">${escapeHtml(value)}</td></tr>`,
+        `<tr><td class="em-cell" style="${rowStyle}">${escapeHtml(label)}</td><td${ltr ? ' dir="ltr"' : ""} class="em-val" style="${valStyle}">${escapeHtml(value)}</td></tr>`,
     )
     .join("");
 
@@ -125,20 +126,21 @@ export function buildNotificationHtml(row: {
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap');
+${EMAIL_RESPONSIVE_CSS}
   </style>
 </head>
-<body style="margin:0;padding:40px 20px;background:#f3f4f6;font-family:'Tajawal',Tahoma,Arial,sans-serif;color:#111827;">
+<body class="em-outer" style="margin:0;padding:40px 20px;background:#f3f4f6;font-family:'Tajawal',Tahoma,Arial,sans-serif;color:#111827;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,0.08);border:1px solid #e5e7eb;margin:0 auto;">
-      <tr><td style="background:linear-gradient(135deg, #003749 0%, #001f29 100%);padding:36px 32px;text-align:center;">
-        <h2 style="margin:0;color:#dfb163;font-size:24px;font-weight:800;">روائس لتأجير السيارات</h2>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="em-card" style="max-width:560px;background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,0.08);border:1px solid #e5e7eb;margin:0 auto;">
+      <tr><td class="em-head" style="background:linear-gradient(135deg, #003749 0%, #001f29 100%);padding:36px 32px;text-align:center;">
+        <h2 class="em-brand" style="margin:0;color:#dfb163;font-size:24px;font-weight:800;">روائس لتأجير السيارات</h2>
         <p style="margin:16px 0 0;font-size:20px;font-weight:800;color:#ffffff;">${escapeHtml(kindLabel)} جديد</p>
         <p style="margin:6px 0 0;font-size:14px;color:#cbd5e1;">رقم المرجع: <span dir="ltr" style="font-family:monospace;">#${row.id}</span></p>
       </td></tr>
-      <tr><td style="padding:32px;">
+      <tr><td class="em-body" style="padding:32px;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
           ${rowsHtml}
         </table>
