@@ -60,7 +60,6 @@ export function SocialLinksEditForm({
           </p>
         </div>
         <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 text-xs font-bold text-primary">
-          <Sparkles className="size-3.5" aria-hidden />
           <span>{activeCount} منصات مفعلة وتظهر في الفوتر</span>
         </div>
       </div>
@@ -73,21 +72,19 @@ export function SocialLinksEditForm({
           return (
             <div
               key={item.platform}
-              className={`relative flex flex-col justify-between rounded-2xl border p-5 transition-all ${
-                item.enabled
+              className={`relative flex flex-col justify-between rounded-2xl border p-5 transition-all ${item.enabled
                   ? "border-primary/40 bg-surface shadow-sm"
                   : "border-outline-variant/20 bg-surface-container-lowest/60 opacity-80"
-              }`}
+                }`}
             >
               <div>
                 <div className="mb-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div
-                      className={`flex h-10 w-10 items-center justify-center rounded-xl transition-colors ${
-                        item.enabled
+                      className={`flex h-10 w-10 items-center justify-center rounded-xl transition-colors ${item.enabled
                           ? "bg-[#003749] text-white"
                           : "bg-surface-container-high text-on-surface-variant"
-                      }`}
+                        }`}
                     >
                       {IconComponent ? (
                         <IconComponent className="h-5 w-5" />
