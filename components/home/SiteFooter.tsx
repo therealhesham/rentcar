@@ -161,8 +161,8 @@ export function SiteFooter() {
         </div>
 
         <div>
-          <h4 className="mb-4 text-sm font-bold text-white">{t("usefulLinks")}</h4>
-          <ul className="flex flex-wrap justify-center gap-x-5 gap-y-2 md:block md:space-y-2">
+          <h4 className="mb-4 text-base font-bold text-white">{t("usefulLinks")}</h4>
+          <ul className="flex flex-wrap justify-center gap-x-5 gap-y-2.5 md:block md:space-y-2.5">
             {siteLinks.map((link) => {
               const active = isLinkActive(pathname, link.href);
               if (link.isTerms) {
@@ -171,7 +171,7 @@ export function SiteFooter() {
                     <button
                       type="button"
                       onClick={handleOpenTerms}
-                      className="text-sm text-white transition-colors hover:text-[#dbb878] cursor-pointer"
+                      className="text-base text-white transition-colors hover:text-[#dbb878] cursor-pointer"
                     >
                       {link.label}
                     </button>
@@ -182,7 +182,7 @@ export function SiteFooter() {
                 <li key={link.label}>
                   <Link
                     href={link.href}
-                    className={`text-sm transition-colors ${active
+                    className={`text-base transition-colors ${active
                       ? "font-bold"
                       : "text-white hover:text-[#dbb878]"
                       }`}
@@ -201,7 +201,7 @@ export function SiteFooter() {
         </div>
 
         <div>
-          <h4 className="mb-4 text-sm font-bold text-white">
+          <h4 className="mb-4 text-base font-bold text-white">
             {t("followUs")}
           </h4>
           {activeSocialLinks.length > 0 ? (
