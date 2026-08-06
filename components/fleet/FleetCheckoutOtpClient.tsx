@@ -206,7 +206,7 @@ export function FleetCheckoutOtpClient() {
               </div>
               <div>
                 <h1 className="text-lg font-extrabold text-[#003749]">رمز التحقق</h1>
-                <p className="mt-2 text-[13px] font-semibold leading-relaxed text-[#6b5a3b]">
+                {/* <p className="mt-2 text-[13px] font-semibold leading-relaxed text-[#6b5a3b]">
                   بعد تأكيد بياناتك في الخطوة السابقة، أُرسل تلقائياً رمز مكوّن من {bookingOtpLengthLabelAr()} إلى{" "}
                   {channel === "EMAIL"
                     ? "بريدك الإلكتروني"
@@ -227,7 +227,7 @@ export function FleetCheckoutOtpClient() {
                   أدخل الرمز هنا ليتم تسجيل الحجز والانتقال إلى الدفع. يُنشأ حسابك تلقائياً إن لم يكن
                   موجوداً (بالاسم والجوال والبريد) أو يُحدَّث، وتبقى جلسة الدخول نشطة حتى تسجيل
                   الخروج يدوياً.
-                </p>
+                </p> */}
               </div>
             </div>
 

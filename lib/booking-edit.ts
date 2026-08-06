@@ -5,6 +5,7 @@ import {
   parseBookingPricingSnapshot,
   resolveBookingRentalPricePerDayExclTax,
 } from "@/lib/booking-pricing-snapshot";
+import { capFullTotalDiscountToFloor } from "@/lib/min-price-floor";
 
 export type BookingDaysPriceInput = {
   /** سعر الإيجار اليومي الفعلي (بعد الخصم) غير شامل الضريبة. */
@@ -16,19 +17,41 @@ export type BookingDaysPriceInput = {
   oneTimeFeesExclTax: number;
   /** خصم كوبون FULL_TOTAL مُجمَّد (مبلغ ثابت لا يتغيّر مع عدد الأيام). صفر لو لا يوجد أو كان RENTAL_ONLY. */
   discountExclTax: number;
+  /** أرضية السعر الأدنى المُجمَّدة (مكافئ يومي، دون ضريبة). null = بلا أرضية. */
+  floorPerDayExclTax: number | null;
 };
 
-/** إجمالي الحجز (شامل الضريبة) لعدد أيام محدّد — دالة نقية صالحة للعميل. */
+/**
+ * إجمالي الحجز (شامل الضريبة) لعدد أيام محدّد — دالة نقية صالحة للعميل.
+ *
+ * الأرضية تُعاد فرضها بعدد الأيام الجديد: خصم كوبون `FULL_TOTAL` مبلغ مطلق
+ * مُجمَّد لا يتقلّص مع تقليل الأيام، فبدون إعادة القصّ هنا يقدر العميل يقلّل
+ * المدة فينزل الصافي تحت الأرضية.
+ */
 export function bookingTotalInclTaxForDays(
   input: BookingDaysPriceInput,
   days: number,
 ): number {
+  const addonRows = input.addonPerDayExclTax.map((pricePerDay) => ({ pricePerDay }));
+  const preDiscount = computeCheckoutTotals(
+    input.pricePerDayExclTax,
+    days,
+    input.vatRatePercent,
+    addonRows,
+    { oneTimeFeesExclTax: input.oneTimeFeesExclTax },
+  );
+  const { discountExclTax } = capFullTotalDiscountToFloor(
+    input.discountExclTax,
+    preDiscount.subtotalExclTax,
+    input.floorPerDayExclTax,
+    days,
+  );
   const totals = computeCheckoutTotals(
     input.pricePerDayExclTax,
     days,
     input.vatRatePercent,
-    input.addonPerDayExclTax.map((pricePerDay) => ({ pricePerDay })),
-    { oneTimeFeesExclTax: input.oneTimeFeesExclTax, discountExclTax: input.discountExclTax },
+    addonRows,
+    { oneTimeFeesExclTax: input.oneTimeFeesExclTax, discountExclTax },
   );
   return totals.totalInclTax;
 }
@@ -43,8 +66,14 @@ export function bookingDaysPriceInputFromSnapshot(
     modelPricePerDayExclTax,
     addonsJson,
   );
-  const { addons, interCityShipping, checkoutOneTimeFees, delayPenalty, couponCode } =
-    parseBookingPricingSnapshot(addonsJson);
+  const {
+    addons,
+    interCityShipping,
+    checkoutOneTimeFees,
+    delayPenalty,
+    couponCode,
+    rentalFloorPerDayExclTax,
+  } = parseBookingPricingSnapshot(addonsJson);
   const shipFee = interCityShipping?.feeExclVatSar ?? 0;
   const checkoutFeesSum = checkoutOneTimeFees.reduce((s, x) => s + x.feeExclVatSar, 0);
   const delayFee = delayPenalty?.feeExclVatSar ?? 0;
@@ -54,13 +83,15 @@ export function bookingDaysPriceInputFromSnapshot(
     addonPerDayExclTax: addons.map((a) => a.pricePerDayExclTax),
     oneTimeFeesExclTax: shipFee + checkoutFeesSum + delayFee,
     discountExclTax: couponCode?.scope === "FULL_TOTAL" ? couponCode.discountExclTax : 0,
+    // الحجوزات الأقدم من هذا الحقل = بلا أرضية، فسلوكها يبقى كما هو.
+    floorPerDayExclTax: rentalFloorPerDayExclTax,
   };
 }
 
 /**
  * يعيد بناء لقطة الإضافات (addonsJson) بعدد أيام جديد:
  * - يضبط days وlineTotalExclTax لكل إضافة على عدد الأيام الجديد.
- * - يُبقي رسوم الشحن بين المدن ورسوم الإتمام ولقطة الخصم وسعر الإيجار اليومي المجمَّد كما هي.
+ * - يُبقي رسوم الشحن بين المدن ورسوم الإتمام ولقطة الخصم وسعر الإيجار اليومي وأرضية السعر المجمَّدين كما هي.
  * - يُسقط غرامة التأخير ووصف المدة (يُعاد احتسابهما عند الإرجاع).
  */
 export function rebuildAddonsJsonForDays(
@@ -74,6 +105,7 @@ export function rebuildAddonsJsonForDays(
     checkoutOneTimeFees?: unknown;
     rentalDiscount?: unknown;
     rentalPricePerDayExclTax?: unknown;
+    rentalFloorPerDayExclTax?: unknown;
     couponCode?: unknown;
   };
   try {
@@ -96,6 +128,7 @@ export function rebuildAddonsJsonForDays(
     checkoutOneTimeFees?: unknown;
     rentalDiscount?: unknown;
     rentalPricePerDayExclTax?: unknown;
+    rentalFloorPerDayExclTax?: unknown;
     couponCode?: unknown;
   } = { items };
 
@@ -107,6 +140,10 @@ export function rebuildAddonsJsonForDays(
   if (typeof data.rentalPricePerDayExclTax === "number") {
     payload.rentalPricePerDayExclTax = data.rentalPricePerDayExclTax;
   }
+  // إسقاط الأرضية هنا كان هيسمح للعميل يهرب منها بمجرد تعديل التواريخ.
+  if (typeof data.rentalFloorPerDayExclTax === "number") {
+    payload.rentalFloorPerDayExclTax = data.rentalFloorPerDayExclTax;
+  }
   if (data.couponCode) payload.couponCode = data.couponCode;
 
   const hasAny =
@@ -115,6 +152,7 @@ export function rebuildAddonsJsonForDays(
     payload.checkoutOneTimeFees != null ||
     payload.rentalDiscount != null ||
     payload.rentalPricePerDayExclTax != null ||
+    payload.rentalFloorPerDayExclTax != null ||
     payload.couponCode != null;
 
   return hasAny ? JSON.stringify(payload) : null;

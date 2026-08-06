@@ -44,6 +44,14 @@ export type BookingPricingSnapshotV1 = {
    * غير شامل الضريبة. مُجمَّد بمعزل عن أي تغيير لاحق في سعر الموديل الحالي.
    */
   rentalPricePerDayExclTax?: number | null;
+  /**
+   * أرضية السعر الأدنى (دون ضريبة) كمكافئ يومي وقت الحجز — مُجمَّدة عشان أي
+   * إعادة حساب بعدد أيام مختلف (تعديل التواريخ) تقدر تعيد فرضها. خصم كوبون
+   * FULL_TOTAL مبلغ مطلق لا يتقلّص مع الأيام، فبدون هذه القيمة يقدر العميل
+   * يقلّل الأيام فينزل الصافي تحت الأرضية.
+   * null = حجز بلا أرضية (وكل الحجوزات السابقة لهذا الحقل).
+   */
+  rentalFloorPerDayExclTax?: number | null;
   /** كود الخصم المُطبَّق عند الحجز (إن وُجد) — يحل محل rentalDiscount. */
   couponCode?: CouponCodeSnap | null;
 };
@@ -89,6 +97,7 @@ export function parseBookingPricingSnapshot(raw: string | null): {
   tripDurationLabelAr: string | null;
   rentalDiscount: RentalDiscountPriceSnap | null;
   rentalPricePerDayExclTax: number | null;
+  rentalFloorPerDayExclTax: number | null;
   couponCode: CouponCodeSnap | null;
 } {
   if (!raw) {
@@ -100,6 +109,7 @@ export function parseBookingPricingSnapshot(raw: string | null): {
       tripDurationLabelAr: null,
       rentalDiscount: null,
       rentalPricePerDayExclTax: null,
+      rentalFloorPerDayExclTax: null,
       couponCode: null,
     };
   }
@@ -184,6 +194,12 @@ export function parseBookingPricingSnapshot(raw: string | null): {
         ? Math.round(rawPrice * 100) / 100
         : null;
 
+    const rawFloor = data.rentalFloorPerDayExclTax;
+    const rentalFloorPerDayExclTax =
+      typeof rawFloor === "number" && Number.isFinite(rawFloor) && rawFloor > 0
+        ? Math.round(rawFloor * 100) / 100
+        : null;
+
     let couponCode: CouponCodeSnap | null = null;
     const cc = data.couponCode;
     if (
@@ -210,6 +226,7 @@ export function parseBookingPricingSnapshot(raw: string | null): {
       tripDurationLabelAr,
       rentalDiscount,
       rentalPricePerDayExclTax,
+      rentalFloorPerDayExclTax,
       couponCode,
     };
   } catch {
@@ -221,6 +238,7 @@ export function parseBookingPricingSnapshot(raw: string | null): {
       tripDurationLabelAr: null,
       rentalDiscount: null,
       rentalPricePerDayExclTax: null,
+      rentalFloorPerDayExclTax: null,
       couponCode: null,
     };
   }

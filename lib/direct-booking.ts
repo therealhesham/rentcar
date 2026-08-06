@@ -935,6 +935,7 @@ async function buildBookingAddonsJsonSnapshot(
   rentalTab: string | null | undefined,
   rentalDiscount?: RentalDiscountPriceSnap | null,
   couponCode?: CouponCodeSnap | null,
+  rentalFloorPerDayExclTax?: number | null,
 ): Promise<{ ok: true; json: string | null } | { ok: false; error: string }> {
   const days = safeBookingDays(numberOfDays);
   let items: Array<{
@@ -1026,8 +1027,13 @@ async function buildBookingAddonsJsonSnapshot(
     tripDurationLabelAr?: string;
     rentalDiscount?: RentalDiscountPriceSnap;
     rentalPricePerDayExclTax: number;
+    rentalFloorPerDayExclTax?: number;
     couponCode?: CouponCodeSnap;
   } = { items, rentalPricePerDayExclTax: pricePerDayExclTax };
+  // الأرضية تُجمَّد مع السعر: أي إعادة حساب بعدد أيام مختلف لازم تقدر تعيد فرضها.
+  if (rentalFloorPerDayExclTax != null && rentalFloorPerDayExclTax > 0) {
+    payload.rentalFloorPerDayExclTax = rentalFloorPerDayExclTax;
+  }
   if (hasShip && interCityShipping) {
     payload.interCityShipping = interCityShipping;
   }
@@ -1369,6 +1375,7 @@ export async function createDirectBooking(
     commonNormalized.rentalTab,
     rentalDiscountSnap,
     couponApplication?.snap ?? null,
+    floorOutcome.floorPerDayExclTax,
   );
   if (!addonsSnap.ok) {
     return { ok: false, error: addonsSnap.error };

@@ -148,23 +148,16 @@ export function SiteFooter() {
         aria-hidden
       />
       <div className="mx-auto grid max-w-screen-xl grid-cols-1 gap-10 px-5 py-10 text-center sm:px-8 sm:py-14 md:grid-cols-3 md:text-right">
-        <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center md:justify-self-start">
-          <div>
-            <Image
-              src={logoSrc}
-              alt=""
-              width={90}
-              height={90}
-              className="h-20 w-20 object-contain sm:h-[90px] sm:w-[90px]"
-              unoptimized={logoSrc.endsWith(".svg") || logoSrc.startsWith("http")}
-            />
-          </div>
-          <div>
-            <p className="text-lg font-bold leading-tight text-white">
-              روائس لتأجير السيارات
-            </p>
-            <p className="text-sm text-white/80">Rawaes Car Rental</p>
-          </div>
+        <div className="flex items-center justify-center md:justify-self-start">
+          <Image
+            src={logoSrc}
+            alt="روائس لتأجير السيارات"
+            width={320}
+            height={120}
+            priority={false}
+            className="h-24 w-auto max-w-full object-contain sm:h-28"
+            unoptimized={logoSrc.endsWith(".svg") || logoSrc.startsWith("http")}
+          />
         </div>
 
         <div>
