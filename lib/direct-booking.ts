@@ -63,7 +63,10 @@ import {
   NO_PRICE_FLOOR,
   type RentalPeriodKind,
 } from "@/lib/min-price-floor";
-import { recordMinPriceFloorApplied } from "@/lib/min-price-floor-audit";
+import {
+  recordMinPriceFloorApplied,
+  recordMinPriceFloorBypassed,
+} from "@/lib/min-price-floor-audit";
 
 export { addDaysToYmd, lastInclusiveBookingDayYmd } from "@/lib/booking-calendar-ymd";
 
@@ -1351,6 +1354,18 @@ export async function createDirectBooking(
   );
   const effectivePricePerDay = floorOutcome.finalPricePerDayExclTax;
 
+  // مع التصريح بالتجاوز نحسب الأرضية «الظلّية» — مش لتغيير السعر، بس عشان
+  // نعرف هل نزل الحجز تحتها فعلاً فنسجّله للمحاسبة.
+  const shadowFloorOutcome = bypassMinPrice
+    ? applyPriceFloorPerDay(
+        toPerDay(discountedPeriodAmountExclTax),
+        toPerDay(basePeriodAmountExclTax),
+        priceFloor,
+        periodKind,
+        days,
+      )
+    : null;
+
   // اللقطة تعكس الخصم **الفعلي** بعد الأرضية، مش الخصم النظري قبلها — وإلا
   // تعرض الفاتورة خصماً ما حصلش.
   if (!couponApplication) {
@@ -1403,6 +1418,7 @@ export async function createDirectBooking(
   let couponDiscountExclTax = 0;
   let fullTotalFloorApplied = false;
   let fullTotalWithheldExclTax = 0;
+  let fullTotalGrantedBelowFloorExclTax = 0;
   if (couponApplication && couponApplication.snap.scope === "FULL_TOTAL") {
     const preDiscountTotals = computeCheckoutTotals(
       effectivePricePerDay,
@@ -1427,6 +1443,16 @@ export async function createDirectBooking(
     couponDiscountExclTax = capped.discountExclTax;
     fullTotalFloorApplied = capped.floorApplied;
     fullTotalWithheldExclTax = capped.withheldDiscountExclTax;
+
+    // نفس فكرة الأرضية الظلّية: كم كان القصّ لولا التصريح؟
+    if (shadowFloorOutcome?.floorPerDayExclTax != null) {
+      fullTotalGrantedBelowFloorExclTax = capFullTotalDiscountToFloor(
+        requestedDiscount,
+        preDiscountTotals.subtotalExclTax,
+        shadowFloorOutcome.floorPerDayExclTax,
+        days,
+      ).withheldDiscountExclTax;
+    }
   }
 
   const bookingTotals = computeCheckoutTotals(
@@ -1663,6 +1689,23 @@ export async function createDirectBooking(
         ? { kind: "COUPON", code: couponApplication.snap.code }
         : { kind: "RENTAL_DISCOUNT" },
       floorExceedsBasePrice: floorOutcome.floorExceedsBasePrice,
+    });
+  }
+
+  // كود مصرَّح له نزل بالسعر فعلاً تحت الحد الأدنى → أثر تدقيق صامت (بلا إشعار).
+  const grantedBelowFloor =
+    (shadowFloorOutcome?.withheldDiscountExclTax ?? 0) + fullTotalGrantedBelowFloorExclTax;
+  if (couponApplication && grantedBelowFloor > 0 && shadowFloorOutcome?.floorPerDayExclTax != null) {
+    await recordMinPriceFloorBypassed({
+      bookingId: bookingRequestId,
+      carLabel: `${model.name} ${model.year}`.trim(),
+      periodKind,
+      couponCode: couponApplication.snap.code,
+      basePricePerDayExclTax: floorOutcome.basePricePerDayExclTax,
+      finalPricePerDayExclTax: effectivePricePerDay,
+      floorPerDayExclTax: shadowFloorOutcome.floorPerDayExclTax,
+      grantedBelowFloorExclTax: grantedBelowFloor,
+      days,
     });
   }
 

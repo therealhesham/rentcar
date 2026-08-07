@@ -87,6 +87,64 @@ function buildFloorExplanationAr(input: MinPriceFloorAuditInput): string {
   );
 }
 
+export type MinPriceFloorBypassAuditInput = {
+  bookingId: number;
+  carLabel: string;
+  periodKind: "DAILY" | "MONTHLY";
+  /** كود الخصم المصرَّح له بالتجاوز. */
+  couponCode: string;
+  /** السعر اليومي الأساسي قبل الخصم (دون ضريبة). */
+  basePricePerDayExclTax: number;
+  /** السعر اليومي المطبَّق فعلاً بعد الخصم الكامل (دون ضريبة). */
+  finalPricePerDayExclTax: number;
+  /** الأرضية التي كانت ستُطبَّق لولا التصريح (مكافئ يومي، دون ضريبة). */
+  floorPerDayExclTax: number;
+  /** المبلغ الممنوح تحت الأرضية لكامل المدة (دون ضريبة). */
+  grantedBelowFloorExclTax: number;
+  days: number;
+};
+
+/**
+ * أثر تدقيق **صامت** لحجز نزل تحت الحد الأدنى بتصريح الكود.
+ *
+ * بدون إشعار ولا إيميل — ده مش تنبيه، دي معاملة مسموح بها إدارياً ومسجَّلة
+ * عشان المحاسبة تقدر تراجع الحجوزات الاستثنائية لاحقاً.
+ */
+export async function recordMinPriceFloorBypassed(
+  input: MinPriceFloorBypassAuditInput,
+): Promise<void> {
+  const isMonthly = input.periodKind === "MONTHLY";
+  const subjectAr = isMonthly ? "إجمالي الشهر" : "السعر اليومي";
+  const unitAr = isMonthly ? "ر.س" : "ر.س/يوم";
+  const scale = isMonthly ? input.days : 1;
+
+  const notes =
+    `تم تطبيق كود الخصم ${input.couponCode} المصرَّح له بتجاوز الحد الأدنى. ` +
+    `نزل ${subjectAr} إلى ${fmt(input.finalPricePerDayExclTax * scale)} ${unitAr}، ` +
+    `وهو أقل من الحد الأدنى المسجّل (${fmt(input.floorPerDayExclTax * scale)} ${unitAr})، ` +
+    `وطُبِّق الخصم بالكامل بناءً على تصريح الكود. ` +
+    `المبلغ الممنوح تحت الحد الأدنى: ${fmt(input.grantedBelowFloorExclTax)} ر.س ` +
+    `لكامل المدة (دون ضريبة).`;
+
+  await logBookingEvent({
+    bookingId: input.bookingId,
+    event: BOOKING_EVENTS.MIN_PRICE_FLOOR_BYPASSED,
+    actorKind: "SYSTEM",
+    actorName: "System",
+    notes: notes.slice(0, 500),
+    meta: {
+      periodKind: input.periodKind,
+      days: input.days,
+      couponCode: input.couponCode,
+      basePricePerDayExclTax: input.basePricePerDayExclTax,
+      finalPricePerDayExclTax: input.finalPricePerDayExclTax,
+      floorPerDayExclTax: input.floorPerDayExclTax,
+      grantedBelowFloorExclTax: input.grantedBelowFloorExclTax,
+      authorized: true,
+    },
+  });
+}
+
 /** يسجّل الحدث ويُشعِر المحاسبة والمشرفين. آمن للاستدعاء داخل أي مسار حجز. */
 export async function recordMinPriceFloorApplied(
   input: MinPriceFloorAuditInput,
