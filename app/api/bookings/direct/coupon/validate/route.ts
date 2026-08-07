@@ -15,6 +15,7 @@ import {
   applyPriceFloorPerDay,
   capFullTotalDiscountToFloor,
   resolvePriceFloorForModel,
+  NO_PRICE_FLOOR,
   type RentalPeriodKind,
 } from "@/lib/min-price-floor";
 
@@ -98,10 +99,14 @@ export async function POST(request: Request) {
   }
   const coupon = resolved.coupon;
 
-  const priceFloor = await resolvePriceFloorForModel(carModelId, branchRow?.id ?? null, {
-    minPricePerDayExclTax: model.minPricePerDayExclTax,
-    minPriceMonthlyExclTax: model.minPriceMonthlyExclTax,
-  });
+  // كود مصرَّح له إدارياً بتجاوز الحد الأدنى → لا أرضية في المعاينة كذلك،
+  // وإلا يشوف العميل سعراً أعلى مما سيدفعه فعلاً.
+  const priceFloor = coupon.canBypassMinPrice
+    ? NO_PRICE_FLOOR
+    : await resolvePriceFloorForModel(carModelId, branchRow?.id ?? null, {
+        minPricePerDayExclTax: model.minPricePerDayExclTax,
+        minPriceMonthlyExclTax: model.minPriceMonthlyExclTax,
+      });
   const basePeriodAmount = isMonthly ? branchMonthlyPrice! : branchBasePrice;
   const toPerDay = (amount: number) => (isMonthly ? amount / numberOfDays : amount);
   const basePricePerDay = toPerDay(basePeriodAmount);

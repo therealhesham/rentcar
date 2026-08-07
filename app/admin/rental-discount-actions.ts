@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { requireSuperAdminForAction } from "@/lib/admin-access";
 import { prisma } from "@/lib/prisma";
+import { isDiscountAppliesTo } from "@/lib/discount-scope";
 import { invalidateRentalDiscountCache } from "@/lib/rental-discount";
 
 export type ActionState = { ok: boolean; error?: string };
@@ -54,7 +55,7 @@ export async function createRentalDiscount(
   if (kindRaw !== "PERCENT" && kindRaw !== "FIXED_DAILY") {
     return { ok: false, error: "نوع الخصم غير صالح." };
   }
-  if (appliesToRaw !== "DAILY_ONLY" && appliesToRaw !== "DAILY_AND_MONTHLY") {
+  if (!isDiscountAppliesTo(appliesToRaw)) {
     return { ok: false, error: "نطاق تطبيق الخصم غير صالح." };
   }
   if (!Number.isFinite(value) || value < 1) {
@@ -136,7 +137,7 @@ export async function updateRentalDiscount(
   if (kindRaw !== "PERCENT" && kindRaw !== "FIXED_DAILY") {
     return { ok: false, error: "نوع الخصم غير صالح." };
   }
-  if (appliesToRaw !== "DAILY_ONLY" && appliesToRaw !== "DAILY_AND_MONTHLY") {
+  if (!isDiscountAppliesTo(appliesToRaw)) {
     return { ok: false, error: "نطاق تطبيق الخصم غير صالح." };
   }
   if (!Number.isFinite(value) || value < 1) {

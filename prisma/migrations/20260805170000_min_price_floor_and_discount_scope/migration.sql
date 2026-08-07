@@ -13,7 +13,12 @@ ALTER TABLE `Fleet`
 -- 2) نطاق الخصم. الافتراضي DAILY_ONLY = سلوك النظام قبل هذا التغيير
 --    (الخصومات وأكواد الخصم ما كانتش بتمسّ تبويب «شهري» إطلاقاً).
 ALTER TABLE `RentalDiscount`
-    ADD COLUMN `appliesTo` ENUM('DAILY_ONLY', 'DAILY_AND_MONTHLY') NOT NULL DEFAULT 'DAILY_ONLY';
+    ADD COLUMN `appliesTo` ENUM('DAILY_ONLY', 'MONTHLY_ONLY', 'DAILY_AND_MONTHLY') NOT NULL DEFAULT 'DAILY_ONLY';
 
 ALTER TABLE `CouponCode`
-    ADD COLUMN `appliesTo` ENUM('DAILY_ONLY', 'DAILY_AND_MONTHLY') NOT NULL DEFAULT 'DAILY_ONLY';
+    ADD COLUMN `appliesTo` ENUM('DAILY_ONLY', 'MONTHLY_ONLY', 'DAILY_AND_MONTHLY') NOT NULL DEFAULT 'DAILY_ONLY';
+
+-- 3) تصريح استثنائي لكود خصم بالنزول تحت الحد الأدنى للسعر.
+--    الافتراضي false = الحد الأدنى يقصّ الخصم لكل الأكواد القائمة.
+ALTER TABLE `CouponCode`
+    ADD COLUMN `canBypassMinPrice` BOOLEAN NOT NULL DEFAULT false;

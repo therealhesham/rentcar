@@ -8,6 +8,7 @@ export type CouponCodeAdminRow = {
   value: number;
   scope: CouponScope;
   appliesTo: DiscountAppliesTo;
+  canBypassMinPrice: boolean;
   startsAt: Date | null;
   endsAt: Date | null;
   isActive: boolean;
@@ -27,6 +28,7 @@ export async function getCouponCodesForAdmin(): Promise<CouponCodeAdminRow[]> {
       value: true,
       scope: true,
       appliesTo: true,
+      canBypassMinPrice: true,
       startsAt: true,
       endsAt: true,
       isActive: true,
@@ -48,6 +50,7 @@ export async function getCouponCodeForAdminEdit(id: number): Promise<CouponCodeA
       value: true,
       scope: true,
       appliesTo: true,
+      canBypassMinPrice: true,
       startsAt: true,
       endsAt: true,
       isActive: true,

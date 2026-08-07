@@ -1,13 +1,19 @@
 "use client";
 
 import { useState } from "react";
+import type { DiscountAppliesTo } from "@prisma/client";
+import {
+  DISCOUNT_APPLIES_TO_LABELS_AR,
+  DISCOUNT_APPLIES_TO_VALUES,
+} from "@/lib/discount-scope";
 
 type Defaults = {
   code?: string;
   kind?: "PERCENT" | "FIXED";
   value?: number | "";
   scope?: "RENTAL_ONLY" | "FULL_TOTAL";
-  appliesTo?: "DAILY_ONLY" | "DAILY_AND_MONTHLY";
+  appliesTo?: DiscountAppliesTo;
+  canBypassMinPrice?: boolean;
   startsAt?: string;
   endsAt?: string;
   maxUses?: number | "";
@@ -67,11 +73,31 @@ export function CouponCodeFields({ defaults, lockCode }: Props) {
           defaultValue={defaults?.appliesTo ?? "DAILY_ONLY"}
           className={inputCls}
         >
-          <option value="DAILY_ONLY">التأجير اليومي فقط</option>
-          <option value="DAILY_AND_MONTHLY">اليومي والشهري معاً</option>
+          {DISCOUNT_APPLIES_TO_VALUES.map((v) => (
+            <option key={v} value={v}>
+              {DISCOUNT_APPLIES_TO_LABELS_AR[v]}
+            </option>
+          ))}
         </select>
         <span className="mt-1 block text-[11px] font-normal text-on-surface-variant">
-          «اليومي فقط» = الكود يُرفض لو العميل حاجز من تبويب «شهري».
+          الكود يُرفض لو العميل حاجز من تبويب مختلف عن النوع المحدَّد هنا.
+        </span>
+      </label>
+
+      <label className="flex items-start gap-2 text-sm font-medium md:col-span-2">
+        <input
+          name="canBypassMinPrice"
+          type="checkbox"
+          defaultChecked={defaults?.canBypassMinPrice ?? false}
+          className="mt-0.5 size-4 rounded border-outline-variant"
+        />
+        <span>
+          يُسمح لهذا الكود بالنزول تحت الحد الأدنى للسعر
+          <span className="mt-1 block text-[11px] font-normal text-on-surface-variant">
+            افتراضياً الحد الأدنى المسجّل يقصّ الخصم. فعّل الخيار ده للعروض
+            الاستثنائية المعتمدة إدارياً فقط — الخصم وقتها هيُطبَّق بالكامل
+            مهما نزل السعر.
+          </span>
         </span>
       </label>
 

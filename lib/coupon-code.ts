@@ -1,6 +1,7 @@
 import type { CouponDiscountKind, CouponScope, DiscountAppliesTo } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { RentalPeriodKind } from "@/lib/min-price-floor";
+import { discountAppliesToPeriod } from "@/lib/discount-scope";
 
 export type ResolvedCoupon = {
   id: number;
@@ -9,6 +10,8 @@ export type ResolvedCoupon = {
   value: number;
   scope: CouponScope;
   appliesTo: DiscountAppliesTo;
+  /** true = مصرَّح له بالنزول تحت الحد الأدنى للسعر. */
+  canBypassMinPrice: boolean;
   maxUses: number | null;
 };
 
@@ -19,6 +22,7 @@ const ERROR_EXPIRED = "انتهت صلاحية كود الخصم.";
 const ERROR_MAX_USES_REACHED = "نفد الحد الأقصى لاستخدام هذا الكود.";
 const ERROR_CUSTOMER_LIMIT_REACHED = "لقد استخدمت هذا الكود من قبل.";
 const ERROR_DAILY_ONLY = "هذا الكود يسري على التأجير اليومي فقط.";
+const ERROR_MONTHLY_ONLY = "هذا الكود يسري على التأجير الشهري فقط.";
 
 /**
  * يتحقق من صلاحية كود الخصم: مفعّل، داخل الفترة، مسموح لنوع التأجير المطلوب،
@@ -42,11 +46,11 @@ export async function resolveCouponCode(
   if (row.endsAt && now.getTime() > row.endsAt.getTime()) {
     return { ok: false, error: ERROR_EXPIRED };
   }
-  if (
-    (ctx.periodKind ?? "DAILY") === "MONTHLY" &&
-    row.appliesTo !== "DAILY_AND_MONTHLY"
-  ) {
-    return { ok: false, error: ERROR_DAILY_ONLY };
+  if (!discountAppliesToPeriod(row.appliesTo, ctx.periodKind)) {
+    return {
+      ok: false,
+      error: row.appliesTo === "MONTHLY_ONLY" ? ERROR_MONTHLY_ONLY : ERROR_DAILY_ONLY,
+    };
   }
   if (row.maxUses != null && row.usesCount >= row.maxUses) {
     return { ok: false, error: ERROR_MAX_USES_REACHED };
@@ -69,6 +73,7 @@ export async function resolveCouponCode(
       value: row.value,
       scope: row.scope,
       appliesTo: row.appliesTo,
+      canBypassMinPrice: row.canBypassMinPrice,
       maxUses: row.maxUses,
     },
   };

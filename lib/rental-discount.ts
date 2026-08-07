@@ -1,6 +1,7 @@
 import type { DiscountAppliesTo, RentalDiscountKind } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { RentalPeriodKind } from "@/lib/min-price-floor";
+import { discountAppliesToPeriod } from "@/lib/discount-scope";
 
 export type RentalDiscountRule = {
   id: number;
@@ -90,10 +91,8 @@ function isWithinDiscountPeriod(
 }
 
 function discountMatchesContext(rule: RentalDiscountRule, ctx: RentalDiscountContext): boolean {
-  // تبويب «شهري» لا يأخذ إلا الخصومات المسموح لها صراحةً بالشهري.
-  if ((ctx.periodKind ?? "DAILY") === "MONTHLY" && rule.appliesTo !== "DAILY_AND_MONTHLY") {
-    return false;
-  }
+  // نطاق التأجير: يومي فقط / شهري فقط / الاثنان.
+  if (!discountAppliesToPeriod(rule.appliesTo, ctx.periodKind)) return false;
   if (rule.brandId != null && rule.brandId !== ctx.brandId) return false;
   if (rule.carModelId != null && rule.carModelId !== ctx.carModelId) return false;
   if (rule.branchId != null) {

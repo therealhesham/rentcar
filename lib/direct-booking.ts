@@ -60,6 +60,7 @@ import {
   applyPriceFloorPerDay,
   capFullTotalDiscountToFloor,
   resolvePriceFloorForModel,
+  NO_PRICE_FLOOR,
   type RentalPeriodKind,
 } from "@/lib/min-price-floor";
 import { recordMinPriceFloorApplied } from "@/lib/min-price-floor-audit";
@@ -1290,11 +1291,13 @@ export async function createDirectBooking(
   let couponApplication:
     | { id: number; maxUses: number | null; kind: "PERCENT" | "FIXED"; value: number; snap: CouponCodeSnap }
     | null = null;
+  // كود مصرَّح له إدارياً بتجاوز الحد الأدنى → نلغي الأرضية لهذا الحجز.
+  let bypassMinPrice = false;
 
   const couponCodeRaw = prepared.couponCode?.trim();
   if (couponCodeRaw) {
     // كود الخصم يحل محل الخصم التلقائي (RentalDiscount) عند صلاحيته.
-    // `periodKind` يمنع أكواد DAILY_ONLY من السريان على التأجير الشهري.
+    // `periodKind` يمنع الأكواد خارج نطاق نوع التأجير المطلوب.
     const resolvedCoupon = await resolveCouponCode(couponCodeRaw, {
       customerPhone: commonNormalized.phone,
       periodKind,
@@ -1303,6 +1306,7 @@ export async function createDirectBooking(
       return { ok: false, error: resolvedCoupon.error };
     }
     const c = resolvedCoupon.coupon;
+    bypassMinPrice = c.canBypassMinPrice;
     if (c.scope === "RENTAL_ONLY") {
       const { discountedAmountExclTax } = computeCouponDiscountForPeriod(
         basePeriodAmountExclTax,
@@ -1341,7 +1345,7 @@ export async function createDirectBooking(
   const floorOutcome = applyPriceFloorPerDay(
     toPerDay(discountedPeriodAmountExclTax),
     toPerDay(basePeriodAmountExclTax),
-    priceFloor,
+    bypassMinPrice ? NO_PRICE_FLOOR : priceFloor,
     periodKind,
     days,
   );

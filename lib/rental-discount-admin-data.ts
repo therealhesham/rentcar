@@ -1,3 +1,4 @@
+import type { DiscountAppliesTo } from "@prisma/client";
 import { branchWhereForScope, type AdminScope } from "@/lib/admin-scope";
 import { prisma } from "@/lib/prisma";
 
@@ -5,7 +6,7 @@ export type RentalDiscountAdminRow = {
   id: number;
   labelAr: string;
   kind: "PERCENT" | "FIXED_DAILY";
-  appliesTo: "DAILY_ONLY" | "DAILY_AND_MONTHLY";
+  appliesTo: DiscountAppliesTo;
   value: number;
   startsAt: Date | null;
   endsAt: Date | null;

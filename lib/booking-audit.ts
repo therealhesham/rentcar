@@ -32,6 +32,7 @@ export const BOOKING_EVENTS = {
   REVERTED_TO_INQUIRY: "REVERTED_TO_INQUIRY",
   INTER_BRANCH_RETURN: "INTER_BRANCH_RETURN",
   MIN_PRICE_FLOOR_APPLIED: "MIN_PRICE_FLOOR_APPLIED",
+  MIN_PRICE_FLOOR_BYPASSED: "MIN_PRICE_FLOOR_BYPASSED",
 } as const;
 
 export type BookingEvent = (typeof BOOKING_EVENTS)[keyof typeof BOOKING_EVENTS];
@@ -55,6 +56,7 @@ export const BOOKING_EVENT_LABELS: Record<BookingEvent, string> = {
   REVERTED_TO_INQUIRY: "إعادة لطلب استفسار",
   INTER_BRANCH_RETURN: "تأكيد إرجاع بين الفروع",
   MIN_PRICE_FLOOR_APPLIED: "تفعيل الحد الأدنى للسعر",
+  MIN_PRICE_FLOOR_BYPASSED: "تجاوز الحد الأدنى بتصريح",
 };
 
 export async function logBookingEvent(input: BookingEventInput): Promise<void> {

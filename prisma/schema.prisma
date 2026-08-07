@@ -500,8 +500,11 @@ model CouponCode {
   value               Int
   /// نطاق التطبيق: سعر الإيجار فقط أو الإجمالي كامل (إيجار + إضافات + رسوم).
   scope               CouponScope
-  /// هل يسري الكود على التأجير اليومي فقط أم على اليومي والشهري معاً.
+  /// نطاق الكود بحسب نوع التأجير: يومي فقط / شهري فقط / الاثنان.
   appliesTo           DiscountAppliesTo  @default(DAILY_ONLY)
+  /// true = هذا الكود مصرَّح له بالنزول تحت الحد الأدنى للسعر (عرض استثنائي
+  /// بموافقة الإدارة). false = الحد الأدنى يقصّ الخصم كالمعتاد.
+  canBypassMinPrice   Boolean            @default(false)
   /// بداية الفترة (null = بدون بداية).
   startsAt            DateTime?
   /// نهاية الفترة (null = بدون نهاية).
@@ -553,9 +556,11 @@ enum CouponScope {
 
 /// نطاق الخصم بحسب نوع التأجير — يُستخدم في `RentalDiscount` و`CouponCode` معاً.
 /// DAILY_ONLY = التأجير اليومي فقط (السلوك الافتراضي التاريخي).
-/// DAILY_AND_MONTHLY = يسري كذلك على تبويب «شهري».
+/// MONTHLY_ONLY = التأجير الشهري فقط (عروض شهرية لا تمسّ اليومي).
+/// DAILY_AND_MONTHLY = الاثنان معاً.
 enum DiscountAppliesTo {
   DAILY_ONLY
+  MONTHLY_ONLY
   DAILY_AND_MONTHLY
 }
 
