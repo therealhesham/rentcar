@@ -32,13 +32,13 @@ const EXTRA_PAGE_PERMISSIONS: AdminPagePermission[] = [
 ];
 
 /** كل صفحات الأدمن القابلة لمنح صلاحية مستقلة لها — الـ href نفسه هو معرّف الصلاحية.
- * `/admin` نفسها مُستثناة عمداً: لوحة التحكم الرئيسية متاحة دائماً لأي موظف مسجّل دخول
- * (صفحة الهبوط بعد الدخول وهدف إعادة التوجيه عند رفض الوصول) — تخصيصها كصلاحية قابلة
- * للمنع كان سيُنتج حلقة إعادة توجيه لا نهائية. */
+ * صفحات `alwaysAllowed` مُستثناة عمداً لأنها متاحة لأي موظف مسجّل دخول: `/admin` (صفحة
+ * الهبوط بعد الدخول وهدف إعادة التوجيه عند رفض الوصول — تخصيصها كصلاحية قابلة للمنع كان
+ * سيُنتج حلقة إعادة توجيه لا نهائية)، و`/admin/system-guides` (شروحات النظام للجميع). */
 export const ADMIN_PAGE_PERMISSIONS: AdminPagePermission[] = [
   ...ADMIN_NAV_GROUPS.flatMap((group) =>
     group.items
-      .filter((item) => !item.external && item.href !== "/admin")
+      .filter((item) => !item.external && !item.alwaysAllowed)
       .map((item) => ({ href: item.href, label: item.label, groupLabel: group.label })),
   ),
   ...EXTRA_PAGE_PERMISSIONS,

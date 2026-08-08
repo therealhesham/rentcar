@@ -19,7 +19,7 @@ export function getAdminNavGroupsForSession(session: AdminSession): AdminNavGrou
   return ADMIN_NAV_GROUPS.map((group) => {
     const filteredItems = group.items.filter((item) => {
       if (item.external) return true; // Always show external links
-      if (item.href === "/admin") return true; // لوحة التحكم متاحة دائماً (نفس منطق middleware)
+      if (item.alwaysAllowed) return true; // لوحة التحكم والشروحات متاحة دائماً (نفس منطق middleware)
       return allowedPermissions.has(item.href);
     });
 

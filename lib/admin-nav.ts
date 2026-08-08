@@ -34,10 +34,16 @@ export type AdminNavItem = {
     | "calendar-x"
     | "credit-card"
     | "file-text"
+    | "graduation-cap"
     | "message-square";
   external?: boolean;
   /** إخفاء العنصر من القائمة الجانبية (لكن الصفحة لا تزال صالحة) */
   hidden?: boolean;
+  /**
+   * صفحة متاحة لأي موظف مسجّل دخول بلا صلاحية مستقلة — لا تظهر في شاشة منح الصلاحيات
+   * ولا يفحصها middleware. لصفحات الهبوط والمساعدة فقط.
+   */
+  alwaysAllowed?: boolean;
 };
 
 export type AdminNavGroup = {
@@ -53,7 +59,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     id: "main",
     label: "الرئيسية",
     items: [
-      { href: "/admin", label: "لوحة التحكم", icon: "layout-dashboard" },
+      { href: "/admin", label: "لوحة التحكم", icon: "layout-dashboard", alwaysAllowed: true },
       { href: "/admin/statistics", label: "الإحصائيات", icon: "bar-chart-2" },
       { href: "/admin/logs", label: "سجل النشاط", icon: "activity" },
       { href: "/admin/financials", label: "الإدارة المالية", icon: "badge-dollar" },
@@ -128,6 +134,18 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     ],
   },
   {
+    id: "help",
+    label: "المساعدة",
+    items: [
+      {
+        href: "/admin/system-guides",
+        label: "شروحات النظام",
+        icon: "graduation-cap",
+        alwaysAllowed: true,
+      },
+    ],
+  },
+  {
     id: "external",
     label: "روابط سريعة",
     items: [
@@ -140,4 +158,17 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
 export function isAdminNavActive(pathname: string, href: string): boolean {
   if (href === "/admin") return pathname === "/admin";
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+/**
+ * هل المسار يخص صفحة `alwaysAllowed`؟ يستعمله middleware لتخطّي فحص الصلاحية، وشاشة
+ * الصلاحيات لاستبعاد الصفحة من قائمة المنح — المصدر الواحد هو ADMIN_NAV_GROUPS.
+ */
+export function isAlwaysAllowedAdminPage(pathname: string): boolean {
+  return ADMIN_NAV_GROUPS.some((group) =>
+    group.items.some(
+      (item) =>
+        item.alwaysAllowed && !item.external && isAdminNavActive(pathname, item.href),
+    ),
+  );
 }

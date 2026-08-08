@@ -1,4 +1,5 @@
 import {
+  DeleteObjectCommand,
   ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
@@ -276,4 +277,53 @@ export async function uploadImageToSpaces(
 
   const buffer = Buffer.from(await file.arrayBuffer());
   return uploadBufferToSpaces(buffer, { folderSlug, mime });
+}
+
+export type SpacesUploadResult = { key: string; url: string };
+
+/**
+ * رفع ملف عام (فيديو/PDF/صورة) بامتداد ونوع MIME محدَّدين مسبقاً من المُنادي — بعكس
+ * `uploadBufferToSpaces` المقيَّد بالصور وحدّ الـ 5 ميجابايت. التحقق من النوع والحجم
+ * مسؤولية المُنادي (كل ميزة لها حدودها الخاصة).
+ */
+export async function uploadFileBufferToSpaces(
+  buffer: Buffer,
+  opts: { folderSlug: string; mime: string; ext: string },
+): Promise<SpacesUploadResult> {
+  if (!isSpacesConfigured()) {
+    throw new Error(
+      "لم يُضبط تخزين Spaces: SPACES_REGION، SPACES_ACCESS_KEY_ID، SPACES_SECRET_ACCESS_KEY، SPACES_BUCKET",
+    );
+  }
+  if (!buffer.length) throw new Error("الملف فارغ.");
+
+  const key = `${folderPrefix(opts.folderSlug)}${Date.now()}-${randomBytes(8).toString("hex")}.${opts.ext}`;
+
+  await getS3Client().send(
+    new PutObjectCommand({
+      Bucket: process.env.SPACES_BUCKET!,
+      Key: key,
+      Body: buffer,
+      ContentType: opts.mime,
+      ACL: "public-read",
+    }),
+  );
+
+  return { key, url: publicUrlForSpacesObjectKey(key) };
+}
+
+/**
+ * حذف كائن من Spaces بمفتاحه. لا يرمي عند الفشل: الحذف من التخزين ثانوي بالنسبة لحذف
+ * السجل من قاعدة البيانات، وملف يتيم أهون من عملية حذف تفشل نصفها.
+ */
+export async function deleteSpacesObjectByKey(key: string): Promise<boolean> {
+  if (!isSpacesConfigured() || !key.startsWith("rentcar/")) return false;
+  try {
+    await getS3Client().send(
+      new DeleteObjectCommand({ Bucket: process.env.SPACES_BUCKET!, Key: key }),
+    );
+    return true;
+  } catch {
+    return false;
+  }
 }

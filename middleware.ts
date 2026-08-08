@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import createIntlMiddleware from "next-intl/middleware";
 import { routing } from "./i18n/routing";
+import { isAlwaysAllowedAdminPage } from "@/lib/admin-nav";
 import { resolveAdminPagePermissionId } from "@/lib/admin-routes";
 import { parseAdminSessionTokenEdge } from "@/lib/admin-session-edge";
 
@@ -24,9 +25,10 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(login);
     }
 
-    // لوحة التحكم الرئيسية دائماً متاحة لأي موظف مسجّل دخول (صفحة هبوط بعد تسجيل الدخول،
-    // وهدف إعادة التوجيه أدناه) — تُحدَّد محتوياتها حسب صلاحياته في مكان آخر.
-    if (!session.isSuperAdmin && pathname !== "/admin") {
+    // صفحات alwaysAllowed متاحة لأي موظف مسجّل دخول: لوحة التحكم الرئيسية (صفحة هبوط بعد
+    // تسجيل الدخول، وهدف إعادة التوجيه أدناه — تُحدَّد محتوياتها حسب صلاحياته في مكان آخر)
+    // وشروحات النظام (مرجع للجميع؛ الرفع والتعديل فيها محصوران بمدير النظام داخل الصفحة).
+    if (!session.isSuperAdmin && !isAlwaysAllowedAdminPage(pathname)) {
       const permId = resolveAdminPagePermissionId(pathname);
       if (permId == null || !session.permissions.includes(permId)) {
         return NextResponse.redirect(new URL("/admin", request.url));

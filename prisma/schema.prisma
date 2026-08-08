@@ -1020,3 +1020,47 @@ model Notification {
 
   @@index([employeeId, isRead, createdAt])
 }
+
+/// قسم في صفحة شروحات النظام — حاوية تُجمِّع شروحات مترابطة (مثلاً «الحجوزات»، «الأسطول»).
+model SystemGuideSection {
+  id          Int           @id @default(autoincrement())
+  title       String        @db.VarChar(255)
+  description String?       @db.Text
+  sortOrder   Int           @default(0)
+  isActive    Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  guides      SystemGuide[]
+
+  @@index([isActive, sortOrder])
+}
+
+/// شرح واحد داخل قسم — ملف مرفوع على Spaces (فيديو أو صورة أو PDF) بعنوان ووصف اختياري.
+/// يقرأه أي موظف مسجّل دخول؛ الرفع والتعديل لمدير النظام فقط.
+model SystemGuide {
+  id               Int                @id @default(autoincrement())
+  sectionId        Int
+  section          SystemGuideSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  title            String             @db.VarChar(255)
+  description      String?            @db.Text
+  kind             SystemGuideKind
+  /// الرابط العام للملف على Spaces (يُعرض مباشرة في المتصفح).
+  fileUrl          String             @db.VarChar(1024)
+  /// مفتاح الكائن داخل الـ bucket — لازم لحذف الملف من التخزين عند حذف الشرح.
+  fileKey          String             @db.VarChar(512)
+  originalFileName String             @db.VarChar(255)
+  mimeType         String             @db.VarChar(128)
+  sizeBytes        Int
+  sortOrder        Int                @default(0)
+  isActive         Boolean            @default(true)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  @@index([sectionId, isActive, sortOrder])
+}
+
+enum SystemGuideKind {
+  VIDEO
+  IMAGE
+  PDF
+}

@@ -16,6 +16,7 @@ import {
   ClipboardList,
   ExternalLink,
   FileText,
+  GraduationCap,
   Home,
   Image as ImageIcon,
   LayoutDashboard,
@@ -77,6 +78,7 @@ const ICONS: Record<AdminNavItem["icon"], LucideIcon> = {
   "calendar-x": CalendarX2,
   "credit-card": CreditCard,
   "file-text": FileText,
+  "graduation-cap": GraduationCap,
   "message-square": MessageSquare,
 };
 
