@@ -101,14 +101,16 @@ export async function POST(request: Request) {
   }
   const coupon = resolved.coupon;
 
-  // كود مصرَّح له إدارياً بتجاوز الحد الأدنى → لا أرضية في المعاينة كذلك،
-  // وإلا يشوف العميل سعراً أعلى مما سيدفعه فعلاً.
-  const priceFloor = coupon.canBypassMinPrice
-    ? NO_PRICE_FLOOR
-    : await resolvePriceFloorForModel(carModelId, branchRow?.id ?? null, {
-        minPricePerDayExclTax: model.minPricePerDayExclTax,
-        minPriceMonthlyExclTax: model.minPriceMonthlyExclTax,
-      });
+  // الأرضية الحقيقية للمركبة — يحتاجها خصم `TO_MIN_PRICE` ليعرف لأي رقم ينزّل،
+  // ولا علاقة لها بتصريح تجاوز الكود.
+  const priceFloor = await resolvePriceFloorForModel(carModelId, branchRow?.id ?? null, {
+    minPricePerDayExclTax: model.minPricePerDayExclTax,
+    minPriceMonthlyExclTax: model.minPriceMonthlyExclTax,
+  });
+  // الأرضية المفروضة عند القصّ فقط — تُلغى لكود مصرَّح له بالتجاوز.
+  // خلطها بالسابقة كانت تُفقد الخصم التلقائي أرضيته فيرتفع السعر بدل أن ينخفض.
+  const enforcedFloor = coupon.canBypassMinPrice ? NO_PRICE_FLOOR : priceFloor;
+
   const basePeriodAmount = isMonthly ? branchMonthlyPrice! : branchBasePrice;
   const toPerDay = (amount: number) => (isMonthly ? amount / numberOfDays : amount);
 
@@ -137,7 +139,7 @@ export async function POST(request: Request) {
     const floorOutcome = applyPriceFloorPerDay(
       toPerDay(discountedAmountExclTax),
       basePricePerDay,
-      priceFloor,
+      enforcedFloor,
       periodKind,
       numberOfDays,
     );
@@ -186,10 +188,10 @@ export async function POST(request: Request) {
   // الأرضية تحمي بند الإيجار — نفس السقف المطبَّق وقت الحجز.
   const floorPerDay =
     periodKind === "MONTHLY"
-      ? priceFloor.minPriceMonthlyExclTax != null
-        ? priceFloor.minPriceMonthlyExclTax / numberOfDays
+      ? enforcedFloor.minPriceMonthlyExclTax != null
+        ? enforcedFloor.minPriceMonthlyExclTax / numberOfDays
         : null
-      : priceFloor.minPricePerDayExclTax;
+      : enforcedFloor.minPricePerDayExclTax;
   const { discountExclTax } = capFullTotalDiscountToFloor(
     requestedDiscount,
     preDiscountTotals.subtotalExclTax,
