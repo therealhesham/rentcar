@@ -206,7 +206,11 @@ function GuideCard({
         </div>
       </div>
 
-      {open ? <div className="px-4 pb-4">{<GuidePreview guide={guide} />}</div> : null}
+      {open ? (
+        <div className="px-4 pb-4">
+          <GuidePreview guide={guide} />
+        </div>
+      ) : null}
 
       {canManage && editing ? (
         <EditGuideForm
