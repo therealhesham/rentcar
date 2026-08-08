@@ -1297,9 +1297,28 @@ export async function createDirectBooking(
   // كود مصرَّح له إدارياً بتجاوز الحد الأدنى → نلغي الأرضية لهذا الحجز.
   let bypassMinPrice = false;
 
+  // الخصم التلقائي يُحسب **دائماً** — حتى مع وجود كود خصم. الكود يُطبَّق فوق
+  // السعر الظاهر للعميل (بعد الخصم التلقائي)، مش على السعر الأساسي؛ وإلا كود
+  // ضعيف يستبدل عرضاً أقوى فيرفع السعر بدل ما ينزّله.
+  const rentalDiscountResolved = await resolveRentalDiscountForPeriod(
+    basePeriodAmountExclTax,
+    {
+      brandId: model.brandId,
+      carModelId: model.id,
+      branchId: returnBranchRow?.id ?? null,
+      referenceDate: commonNormalized.pickupDate,
+      periodKind,
+      days,
+      // يحتاجها نوع `TO_MIN_PRICE` ليعرف لأي رقم ينزّل.
+      priceFloor,
+    },
+  );
+  const afterRentalDiscountExclTax =
+    rentalDiscountResolved?.discountedAmountExclTax ?? basePeriodAmountExclTax;
+  discountedPeriodAmountExclTax = afterRentalDiscountExclTax;
+
   const couponCodeRaw = prepared.couponCode?.trim();
   if (couponCodeRaw) {
-    // كود الخصم يحل محل الخصم التلقائي (RentalDiscount) عند صلاحيته.
     // `periodKind` يمنع الأكواد خارج نطاق نوع التأجير المطلوب.
     const resolvedCoupon = await resolveCouponCode(couponCodeRaw, {
       customerPhone: commonNormalized.phone,
@@ -1312,7 +1331,7 @@ export async function createDirectBooking(
     bypassMinPrice = c.canBypassMinPrice;
     if (c.scope === "RENTAL_ONLY") {
       const { discountedAmountExclTax } = computeCouponDiscountForPeriod(
-        basePeriodAmountExclTax,
+        afterRentalDiscountExclTax,
         c.kind,
         c.value,
         periodKind,
@@ -1327,22 +1346,6 @@ export async function createDirectBooking(
       // discountExclTax يبدأ صفر ويُملأ لاحقاً لنطاق FULL_TOTAL بعد معرفة الإجمالي الفرعي.
       snap: { code: c.code, kind: c.kind, scope: c.scope, discountExclTax: 0 },
     };
-  } else {
-    const rentalDiscountResolved = await resolveRentalDiscountForPeriod(
-      basePeriodAmountExclTax,
-      {
-        brandId: model.brandId,
-        carModelId: model.id,
-        branchId: returnBranchRow?.id ?? null,
-        referenceDate: commonNormalized.pickupDate,
-        periodKind,
-        days,
-        // يحتاجها نوع `TO_MIN_PRICE` ليعرف لأي رقم ينزّل.
-        priceFloor,
-      },
-    );
-    discountedPeriodAmountExclTax =
-      rentalDiscountResolved?.discountedAmountExclTax ?? basePeriodAmountExclTax;
   }
 
   // الأرضية تُقارَن قبل الضريبة دائماً — `computeCheckoutTotals` تحسب الضريبة
@@ -1368,17 +1371,21 @@ export async function createDirectBooking(
       )
     : null;
 
-  // اللقطة تعكس الخصم **الفعلي** بعد الأرضية، مش الخصم النظري قبلها — وإلا
-  // تعرض الفاتورة خصماً ما حصلش.
-  if (!couponApplication) {
-    const actualDiscountPerDay = Math.round(
-      (floorOutcome.basePricePerDayExclTax - effectivePricePerDay) * 100,
-    ) / 100;
+  // لقطة الخصم التلقائي = الجزء الذي حقّقه وحده (السعر الأساسي ← ما بعده)، بمعزل
+  // عن الكوبون. مقصوصة بالسعر النهائي حتى لا يتجاوز مجموع الخصمين المعروض ما
+  // دفعه العميل فعلاً بعد الأرضية.
+  {
+    const perDayBase = floorOutcome.basePricePerDayExclTax;
+    const perDayAfterRental = Math.min(
+      Math.max(toPerDay(afterRentalDiscountExclTax), effectivePricePerDay),
+      perDayBase,
+    );
+    const actualDiscountPerDay = Math.round((perDayBase - perDayAfterRental) * 100) / 100;
     rentalDiscountSnap =
       actualDiscountPerDay > 0
         ? {
-            originalPricePerDayExclTax: floorOutcome.basePricePerDayExclTax,
-            discountedPricePerDayExclTax: effectivePricePerDay,
+            originalPricePerDayExclTax: perDayBase,
+            discountedPricePerDayExclTax: Math.round(perDayAfterRental * 100) / 100,
             discountPerDayExclTax: actualDiscountPerDay,
           }
         : null;

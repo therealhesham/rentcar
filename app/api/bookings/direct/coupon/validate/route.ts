@@ -5,6 +5,7 @@ import {
   resolveBranchBasePriceForModel,
   resolveBranchMonthlyPriceForModel,
 } from "@/lib/fleet-branch-stock";
+import { resolveRentalDiscountForPeriod } from "@/lib/rental-discount";
 import {
   buildCouponDiscountLabelAr,
   computeCouponDiscountOnSubtotal,
@@ -67,6 +68,7 @@ export async function POST(request: Request) {
   const model = await prisma.carModel.findUnique({
     where: { id: carModelId },
     select: {
+      brandId: true,
       price: true,
       priceMonthlyExclTax: true,
       vatRatePercent: true,
@@ -109,11 +111,25 @@ export async function POST(request: Request) {
       });
   const basePeriodAmount = isMonthly ? branchMonthlyPrice! : branchBasePrice;
   const toPerDay = (amount: number) => (isMonthly ? amount / numberOfDays : amount);
-  const basePricePerDay = toPerDay(basePeriodAmount);
+
+  // الخصم التلقائي أولاً — الكود يُطبَّق فوق السعر الظاهر للعميل، مش على السعر
+  // الأساسي. نفس ترتيب `createDirectBooking` بالضبط.
+  const rentalDiscountResolved = await resolveRentalDiscountForPeriod(basePeriodAmount, {
+    brandId: model.brandId,
+    carModelId,
+    branchId: branchRow?.id ?? null,
+    periodKind,
+    days: numberOfDays,
+    priceFloor,
+  });
+  const afterRentalDiscount =
+    rentalDiscountResolved?.discountedAmountExclTax ?? basePeriodAmount;
+  // «السعر الأساسي» في المعاينة = السعر الظاهر للعميل قبل الكود.
+  const basePricePerDay = toPerDay(afterRentalDiscount);
 
   if (coupon.scope === "RENTAL_ONLY") {
     const { discountedAmountExclTax } = computeCouponDiscountForPeriod(
-      basePeriodAmount,
+      afterRentalDiscount,
       coupon.kind,
       coupon.value,
       periodKind,
