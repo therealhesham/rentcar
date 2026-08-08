@@ -20,6 +20,7 @@ import {
   Clock,
   Pencil,
   Key,
+  CheckCircle2,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { AdminKindBadge, AdminStatusBadge } from "@/components/admin/AdminStatusBadge";
@@ -28,6 +29,7 @@ import { SarAmountWithSymbol } from "@/components/ui/SarAmountWithSymbol";
 import { computeCheckoutTotals, formatSarAmount } from "@/lib/booking-checkout-pricing";
 import { BookingAttachmentsPanel } from "@/components/admin/BookingAttachmentsPanel";
 import { BookingCancelPanel } from "@/components/admin/BookingCancelPanel";
+import { BookingConfirmPanel } from "@/components/admin/BookingConfirmPanel";
 import { BookingLifecyclePanel } from "@/components/admin/BookingLifecyclePanel";
 import { BookingDetailSection } from "@/components/admin/BookingDetailSection";
 import type { AdminBookingCancellationContext } from "@/lib/admin-booking-cancellation";
@@ -456,6 +458,21 @@ export function BookingDetailView({
 
         {/* Sidebar column */}
         <div className="space-y-6">
+          {statusKeyUpper === "NEW" || statusKeyUpper === "UNDER_REVIEW" ? (
+            <BookingDetailSection
+              icon={CheckCircle2}
+              title="تأكيد الطلب"
+              description="تأكيد الحجز أو رفضه دون مغادرة صفحة الطلب"
+            >
+              <BookingConfirmPanel
+                bookingRequestId={booking.id}
+                kind={booking.kind}
+                status={booking.status}
+                carModelId={booking.carModelId}
+              />
+            </BookingDetailSection>
+          ) : null}
+
           {booking.kind === "DIRECT" ? (
             <BookingDetailSection
               icon={Car}
