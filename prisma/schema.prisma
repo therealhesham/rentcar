@@ -485,9 +485,13 @@ model RentalDiscount {
   @@index([startsAt, endsAt])
 }
 
+/// PERCENT = نسبة من السعر؛ FIXED_DAILY = مبلغ يومي ثابت؛
+/// TO_MIN_PRICE = ينزّل السعر للحد الأدنى المسجّل للمركبة بالضبط، فالخصم =
+/// السعر الأساسي − الحد الأدنى (يختلف من مركبة لأخرى). `value` غير مستخدَم معه.
 enum RentalDiscountKind {
   PERCENT
   FIXED_DAILY
+  TO_MIN_PRICE
 }
 
 /// كود خصم يُدخله العميل في صفحة الدفع — يُدار من الإدارة، ويحل محل الخصم التلقائي (RentalDiscount) عند استخدامه.

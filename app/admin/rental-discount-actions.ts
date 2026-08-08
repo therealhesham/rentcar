@@ -52,13 +52,14 @@ export async function createRentalDiscount(
   if (!labelAr) {
     return { ok: false, error: "أدخل اسماً داخلياً للخصم." };
   }
-  if (kindRaw !== "PERCENT" && kindRaw !== "FIXED_DAILY") {
+  if (kindRaw !== "PERCENT" && kindRaw !== "FIXED_DAILY" && kindRaw !== "TO_MIN_PRICE") {
     return { ok: false, error: "نوع الخصم غير صالح." };
   }
   if (!isDiscountAppliesTo(appliesToRaw)) {
     return { ok: false, error: "نطاق تطبيق الخصم غير صالح." };
   }
-  if (!Number.isFinite(value) || value < 1) {
+  // `TO_MIN_PRICE` لا يستخدم `value` — الخصم = السعر − الحد الأدنى لكل مركبة.
+  if (kindRaw !== "TO_MIN_PRICE" && (!Number.isFinite(value) || value < 1)) {
     return { ok: false, error: "قيمة الخصم غير صالحة." };
   }
   if (kindRaw === "PERCENT" && value > 100) {
@@ -89,7 +90,7 @@ export async function createRentalDiscount(
         labelAr: labelAr.slice(0, 255),
         kind: kindRaw,
         appliesTo: appliesToRaw,
-        value: Math.round(value),
+        value: kindRaw === "TO_MIN_PRICE" ? 0 : Math.round(value),
         startsAt,
         endsAt,
         brandId,
@@ -134,13 +135,14 @@ export async function updateRentalDiscount(
   if (!labelAr) {
     return { ok: false, error: "أدخل اسماً داخلياً للخصم." };
   }
-  if (kindRaw !== "PERCENT" && kindRaw !== "FIXED_DAILY") {
+  if (kindRaw !== "PERCENT" && kindRaw !== "FIXED_DAILY" && kindRaw !== "TO_MIN_PRICE") {
     return { ok: false, error: "نوع الخصم غير صالح." };
   }
   if (!isDiscountAppliesTo(appliesToRaw)) {
     return { ok: false, error: "نطاق تطبيق الخصم غير صالح." };
   }
-  if (!Number.isFinite(value) || value < 1) {
+  // `TO_MIN_PRICE` لا يستخدم `value` — الخصم = السعر − الحد الأدنى لكل مركبة.
+  if (kindRaw !== "TO_MIN_PRICE" && (!Number.isFinite(value) || value < 1)) {
     return { ok: false, error: "قيمة الخصم غير صالحة." };
   }
   if (kindRaw === "PERCENT" && value > 100) {
@@ -166,7 +168,7 @@ export async function updateRentalDiscount(
         labelAr: labelAr.slice(0, 255),
         kind: kindRaw,
         appliesTo: appliesToRaw,
-        value: Math.round(value),
+        value: kindRaw === "TO_MIN_PRICE" ? 0 : Math.round(value),
         startsAt,
         endsAt,
         brandId,

@@ -5,7 +5,10 @@ import {
   resolveBranchBasePriceForModel,
   resolveBranchMonthlyPriceForModel,
 } from "@/lib/fleet-branch-stock";
-import { resolveRentalDiscountForModel } from "@/lib/rental-discount";
+import {
+  resolveRentalDiscountForModel,
+  customerDiscountLabelForActualSavings,
+} from "@/lib/rental-discount";
 import { applyPriceFloorPerDay, resolvePriceFloorForModel } from "@/lib/min-price-floor";
 
 const PLACEHOLDER_IMG =
@@ -76,21 +79,23 @@ export async function getCarModelForCheckout(
     ? await resolveBranchMonthlyPriceForModel(m.id, branchId, m.priceMonthlyExclTax)
     : (await minBranchMonthlyPriceForModel(m.id, m.priceMonthlyExclTax)).minPrice;
 
+  // أرضية السعر تُحسب قبل الخصم — نوع الخصم `TO_MIN_PRICE` يحتاجها ليعرف
+  // لأي رقم ينزّل، والأرضية نفسها تُطبَّق بعده كسقف أمان.
+  const priceFloor = await resolvePriceFloorForModel(m.id, branchId, {
+    minPricePerDayExclTax: m.minPricePerDayExclTax,
+    minPriceMonthlyExclTax: m.minPriceMonthlyExclTax,
+  });
+
   const resolved = await resolveRentalDiscountForModel(basePrice, {
     brandId: m.brandId,
     carModelId: m.id,
     branchId,
     referenceDate: opts.pickupDate ?? null,
+    priceFloor,
   });
 
   const brandName = m.brand.name.trim();
   const modelName = m.name.trim();
-  // أرضية السعر الأدنى تُطبَّق هنا كذلك — السعر المعروض في صفحة الإتمام لازم
-  // يطابق اللي هيتحسب وقت الحجز في `createDirectBooking`.
-  const priceFloor = await resolvePriceFloorForModel(m.id, branchId, {
-    minPricePerDayExclTax: m.minPricePerDayExclTax,
-    minPriceMonthlyExclTax: m.minPriceMonthlyExclTax,
-  });
   const floorOutcome = applyPriceFloorPerDay(
     resolved?.discountedPricePerDayExclTax ?? basePrice,
     basePrice,
@@ -99,8 +104,6 @@ export async function getCarModelForCheckout(
     1,
   );
   const effectivePrice = floorOutcome.finalPricePerDayExclTax;
-  // لو الأرضية بلعت الخصم بالكامل، ما نعرضش شارة خصم كاذبة.
-  const showDiscount = effectivePrice < basePrice;
 
   return {
     modelId: m.id,
@@ -112,7 +115,8 @@ export async function getCarModelForCheckout(
     categoryTitle: m.category.title.trim(),
     pricePerDayExclTax: effectivePrice,
     originalPricePerDayExclTax: basePrice,
-    discountLabelAr: showDiscount ? (resolved?.displayLabelAr ?? null) : null,
+    // الشارة من التوفير الفعلي بعد الأرضية — مش الخصم النظري قبلها.
+    discountLabelAr: customerDiscountLabelForActualSavings(resolved, basePrice - effectivePrice),
     pricePerMonthExclTax: monthlyPrice,
     vatRatePercent: m.vatRatePercent,
     image: m.image?.trim() || PLACEHOLDER_IMG,

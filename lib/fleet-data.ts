@@ -7,6 +7,7 @@ import { getRentalPriceDisplayMode } from "@/lib/site-settings";
 import {
   getActiveRentalDiscounts,
   resolveBestRentalDiscount,
+  customerDiscountLabelForActualSavings,
   type RentalDiscountRule,
 } from "@/lib/rental-discount";
 import { applyPriceFloorPerDay, type ResolvedPriceFloor } from "@/lib/min-price-floor";
@@ -78,6 +79,7 @@ function rowDiscountedPrice(
   referenceDate?: Date | null,
 ): { basePrice: number; effectivePrice: number; displayLabelAr: string | null } {
   const basePrice = rowBasePrice(row);
+  const priceFloor = rowPriceFloor(row);
   const resolved = resolveBestRentalDiscount(
     discountRules,
     {
@@ -85,21 +87,22 @@ function rowDiscountedPrice(
       carModelId: row.model.id,
       branchId: row.branchId,
       referenceDate,
+      priceFloor,
     },
     basePrice,
   );
   const effectivePrice = applyPriceFloorPerDay(
     resolved?.discountedPricePerDayExclTax ?? basePrice,
     basePrice,
-    rowPriceFloor(row),
+    priceFloor,
     "DAILY",
     1,
   ).finalPricePerDayExclTax;
   return {
     basePrice,
     effectivePrice,
-    // خصم مبلوع بالكامل بواسطة الأرضية = لا شارة خصم.
-    displayLabelAr: effectivePrice < basePrice ? (resolved?.displayLabelAr ?? null) : null,
+    // الشارة تعكس التوفير الفعلي بعد الأرضية — مش الخصم النظري قبلها.
+    displayLabelAr: customerDiscountLabelForActualSavings(resolved, basePrice - effectivePrice),
   };
 }
 

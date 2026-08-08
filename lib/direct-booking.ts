@@ -1337,6 +1337,8 @@ export async function createDirectBooking(
         referenceDate: commonNormalized.pickupDate,
         periodKind,
         days,
+        // يحتاجها نوع `TO_MIN_PRICE` ليعرف لأي رقم ينزّل.
+        priceFloor,
       },
     );
     discountedPeriodAmountExclTax =

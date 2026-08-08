@@ -1,6 +1,6 @@
 import type { DiscountAppliesTo, RentalDiscountKind } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import type { RentalPeriodKind } from "@/lib/min-price-floor";
+import type { RentalPeriodKind, ResolvedPriceFloor } from "@/lib/min-price-floor";
 import { discountAppliesToPeriod } from "@/lib/discount-scope";
 
 export type RentalDiscountRule = {
@@ -24,6 +24,11 @@ export type RentalDiscountContext = {
   referenceDate?: Date | null;
   /** نوع التأجير — الخصم الشهري يتطلب `appliesTo = DAILY_AND_MONTHLY`. الافتراضي يومي. */
   periodKind?: RentalPeriodKind | null;
+  /**
+   * أرضية السعر للمركبة في هذا الفرع — يحتاجها نوع `TO_MIN_PRICE` ليعرف
+   * لأي رقم ينزّل. غيابها = قواعد `TO_MIN_PRICE` لا تسري (تسقط لقاعدة أخرى).
+   */
+  priceFloor?: ResolvedPriceFloor | null;
 };
 
 /** نتيجة الخصم للعميل — بدون تفاصيل الشرط (فترة/ماركة/فرع). */
@@ -107,9 +112,22 @@ export function computeDiscountedDailyPrice(
   basePricePerDayExclTax: number,
   kind: RentalDiscountKind,
   value: number,
+  /** الحد الأدنى اليومي — إلزامي لنوع `TO_MIN_PRICE` فقط. */
+  minPricePerDayExclTax?: number | null,
 ): { discounted: number; savingsPerDay: number } {
   const base = Math.max(0, Math.round(basePricePerDayExclTax));
   if (base <= 0) return { discounted: 0, savingsPerDay: 0 };
+
+  if (kind === "TO_MIN_PRICE") {
+    // ينزّل للأرضية بالضبط. بلا أرضية (أو أرضية ≥ السعر) لا خصم — والقاعدة
+    // تسقط تلقائياً فتتاح الفرصة لقاعدة أخرى مطابقة.
+    if (minPricePerDayExclTax == null || minPricePerDayExclTax <= 0) {
+      return { discounted: base, savingsPerDay: 0 };
+    }
+    const floor = Math.round(minPricePerDayExclTax * 100) / 100;
+    if (floor >= base) return { discounted: base, savingsPerDay: 0 };
+    return { discounted: floor, savingsPerDay: Math.round((base - floor) * 100) / 100 };
+  }
 
   let savings = 0;
   if (kind === "PERCENT") {
@@ -128,11 +146,29 @@ export function buildCustomerDiscountLabelAr(
   savingsPerDay: number,
 ): string {
   if (savingsPerDay <= 0) return "";
+  // `TO_MIN_PRICE` مبلغ متغيّر لكل مركبة — يُعرض دائماً كمبلغ، لا كنسبة.
   if (kind === "PERCENT") {
     const pct = Math.min(100, Math.max(1, Math.round(value)));
     return `خصم ${pct.toLocaleString("ar-SA")}٪`;
   }
   return `وفّرت ${savingsPerDay.toLocaleString("en-US")} ر.س`;
+}
+
+/**
+ * تسمية الخصم بناءً على التوفير **الفعلي** بعد تطبيق الأرضية.
+ *
+ * لازمة لأن الأرضية قد تقصّ خصم نسبة مئوية، فتصبح شارة «خصم ٢٠٪» كذباً على
+ * العميل بينما الخصم الحقيقي أقل. عند القصّ نتحوّل لعرض المبلغ الفعلي.
+ */
+export function customerDiscountLabelForActualSavings(
+  resolved: ResolvedRentalDiscount | null,
+  actualSavingsPerDay: number,
+): string | null {
+  if (!resolved || actualSavingsPerDay <= 0) return null;
+  const planned = Math.round(resolved.discountPerDayExclTax * 100) / 100;
+  const actual = Math.round(actualSavingsPerDay * 100) / 100;
+  if (actual >= planned) return resolved.displayLabelAr;
+  return `وفّرت ${actual.toLocaleString("en-US")} ر.س`;
 }
 
 export function resolveBestRentalDiscount(
@@ -147,7 +183,12 @@ export function resolveBestRentalDiscount(
 
   for (const rule of rules) {
     if (!discountMatchesContext(rule, ctx)) continue;
-    const { discounted, savingsPerDay } = computeDiscountedDailyPrice(base, rule.kind, rule.value);
+    const { discounted, savingsPerDay } = computeDiscountedDailyPrice(
+      base,
+      rule.kind,
+      rule.value,
+      ctx.priceFloor?.minPricePerDayExclTax,
+    );
     if (savingsPerDay <= 0) continue;
 
     const candidate: ResolvedRentalDiscount = {
@@ -192,9 +233,16 @@ function computeMonthlySavings(
   kind: RentalDiscountKind,
   value: number,
   days: number,
+  /** أرضية **إجمالي الشهر** — إلزامية لنوع `TO_MIN_PRICE`. */
+  minPriceMonthlyExclTax?: number | null,
 ): number {
   const base = Math.max(0, monthlyTotalExclTax);
   if (base <= 0) return 0;
+  if (kind === "TO_MIN_PRICE") {
+    if (minPriceMonthlyExclTax == null || minPriceMonthlyExclTax <= 0) return 0;
+    const floor = Math.round(minPriceMonthlyExclTax * 100) / 100;
+    return floor >= base ? 0 : Math.round((base - floor) * 100) / 100;
+  }
   if (kind === "PERCENT") {
     const pct = Math.min(100, Math.max(1, Math.round(value)));
     return Math.round(((base * pct) / 100) * 100) / 100;
@@ -235,7 +283,13 @@ export async function resolveRentalDiscountForPeriod(
 
   for (const rule of rules) {
     if (!discountMatchesContext(rule, ctx)) continue;
-    const savings = computeMonthlySavings(base, rule.kind, rule.value, ctx.days);
+    const savings = computeMonthlySavings(
+      base,
+      rule.kind,
+      rule.value,
+      ctx.days,
+      ctx.priceFloor?.minPriceMonthlyExclTax,
+    );
     if (savings <= 0) continue;
 
     const candidate: ResolvedPeriodDiscount = {

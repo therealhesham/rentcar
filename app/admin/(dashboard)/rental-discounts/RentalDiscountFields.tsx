@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { DiscountAppliesTo } from "@prisma/client";
+import type { DiscountAppliesTo, RentalDiscountKind } from "@prisma/client";
 import {
   DISCOUNT_APPLIES_TO_LABELS_AR,
   DISCOUNT_APPLIES_TO_VALUES,
@@ -21,7 +21,7 @@ export type BranchOpt = { id: number; name: string; slug: string };
 
 type Defaults = {
   labelAr?: string;
-  kind?: "PERCENT" | "FIXED_DAILY";
+  kind?: RentalDiscountKind;
   appliesTo?: DiscountAppliesTo;
   value?: number | "";
   startsAt?: string;
@@ -51,7 +51,7 @@ function formatSar(n: number): string {
 }
 
 export function RentalDiscountFields({ brands, models, branches, defaults }: Props) {
-  const [kind, setKind] = useState<"PERCENT" | "FIXED_DAILY">(defaults?.kind ?? "PERCENT");
+  const [kind, setKind] = useState<RentalDiscountKind>(defaults?.kind ?? "PERCENT");
   const [value, setValue] = useState<string>(
     defaults?.value != null && defaults.value !== "" ? String(defaults.value) : "",
   );
@@ -168,12 +168,19 @@ export function RentalDiscountFields({ brands, models, branches, defaults }: Pro
           name="kind"
           required
           value={kind}
-          onChange={(e) => setKind(e.target.value as "PERCENT" | "FIXED_DAILY")}
+          onChange={(e) => setKind(e.target.value as RentalDiscountKind)}
           className={inputCls}
         >
           <option value="PERCENT">نسبة مئوية (%)</option>
           <option value="FIXED_DAILY">مبلغ ثابت يومي (ريال)</option>
+          <option value="TO_MIN_PRICE">تنزيل للحد الأدنى المسجّل</option>
         </select>
+        {kind === "TO_MIN_PRICE" ? (
+          <span className="mt-1 block text-[11px] font-normal text-on-surface-variant">
+            ينزّل سعر كل مركبة لحدها الأدنى المسجّل بالضبط، فمقدار الخصم يختلف من
+            مركبة لأخرى ويُعرض للعميل كمبلغ. المركبات بلا حد أدنى لا يسري عليها.
+          </span>
+        ) : null}
       </label>
 
       <label className="text-sm font-medium">
@@ -196,7 +203,7 @@ export function RentalDiscountFields({ brands, models, branches, defaults }: Pro
         </span>
       </label>
 
-      <label className="text-sm font-medium">
+      <label className={`text-sm font-medium ${kind === "TO_MIN_PRICE" ? "hidden" : ""}`}>
         {kind === "PERCENT" ? "نسبة الخصم (%)" : "مبلغ الخصم اليومي (ريال)"}
         <input
           name="value"
@@ -204,7 +211,7 @@ export function RentalDiscountFields({ brands, models, branches, defaults }: Pro
           min={1}
           max={kind === "PERCENT" ? 100 : 1_000_000}
           step={1}
-          required
+          required={kind !== "TO_MIN_PRICE"}
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder={kind === "PERCENT" ? "10" : "50"}
