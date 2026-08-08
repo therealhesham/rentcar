@@ -180,7 +180,7 @@ export function FleetCarCard({
               </span>
             ) : null}
             {car.priceUi.originalPrimaryAmount ? (
-              <span className="flex items-baseline gap-0.5 text-sm text-gray-400 line-through">
+              <span className="flex items-baseline gap-0.5 text-sm font-semibold text-gray-400 line-through decoration-red-500 decoration-[1.5px] opacity-85 me-0.5">
                 {car.priceUi.originalPrimaryAmount}
                 <SarCurrencyGlyph className="h-[0.7em] w-[0.7em]" />
               </span>

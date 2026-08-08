@@ -360,7 +360,7 @@ export function RentalDiscountFields({ brands, models, branches, defaults }: Pro
         ) : preview ? (
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex items-baseline gap-2" dir="ltr">
-              <span className="text-sm font-bold text-on-surface-variant line-through opacity-70">
+              <span className="text-sm font-bold text-on-surface-variant line-through decoration-red-500 decoration-[1.5px] opacity-80">
                 {formatSar(preview.original)} <SarCurrencyGlyph />
               </span>
               <span className="text-2xl font-extrabold text-on-surface">
