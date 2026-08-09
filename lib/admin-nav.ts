@@ -134,6 +134,18 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     ],
   },
   {
+    id: "account",
+    label: "حسابي",
+    items: [
+      {
+        href: "/admin/profile",
+        label: "ملفي الشخصي",
+        icon: "user-cog",
+        alwaysAllowed: true,
+      },
+    ],
+  },
+  {
     id: "help",
     label: "المساعدة",
     items: [

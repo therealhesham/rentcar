@@ -460,7 +460,7 @@ export default async function AccountDashboardPage() {
 
               {/* أزرار الإجراءات */}
               <div className="flex flex-wrap items-center justify-center gap-2.5 sm:flex-col sm:items-stretch sm:gap-2">
-                <Link
+                {/* <Link
                   href="/subscriptions"
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-l from-[#dbb878] to-[#e6be82] px-5 py-2.5 text-sm font-extrabold text-[#003749] shadow-md transition-all hover:shadow-lg hover:brightness-105"
                 >
@@ -477,7 +477,7 @@ export default async function AccountDashboardPage() {
                     <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                   </svg>
                   اشتراكي
-                </Link>
+                </Link> */}
                 <form action={logoutCustomer}>
                   <button
                     type="submit"
@@ -497,11 +497,10 @@ export default async function AccountDashboardPage() {
         {/* ────── تحذير رخصة القيادة ────── */}
         {licenseWarning ? (
           <div
-            className={`mt-4 flex items-start gap-3 rounded-2xl border px-4 py-3.5 text-sm font-bold leading-relaxed ${
-              licenseWarning.kind === "expired"
+            className={`mt-4 flex items-start gap-3 rounded-2xl border px-4 py-3.5 text-sm font-bold leading-relaxed ${licenseWarning.kind === "expired"
                 ? "border-red-300/70 bg-red-50 text-red-900"
                 : "border-amber-300/70 bg-amber-50 text-amber-950"
-            }`}
+              }`}
           >
             <svg viewBox="0 0 24 24" fill="none" className="mt-0.5 h-5 w-5 shrink-0" aria-hidden>
               <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />

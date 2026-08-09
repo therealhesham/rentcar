@@ -1,6 +1,6 @@
 {
   "HomePage": {
-    "title": "Luxury Car Rental in Saudi Arabia",
+    "title": "Rawaes Car Rental",
     "description": "Book your car online with Rawaes — Luxury fleet, multiple branches, daily & weekly rentals, and monthly subscription packages."
   },
   "SiteNav": {
@@ -15,7 +15,7 @@
     "language": "Language"
   },
   "BrandHeader": {
-    "tagline": "Luxury Car Rental in Saudi Arabia"
+    "tagline": "Rawaes Car Rental"
   },
   "Hero": {
     "title": "Reserve your trip",
@@ -268,7 +268,7 @@
   },
   "Navigation": {
     "brand": {
-      "tagline": "Luxury Car Rental in Saudi Arabia"
+      "tagline": "Rawaes Car Rental"
     },
     "siteNav": {
       "home": "Home",
