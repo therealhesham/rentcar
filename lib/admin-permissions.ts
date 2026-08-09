@@ -47,6 +47,26 @@ export const ADMIN_PAGE_PERMISSIONS: AdminPagePermission[] = [
 /** قدرة خاصة غير مرتبطة بصفحة معيّنة — تتجاوز سياسة خصم الشرائح بالكامل عند الإلغاء. */
 export const CANCEL_OVERRIDE = "CANCEL_OVERRIDE" as const;
 
+/** قرارات غرامة الإرجاع المتأخر — كل قرار صلاحية مستقلة يمنحها مدير النظام. */
+export const LATE_PENALTY_APPLY = "LATE_PENALTY_APPLY" as const;
+export const LATE_PENALTY_WAIVE = "LATE_PENALTY_WAIVE" as const;
+export const LATE_RETURN_ON_TIME = "LATE_RETURN_ON_TIME" as const;
+
+/** الصلاحية المطلوبة لكل قرار في مودال الإرجاع المتأخر. */
+export const LATE_PENALTY_DECISION_PERMISSIONS = {
+  APPLY: LATE_PENALTY_APPLY,
+  WAIVE: LATE_PENALTY_WAIVE,
+  ON_TIME: LATE_RETURN_ON_TIME,
+} as const;
+
+/** القدرات الخاصة (غير المرتبطة بصفحة) كما تُعرض في فورم صلاحيات الموظف. */
+export const ADMIN_CAPABILITY_PERMISSIONS = [
+  CANCEL_OVERRIDE,
+  LATE_PENALTY_APPLY,
+  LATE_PENALTY_WAIVE,
+  LATE_RETURN_ON_TIME,
+] as const;
+
 /**
  * معرّف الصلاحية: href صفحة (نص حر، مش literal union) أو CANCEL_OVERRIDE. النوع فضّل
  * string عمداً بدل استخراج union دقيق من ADMIN_NAV_GROUPS — الصفحات كتير ومتغيّرة، والحماية
@@ -57,11 +77,14 @@ export type AdminPermission = string;
 export const ADMIN_PERMISSION_LABELS: Record<string, string> = {
   ...Object.fromEntries(ADMIN_PAGE_PERMISSIONS.map((p) => [p.href, p.label])),
   [CANCEL_OVERRIDE]: "تجاوز سياسة الإلغاء (استرداد كامل / بلا استرداد)",
+  [LATE_PENALTY_APPLY]: "تطبيق غرامة التأخير عند الإرجاع",
+  [LATE_PENALTY_WAIVE]: "إعفاء العميل من غرامة التأخير",
+  [LATE_RETURN_ON_TIME]: "اعتبار الإرجاع المتأخر تسليماً في الموعد (بلا قيد تأخير)",
 };
 
 const KNOWN_PERMISSION_IDS = new Set<string>([
   ...ADMIN_PAGE_PERMISSIONS.map((p) => p.href),
-  CANCEL_OVERRIDE,
+  ...ADMIN_CAPABILITY_PERMISSIONS,
 ]);
 
 /** يتحقق إن معرّف الصلاحية معروف فعلاً قبل حفظه — يمنع تسرّب قيم غريبة من الفورم لعمود permissionsJson. */

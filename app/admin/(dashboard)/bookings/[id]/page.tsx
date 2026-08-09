@@ -4,7 +4,8 @@ import { Suspense } from "react";
 import { BookingDetailEditActions } from "@/components/admin/BookingDetailEditActions";
 import { BookingDetailView } from "@/components/admin/BookingDetailView";
 import { BookingAuditLog } from "@/components/admin/BookingAuditLog";
-import { assertBookingRequestInScope } from "@/lib/admin-access";
+import { assertBookingRequestInScope, sessionHasPermission } from "@/lib/admin-access";
+import { LATE_PENALTY_DECISION_PERMISSIONS } from "@/lib/admin-permissions";
 import { loadAdminBookingCancellationContext } from "@/lib/admin-booking-cancellation";
 import {
   loadAdminBookingDetail,
@@ -37,6 +38,13 @@ export default async function AdminBookingDetailPage({
   // (لا في المكوّن العميل) لأن جلسة الإدارة لا تصل إلا للسيرفر.
   const canOverrideCancelPolicy =
     session.isSuperAdmin || session.permissions.includes("CANCEL_OVERRIDE");
+
+  // نفس المبدأ لقرارات غرامة الإرجاع المتأخر — كل قرار صلاحية مستقلة يمنحها مدير النظام.
+  const latePenaltyDecisionPerms = {
+    apply: sessionHasPermission(session, LATE_PENALTY_DECISION_PERMISSIONS.APPLY),
+    waive: sessionHasPermission(session, LATE_PENALTY_DECISION_PERMISSIONS.WAIVE),
+    onTime: sessionHasPermission(session, LATE_PENALTY_DECISION_PERMISSIONS.ON_TIME),
+  };
 
   const scope = await assertBookingRequestInScope(session, id);
   if (!scope.ok) {
@@ -94,6 +102,7 @@ export default async function AdminBookingDetailPage({
         editActions={editActions}
         cancellation={cancellation}
         canOverrideCancelPolicy={canOverrideCancelPolicy}
+        latePenaltyDecisionPerms={latePenaltyDecisionPerms}
       />
       <section className="mx-auto mt-8 max-w-screen-xl px-4 sm:px-6 lg:px-8">
         <div className="rounded-2xl border border-outline-variant/30 bg-surface-container-low p-5 md:p-6">

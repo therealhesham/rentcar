@@ -4,7 +4,12 @@ import { revalidatePath } from "next/cache";
 import {
   assertBookingRequestInScope,
   requireAdminForAction,
+  sessionHasPermission,
 } from "@/lib/admin-access";
+import {
+  ADMIN_PERMISSION_LABELS,
+  LATE_PENALTY_DECISION_PERMISSIONS,
+} from "@/lib/admin-permissions";
 import {
   recordBookingPickupFromBranch,
   recordBookingReturnToBranch,
@@ -89,7 +94,20 @@ export async function recordReturnToBranchAction(
     .trim()
     .toUpperCase();
   const latePenaltyDecision =
-    decisionRaw === "APPLY" || decisionRaw === "WAIVE" ? decisionRaw : undefined;
+    decisionRaw === "APPLY" || decisionRaw === "WAIVE" || decisionRaw === "ON_TIME"
+      ? decisionRaw
+      : undefined;
+
+  // كل قرار غرامة صلاحية مستقلة — الإخفاء في الواجهة وحده لا يكفي، الفورم يمكن تزويره.
+  if (latePenaltyDecision) {
+    const required = LATE_PENALTY_DECISION_PERMISSIONS[latePenaltyDecision];
+    if (!sessionHasPermission(auth.session, required)) {
+      return {
+        ok: false,
+        error: `ليس لديك صلاحية «${ADMIN_PERMISSION_LABELS[required]}». راجع مدير النظام.`,
+      };
+    }
+  }
 
   const odometer = parseOdometerInput(formData.get("odometerAtReturnKm"));
   if (!odometer.ok) return { ok: false, error: odometer.error };
@@ -101,12 +119,20 @@ export async function recordReturnToBranchAction(
   });
   if (!result.ok) return result;
 
+  // ساعات التأخير المعروضة في المودال — للملاحظة النصية في السجل فقط.
+  const lateHoursAtDecision = Number(formData.get("lateHoursAtDecision"));
+  const lateHoursText = Number.isFinite(lateHoursAtDecision)
+    ? ` رغم تأخير ${lateHoursAtDecision} ساعة`
+    : "";
+
   const returnNotes = [
     latePenaltyDecision === "APPLY"
       ? "تم تطبيق غرامة التأخير"
       : latePenaltyDecision === "WAIVE"
         ? "تم إعفاء العميل من غرامة التأخير"
-        : null,
+        : latePenaltyDecision === "ON_TIME"
+          ? `سُجِّل الإرجاع كتسليم في الموعد${lateHoursText} — بدون غرامة ولا قيد تأخير`
+          : null,
     odometer.value != null ? `العداد عند الإرجاع: ${odometer.value} كم` : null,
   ].filter(Boolean);
 

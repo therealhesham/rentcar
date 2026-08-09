@@ -29,6 +29,13 @@ function needsLateDecision(
   return s != null && !s.ok && "needsLateDecision" in s && s.needsLateDecision;
 }
 
+/** أي قرارات غرامة التأخير مسموحة لهذا الموظف — تُحسب من الجلسة على السيرفر. */
+export type LatePenaltyDecisionPerms = {
+  apply: boolean;
+  waive: boolean;
+  onTime: boolean;
+};
+
 type Props = {
   bookingRequestId: number;
   kind: string;
@@ -45,6 +52,11 @@ type Props = {
   odometerAtPickupKm?: number | null;
   odometerAtReturnKm?: number | null;
   numberOfDays?: number;
+  /**
+   * صلاحيات قرار غرامة التأخير. الإخفاء هنا للواجهة فقط — الحاجز الفعلي في
+   * `recordReturnToBranchAction` على السيرفر.
+   */
+  latePenaltyDecisionPerms?: LatePenaltyDecisionPerms;
 };
 
 function fmtWhen(d: Date | null): string | null {
@@ -73,6 +85,7 @@ export function BookingLifecyclePanel({
   odometerAtPickupKm = null,
   odometerAtReturnKm = null,
   numberOfDays = 1,
+  latePenaltyDecisionPerms = { apply: false, waive: false, onTime: false },
 }: Props) {
   const [returnState, returnAction, returnPending] = useActionState(
     recordReturnToBranchAction,
@@ -90,6 +103,9 @@ export function BookingLifecyclePanel({
 
   const showLateModal =
     needsLateDecision(returnState) && dismissedLateState !== returnState;
+
+  const { apply, waive, onTime } = latePenaltyDecisionPerms;
+  const hasAnyLateDecisionPerm = apply || waive || onTime;
 
   if (kind !== "DIRECT") return null;
 
@@ -344,31 +360,64 @@ export function BookingLifecyclePanel({
                   </div>
                 </dl>
 
+                <input
+                  type="hidden"
+                  name="lateHoursAtDecision"
+                  value={returnState.lateInfo.totalLateHours}
+                />
+
                 <div className="flex flex-col gap-2">
-                  <button
-                    type="submit"
-                    name="latePenaltyDecision"
-                    value="APPLY"
-                    disabled={returnPending}
-                    className="w-full rounded-xl bg-red-600 px-4 py-3 text-sm font-extrabold text-white transition-opacity hover:opacity-95 disabled:opacity-60"
-                  >
-                    {returnPending ? "جاري التسجيل…" : "تطبيق الغرامة وتسجيل الإرجاع"}
-                  </button>
-                  <button
-                    type="submit"
-                    name="latePenaltyDecision"
-                    value="WAIVE"
-                    disabled={returnPending}
-                    className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-extrabold text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-60"
-                  >
-                    إعفاء العميل وتسجيل الإرجاع بدون غرامة
-                  </button>
+                  {latePenaltyDecisionPerms.apply ? (
+                    <button
+                      type="submit"
+                      name="latePenaltyDecision"
+                      value="APPLY"
+                      disabled={returnPending}
+                      className="w-full rounded-xl bg-red-600 px-4 py-3 text-sm font-extrabold text-white transition-opacity hover:opacity-95 disabled:opacity-60"
+                    >
+                      {returnPending ? "جاري التسجيل…" : "تطبيق الغرامة وتسجيل الإرجاع"}
+                    </button>
+                  ) : null}
+                  {latePenaltyDecisionPerms.waive ? (
+                    <button
+                      type="submit"
+                      name="latePenaltyDecision"
+                      value="WAIVE"
+                      disabled={returnPending}
+                      className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-extrabold text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-60"
+                    >
+                      إعفاء العميل وتسجيل الإرجاع بدون غرامة
+                    </button>
+                  ) : null}
+                  {latePenaltyDecisionPerms.onTime ? (
+                    <>
+                      <button
+                        type="submit"
+                        name="latePenaltyDecision"
+                        value="ON_TIME"
+                        disabled={returnPending}
+                        className="w-full rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-extrabold text-emerald-800 transition-colors hover:bg-emerald-100 disabled:opacity-60"
+                      >
+                        تسليم — اعتبار الإرجاع تمّ في الموعد
+                      </button>
+                      <p className="-mt-0.5 text-center text-[11px] font-medium text-gray-400">
+                        بدون غرامة ودون تسجيل تأخير في صفحة الاستلامات المتأخرة.
+                      </p>
+                    </>
+                  ) : null}
+                  {!hasAnyLateDecisionPerm ? (
+                    <p className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-center text-xs font-bold leading-relaxed text-amber-900">
+                      ليس لديك صلاحية اتخاذ قرار في غرامة التأخير.
+                      <br />
+                      راجع مدير النظام لتسجيل إرجاع هذا الحجز.
+                    </p>
+                  ) : null}
                   <button
                     type="button"
                     onClick={() => setDismissedLateState(returnState)}
                     className="w-full rounded-xl px-4 py-2 text-xs font-bold text-gray-400 hover:text-gray-600"
                   >
-                    إلغاء (لن يُسجَّل الإرجاع)
+                    {hasAnyLateDecisionPerm ? "إلغاء (لن يُسجَّل الإرجاع)" : "إغلاق"}
                   </button>
                 </div>
               </div>

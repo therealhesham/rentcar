@@ -38,10 +38,16 @@ export function BookingListQuickActions({ bookingId, status, kind, carModelId, c
       }
 
       if (!result.ok) {
+        // الإرجاع المتأخر يحتاج قرار غرامة — القرار وصلاحياته في صفحة الحجز، مش هنا.
+        const needsLateDecision = "needsLateDecision" in result && result.needsLateDecision;
         setModalConfig({
           open: true,
           type: "error",
-          message: "error" in result && typeof result.error === "string" ? result.error : "حدث خطأ أثناء تحديث الحالة",
+          message: needsLateDecision
+            ? "السيارة أُرجعت متأخرة عن موعد الحجز. افتح صفحة الحجز لاتخاذ قرار غرامة التأخير قبل تسجيل الإرجاع."
+            : "error" in result && typeof result.error === "string"
+              ? result.error
+              : "حدث خطأ أثناء تحديث الحالة",
         });
       }
     });

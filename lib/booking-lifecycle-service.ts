@@ -46,7 +46,13 @@ export type ReturnLifecycleResult =
   | { ok: false; error: string }
   | { ok: false; needsLateDecision: true; lateInfo: LateReturnInfo };
 
-export type LatePenaltyDecision = "APPLY" | "WAIVE";
+/**
+ * قرار الموظف عند الإرجاع المتأخر:
+ * - APPLY: تطبيق الغرامة وتحصيلها.
+ * - WAIVE: إعفاء من الغرامة مع تسجيل التأخير في سجل الاستلامات المتأخرة.
+ * - ON_TIME: اعتبار الإرجاع تمّ في موعده — لا غرامة ولا تسجيل تأخير إطلاقاً.
+ */
+export type LatePenaltyDecision = "APPLY" | "WAIVE" | "ON_TIME";
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
@@ -196,7 +202,7 @@ export async function recordBookingPickupFromBranch(
 
 /**
  * تسجيل إرجاع السيارة إلى الفرع — الحالة RETURNED؛ للكاش: تأكيد الدفع وإرسال الفاتورة.
- * عند تأخير يتجاوز السماحية وبغرامة صافية > 0: يتطلب قرار الموظف (تطبيق/إعفاء) —
+ * عند تأخير يتجاوز السماحية وبغرامة صافية > 0: يتطلب قرار الموظف (تطبيق/إعفاء/تسليم في الموعد) —
  * بدون قرار يُرجع `needsLateDecision` مع التفاصيل ليعرضها المودال.
  */
 export async function recordBookingReturnToBranch(
@@ -237,6 +243,10 @@ export async function recordBookingReturnToBranch(
   }
   const applyPenalty = penaltyDue && opts?.latePenaltyDecision === "APPLY";
   const waivePenalty = penaltyDue && opts?.latePenaltyDecision === "WAIVE";
+  // اعتبار الإرجاع في موعده: لا غرامة ولا أثر للتأخير — وقت الإرجاع يُسجَّل بالموعد المجدول.
+  const treatAsOnTime = penaltyDue && opts?.latePenaltyDecision === "ON_TIME";
+  const returnedAt =
+    treatAsOnTime && lateInfo ? new Date(lateInfo.scheduledReturnAtIso) : now;
 
   // لقطة الغرامة الجديدة على إجمالي الساعات (تستبدل بند الساعات المعلنة إن وُجد)
   const appliedSnap: DelayPenaltySnap | null =
@@ -305,7 +315,7 @@ export async function recordBookingReturnToBranch(
       },
       data: {
         status: BOOKING_STATUS_RETURNED,
-        vehicleReturnedAt: now,
+        vehicleReturnedAt: returnedAt,
         ...(opts?.odometerAtReturnKm != null
           ? { odometerAtReturnKm: opts.odometerAtReturnKm }
           : {}),
@@ -319,7 +329,7 @@ export async function recordBookingReturnToBranch(
                 : {}),
             }
           : {}),
-        ...(lateInfo
+        ...(lateInfo && !treatAsOnTime
           ? {
               lateReturnHours: lateInfo.totalLateHours,
               lateReturnPenaltyExclTaxSar: applyPenalty ? lateInfo.netPenaltyExclTax : 0,

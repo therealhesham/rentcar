@@ -56,6 +56,14 @@ export async function requireSuperAdminForAction(): Promise<
   return auth;
 }
 
+/** فحص صلاحية على جلسة محمّلة بالفعل — مدير النظام يملك كل شيء. */
+export function sessionHasPermission(
+  session: AdminSession,
+  permission: AdminPermission,
+): boolean {
+  return session.isSuperAdmin || session.permissions.includes(permission);
+}
+
 export async function requirePermissionForAction(
   permission: AdminPermission
 ): Promise<{ ok: true; session: AdminSession } | { ok: false; error: string }> {

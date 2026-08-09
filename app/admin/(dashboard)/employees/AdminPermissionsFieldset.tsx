@@ -1,6 +1,10 @@
 "use client";
 
-import { ADMIN_PAGE_PERMISSIONS, ADMIN_PERMISSION_LABELS, CANCEL_OVERRIDE } from "@/lib/admin-permissions";
+import {
+  ADMIN_CAPABILITY_PERMISSIONS,
+  ADMIN_PAGE_PERMISSIONS,
+  ADMIN_PERMISSION_LABELS,
+} from "@/lib/admin-permissions";
 
 type Props = {
   /** الصلاحيات المفعّلة حاليًا (فورم التعديل) — فارغة افتراضيًا لفورم الإضافة. */
@@ -51,16 +55,22 @@ export function AdminPermissionsFieldset({ currentPermissions }: Props) {
 
       <div className="rounded-xl border border-outline-variant/40 bg-surface-container-lowest p-3">
         <p className="mb-2 px-1 text-sm font-bold text-on-surface">قدرات خاصة</p>
-        <label className={checkboxCls}>
-          <input
-            type="checkbox"
-            name="permissions"
-            value={CANCEL_OVERRIDE}
-            defaultChecked={current.has(CANCEL_OVERRIDE)}
-            className="h-4 w-4 rounded border-outline text-primary focus:ring-primary"
-          />
-          <span className="font-medium text-on-surface">{ADMIN_PERMISSION_LABELS[CANCEL_OVERRIDE]}</span>
-        </label>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {ADMIN_CAPABILITY_PERMISSIONS.map((capability) => (
+            <label key={capability} className={checkboxCls}>
+              <input
+                type="checkbox"
+                name="permissions"
+                value={capability}
+                defaultChecked={current.has(capability)}
+                className="h-4 w-4 rounded border-outline text-primary focus:ring-primary"
+              />
+              <span className="font-medium text-on-surface">
+                {ADMIN_PERMISSION_LABELS[capability]}
+              </span>
+            </label>
+          ))}
+        </div>
       </div>
     </div>
   );

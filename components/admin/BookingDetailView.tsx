@@ -30,7 +30,10 @@ import { computeCheckoutTotals, formatSarAmount } from "@/lib/booking-checkout-p
 import { BookingAttachmentsPanel } from "@/components/admin/BookingAttachmentsPanel";
 import { BookingCancelPanel } from "@/components/admin/BookingCancelPanel";
 import { BookingConfirmPanel } from "@/components/admin/BookingConfirmPanel";
-import { BookingLifecyclePanel } from "@/components/admin/BookingLifecyclePanel";
+import {
+  BookingLifecyclePanel,
+  type LatePenaltyDecisionPerms,
+} from "@/components/admin/BookingLifecyclePanel";
 import { BookingDetailSection } from "@/components/admin/BookingDetailSection";
 import type { AdminBookingCancellationContext } from "@/lib/admin-booking-cancellation";
 import type { AdminBookingDetail } from "@/lib/admin-booking-detail";
@@ -115,6 +118,8 @@ type Props = {
   cancellation: AdminBookingCancellationContext;
   /** يتحكم بظهور «استرداد كامل» و«بلا استرداد» — يُحسب من صلاحيات جلسة الإدارة على السيرفر. */
   canOverrideCancelPolicy: boolean;
+  /** يتحكم بظهور أزرار قرار غرامة التأخير — يُحسب كذلك من الجلسة على السيرفر. */
+  latePenaltyDecisionPerms: LatePenaltyDecisionPerms;
 };
 
 export function BookingDetailView({
@@ -122,6 +127,7 @@ export function BookingDetailView({
   editActions,
   cancellation,
   canOverrideCancelPolicy,
+  latePenaltyDecisionPerms,
 }: Props) {
   const [updatePlateModalOpen, setUpdatePlateModalOpen] = useState(false);
   const kycAttachments = resolveBookingKycForDisplay(booking, booking.customer);
@@ -497,6 +503,7 @@ export function BookingDetailView({
                 odometerAtPickupKm={booking.odometerAtPickupKm}
                 odometerAtReturnKm={booking.odometerAtReturnKm}
                 numberOfDays={booking.numberOfDays}
+                latePenaltyDecisionPerms={latePenaltyDecisionPerms}
               />
             </BookingDetailSection>
           ) : null}
