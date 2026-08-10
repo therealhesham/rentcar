@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { currentRequestMeta, logActivity } from "@/lib/activity-log";
+import { getCustomerSessionUserId } from "@/lib/customer-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -30,10 +31,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true });
   }
 
+  // ربط المشاهدة بالعميل المسجّل دخول — الاسم يُستخرج وقت العرض من `userId`
+  // حتى لا نضيف استعلاماً على كل مشاهدة ولا نخزّن اسماً يتقادم.
+  const userId = await getCustomerSessionUserId();
+
   await logActivity({
     kind: carModelId ? "CAR_VIEW" : "PAGE_VIEW",
     path,
     carModelId,
+    userId,
     ...meta,
   });
   return NextResponse.json({ ok: true });

@@ -20,6 +20,9 @@ const KIND_BADGE_CLASSES: Record<string, string> = {
   CAR_VIEW: "bg-violet-50 text-violet-700 border-violet-200",
 };
 
+/** الأنواع التي تُحتسب «زيارة» للموقع العام. */
+const VIEW_KINDS = ["PAGE_VIEW", "CAR_VIEW"];
+
 const FILTERS: Array<{ key: string; label: string; kinds: string[] | null }> = [
   { key: "all", label: "الكل", kinds: null },
   { key: "logins", label: "تسجيلات الدخول", kinds: ["CUSTOMER_LOGIN", "ADMIN_LOGIN"] },
@@ -76,8 +79,16 @@ export default async function AdminActivityLogsPage({
   const where = filter.kinds ? { kind: { in: filter.kinds } } : {};
   const todayStart = startOfTodayRiyadh();
 
-  const [rows, total, todayCustomerLogins, todayAdminLogins, todayViews, todayCarViews, topCarGroups] =
-    await Promise.all([
+  const [
+    rows,
+    total,
+    todayCustomerLogins,
+    todayAdminLogins,
+    todayViews,
+    todayCarViews,
+    topCarGroups,
+    topVisitorGroups,
+  ] = await Promise.all([
       prisma.activityLog.findMany({
         where,
         orderBy: { createdAt: "desc" },
@@ -104,6 +115,13 @@ export default async function AdminActivityLogsPage({
         orderBy: { _count: { carModelId: "desc" } },
         take: 10,
       }),
+      prisma.activityLog.groupBy({
+        by: ["userId"],
+        where: { kind: { in: VIEW_KINDS }, userId: { not: null } },
+        _count: { _all: true },
+        orderBy: { _count: { userId: "desc" } },
+        take: 10,
+      }),
     ]);
 
   // أسماء السيارات: للأكثر مشاهدة + للصفوف المعروضة في الجدول
@@ -127,6 +145,28 @@ export default async function AdminActivityLogsPage({
       name: carNameById.get(g.carModelId as number) ?? `موديل #${g.carModelId}`,
     }));
   const maxTopViews = Math.max(1, ...topCars.map((c) => c.views));
+
+  // أسماء العملاء: للأكثر زيارة + للصفوف المعروضة (المشاهدات تُخزَّن بـ userId بلا اسم)
+  const userIds = new Set<number>();
+  for (const g of topVisitorGroups) if (g.userId != null) userIds.add(g.userId);
+  for (const r of rows) if (r.userId != null && !r.actorLabel) userIds.add(r.userId);
+  const users = userIds.size
+    ? await prisma.user.findMany({
+        where: { id: { in: [...userIds] } },
+        select: { id: true, name: true, phone: true, email: true },
+      })
+    : [];
+  const userLabelById = new Map(
+    users.map((u) => [u.id, u.name?.trim() || u.phone || u.email]),
+  );
+  const topVisitors = topVisitorGroups
+    .filter((g) => g.userId != null)
+    .map((g) => ({
+      userId: g.userId as number,
+      visits: g._count._all,
+      label: userLabelById.get(g.userId as number) ?? `عميل #${g.userId}`,
+    }));
+  const maxTopVisits = Math.max(1, ...topVisitors.map((v) => v.visits));
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const pageHref = (p: number) => `/admin/logs?kind=${filter.key}&page=${p}`;
@@ -164,6 +204,57 @@ export default async function AdminActivityLogsPage({
           <p className="mt-1 text-3xl font-extrabold tabular-nums">{todayCarViews}</p>
         </div>
       </section>
+
+      {topVisitors.length > 0 && (
+        <details className="group mb-8 rounded-2xl border border-outline-variant/30 bg-surface-container-low p-6">
+          <summary className="flex cursor-pointer list-none items-center gap-3 [&::-webkit-details-marker]:hidden">
+            <div>
+              <h2 className="text-xl font-extrabold tracking-tight">العملاء الأكثر زيارة</h2>
+              <p className="mt-1 text-sm text-on-surface-variant">
+                عدد مشاهدات الصفحات والسيارات لكل عميل مسجّل دخول. الزيارات قبل تفعيل الربط
+                تظهر كـ«زائر».
+              </p>
+            </div>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="ms-auto size-5 shrink-0 text-on-surface-variant transition-transform group-open:rotate-180"
+              aria-hidden
+            >
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </summary>
+          <ol className="mt-4 space-y-3">
+            {topVisitors.map((v, i) => (
+              <li key={v.userId} className="flex items-center gap-3">
+                <span className="w-6 shrink-0 text-center text-sm font-extrabold text-on-surface-variant tabular-nums">
+                  {i + 1}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="truncate font-bold">{v.label}</span>
+                    <span className="shrink-0 text-sm font-extrabold tabular-nums">
+                      {v.visits} <span className="font-medium text-on-surface-variant">زيارة</span>
+                    </span>
+                  </div>
+                  <div className="mt-1 h-2 overflow-hidden rounded-full bg-outline-variant/20">
+                    <div
+                      className="h-full rounded-full bg-primary"
+                      style={{
+                        width: `${Math.max(4, Math.round((v.visits / maxTopVisits) * 100))}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </details>
+      )}
 
       {topCars.length > 0 && (
         <details className="group mb-8 rounded-2xl border border-outline-variant/30 bg-surface-container-low p-6">
@@ -275,8 +366,14 @@ export default async function AdminActivityLogsPage({
                         {KIND_LABELS[r.kind] ?? r.kind}
                       </span>
                     </td>
-                    <td className="px-4 py-3 font-medium" dir={r.actorLabel ? "ltr" : undefined}>
-                      {r.actorLabel ?? <span className="text-on-surface-variant">زائر</span>}
+                    <td
+                      className="px-4 py-3 font-medium"
+                      dir={r.actorLabel ? "ltr" : undefined}
+                    >
+                      {r.actorLabel ??
+                        (r.userId != null ? userLabelById.get(r.userId) : null) ?? (
+                          <span className="text-on-surface-variant">زائر</span>
+                        )}
                     </td>
                     <td
                       className="max-w-[220px] truncate px-4 py-3"
