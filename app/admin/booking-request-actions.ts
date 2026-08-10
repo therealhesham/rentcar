@@ -6,6 +6,7 @@ import {
   assertBranchSlugInScope,
   enforceBranchOnFormData,
   requireAdminForAction,
+  requirePermissionForAction,
 } from "@/lib/admin-access";
 import { isCashPaymentMethod } from "@/lib/booking-cash-flow";
 import { syncLifecycleFromAdminStatusChange } from "@/lib/booking-lifecycle-service";
@@ -110,7 +111,7 @@ export async function updateBookingRequest(
   _prev: { ok: boolean; error?: string } | null,
   formData: FormData,
 ): Promise<{ ok: boolean; error?: string }> {
-  const auth = await requireAdminForAction();
+  const auth = await requirePermissionForAction("BOOKING_EDIT");
   if (!auth.ok) return { ok: false, error: auth.error };
 
   const bookingRequestId = Number(formData.get("bookingRequestId"));

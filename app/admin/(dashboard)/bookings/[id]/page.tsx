@@ -85,7 +85,10 @@ export default async function AdminBookingDetailPage({
 
   const editable = toEditableBookingRow(booking);
 
-  const editActions = (
+  const canEditBooking =
+    session.isSuperAdmin || session.permissions.includes("BOOKING_EDIT");
+
+  const editActions = canEditBooking ? (
     <Suspense fallback={<EditActionsFallback />}>
       <BookingDetailEditActions
         request={editable}
@@ -94,7 +97,7 @@ export default async function AdminBookingDetailPage({
         branches={editContext.branches}
       />
     </Suspense>
-  );
+  ) : null;
 
   return (
     <>
@@ -104,6 +107,7 @@ export default async function AdminBookingDetailPage({
         cancellation={cancellation}
         canOverrideCancelPolicy={canOverrideCancelPolicy}
         latePenaltyDecisionPerms={latePenaltyDecisionPerms}
+        canEditBooking={canEditBooking}
       />
       <section className="mx-auto mt-8 max-w-screen-xl px-4 sm:px-6 lg:px-8">
         <div className="rounded-2xl border border-outline-variant/30 bg-surface-container-low p-5 md:p-6">

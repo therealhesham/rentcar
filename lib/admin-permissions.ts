@@ -45,8 +45,11 @@ export const ADMIN_PAGE_PERMISSIONS: AdminPagePermission[] = [
   ...EXTRA_PAGE_PERMISSIONS,
 ];
 
-/** قدرة خاصة غير مرتبطة بصفحة معيّنة — تتجاوز سياسة خصم الشرائح بالكامل عند الإلغاء. */
+/** قدرة خاصة غير مرتبطة بصفحة معيّنة — تجاوز سياسة خصم الشرائح بالكامل عند الإلغاء. */
 export const CANCEL_OVERRIDE = "CANCEL_OVERRIDE" as const;
+
+/** قدرة خاصة غير مرتبطة بصفحة معيّنة — تعديل بيانات الحجز. */
+export const BOOKING_EDIT = "BOOKING_EDIT" as const;
 
 /** قرارات غرامة الإرجاع المتأخر — كل قرار صلاحية مستقلة يمنحها مدير النظام. */
 export const LATE_PENALTY_APPLY = "LATE_PENALTY_APPLY" as const;
@@ -66,6 +69,7 @@ export const ADMIN_CAPABILITY_PERMISSIONS = [
   LATE_PENALTY_APPLY,
   LATE_PENALTY_WAIVE,
   LATE_RETURN_ON_TIME,
+  BOOKING_EDIT,
 ] as const;
 
 /**
@@ -81,6 +85,7 @@ export const ADMIN_PERMISSION_LABELS: Record<string, string> = {
   [LATE_PENALTY_APPLY]: "تطبيق غرامة التأخير عند الإرجاع",
   [LATE_PENALTY_WAIVE]: "إعفاء العميل من غرامة التأخير",
   [LATE_RETURN_ON_TIME]: "اعتبار الإرجاع المتأخر تسليماً في الموعد (بلا قيد تأخير)",
+  [BOOKING_EDIT]: "تعديل بيانات الحجز (تغيير التفاصيل، الفرع، السيارات... إلخ)",
 };
 
 const KNOWN_PERMISSION_IDS = new Set<string>([

@@ -21,6 +21,7 @@ type Props = {
   kind: string;
   currentPlateNumber?: string | null;
   onOpenPlateModal?: () => void;
+  canEditBooking?: boolean;
 };
 
 export function BookingHeaderGearMenu({
@@ -28,6 +29,7 @@ export function BookingHeaderGearMenu({
   kind,
   currentPlateNumber,
   onOpenPlateModal,
+  canEditBooking = false,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [loadingEmail, setLoadingEmail] = useState(false);
@@ -95,13 +97,15 @@ export function BookingHeaderGearMenu({
           dir="rtl"
         >
           {/* Edit Booking */}
-          <Link
-            href={`/admin/bookings/${bookingId}?edit=1`}
-            className="flex w-full items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-right text-xs font-bold text-on-surface transition-colors hover:bg-surface-container-low"
-          >
-            <Pencil className="size-4 text-primary" />
-            تعديل بيانات الحجز
-          </Link>
+          {canEditBooking ? (
+            <Link
+              href={`/admin/bookings/${bookingId}?edit=1`}
+              className="flex w-full items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-right text-xs font-bold text-on-surface transition-colors hover:bg-surface-container-low"
+            >
+              <Pencil className="size-4 text-primary" />
+              تعديل بيانات الحجز
+            </Link>
+          ) : null}
 
           {kind === "DIRECT" ? (
             <>

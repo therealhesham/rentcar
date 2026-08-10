@@ -120,6 +120,7 @@ type Props = {
   canOverrideCancelPolicy: boolean;
   /** يتحكم بظهور أزرار قرار غرامة التأخير — يُحسب كذلك من الجلسة على السيرفر. */
   latePenaltyDecisionPerms: LatePenaltyDecisionPerms;
+  canEditBooking: boolean;
 };
 
 export function BookingDetailView({
@@ -128,6 +129,7 @@ export function BookingDetailView({
   cancellation,
   canOverrideCancelPolicy,
   latePenaltyDecisionPerms,
+  canEditBooking,
 }: Props) {
   const [updatePlateModalOpen, setUpdatePlateModalOpen] = useState(false);
   const kycAttachments = resolveBookingKycForDisplay(booking, booking.customer);
@@ -210,6 +212,7 @@ export function BookingDetailView({
               kind={booking.kind}
               currentPlateNumber={booking.vehiclePlateNumber}
               onOpenPlateModal={() => setUpdatePlateModalOpen(true)}
+              canEditBooking={canEditBooking}
             />
           </div>
         }
