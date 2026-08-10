@@ -1,5 +1,6 @@
 import { computeBookingDays } from "@/lib/booking-days";
 import { formatDailyBookingDurationFromIso } from "@/lib/booking-duration-display";
+import { parseHmToMinutes } from "@/lib/branch-opening-hours";
 
 export type RentalTab = "daily" | "weekly" | "monthly" | "monthly_packages";
 export type ModeTab = "pickup" | "delivery";
@@ -113,6 +114,39 @@ export function parseDdMmYyToYmd(text: string): string | null {
     return null;
   }
   return `${year}-${pad2(month)}-${pad2(day)}`;
+}
+
+/** خطوة منتقي الوقت بالدقائق — تُستخدم في TimePickerPopover وفي ضبط وقت التسليم. */
+export const TIME_SLOT_STEP_MINUTES = 30;
+
+/**
+ * أول سلوت بعد `hm` — لدفع وقت التسليم للأمام عندما يقع في نفس يوم الاستلام
+ * وبنفس وقته أو قبله. يُرجع null إن لم يبقَ سلوت في نفس اليوم.
+ */
+export function nextTimeSlotAfter(hm: string): string | null {
+  const minutes = parseHmToMinutes(hm);
+  if (minutes == null) return null;
+  const next =
+    (Math.floor(minutes / TIME_SLOT_STEP_MINUTES) + 1) * TIME_SLOT_STEP_MINUTES;
+  if (next > 24 * 60 - TIME_SLOT_STEP_MINUTES) return null;
+  return `${pad2(Math.floor(next / 60))}:${pad2(next % 60)}`;
+}
+
+/**
+ * وقت التسليم بعد منع تطابقه مع وقت الاستلام (أو سبقه) في نفس اليوم.
+ * يُعاد كما هو إذا اختلف اليوم أو كان الوقت لاحقاً فعلاً.
+ */
+export function resolveDropoffTimeHm(
+  pickupYmd: string,
+  dropoffYmd: string,
+  pickupHm: string,
+  dropoffHm: string,
+): string {
+  if (!pickupYmd || !dropoffYmd || pickupYmd !== dropoffYmd) return dropoffHm;
+  const p = parseHmToMinutes(pickupHm);
+  const d = parseHmToMinutes(dropoffHm);
+  if (p == null || d == null || d > p) return dropoffHm;
+  return nextTimeSlotAfter(pickupHm) ?? dropoffHm;
 }
 
 /** يدمج تاريخ YYYY-MM-DD ووقت HH:mm (من حقل time) لقيمة نفس شكل `datetime-local` */

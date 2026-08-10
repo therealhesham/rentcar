@@ -1,4 +1,4 @@
-import { computeBookingDays } from "@/lib/booking-days";
+import { computeBookingDays, isDropoffAfterPickup } from "@/lib/booking-days";
 import { computeBookingReturnAt } from "@/lib/booking-return-schedule";
 
 /** دقائق — إن كان فرق الوقت أقل يُعتبر تطابقاً تاماً (عرض «X يوم» فقط). */
@@ -59,7 +59,8 @@ export function computeDailyBookingDurationParts(
   dropoff: Date,
 ): DailyBookingDurationParts | null {
   if (Number.isNaN(pickup.getTime()) || Number.isNaN(dropoff.getTime())) return null;
-  if (dropoff.getTime() < pickup.getTime()) return null;
+  // مدى صفري (نفس التاريخ والوقت) ليس مدة حجز — لا يُعرض له نص مدة
+  if (!isDropoffAfterPickup(pickup, dropoff)) return null;
   const days = computeBookingDays(pickup, dropoff);
   const extraHours = computeDailyBookingExtraHours(pickup, dropoff, days);
   return { days, extraHours };

@@ -26,6 +26,13 @@ const nextConfig: NextConfig = {
   /** مطلوب لبناء صورة Docker التي تنسخ `.next/standalone` */
   output: "standalone",
   /**
+   * جذر المشروع صراحةً — بدونه يستنتج Turbopack مجلداً أعلى عند وجود `package-lock.json`
+   * آخر في المجلد الأب، فيفشل حلّ حزم مثل `tailwindcss`.
+   */
+  turbopack: {
+    root: __dirname,
+  },
+  /**
    * ملف توثيق نطاق Apple Pay يُقدَّم من `public/.well-known/` كنص صريح — بدون هذا
    * تُرسله Next كـ application/octet-stream فتعامله بعض أدوات التحقق كملف تنزيل.
    * ملاحظة: المسار يتخطى وسيط next-intl تلقائياً لاحتوائه على نقطة (مُطابِق middleware).

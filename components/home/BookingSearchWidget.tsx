@@ -39,7 +39,11 @@ import { PickupReturnBranchFields } from "@/components/home/PickupReturnBranchFi
 import { SubscriptionPackagesInWidget } from "@/components/subscriptions/SubscriptionPackagesInWidget";
 import { DdMmYyDateWithPicker } from "@/components/ui/DdMmYyDateWithPicker";
 import { TimeInput24h } from "@/components/ui/TimeInput24h";
-import { computeBookingDays } from "@/lib/booking-days";
+import {
+  computeBookingDays,
+  DROPOFF_AFTER_PICKUP_ERROR_AR,
+  isDropoffAfterPickup,
+} from "@/lib/booking-days";
 import {
   composeDatetimeLocal,
   computeAutoDropoff,
@@ -48,6 +52,7 @@ import {
   draftFromDatetimeLocal,
   parseDdMmYyToYmd,
   rentalDropoffHint,
+  resolveDropoffTimeHm,
   toDatetimeLocalValue,
   validateRentalMinDays,
   formatYmdAsDdMmYy,
@@ -111,6 +116,28 @@ export type BookingSearchWidgetVariant = "search" | "checkout";
 const GOLD = "#dbb878";
 const GOLD_DARK = "#c9a356";
 const TEAL = "#003749";
+
+/** مهلة قصيرة بعد آخر تعديل قبل تشغيل البحث التلقائي */
+const AUTO_SEARCH_DEBOUNCE_MS = 500;
+
+/** المعاملات التي تُحدِّد نتيجة البحث — لمقارنة الحالة الحالية بالرابط */
+const FLEET_SEARCH_SIGNATURE_KEYS = [
+  "pickup",
+  "dropoff",
+  "rental",
+  "mode",
+  "days",
+  "pickupBranch",
+  "returnBranch",
+  "dlat",
+  "dlng",
+  "daddr",
+  "pickupCity",
+] as const;
+
+function fleetSearchSignature(sp: { get(name: string): string | null }): string {
+  return FLEET_SEARCH_SIGNATURE_KEYS.map((k) => `${k}=${sp.get(k) ?? ""}`).join("&");
+}
 
 
 export function BookingSearchWidget({
@@ -496,8 +523,11 @@ export function BookingSearchWidget({
     const startYmd = parseDdMmYyToYmd(startDdMmYy);
     const endYmd = parseDdMmYyToYmd(endDdMmYy);
     if (!startYmd || !endYmd) return;
+    // تسليم في نفس يوم الاستلام ⇒ ادفع الوقت للأمام حتى لا يتطابق الموعدان
+    const dropoffHm = resolveDropoffTimeHm(startYmd, endYmd, pickupTimeDraft, dropoffTimeDraft);
+    if (dropoffHm !== dropoffTimeDraft) setDropoffTimeDraft(dropoffHm);
     const pickup = composeDatetimeLocal(startYmd, pickupTimeDraft);
-    const dropoff = composeDatetimeLocal(endYmd, dropoffTimeDraft);
+    const dropoff = composeDatetimeLocal(endYmd, dropoffHm);
     if (pickup) setPickupDt(pickup);
     if (dropoff) setDropoffDt(dropoff);
   }
@@ -534,6 +564,19 @@ export function BookingSearchWidget({
       const c = composeDatetimeLocal(ymd, hm);
       if (c) setPickupDt(c);
     }
+    // تغيير وقت الاستلام قد يجعله مطابقاً/لاحقاً لوقت التسليم في نفس اليوم
+    const dropYmd = dropoffDt.slice(0, 10);
+    const nextDropoffHm = resolveDropoffTimeHm(
+      ymd || pickupDt.slice(0, 10),
+      dropYmd,
+      hm,
+      dropoffTimeDraft,
+    );
+    if (nextDropoffHm !== dropoffTimeDraft) {
+      setDropoffTimeDraft(nextDropoffHm);
+      const c = composeDatetimeLocal(dropYmd, nextDropoffHm);
+      if (c) setDropoffDt(c);
+    }
   }
 
   function applyDropoffTime(hm: string) {
@@ -544,6 +587,12 @@ export function BookingSearchWidget({
       if (c) setDropoffDt(c);
     }
   }
+
+  /* التسليم في نفس يوم الاستلام ⇒ لا تُعرض أوقات تسبق وقت الاستلام أو تطابقه */
+  const dropoffMinExclusiveHm =
+    pickupDt.slice(0, 10) && pickupDt.slice(0, 10) === dropoffDt.slice(0, 10)
+      ? pickupTimeDraft
+      : null;
 
   const durationBadgeLabel = useMemo(() => {
     if (rental === "corporate") return null;
@@ -687,6 +736,23 @@ export function BookingSearchWidget({
       return;
     }
 
+    const built = buildFleetSearch();
+    if (!built.ok) {
+      if (built.error) setError(built.error);
+      if (built.notice) setBranchHoursNotice(built.notice);
+      return;
+    }
+
+    persistAndNavigate(built.params, built.ctx);
+  }
+
+  type BuiltFleetSearch =
+    | { ok: true; params: URLSearchParams; ctx: StoredFleetSearchContext }
+    | { ok: false; error?: string; notice?: { title: string; message: string } };
+
+  /** التحقق من النموذج وبناء معاملات البحث — يشترك فيه زر البحث والبحث التلقائي. */
+  function buildFleetSearch(): BuiltFleetSearch {
+    if (rental === "corporate") return { ok: false };
     let effPickupDt = pickupDt;
     let effDropoffDt = dropoffDt;
     if (rental === "monthly_packages") {
@@ -695,86 +761,87 @@ export function BookingSearchWidget({
         subPackMonths < MIN_SUBSCRIPTION_DURATION_MONTHS ||
         subPackMonths > MAX_SUBSCRIPTION_DURATION_MONTHS
       ) {
-        setError(
-          `أدخل عدد أشهر الباقة بين ${MIN_SUBSCRIPTION_DURATION_MONTHS} و${MAX_SUBSCRIPTION_DURATION_MONTHS}.`,
-        );
-        return;
+        return {
+          ok: false,
+          error: `أدخل عدد أشهر الباقة بين ${MIN_SUBSCRIPTION_DURATION_MONTHS} و${MAX_SUBSCRIPTION_DURATION_MONTHS}.`,
+        };
       }
       const r = fleetDatetimesFromSubscriptionPack(subPackStartYmd, subPackMonths);
       if (!r) {
-        setError("يوم بدء الباقة غير صالح.");
-        return;
+        return { ok: false, error: "يوم بدء الباقة غير صالح." };
       }
       effPickupDt = r.pickupDt;
       effDropoffDt = r.dropoffDt;
     }
 
     if (!effPickupDt.trim() || !effDropoffDt.trim()) {
-      setError(
-        rental === "monthly_packages"
-          ? "تعذّر احتساب التواريخ من يوم بدء الباقة — راجع التاريخ أعلاه."
-          : "يرجى تحديد تاريخ ووقت الاستلام والتسليم.",
-      );
-      return;
+      return {
+        ok: false,
+        error:
+          rental === "monthly_packages"
+            ? "تعذّر احتساب التواريخ من يوم بدء الباقة — راجع التاريخ أعلاه."
+            : "يرجى تحديد تاريخ ووقت الاستلام والتسليم.",
+      };
     }
 
     const pickupDate = new Date(effPickupDt);
     const dropoffDate = new Date(effDropoffDt);
     if (Number.isNaN(pickupDate.getTime()) || Number.isNaN(dropoffDate.getTime())) {
-      setError("صيغة التاريخ غير صالحة.");
-      return;
+      return { ok: false, error: "صيغة التاريخ غير صالحة." };
     }
-    if (dropoffDate.getTime() < pickupDate.getTime()) {
-      setError("تاريخ التسليم يجب أن يكون بعد أو يطابق وقت الاستلام.");
-      return;
+    if (!isDropoffAfterPickup(pickupDate, dropoffDate)) {
+      return { ok: false, error: DROPOFF_AFTER_PICKUP_ERROR_AR };
     }
 
     const days = computeBookingDays(pickupDate, dropoffDate);
     const rentalErr = validateRentalMinDays(rental, days);
     if (rentalErr) {
-      setError(rentalErr);
-      return;
+      return { ok: false, error: rentalErr };
     }
 
     if (branchSelectRequired) {
       if (!pickupBranchEffective) {
-        setError(mode === "delivery" ? "اختر فرع التوصيل." : "اختر فرع الاستلام.");
-        return;
+        return {
+          ok: false,
+          error: mode === "delivery" ? "اختر فرع التوصيل." : "اختر فرع الاستلام.",
+        };
       }
       if (returnLocationDifferent && !returnBranchEffective) {
-        setError("اختر فرع الإرجاع.");
-        return;
+        return { ok: false, error: "اختر فرع الإرجاع." };
       }
     }
 
     if (mode === "delivery") {
       const mapOk = deliveryLat != null && deliveryLng != null;
       if (!mapOk) {
-        setError("حدّد موقع التوصيل على الخريطة.");
-        return;
+        return { ok: false, error: "حدّد موقع التوصيل على الخريطة." };
       }
     }
 
     if (!tabFlagsEff.allowHolidayBooking && mode === "pickup" && pickupBranchEffective) {
       const sch = lookupBranchOpeningSchedule(dateCities, pickupBranchEffective);
       if (!isDateTimeWithinBranchSchedule(pickupDate, sch)) {
-        setBranchHoursNotice({
-          title: "فرع الاستلام غير متاح",
-          message:
-            "فرع الاستلام غير متاح في وقت الاستلام المحدّد. اختر موعداً ضمن مواعيد العمل أو فرعاً آخر.",
-        });
-        return;
+        return {
+          ok: false,
+          notice: {
+            title: "فرع الاستلام غير متاح",
+            message:
+              "فرع الاستلام غير متاح في وقت الاستلام المحدّد. اختر موعداً ضمن مواعيد العمل أو فرعاً آخر.",
+          },
+        };
       }
     }
     if (!tabFlagsEff.allowHolidayBooking && returnBranchEffective) {
       const schR = lookupBranchOpeningSchedule(dateCities, returnBranchEffective);
       if (!isDateTimeWithinBranchSchedule(dropoffDate, schR)) {
-        setBranchHoursNotice({
-          title: "فرع التسليم غير متاح",
-          message:
-            "فرع التسليم غير متاح في وقت التسليم المحدّد. اختر موعداً ضمن مواعيد العمل أو فرعاً آخر.",
-        });
-        return;
+        return {
+          ok: false,
+          notice: {
+            title: "فرع التسليم غير متاح",
+            message:
+              "فرع التسليم غير متاح في وقت التسليم المحدّد. اختر موعداً ضمن مواعيد العمل أو فرعاً آخر.",
+          },
+        };
       }
     }
 
@@ -832,8 +899,52 @@ export function BookingSearchWidget({
       days,
     };
 
-    persistAndNavigate(params, ctx);
+    return { ok: true, params, ctx };
   }
+
+  /* بحث تلقائي بعد اكتمال البيانات — في بطاقة `/fleet` وصفحة إتمام الحجز فقط،
+     والزر يبقى كما هو لمن يفضّل الضغط عليه. */
+  const autoSearchEnabled = combinedPanel || isCheckout;
+  const lastAutoSearchSigRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!autoSearchEnabled || !mounted || rental === "corporate") return;
+    const built = buildFleetSearch();
+    if (!built.ok) return;
+    const sig = fleetSearchSignature(built.params);
+    // النتيجة المعروضة حالياً هي نفسها ⇒ لا حاجة لإعادة البحث
+    if (sig === lastAutoSearchSigRef.current || sig === fleetSearchSignature(urlSp)) {
+      lastAutoSearchSigRef.current = sig;
+      return;
+    }
+    const timer = setTimeout(() => {
+      lastAutoSearchSigRef.current = sig;
+      setError(null);
+      setBranchHoursNotice(null);
+      persistAndNavigate(built.params, built.ctx);
+    }, AUTO_SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    autoSearchEnabled,
+    mounted,
+    rental,
+    mode,
+    pickupDt,
+    dropoffDt,
+    subPackMonths,
+    subPackStartYmd,
+    pickupBranchEffective,
+    returnBranchEffective,
+    returnLocationDifferent,
+    deliveryLat,
+    deliveryLng,
+    deliveryAddressText,
+    deliveryOriginCitySlug,
+    pickupCityEff,
+    returnCityEff,
+    urlSp,
+  ]);
 
   // Resolve label for a branch slug
   function branchLabel(slug: string): string {
@@ -1284,6 +1395,7 @@ export function BookingSearchWidget({
                     time={dropoffTimeDraft}
                     schedule={dropoffTimeBranchSchedule}
                     dateDdMmYy={dropoffDateDraft}
+                    minExclusiveHm={dropoffMinExclusiveHm}
                     onConfirm={applyDropoffTime}
                     anchorRef={dropoffTimeRef}
                   />
@@ -1907,6 +2019,7 @@ export function BookingSearchWidget({
                   readOnly={rental !== "daily"}
                   schedule={dropoffTimeBranchSchedule}
                   dateDdMmYy={dropoffDateDraft}
+                  minExclusiveHm={dropoffMinExclusiveHm}
                   onConfirm={applyDropoffTime}
                   anchorRef={dropoffTimeRef}
                 />

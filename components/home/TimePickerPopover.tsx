@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { CalendarX2, Clock, X } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useAnchoredPopoverPosition } from "@/lib/use-anchored-popover-position";
-import { parseDdMmYyToYmd } from "@/lib/booking-search-shared";
+import { parseDdMmYyToYmd, TIME_SLOT_STEP_MINUTES } from "@/lib/booking-search-shared";
 import {
   parseHmToMinutes,
   scheduleHasAnyRule,
@@ -24,9 +24,14 @@ type Props = {
   schedule?: BranchOpeningHoursSchedule | null;
   /** تاريخ اليوم المختار (DD-MM-YY) لتحديد مواعيد يوم الأسبوع */
   dateDdMmYy?: string;
+  /**
+   * أقل وقت (HH:mm) — تُخفى السلوتات المساوية له أو السابقة عليه.
+   * يُستخدم لوقت التسليم عندما يكون في نفس يوم الاستلام، حتى لا يتطابق الموعدان.
+   */
+  minExclusiveHm?: string | null;
 };
 
-const SLOT_STEP_MINUTES = 30;
+const SLOT_STEP_MINUTES = TIME_SLOT_STEP_MINUTES;
 
 type DayBounds =
   | { kind: "unrestricted" }
@@ -100,6 +105,7 @@ export function TimePickerPopover({
   readOnly = false,
   schedule = null,
   dateDdMmYy,
+  minExclusiveHm = null,
 }: Props) {
   const panelRef = useRef<HTMLDivElement>(null);
   const timeListRef = useRef<HTMLDivElement>(null);
@@ -121,14 +127,16 @@ export function TimePickerPopover({
   const allowedSlots = useMemo(() => {
     if (bounds.kind === "closed") return [];
     const minMinutes = minMinutesIfToday(dateDdMmYy);
+    const minExclusiveM = minExclusiveHm ? parseHmToMinutes(minExclusiveHm) : null;
     const out: number[] = [];
     for (let m = 0; m < 24 * 60; m += SLOT_STEP_MINUTES) {
       if (bounds.kind === "range" && (m < bounds.openM || m > bounds.closeM)) continue;
       if (minMinutes != null && m < minMinutes) continue;
+      if (minExclusiveM != null && m <= minExclusiveM) continue;
       out.push(m);
     }
     return out;
-  }, [bounds, dateDdMmYy]);
+  }, [bounds, dateDdMmYy, minExclusiveHm]);
 
   const groups = useMemo(
     () =>
@@ -213,13 +221,17 @@ export function TimePickerPopover({
         <p className="px-3 py-4 text-center text-[11px] font-semibold text-[#aaa08e]">
           الوقت محدد آلياً
         </p>
-      ) : bounds.kind === "closed" ? (
+      ) : groups.length === 0 ? (
         <div className="flex flex-col items-center gap-2 px-4 py-6 text-center">
           <CalendarX2 className="size-7 text-[#c9a356]" aria-hidden />
           <p className="text-[12.5px] font-bold leading-relaxed text-[#3a2f1e]">
-            {isAr
-              ? "الفرع مغلق في هذا اليوم — اختر تاريخاً آخر أو فرعاً آخر."
-              : "The branch is closed on this day — pick another date or branch."}
+            {bounds.kind === "closed"
+              ? isAr
+                ? "الفرع مغلق في هذا اليوم — اختر تاريخاً آخر أو فرعاً آخر."
+                : "The branch is closed on this day — pick another date or branch."
+              : isAr
+                ? "لا يوجد وقت متاح بعد وقت الاستلام في هذا اليوم — اختر تاريخ تسليم لاحق."
+                : "No time available after the pickup time on this day — pick a later return date."}
           </p>
         </div>
       ) : (
@@ -227,7 +239,7 @@ export function TimePickerPopover({
           <div className="flex items-center gap-1.5 border-b border-[#f0ebe4] px-4 py-2.5">
             <Clock className="size-3.5 shrink-0 text-[#dbb878]" aria-hidden />
             <span className="text-[11.5px] font-bold text-[#6b5a3b]">
-              {bounds.kind === "unrestricted" ? (
+              {bounds.kind !== "range" ? (
                 isAr ? "متاح على مدار 24 ساعة" : "24-hour availability"
               ) : (
                 <>

@@ -1,3 +1,5 @@
+import { DROPOFF_AFTER_PICKUP_ERROR_AR, isDropoffAfterPickup } from "@/lib/booking-days";
+
 /** التحقق من اكتمال بحث الأسطول قبل «احجز الآن» (من معاملات الرابط). */
 export type FleetBookNowValidationResult =
   | { ok: true }
@@ -25,10 +27,10 @@ export function validateFleetBookNowSearchParams(
       message: "صيغة التواريخ غير صالحة — راجع الاستلام والتسليم في النموذج أعلاه.",
     };
   }
-  if (dropoffDate.getTime() < pickupDate.getTime()) {
+  if (!isDropoffAfterPickup(pickupDate, dropoffDate)) {
     return {
       ok: false,
-      message: "تاريخ التسليم يجب أن يكون بعد وقت الاستلام.",
+      message: DROPOFF_AFTER_PICKUP_ERROR_AR,
     };
   }
 

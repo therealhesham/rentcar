@@ -7,11 +7,17 @@ import { useLocale } from "next-intl";
 import { DateRangePickerPopover } from "@/components/home/DateRangePickerPopover";
 import { LocationPickerPopover } from "@/components/home/LocationPickerPopover";
 import { TimePickerPopover } from "@/components/home/TimePickerPopover";
+import {
+  DROPOFF_AFTER_PICKUP_ERROR_AR,
+  DROPOFF_AFTER_PICKUP_ERROR_EN,
+  isDropoffAfterPickup,
+} from "@/lib/booking-days";
 import type { BookingCityBranchesOption } from "@/lib/booking-location-options";
 import {
   composeDatetimeLocal,
   draftFromDatetimeLocal,
   parseDdMmYyToYmd,
+  resolveDropoffTimeHm,
 } from "@/lib/booking-search-shared";
 import { OVERLAY_BACKDROP_Z } from "@/lib/overlay-z-index";
 import {
@@ -145,6 +151,15 @@ export function FleetBookNowHintModal({
   function applyDateRange(startDdMmYy: string, endDdMmYy: string) {
     setPickupDateDraft(startDdMmYy);
     setDropoffDateDraft(endDdMmYy);
+    // تسليم في نفس يوم الاستلام ⇒ ادفع الوقت للأمام حتى لا يتطابق الموعدان
+    setDropoffTimeDraft((hm) =>
+      resolveDropoffTimeHm(
+        parseDdMmYyToYmd(startDdMmYy) ?? "",
+        parseDdMmYyToYmd(endDdMmYy) ?? "",
+        pickupTimeDraft,
+        hm,
+      ),
+    );
   }
 
   function applyPickupDateOnly(dateDdMmYy: string) {
@@ -170,11 +185,23 @@ export function FleetBookNowHintModal({
 
   function applyPickupTime(hm: string) {
     setPickupTimeDraft(hm);
+    setDropoffTimeDraft((prev) =>
+      resolveDropoffTimeHm(
+        parseDdMmYyToYmd(pickupDateDraft) ?? "",
+        parseDdMmYyToYmd(dropoffDateDraft) ?? "",
+        hm,
+        prev,
+      ),
+    );
   }
 
   function applyDropoffTime(hm: string) {
     setDropoffTimeDraft(hm);
   }
+
+  /* التسليم في نفس يوم الاستلام ⇒ لا تُعرض أوقات تسبق وقت الاستلام أو تطابقه */
+  const dropoffMinExclusiveHm =
+    pickupDateDraft && pickupDateDraft === dropoffDateDraft ? pickupTimeDraft : null;
 
   // جدول مواعيد الفرع المختار حالياً
   const selectedBranchSchedule = useMemo(() => {
@@ -218,12 +245,8 @@ export function FleetBookNowHintModal({
       setError(isRTL ? "صيغة التاريخ/الوقت غير صالحة." : "Invalid date or time format.");
       return;
     }
-    if (dropoffDate.getTime() < pickupDate.getTime()) {
-      setError(
-        isRTL
-          ? "وقت التسليم يجب أن يكون بعد وقت الاستلام."
-          : "Return time must be after pickup time.",
-      );
+    if (!isDropoffAfterPickup(pickupDate, dropoffDate)) {
+      setError(isRTL ? DROPOFF_AFTER_PICKUP_ERROR_AR : DROPOFF_AFTER_PICKUP_ERROR_EN);
       return;
     }
 
@@ -515,6 +538,7 @@ export function FleetBookNowHintModal({
                   onClose={() => setDropoffTimeOpen(false)}
                   label={isRTL ? "وقت التسليم" : "Return Time"}
                   time={dropoffTimeDraft}
+                  minExclusiveHm={dropoffMinExclusiveHm}
                   onConfirm={applyDropoffTime}
                   anchorRef={dropoffTimeRef}
                 />

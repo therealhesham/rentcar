@@ -1,3 +1,4 @@
+import { DROPOFF_AFTER_PICKUP_ERROR_AR, isDropoffAfterPickup } from "@/lib/booking-days";
 import type { CreateDirectBookingInput } from "@/lib/direct-booking";
 import {
   parseAddonIdsFromJsonBody,
@@ -34,9 +35,9 @@ export function parseCreateDirectBookingInputFromCheckoutJson(
   }
   if (
     dropoffParsed.dropoffDate &&
-    dropoffParsed.dropoffDate.getTime() < parsed.data.pickupDate.getTime()
+    !isDropoffAfterPickup(parsed.data.pickupDate, dropoffParsed.dropoffDate)
   ) {
-    return { ok: false, error: "وقت التسليم يجب أن يكون بعد وقت الاستلام." };
+    return { ok: false, error: DROPOFF_AFTER_PICKUP_ERROR_AR };
   }
 
   const emailParsed = parseContactEmailFromJson(obj);

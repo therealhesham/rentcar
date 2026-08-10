@@ -6,7 +6,7 @@ import { BookingWidget } from "@/components/home";
 import { SiteFooter } from "@/components/home/SiteFooter";
 import { SiteNav } from "@/components/shared/SiteNav";
 import { getActiveBookingCitiesWithBranches } from "@/lib/branch-data";
-import { computeBookingDays } from "@/lib/booking-days";
+import { computeBookingDays, isDropoffAfterPickup } from "@/lib/booking-days";
 import { formatDailyBookingDurationFromIso } from "@/lib/booking-duration-display";
 import { listAvailableCarModelIds } from "@/lib/direct-booking";
 import {
@@ -87,7 +87,7 @@ export default async function FleetPage({
     if (
       !Number.isNaN(pickupDate.getTime()) &&
       !Number.isNaN(dropoffDate.getTime()) &&
-      dropoffDate.getTime() >= pickupDate.getTime()
+      isDropoffAfterPickup(pickupDate, dropoffDate)
     ) {
       const days = computeBookingDays(pickupDate, dropoffDate);
       const durationLabel =
