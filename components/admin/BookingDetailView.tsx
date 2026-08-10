@@ -203,12 +203,15 @@ export function BookingDetailView({
           </span>
         }
         actions={
-          <BookingHeaderGearMenu
-            bookingId={booking.id}
-            kind={booking.kind}
-            currentPlateNumber={booking.vehiclePlateNumber}
-            onOpenPlateModal={() => setUpdatePlateModalOpen(true)}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            {editActions}
+            <BookingHeaderGearMenu
+              bookingId={booking.id}
+              kind={booking.kind}
+              currentPlateNumber={booking.vehiclePlateNumber}
+              onOpenPlateModal={() => setUpdatePlateModalOpen(true)}
+            />
+          </div>
         }
       />
 

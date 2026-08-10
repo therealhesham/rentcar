@@ -21,6 +21,7 @@ import type { EditableBookingRow } from "@/lib/admin-booking-edit-types";
 export type { EditableBookingRow } from "@/lib/admin-booking-edit-types";
 
 type CategoryOption = { slug: string; title: string };
+type BranchOption = { slug: string; name: string };
 
 function paymentStatusLabelArForBooking(ps: string | null | undefined, balanceDue?: number | null): string {
   const k = String(ps ?? "")
@@ -37,10 +38,13 @@ type Props = {
   request: EditableBookingRow;
   categories: CategoryOption[];
   models: BookableModelOption[];
+  branches?: BranchOption[];
   /** فتح نافذة التعديل فوراً (مثلاً من صفحة التفاصيل أو ?edit=1) */
   defaultOpen?: boolean;
   /** إخفاء رابط «عرض التفاصيل» داخل النافذة */
   hideDetailLink?: boolean;
+  /** إظهار زر التفعيل في الصفحة أم الاكتفاء بالمودال فقط */
+  showTrigger?: boolean;
   triggerLabel?: string;
   triggerClassName?: string;
   onModalClose?: () => void;
@@ -74,6 +78,7 @@ type InnerProps = {
   request: EditableBookingRow;
   categories: CategoryOption[];
   models: BookableModelOption[];
+  branches?: BranchOption[];
   onClose: () => void;
   hideDetailLink?: boolean;
 };
@@ -82,6 +87,7 @@ export function EditBookingModalInner({
   request,
   categories,
   models,
+  branches,
   onClose,
   hideDetailLink = false,
 }: InnerProps) {
@@ -348,9 +354,28 @@ export function EditBookingModalInner({
                   defaultValue={request.branch}
                   className="mt-1 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
                 >
-                  <option value="jeddah">جدة</option>
-                  <option value="madinah">المدينة المنورة</option>
-                  <option value="tabuk">تبوك</option>
+                  {branches && branches.length > 0 ? (
+                    <>
+                      {request.branch && !branches.some((b) => b.slug === request.branch) ? (
+                        <option value={request.branch}>{request.branch}</option>
+                      ) : null}
+                      {branches.map((b) => (
+                        <option key={b.slug} value={b.slug}>
+                          {b.name}
+                        </option>
+                      ))}
+                    </>
+                  ) : (
+                    <>
+                      <option value="ared">العريض</option>
+                      <option value="anbryiah">العنبرية</option>
+                      <option value="aziziyah">العزيزية</option>
+                      <option value="palastine-sehaba">فلسطين الصحافة</option>
+                      <option value="ajawed">الاجاويد</option>
+                      <option value="king-abdelziz-rd">طريق الملك عبدالعزيز</option>
+                      <option value="mruj">حي المروج</option>
+                    </>
+                  )}
                 </select>
               </label>
               <label className="block text-sm font-bold text-on-surface">
@@ -550,14 +575,23 @@ export function EditBookingRequestForm({
   request,
   categories,
   models,
+  branches,
   defaultOpen = false,
   hideDetailLink = false,
+  showTrigger = true,
   triggerLabel = "تعديل",
   triggerClassName,
   onModalClose,
 }: Props) {
   const [open, setOpen] = useState(defaultOpen);
   const [innerKey, setInnerKey] = useState(0);
+
+  useEffect(() => {
+    if (defaultOpen) {
+      setInnerKey((k) => k + 1);
+      setOpen(true);
+    }
+  }, [defaultOpen]);
 
   const closeModal = () => {
     setOpen(false);
@@ -574,20 +608,22 @@ export function EditBookingRequestForm({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => {
-          setInnerKey((k) => k + 1);
-          setOpen(true);
-        }}
-        className={
-          triggerClassName ??
-          "inline-flex items-center gap-1 rounded-lg border border-outline-variant/60 bg-surface-container px-2 py-1.5 text-xs font-bold text-on-surface hover:bg-surface-container-high"
-        }
-      >
-        <Pencil className="h-3.5 w-3.5 shrink-0" aria-hidden />
-        {triggerLabel}
-      </button>
+      {showTrigger ? (
+        <button
+          type="button"
+          onClick={() => {
+            setInnerKey((k) => k + 1);
+            setOpen(true);
+          }}
+          className={
+            triggerClassName ??
+            "inline-flex items-center gap-1 rounded-lg border border-outline-variant/60 bg-surface-container px-2 py-1.5 text-xs font-bold text-on-surface hover:bg-surface-container-high"
+          }
+        >
+          <Pencil className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          {triggerLabel}
+        </button>
+      ) : null}
 
       {open ? (
         <div
@@ -599,6 +635,7 @@ export function EditBookingRequestForm({
             request={request}
             categories={categories}
             models={models}
+            branches={branches}
             hideDetailLink={hideDetailLink}
             onClose={closeModal}
           />

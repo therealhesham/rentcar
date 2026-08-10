@@ -91,6 +91,7 @@ export default async function AdminBookingDetailPage({
         request={editable}
         categories={editContext.categories}
         models={editContext.models}
+        branches={editContext.branches}
       />
     </Suspense>
   );
