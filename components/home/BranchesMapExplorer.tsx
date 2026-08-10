@@ -122,6 +122,14 @@ export function BranchesMapExplorer({ groups }: { groups: ExplorerCityGroup[] })
                       <span className="mt-0.5 block truncate text-xs leading-relaxed text-[#8a7752]">
                         {branch.address?.trim() || branch.tagline?.trim() || t("defaultAddress")}
                       </span>
+                      {branch.phone?.trim() ? (
+                        <span className="mt-1.5 flex items-center gap-1.5 text-xs font-bold text-[#775927]">
+                          <Phone className="size-3.5 shrink-0" aria-hidden />
+                          <span dir="ltr" className="truncate">
+                            {branch.phone.trim()}
+                          </span>
+                        </span>
+                      ) : null}
                     </span>
                   </button>
                 );
@@ -150,6 +158,16 @@ export function BranchesMapExplorer({ groups }: { groups: ExplorerCityGroup[] })
                 <p className="mt-0.5 truncate text-xs text-[#8a7752]">
                   {selected.address?.trim() || selected.tagline?.trim() || t("defaultAddress")}
                 </p>
+                {selected.phone?.trim() ? (
+                  <a
+                    href={`tel:${selected.phone.trim()}`}
+                    dir="ltr"
+                    className="mt-1 inline-flex items-center gap-1.5 text-xs font-extrabold text-[#775927] transition-colors hover:text-[#003749]"
+                  >
+                    <Phone className="size-3.5 shrink-0" aria-hidden />
+                    {selected.phone.trim()}
+                  </a>
+                ) : null}
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 {selected.phone?.trim() ? (
