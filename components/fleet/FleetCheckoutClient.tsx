@@ -716,6 +716,11 @@ export function FleetCheckoutClient({
     const email = String(fd.get("email") ?? "").trim();
     const terms = fd.get("terms") === "on";
 
+    if (name.trim().split(/\s+/).filter(Boolean).length < 3) {
+      setError("رجاء كتابة الاسم بالكامل");
+      return;
+    }
+
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setError("أدخل بريداً إلكترونياً صالحاً لإرسال الفاتورة بعد الدفع.");
       return;
