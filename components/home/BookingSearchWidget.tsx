@@ -534,11 +534,18 @@ export function BookingSearchWidget({
 
   function applyPickupDateOnly(dateDdMmYy: string) {
     applyPickupDateFromDraft(dateDdMmYy);
-    const startYmd = parseDdMmYyToYmd(dateDdMmYy);
-    const endYmd = dropoffDt.slice(0, 10);
-    if (startYmd && endYmd && endYmd < startYmd) {
-      setDropoffDt("");
+    if (rental !== "daily") {
+      const startYmd = parseDdMmYyToYmd(dateDdMmYy);
+      const endYmd = dropoffDt.slice(0, 10);
+      if (startYmd && endYmd && endYmd < startYmd) {
+        setDropoffDt("");
+      }
+      return;
     }
+    // اختيار تاريخ الذهاب يُعيد بدء النطاق ⇒ يُختار تاريخ الإياب من جديد،
+    // والتقويم ينتقل أسفل حقل «تاريخ التسليم» حتى لا يلتبس على المستخدم
+    setDropoffDt("");
+    setDateRangeAnchor("dropoff");
   }
 
   function toggleDateRange(anchor: "pickup" | "dropoff") {

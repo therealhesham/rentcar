@@ -164,11 +164,10 @@ export function FleetBookNowHintModal({
 
   function applyPickupDateOnly(dateDdMmYy: string) {
     setPickupDateDraft(dateDdMmYy);
-    const startYmd = parseDdMmYyToYmd(dateDdMmYy);
-    const endYmd = parseDdMmYyToYmd(dropoffDateDraft);
-    if (startYmd && endYmd && endYmd < startYmd) {
-      setDropoffDateDraft("");
-    }
+    // اختيار تاريخ الذهاب يُعيد بدء النطاق ⇒ يُختار تاريخ الإياب من جديد،
+    // والتقويم ينتقل أسفل حقل «تاريخ التسليم» حتى لا يلتبس على المستخدم
+    setDropoffDateDraft("");
+    setDateRangeAnchor("dropoff");
   }
 
   function toggleDateRange(anchor: "pickup" | "dropoff") {
