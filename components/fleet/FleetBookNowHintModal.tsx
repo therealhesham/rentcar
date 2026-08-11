@@ -1,7 +1,7 @@
 "use client";
 
 import { CalendarClock, CalendarRange, Clock, MapPin, ChevronDown, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLocale } from "next-intl";
 import { DateRangePickerPopover } from "@/components/home/DateRangePickerPopover";
@@ -100,10 +100,27 @@ export function FleetBookNowHintModal({
   const pickupTimeRef = useRef<HTMLButtonElement>(null);
   const dropoffTimeRef = useRef<HTMLButtonElement>(null);
 
-  const branchValue = useMemo(
-    () => (branch || initialBranch || defaultBranchSlug).trim(),
-    [branch, initialBranch, defaultBranchSlug],
+  /** هل هذا الفرع من فروع هذه السيارة فعلاً؟ */
+  const isSelectableBranch = useCallback(
+    (slug: string) => dateCities.some((c) => c.branches.some((b) => b.slug === slug)),
+    [dateCities],
   );
+
+  /**
+   * أول مرشّح **صالح** من: اختيار المستخدم، ثم الفرع القادم من الرابط، ثم أول فرع متاح.
+   *
+   * التحقق من الصلاحية ضروري لا تجميلي: `initialBranch` قد يحمل فرعاً لا تتوفر فيه هذه
+   * السيارة (من رابط قديم أو من الفرع الافتراضي العام). حينها كان `branchValue` يبقى
+   * غير فارغ فيمرّ من شرط الإرسال، بينما `branchLabel` لا يجده فتعرض الواجهة «اختر
+   * الفرع» — فيُرسَل الحجز بفرع لم يره المستخدم ولا تتوفر فيه السيارة.
+   */
+  const branchValue = useMemo(() => {
+    for (const candidate of [branch, initialBranch, defaultBranchSlug]) {
+      const slug = candidate?.trim();
+      if (slug && isSelectableBranch(slug)) return slug;
+    }
+    return "";
+  }, [branch, initialBranch, defaultBranchSlug, isSelectableBranch]);
   const dateRangeActiveRef = dateRangeAnchor === "pickup" ? pickupDateRef : dropoffDateRef;
 
   function branchLabel(slug: string): string {
@@ -116,7 +133,8 @@ export function FleetBookNowHintModal({
 
   useEffect(() => {
     if (!open) return;
-    setBranch((initialBranch || defaultBranchSlug).trim());
+    const seed = (initialBranch || "").trim();
+    setBranch(isSelectableBranch(seed) ? seed : defaultBranchSlug);
     const pickupDraft = draftFromDatetimeLocal((initialPickup || localNowPlusHours(2)).trim());
     const dropoffDraft = draftFromDatetimeLocal((initialDropoff || localNowPlusHours(26)).trim());
     setPickupDateDraft(pickupDraft.dateDdMmYy);
@@ -128,7 +146,7 @@ export function FleetBookNowHintModal({
     setPickupTimeOpen(false);
     setDropoffTimeOpen(false);
     setError(null);
-  }, [open, initialBranch, initialPickup, initialDropoff, defaultBranchSlug]);
+  }, [open, initialBranch, initialPickup, initialDropoff, defaultBranchSlug, isSelectableBranch]);
 
   useEffect(() => {
     if (!open) return;
@@ -215,7 +233,16 @@ export function FleetBookNowHintModal({
     e.preventDefault();
     setError(null);
 
-    if (!hasBranches || !branchValue) {
+    if (!hasBranches) {
+      setError(
+        isRTL
+          ? "لا يوجد فرع متاح لهذه السيارة حالياً. اختر سيارة أخرى."
+          : "No branch is currently available for this car. Please choose another car.",
+      );
+      return;
+    }
+
+    if (!branchValue) {
       setError(isRTL ? "يرجى اختيار فرع الاستلام." : "Please select a pickup branch.");
       return;
     }

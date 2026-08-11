@@ -138,16 +138,18 @@ function FleetBookNowButtonInner({ modelId, cities = FALLBACK_CITIES, carName, a
   useEffect(() => {
     const spRaw = sp.toString();
     const spObj = new URLSearchParams(spRaw);
+    // الاحتياطي مقيّد بفروع هذه السيارة — الفرع الافتراضي العام قد لا تتوفر فيه،
+    // فيصل للمودال كقيمة أولية لا يعرفها ولا يعرضها.
     const branch =
       spObj.get("pickupBranch")?.trim() ||
       spObj.get("returnBranch")?.trim() ||
       spObj.get("branch")?.trim() ||
-      firstBranchSlug(cities) ||
+      firstBranchSlug(cities, availableBranchSlugs) ||
       "";
     setDraftBranch(branch);
     setDraftPickup(formatAsDatetimeLocal(spObj.get("pickup")));
     setDraftDropoff(formatAsDatetimeLocal(spObj.get("dropoff")));
-  }, [sp, cities]);
+  }, [sp, cities, availableBranchSlugs]);
 
   function onBookClick(e: React.MouseEvent<HTMLAnchorElement>) {
     e.preventDefault();
