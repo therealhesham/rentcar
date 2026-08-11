@@ -227,7 +227,9 @@ export default async function AdminActivityLogsPage({
     select: { userAgent: true },
     distinct: ["userAgent"],
     orderBy: { createdAt: "desc" },
-    take: 100,
+    // نرفع الحد إلى 8000 لضمان شمول كل النسخ المختلفة للمتصفحات. 
+    // لو كان 100 فقط، عند الاستبعاد لن تُستبعد سوى أحدث 100 نسخة وسيتسرب الباقي.
+    take: 8000,
   });
   /** اسم المتصفح (shortBrowser) → قائمة raw userAgent strings */
   const browserLabelToUAs = new Map<string, string[]>();
