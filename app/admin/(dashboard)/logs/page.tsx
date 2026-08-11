@@ -213,8 +213,84 @@ export default async function AdminActivityLogsPage({
   const countUnit = COUNT_MODES.find((m) => m.key === countMode)!.unit;
   const excludeIps = traffic === "real" ? [...staffIps] : [];
 
+  // صفاية البحث والاستبعاد
+  const q = typeof sp.q === "string" ? sp.q.trim() : "";
+  const exclude = typeof sp.exclude === "string" ? sp.exclude.trim() : "";
+
+  const searchConditions: Prisma.ActivityLogWhereInput[] = [];
+
+  if (q) {
+    const qNum = Number(q);
+    const isQNum = !isNaN(qNum) && Number.isInteger(qNum);
+
+    const matchedUsers = await prisma.user.findMany({
+      where: {
+        OR: [
+          { name: { contains: q } },
+          { phone: { contains: q } },
+          { email: { contains: q } },
+        ],
+      },
+      select: { id: true },
+    });
+    const matchedUserIds = matchedUsers.map((u) => u.id);
+
+    const qOr: Prisma.ActivityLogWhereInput[] = [
+      { ip: { contains: q } },
+      { path: { contains: q } },
+      { actorLabel: { contains: q } },
+      { userAgent: { contains: q } },
+      { detail: { contains: q } },
+    ];
+    if (matchedUserIds.length > 0) {
+      qOr.push({ userId: { in: matchedUserIds } });
+    }
+    if (isQNum) {
+      qOr.push({ carModelId: qNum });
+      qOr.push({ userId: qNum });
+    }
+    searchConditions.push({ OR: qOr });
+  }
+
+  if (exclude) {
+    const exNum = Number(exclude);
+    const isExNum = !isNaN(exNum) && Number.isInteger(exNum);
+
+    const matchedExUsers = await prisma.user.findMany({
+      where: {
+        OR: [
+          { name: { contains: exclude } },
+          { phone: { contains: exclude } },
+          { email: { contains: exclude } },
+        ],
+      },
+      select: { id: true },
+    });
+    const matchedExUserIds = matchedExUsers.map((u) => u.id);
+
+    const exOr: Prisma.ActivityLogWhereInput[] = [
+      { ip: { contains: exclude } },
+      { path: { contains: exclude } },
+      { actorLabel: { contains: exclude } },
+      { userAgent: { contains: exclude } },
+      { detail: { contains: exclude } },
+    ];
+    if (matchedExUserIds.length > 0) {
+      exOr.push({ userId: { in: matchedExUserIds } });
+    }
+    if (isExNum) {
+      exOr.push({ carModelId: exNum });
+      exOr.push({ userId: exNum });
+    }
+    searchConditions.push({ NOT: { OR: exOr } });
+  }
+
+  const searchWhere: Prisma.ActivityLogWhereInput = searchConditions.length
+    ? { AND: searchConditions }
+    : {};
+
   const trafficWhere = excludeIps.length ? { ip: { notIn: excludeIps } } : {};
-  const baseWhere = { ...dateWhere, ...trafficWhere };
+  const baseWhere = { ...dateWhere, ...trafficWhere, ...searchWhere };
   const where = filter.kinds ? { ...baseWhere, kind: { in: filter.kinds } } : baseWhere;
 
   const dateSql =
@@ -228,6 +304,14 @@ export default async function AdminActivityLogsPage({
 
   const trafficSql = excludeIps.length
     ? Prisma.sql`AND (ip IS NULL OR ip NOT IN (${Prisma.join(excludeIps)}))`
+    : Prisma.empty;
+
+  const qSql = q
+    ? Prisma.sql`AND (ip LIKE ${`%${q}%`} OR path LIKE ${`%${q}%`} OR actorLabel LIKE ${`%${q}%`} OR userAgent LIKE ${`%${q}%`})`
+    : Prisma.empty;
+
+  const excludeSql = exclude
+    ? Prisma.sql`AND NOT (ip LIKE ${`%${exclude}%`} OR path LIKE ${`%${exclude}%`} OR actorLabel LIKE ${`%${exclude}%`} OR userAgent LIKE ${`%${exclude}%`})`
     : Prisma.empty;
 
   const [
@@ -273,7 +357,7 @@ export default async function AdminActivityLogsPage({
     // العناوين المميّزة لكل نوع — نحسب منها عدّاد كل تبويب في الذاكرة، لأن اتحاد
     // نوعين ليس مجموع منفرديهما (نفس الـ IP قد يظهر في الاثنين).
     prisma.$queryRaw<Array<{ kind: string; ip: string }>>`
-      SELECT DISTINCT kind, ip FROM ActivityLog WHERE ip IS NOT NULL ${dateSql} ${trafficSql}`,
+      SELECT DISTINCT kind, ip FROM ActivityLog WHERE ip IS NOT NULL ${dateSql} ${trafficSql} ${qSql} ${excludeSql}`,
     // عدد السجلات لكل نوع — هذا الوضع جمعي بحت: مجموع التبويبات = إجمالي السجلات.
     prisma.activityLog.groupBy({
       by: ["kind"],
@@ -512,6 +596,8 @@ export default async function AdminActivityLogsPage({
     page?: number;
     traffic?: "real" | "all";
     count?: CountMode;
+    q?: string | null;
+    exclude?: string | null;
     hash?: string;
   }) => {
     const p = new URLSearchParams();
@@ -529,6 +615,13 @@ export default async function AdminActivityLogsPage({
     if (nextTraffic !== "real") p.set("traffic", nextTraffic);
     const nextCount = patch.count ?? countMode;
     if (nextCount !== "records") p.set("count", nextCount);
+
+    const nextQ = patch.q !== undefined ? patch.q : q;
+    if (nextQ) p.set("q", nextQ);
+
+    const nextExclude = patch.exclude !== undefined ? patch.exclude : exclude;
+    if (nextExclude) p.set("exclude", nextExclude);
+
     if (patch.page && patch.page > 1) p.set("page", String(patch.page));
     const qs = p.toString();
     const base = qs ? `/admin/logs?${qs}` : "/admin/logs";
@@ -1338,6 +1431,96 @@ export default async function AdminActivityLogsPage({
             </div>
           </div>
         </div>
+
+        {/* صفاية الأحداث (تحديد واستبعاد) */}
+        <div className="mb-5 rounded-2xl border border-outline-variant/30 bg-surface/70 p-4">
+          <form method="get" action="/admin/logs#events" className="flex flex-wrap items-center gap-3">
+            {filter.key !== "all" && <input type="hidden" name="kind" value={filter.key} />}
+            {traffic !== "real" && <input type="hidden" name="traffic" value={traffic} />}
+            {countMode !== "records" && <input type="hidden" name="count" value={countMode} />}
+            {isCustomRange ? (
+              <>
+                {from && <input type="hidden" name="from" value={from} />}
+                {to && <input type="hidden" name="to" value={to} />}
+              </>
+            ) : (
+              range.key !== "all" && <input type="hidden" name="range" value={range.key} />
+            )}
+
+            {/* تضمين / تحديد */}
+            <div className="flex min-w-[220px] flex-1 items-center gap-2 rounded-xl border border-emerald-500/40 bg-surface px-3 py-1.5 focus-within:border-emerald-600 focus-within:ring-1 focus-within:ring-emerald-600/30">
+              <span className="text-xs font-bold text-emerald-700 shrink-0">+ تحديد:</span>
+              <input
+                type="text"
+                name="q"
+                defaultValue={q}
+                placeholder="IP، مسار، اسم، متصفح..."
+                className="w-full bg-transparent text-sm font-medium text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none"
+              />
+            </div>
+
+            {/* استبعاد */}
+            <div className="flex min-w-[220px] flex-1 items-center gap-2 rounded-xl border border-rose-500/40 bg-surface px-3 py-1.5 focus-within:border-rose-600 focus-within:ring-1 focus-within:ring-rose-600/30">
+              <span className="text-xs font-bold text-rose-700 shrink-0">- استبعاد:</span>
+              <input
+                type="text"
+                name="exclude"
+                defaultValue={exclude}
+                placeholder="IP، مسار، اسم، متصفح..."
+                className="w-full bg-transparent text-sm font-medium text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none"
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="rounded-xl border border-primary bg-primary px-5 py-2 text-sm font-bold text-on-primary shadow-sm hover:bg-primary/90 transition-colors shrink-0"
+            >
+              تطبيق الصفاية
+            </button>
+
+            {(q || exclude) && (
+              <Link
+                href={hrefWith({ q: null, exclude: null, page: 1, hash: "events" })}
+                className="rounded-xl border border-outline-variant/40 bg-surface px-3.5 py-2 text-sm font-bold text-on-surface-variant hover:bg-outline-variant/15 hover:text-on-surface transition-colors shrink-0"
+              >
+                إلغاء الصفاية
+              </Link>
+            )}
+          </form>
+
+          {/* فلاتر نشطة */}
+          {(q || exclude) && (
+            <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-outline-variant/20 pt-3 text-xs">
+              <span className="font-bold text-on-surface-variant">الآلية النشطة:</span>
+              {q && (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 font-bold text-emerald-900">
+                  <span>تحديد:</span>
+                  <span dir="ltr" className="font-mono">{q}</span>
+                  <Link
+                    href={hrefWith({ q: null, page: 1, hash: "events" })}
+                    className="ms-1 font-black text-emerald-700 hover:text-emerald-950"
+                    title="إزالة تحديد هذا النص"
+                  >
+                    ✕
+                  </Link>
+                </span>
+              )}
+              {exclude && (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-300 bg-rose-50 px-3 py-1 font-bold text-rose-900">
+                  <span>استبعاد:</span>
+                  <span dir="ltr" className="font-mono">{exclude}</span>
+                  <Link
+                    href={hrefWith({ exclude: null, page: 1, hash: "events" })}
+                    className="ms-1 font-black text-rose-700 hover:text-rose-950"
+                    title="إزالة استبعاد هذا النص"
+                  >
+                    ✕
+                  </Link>
+                </span>
+              )}
+            </div>
+          )}
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           {FILTERS.map((f) => {
             const isActive = f.key === filter.key;
@@ -1455,7 +1638,29 @@ export default async function AdminActivityLogsPage({
                       )}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 tabular-nums" dir="ltr">
-                      {r.ip ?? "—"}
+                      {r.ip ? (
+                        <div className="group/ip relative inline-flex items-center gap-1.5">
+                          <span>{r.ip}</span>
+                          <span className="inline-flex items-center gap-1 opacity-0 transition-opacity group-hover/ip:opacity-100">
+                            <Link
+                              href={hrefWith({ q: r.ip, page: 1, hash: "events" })}
+                              className="rounded bg-emerald-100 px-1 py-0.5 text-[10px] font-extrabold text-emerald-800 hover:bg-emerald-200"
+                              title="تحديد هذا الـ IP فقط"
+                            >
+                              +
+                            </Link>
+                            <Link
+                              href={hrefWith({ exclude: r.ip, page: 1, hash: "events" })}
+                              className="rounded bg-rose-100 px-1 py-0.5 text-[10px] font-extrabold text-rose-800 hover:bg-rose-200"
+                              title="استبعاد هذا الـ IP"
+                            >
+                              -
+                            </Link>
+                          </span>
+                        </div>
+                      ) : (
+                        "—"
+                      )}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-on-surface-variant" dir="ltr" title={r.userAgent ?? undefined}>
                       {shortBrowser(r.userAgent) ?? "—"}
