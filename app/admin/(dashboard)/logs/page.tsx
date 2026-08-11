@@ -246,7 +246,12 @@ export default async function AdminActivityLogsPage({
     ? { AND: searchConditions }
     : {};
 
-  const trafficWhere = excludeIps.length ? { ip: { notIn: excludeIps } } : {};
+  // عندما يكون المستخدم يبحث بصراحة عن شيء بعينه لا نطبّق فلتر الترافيك —
+  // فلتر "IP موظف" سيتناقض مع طلب البحث ويعطي صفر نتائج.
+  const hasActiveSearch = qValues.length > 0 || excludeValues.length > 0;
+  const effectiveExcludeIps = hasActiveSearch ? [] : excludeIps;
+
+  const trafficWhere = effectiveExcludeIps.length ? { ip: { notIn: effectiveExcludeIps } } : {};
   const baseWhere = { ...dateWhere, ...trafficWhere, ...searchWhere };
   const where = filter.kinds ? { ...baseWhere, kind: { in: filter.kinds } } : baseWhere;
 
@@ -259,8 +264,9 @@ export default async function AdminActivityLogsPage({
           ? Prisma.sql`AND createdAt < ${lt}`
           : Prisma.empty;
 
-  const trafficSql = excludeIps.length
-    ? Prisma.sql`AND (ip IS NULL OR ip NOT IN (${Prisma.join(excludeIps)}))`
+  // استخدم effectiveExcludeIps في الـ raw SQL كذلك
+  const trafficSql = effectiveExcludeIps.length
+    ? Prisma.sql`AND (ip IS NULL OR ip NOT IN (${Prisma.join(effectiveExcludeIps)}))`
     : Prisma.empty;
 
   // للعدّاد الدقيق للتبويبات نحتاج SQL للجلسات — لكن searchWhere مضمّن في baseWhere مسبقاً
@@ -359,17 +365,66 @@ export default async function AdminActivityLogsPage({
   const trackedCheckout = trackedSessions.filter((s) => s.stages.has("checkout"));
   const checkoutWithoutButton = trackedCheckout.filter((s) => !s.stages.has("book_now")).length;
 
+  // خطوات المسار من كل مرحلة حتى إتمام الدفع فعلياً
+  // "payment" = فتح صفحة الدفع بس‛ لا يزال يحتاج اختيار طريقة دفع + تأكيدها
+  const STAGE_ORDER = ["home", "fleet", "book_now", "checkout", "submit", "otp", "payment"] as const;
+  const stepsToPayment = (stage: string): number => {
+    const idx = STAGE_ORDER.indexOf(stage as (typeof STAGE_ORDER)[number]);
+    if (idx < 0) return -1;
+    // payment (index 6) = خطوة واحدة متبقية — لازم يختار ويكمل الدفع فعلياً
+    return STAGE_ORDER.length - idx; // home=7, fleet=6, ..., otp=2, payment=1
+  };
+
+  // أكثر exitPath شيوعاً لكل مرحلة توقف
+  const dropOffPathCounts = new Map<string, Map<string, number>>(); // stage -> (exitPath -> count)
   const dropOff = new Map<string, number>();
   for (const s of sessions) {
     const key = s.deepestStage ?? "none";
     dropOff.set(key, (dropOff.get(key) ?? 0) + 1);
+    if (s.exitPath) {
+      const pathMap = dropOffPathCounts.get(key) ?? new Map<string, number>();
+      pathMap.set(s.exitPath, (pathMap.get(s.exitPath) ?? 0) + 1);
+      dropOffPathCounts.set(key, pathMap);
+    }
   }
-  const dropOffRows = [...dropOff.entries()]
-    .map(([stage, count]) => ({
-      label: stage === "none" ? "صفحات أخرى فقط" : FUNNEL_STAGE_LABELS[stage as FunnelStage],
-      count,
-    }))
-    .sort((a, b) => b.count - a.count);
+  const topExitPath = (stage: string): string | null => {
+    const pathMap = dropOffPathCounts.get(stage);
+    if (!pathMap) return null;
+    let best: string | null = null;
+    let bestCount = 0;
+    for (const [p, c] of pathMap) {
+      if (c > bestCount) { bestCount = c; best = p; }
+    }
+    return best;
+  };
+
+  // عدد الحجوزات المدفوعة فعلياً — "اكتمال الحجز" الحقيقي
+  const paidBookingsCount = await prisma.bookingRequest.count({
+    where: {
+      paymentStatus: "PAID",
+      ...(gte || lt ? { createdAt: { ...(gte ? { gte } : {}), ...(lt ? { lt } : {}) } } : {}),
+    },
+  });
+
+  const dropOffRows: Array<{
+    stage: string;
+    label: string;
+    count: number;
+    exitPath: string | null;
+    steps: number;
+  }> = [
+    // صف "اكتمل الحجز" = دفع فعلي مسجّل في الداتا بيس (paymentStatus PAID)
+    { stage: "paid", label: "اكتمل الحجز ✔", count: paidBookingsCount, exitPath: null, steps: 0 },
+    ...[...dropOff.entries()]
+      .map(([stage, count]) => ({
+        stage,
+        label: stage === "none" ? "صفحات أخرى فقط" : FUNNEL_STAGE_LABELS[stage as FunnelStage],
+        count,
+        exitPath: topExitPath(stage),
+        steps: stage === "none" ? -1 : stepsToPayment(stage),
+      }))
+      .sort((a, b) => b.count - a.count),
+  ];
 
   const errorTally = tally(
     sessions.flatMap((s) => s.errorCodes),
@@ -910,13 +965,55 @@ export default async function AdminActivityLogsPage({
         <div className="mt-6 grid gap-6 border-t border-outline-variant/20 pt-6 md:grid-cols-2">
           <div>
             <h3 className="text-sm font-extrabold">أين يتوقفون</h3>
-            <ul className="mt-3 space-y-2 text-sm">
-              {dropOffRows.map((d) => (
-                <li key={d.label} className="flex items-baseline justify-between gap-3">
-                  <span className="text-on-surface-variant">{d.label}</span>
-                  <span className="font-extrabold tabular-nums">{d.count}</span>
-                </li>
-              ))}
+            <ul className="mt-3 space-y-2.5 text-sm">
+              {dropOffRows.map((d) => {
+                // لون الشارة حسب عدد الخطوات
+                const badgeColor =
+                  d.steps <= 0
+                    ? "bg-emerald-100 text-emerald-800"
+                    : d.steps === 1
+                      ? "bg-rose-100 text-rose-800"
+                      : d.steps === 2
+                        ? "bg-orange-100 text-orange-800"
+                        : d.steps <= 4
+                          ? "bg-amber-100 text-amber-800"
+                          : "bg-outline-variant/20 text-on-surface-variant";
+                const stepsLabel =
+                  d.steps < 0
+                    ? null
+                    : d.steps === 0
+                      ? "اكتمل الحجز ✔"
+                      : d.steps === 1
+                        ? "خطوة واحدة — فتح صفحة الدفع"
+                        : `${d.steps} خطوات من الدفع`;
+                return (
+                  <li key={d.stage} className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 flex-col gap-0.5">
+                      <span className="font-bold text-on-surface">{d.label}</span>
+                      {d.exitPath && (
+                        <a
+                          href={d.exitPath}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="truncate font-mono text-[10px] text-on-surface-variant/70 hover:text-primary hover:underline"
+                          dir="ltr"
+                          title={d.exitPath}
+                        >
+                          {d.exitPath.length > 55 ? d.exitPath.slice(0, 55) + "…" : d.exitPath}
+                        </a>
+                      )}
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {stepsLabel && (
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold ${badgeColor}`}>
+                          {stepsLabel}
+                        </span>
+                      )}
+                      <span className="font-extrabold tabular-nums">{d.count}</span>
+                    </div>
+                  </li>
+                );
+              })}
               {dropOffRows.length === 0 && (
                 <li className="text-on-surface-variant">—</li>
               )}
@@ -1468,6 +1565,14 @@ export default async function AdminActivityLogsPage({
               </Link>
             )}
           </div>
+          {hasActiveSearch && traffic === "real" && (
+            <p className="mt-2.5 flex items-center gap-1.5 text-xs text-amber-700">
+              <svg viewBox="0 0 20 20" fill="currentColor" className="size-3.5 shrink-0">
+                <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+              </svg>
+              فلتر الترافيك معطَّل مؤقتاً أثناء الصفاية — النتائج تشمل عناوين الفريق والترافيك الداخلي.
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {FILTERS.map((f) => {
