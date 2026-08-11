@@ -89,21 +89,22 @@ type FleetBookNowButtonProps = {
  */
 const DATES_REQUESTED_EVENT = "DATES_MODAL_SHOWN";
 
-/**
- * التمرير يجب أن يتأخّر إلى ما بعد تفكيك `OrSimilarModal`: المودال يضبط
- * `document.body.style.overflow = "hidden"` ويستعيده في تنظيف الـeffect. لو صدر أمر
- * التمرير داخل نفس المعالج لَنُفِّذ والجسم ما زال مقفولاً فلا تتحرّك الصفحة إطلاقاً.
- */
-function scrollToSearchAfterModalCloses(): void {
-  setTimeout(scrollToBookingSearchForm, 0);
-}
-
 function FleetBookNowButtonInner({ modelId, carName }: FleetBookNowButtonProps) {
   const router = useRouter();
   const sp = useSearchParams();
   const extra = sp.toString();
   const href = `/fleet/checkout?modelId=${modelId}${extra ? `&${extra}` : ""}`;
   const [orSimilarOpen, setOrSimilarOpen] = useState(false);
+  const [pendingScroll, setPendingScroll] = useState(false);
+
+  useEffect(() => {
+    if (!orSimilarOpen && pendingScroll) {
+      setPendingScroll(false);
+      requestAnimationFrame(() => {
+        scrollToBookingSearchForm();
+      });
+    }
+  }, [orSimilarOpen, pendingScroll]);
 
   function onBookClick(e: React.MouseEvent<HTMLAnchorElement>) {
     e.preventDefault();
@@ -121,7 +122,7 @@ function FleetBookNowButtonInner({ modelId, carName }: FleetBookNowButtonProps) 
     const check = validateFleetBookNowSearchParams(new URLSearchParams(extra));
     if (!check.ok) {
       trackEvent(DATES_REQUESTED_EVENT, { carModelId: modelId });
-      scrollToSearchAfterModalCloses();
+      setPendingScroll(true);
       return;
     }
 
@@ -151,6 +152,16 @@ function FleetBookNowButtonInner({ modelId, carName }: FleetBookNowButtonProps) 
  */
 function FleetBookNowButtonFallback({ modelId, carName }: FleetBookNowButtonProps) {
   const [orSimilarOpen, setOrSimilarOpen] = useState(false);
+  const [pendingScroll, setPendingScroll] = useState(false);
+
+  useEffect(() => {
+    if (!orSimilarOpen && pendingScroll) {
+      setPendingScroll(false);
+      requestAnimationFrame(() => {
+        scrollToBookingSearchForm();
+      });
+    }
+  }, [orSimilarOpen, pendingScroll]);
 
   function onBookClick(e: React.MouseEvent<HTMLAnchorElement>) {
     e.preventDefault();
@@ -168,7 +179,7 @@ function FleetBookNowButtonFallback({ modelId, carName }: FleetBookNowButtonProp
           setOrSimilarOpen(false);
           trackEvent("OR_SIMILAR_CONFIRM", { carModelId: modelId });
           trackEvent(DATES_REQUESTED_EVENT, { carModelId: modelId });
-          scrollToSearchAfterModalCloses();
+          setPendingScroll(true);
         }}
         onClose={() => {
           trackEvent("OR_SIMILAR_DISMISS", { carModelId: modelId });
