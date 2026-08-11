@@ -57,7 +57,11 @@ import { sumCheckoutOneTimeFees } from "@/lib/checkout-one-time-fees";
 import type { FleetCheckoutEditPrefill } from "@/lib/fleet-checkout-edit-prefill";
 import { DdMmYyDateWithPicker } from "@/components/ui/DdMmYyDateWithPicker";
 import { BookingStepper } from "@/components/fleet/BookingStepper";
-import { formatYmdAsDdMmYy, parseDdMmYyToYmd } from "@/lib/booking-search-shared";
+import {
+  formatYmdAsDdMmYy,
+  parseDdMmYyToYmd,
+  WEEKLY_TAB_DAYS,
+} from "@/lib/booking-search-shared";
 import { getDistanceKM } from "@/lib/geo-distance";
 
 const GOLD = "#dbb878";
@@ -1683,6 +1687,21 @@ export function FleetCheckoutClient({
                         <span className="text-[#8a7752]">(غير شامل الضريبة)</span>
                       </p>
                     )}
+                    {rentalTab === "weekly" ? (
+                      <p dir="ltr" className="mt-2 border-t border-[#ebe4d3] pt-2 text-end">
+                        السعر الأسبوعي:{" "}
+                        <span className="font-extrabold text-[#003749]">
+                          {formatSarAmount(
+                            dailyRentalInclTaxSar(
+                              car.pricePerDayExclTax * WEEKLY_TAB_DAYS,
+                              car.vatRatePercent,
+                            ),
+                          )}{" "}
+                          <SarCurrencyGlyph />
+                        </span>{" "}
+                        <span className="text-[#8a7752]">(شامل الضريبة {car.vatRatePercent}%)</span>
+                      </p>
+                    ) : null}
                     {rentalTab === "monthly" && car.pricePerMonthExclTax != null ? (
                       <p dir="ltr" className="mt-2 border-t border-[#ebe4d3] pt-2 text-end">
                         السعر الشهري:{" "}

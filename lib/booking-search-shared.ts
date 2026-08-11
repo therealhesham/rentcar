@@ -3,6 +3,9 @@ import { formatDailyBookingDurationFromIso } from "@/lib/booking-duration-displa
 import { parseHmToMinutes } from "@/lib/branch-opening-hours";
 
 export type RentalTab = "daily" | "weekly" | "monthly" | "monthly_packages";
+
+/** لا يوجد سعر أسبوعي مستقل — تبويب «أسبوعي» يُسعَّر كإجمالي 7 أيام بالسعر اليومي. */
+export const WEEKLY_TAB_DAYS = 7;
 export type ModeTab = "pickup" | "delivery";
 
 function pad2(n: number): string {

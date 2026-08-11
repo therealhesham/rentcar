@@ -11,6 +11,7 @@ import {
   type RentalDiscountRule,
 } from "@/lib/rental-discount";
 import { applyPriceFloorPerDay, type ResolvedPriceFloor } from "@/lib/min-price-floor";
+import { WEEKLY_TAB_DAYS } from "@/lib/booking-search-shared";
 
 const FUEL_AR: Record<FuelType, string> = {
   GASOLINE: "بنزين",
@@ -38,6 +39,15 @@ const TRANS_EN: Record<Transmission, string> = {
 
 const PLACEHOLDER_IMG =
   "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=1200&q=80";
+
+/** تسعير فترة مضروبة في السعر اليومي (تبويب «أسبوعي») */
+type PeriodPricing = { days: number; labelAr: string; labelEn: string };
+
+const WEEKLY_PERIOD: PeriodPricing = {
+  days: WEEKLY_TAB_DAYS,
+  labelAr: "أسبوعياً",
+  labelEn: "Weekly",
+};
 
 import { localizeDbField } from "@/lib/localize";
 
@@ -129,6 +139,7 @@ function mapFleetRowToFleetCar(
   startingFrom: boolean = false,
   monthlyOverride?: { price: number; varies: boolean } | null,
   availableBranchSlugs?: string[],
+  period?: PeriodPricing | null,
 ): FleetCar {
   const m = row.model;
   const brandName = localizeDbField(m.brand, "name", locale).trim();
@@ -153,11 +164,15 @@ function mapFleetRowToFleetCar(
       discountRules,
       referenceDate,
     );
-    priceUi = buildFleetCardPriceParts(effectivePrice, m.vatRatePercent, priceMode, {
-      originalPriceExclTaxSar: basePrice,
+    // تبويب «أسبوعي» لا يملك سعراً مستقلاً — يُعرض إجمالي الفترة من السعر اليومي بعد الخصم
+    const periodDays = period?.days ?? 1;
+    priceUi = buildFleetCardPriceParts(effectivePrice * periodDays, m.vatRatePercent, priceMode, {
+      originalPriceExclTaxSar: basePrice * periodDays,
       discountLabelAr: displayLabelAr,
       discountLabelEn: displayLabelAr,
       startingFrom,
+      periodLabelAr: period?.labelAr ?? null,
+      periodLabelEn: period?.labelEn ?? null,
       locale,
     });
   }
@@ -320,7 +335,10 @@ export type FleetDisplayFilters = {
   pickupDate?: Date | null;
   priceDisplayMode?: RentalPriceDisplayMode;
   locale?: string;
-  /** "monthly" = عرض السعر الشهري بدل اليومي للموديلات التي لها سعر شهري */
+  /**
+   * "monthly" = عرض السعر الشهري بدل اليومي للموديلات التي لها سعر شهري،
+   * "weekly" = عرض إجمالي 7 أيام بالسعر اليومي.
+   */
   rentalTab?: string | null;
 };
 
@@ -387,7 +405,9 @@ export async function getFleetCarsForDisplay(
   });
 
   const hasBranchFilter = Boolean(branchSlug?.trim());
-  const isMonthlyTab = rentalTab?.trim().toLowerCase() === "monthly";
+  const tab = rentalTab?.trim().toLowerCase();
+  const isMonthlyTab = tab === "monthly";
+  const period = tab === "weekly" ? WEEKLY_PERIOD : null;
   const cars: FleetCar[] = [];
   const orderSeen: number[] = [];
   const picks = pickCheapestRowPerModel(rows, discountRules, pickupDate);
@@ -429,6 +449,7 @@ export async function getFleetCarsForDisplay(
         !hasBranchFilter && pick.pricesVary,
         monthly ? { price: monthly.price, varies: !hasBranchFilter && monthly.varies } : null,
         availableSlugsMap.get(modelId),
+        period,
       ),
     );
   }

@@ -95,6 +95,26 @@ function isRentalTabEnabled(f: BookingWidgetTabFlags, r: SearchRentalTab): boole
   }
 }
 
+/** أقصى عدد أيام يُزحزح بها تاريخ التسليم المحسوب بحثاً عن يوم عمل للفرع */
+const MAX_DROPOFF_SHIFT_DAYS = 14;
+
+/**
+ * أقرب موعد تسليم لا يسبق `at` ويقع ضمن مواعيد فرع الإرجاع — تاريخ التسليم
+ * المحسوب تلقائياً (أسبوعي/شهري) قد يقع في يوم إجازة، فيُزاح للأمام يوماً بيوم.
+ * إن لم يوجد يوم مناسب خلال أسبوعين يعود الموعد الأصلي كما هو.
+ */
+function nextDropoffWithinSchedule(
+  at: Date,
+  schedule: Parameters<typeof isDateTimeWithinBranchSchedule>[1],
+): Date {
+  for (let i = 0; i <= MAX_DROPOFF_SHIFT_DAYS; i += 1) {
+    const candidate = new Date(at.getTime());
+    candidate.setDate(candidate.getDate() + i);
+    if (isDateTimeWithinBranchSchedule(candidate, schedule)) return candidate;
+  }
+  return at;
+}
+
 function todayYmdLocalForPack(): string {
   const t = new Date();
   return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
@@ -285,16 +305,6 @@ export function BookingSearchWidget({
   }, [rental]);
 
   useEffect(() => {
-    if (rental === "daily" || rental === "monthly_packages" || rental === "corporate") return;
-    if (!pickupDt.trim()) return;
-    const p = new Date(pickupDt);
-    if (Number.isNaN(p.getTime())) return;
-    const auto = computeAutoDropoff(p, rental);
-    if (!auto) return;
-    setDropoffDt(toDatetimeLocalValue(auto));
-  }, [rental, pickupDt]);
-
-  useEffect(() => {
     const { dateDdMmYy, hm } = draftFromDatetimeLocal(pickupDt);
     setPickupDateDraft(dateDdMmYy);
     setPickupTimeDraft(hm);
@@ -467,6 +477,24 @@ export function BookingSearchWidget({
         : null,
     [returnBranchEffective, dateCities],
   );
+
+  /* أسبوعي/شهري: تاريخ التسليم محسوب من تاريخ الاستلام، ويُزحزح للأمام إن وقع
+     خارج مواعيد فرع الإرجاع — وإلا يفشل التحقق ولا يعمل البحث التلقائي إطلاقاً. */
+  useEffect(() => {
+    if (rental === "daily" || rental === "monthly_packages" || rental === "corporate") return;
+    if (!pickupDt.trim()) return;
+    const p = new Date(pickupDt);
+    if (Number.isNaN(p.getTime())) return;
+    const auto = computeAutoDropoff(p, rental);
+    if (!auto) return;
+    setDropoffDt(
+      toDatetimeLocalValue(
+        tabFlagsEff.allowHolidayBooking
+          ? auto
+          : nextDropoffWithinSchedule(auto, dropoffTimeBranchSchedule),
+      ),
+    );
+  }, [rental, pickupDt, dropoffTimeBranchSchedule, tabFlagsEff.allowHolidayBooking]);
 
   const freshRebookLocationSummaryAr = useMemo(() => {
     if (!isFreshRebookFlow) return "";
