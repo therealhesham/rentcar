@@ -30,8 +30,17 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   });
 }
 
-export default async function Home({ params }: { params: Promise<{ locale: string }> }) {
+export default async function Home({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ locale: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { locale } = await params;
+  // تبويب الإيجار في الويدجت يكتب `?rental=` — لتتحدّث أسعار بطاقات الأسطول تحته
+  const rentalRaw = (await searchParams).rental;
+  const rentalTab = Array.isArray(rentalRaw) ? rentalRaw[0] : rentalRaw;
   const [hero, cities, tabFlags] = await Promise.all([
     getHomeHeroSettings(),
     getActiveBookingCitiesWithBranches(locale).catch(() => []),
@@ -49,9 +58,10 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
               imageAlt={hero.imageAlt}
               cities={cities}
               tabFlags={tabFlags}
+              initialRental={rentalTab}
             />
           }
-          fleetCategories={<FleetCategories />}
+          fleetCategories={<FleetCategories rentalTab={rentalTab} />}
           promoBanner={<PromoBanner />}
           services={<ServicesSection />}
           fleetBanner={<FleetBanner />}

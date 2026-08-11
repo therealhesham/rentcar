@@ -33,9 +33,12 @@ model RentalTerm {
 /// سجل النشاط — تسجيلات دخول العملاء والموظفين ومشاهدات الصفحات، يُعرض في /admin/logs.
 model ActivityLog {
   id         Int      @id @default(autoincrement())
-  /// CUSTOMER_LOGIN | ADMIN_LOGIN | PAGE_VIEW | CAR_VIEW | BOOKING_PAYMENT | BOOKING_REFUND
+  /// CUSTOMER_LOGIN | ADMIN_LOGIN | PAGE_VIEW | CAR_VIEW | BOOK_NOW_CLICK | OR_SIMILAR_CONFIRM |
+  /// OR_SIMILAR_DISMISS | DATES_MODAL_SHOWN | DATES_MODAL_CONFIRM | CAR_UNAVAILABLE |
+  /// CHECKOUT_SUBMIT | CHECKOUT_ERROR | BOOKING_PAYMENT | BOOKING_REFUND
+  /// (مرحلتا رمز التحقق والدفع تُشتقّان من `path` لأن PageViewTracker يغطّيهما)
   kind       String   @db.VarChar(32)
-  /// مسار الصفحة لمشاهدات الصفحات
+  /// مسار الصفحة **مع** الـ query string — بدونه لا يمكن معرفة التواريخ والفرع المستخدَمين في البحث
   path       String?  @db.VarChar(512)
   /// وصف بواسطة — اسم/بريد الموظف أو جوال/بريد العميل
   actorLabel String?  @db.VarChar(255)
@@ -44,6 +47,10 @@ model ActivityLog {
   carModelId Int?
   ip         String?  @db.VarChar(64)
   userAgent  String?  @db.VarChar(512)
+  /// مصدر الزيارة — `document.referrer` وقت أول مشاهدة، فارغ للزيارات المباشرة
+  referrer   String?  @db.VarChar(255)
+  /// تفصيل الحدث: سبب فشل التحقق في CHECKOUT_ERROR، أو أي سياق قصير آخر
+  detail     String?  @db.VarChar(255)
   createdAt  DateTime @default(now())
 
   @@index([kind, createdAt])

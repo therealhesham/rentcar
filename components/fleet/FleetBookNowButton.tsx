@@ -6,6 +6,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { FleetBookNowHintModal } from "@/components/fleet/FleetBookNowHintModal";
 import { OrSimilarModal } from "@/components/fleet/OrSimilarModal";
+import { trackEvent } from "@/lib/track-event";
 import type { BookingCityBranchesOption } from "@/lib/booking-location-options";
 import {
   validateFleetBookNowSearchParams,
@@ -150,13 +151,16 @@ function FleetBookNowButtonInner({ modelId, cities = FALLBACK_CITIES, carName, a
 
   function onBookClick(e: React.MouseEvent<HTMLAnchorElement>) {
     e.preventDefault();
+    trackEvent("BOOK_NOW_CLICK", { carModelId: modelId });
     setOrSimilarOpen(true);
   }
 
   function handleOrSimilarConfirm() {
     setOrSimilarOpen(false);
+    trackEvent("OR_SIMILAR_CONFIRM", { carModelId: modelId });
     const check = validateFleetBookNowSearchParams(new URLSearchParams(sp.toString()));
     if (!check.ok) {
+      trackEvent("DATES_MODAL_SHOWN", { carModelId: modelId });
       setModalOpen(true);
     } else {
       router.push(`/fleet/checkout?modelId=${modelId}&${sp.toString()}`);
@@ -164,6 +168,7 @@ function FleetBookNowButtonInner({ modelId, cities = FALLBACK_CITIES, carName, a
   }
 
   function handleConfirmModal(draft: { branch: string; pickup: string; dropoff: string }) {
+    trackEvent("DATES_MODAL_CONFIRM", { carModelId: modelId });
     const next = new URLSearchParams(sp.toString());
     next.set("mode", "pickup");
     next.set("rental", next.get("rental")?.trim() || "daily");
@@ -186,7 +191,10 @@ function FleetBookNowButtonInner({ modelId, cities = FALLBACK_CITIES, carName, a
         open={orSimilarOpen}
         carName={carName}
         onConfirm={handleOrSimilarConfirm}
-        onClose={() => setOrSimilarOpen(false)}
+        onClose={() => {
+          trackEvent("OR_SIMILAR_DISMISS", { carModelId: modelId });
+          setOrSimilarOpen(false);
+        }}
       />
       <FleetBookNowHintModal
         open={modalOpen}
@@ -223,15 +231,19 @@ function FleetBookNowButtonFallback({
 
   function onBookClick(e: React.MouseEvent<HTMLAnchorElement>) {
     e.preventDefault();
+    trackEvent("BOOK_NOW_CLICK", { carModelId: modelId });
     setOrSimilarOpen(true);
   }
 
   function handleOrSimilarConfirm() {
     setOrSimilarOpen(false);
+    trackEvent("OR_SIMILAR_CONFIRM", { carModelId: modelId });
+    trackEvent("DATES_MODAL_SHOWN", { carModelId: modelId });
     setModalOpen(true);
   }
 
   function handleConfirmModal(draft: { branch: string; pickup: string; dropoff: string }) {
+    trackEvent("DATES_MODAL_CONFIRM", { carModelId: modelId });
     const next = new URLSearchParams();
     next.set("mode", "pickup");
     next.set("rental", "daily");
@@ -254,7 +266,10 @@ function FleetBookNowButtonFallback({
         open={orSimilarOpen}
         carName={carName}
         onConfirm={handleOrSimilarConfirm}
-        onClose={() => setOrSimilarOpen(false)}
+        onClose={() => {
+          trackEvent("OR_SIMILAR_DISMISS", { carModelId: modelId });
+          setOrSimilarOpen(false);
+        }}
       />
       <FleetBookNowHintModal
         open={modalOpen}

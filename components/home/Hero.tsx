@@ -13,9 +13,11 @@ export type HeroProps = {
   imageAlt: string;
   cities: BookingCityBranchesOption[];
   tabFlags?: BookingWidgetTabFlags | null;
+  /** تبويب الإيجار من `?rental=` — حتى يطابق الويدجت أسعار البطاقات بعد إعادة التحميل */
+  initialRental?: string | null;
 };
 
-export function Hero({ imageUrl, imageAlt, cities, tabFlags }: HeroProps) {
+export function Hero({ imageUrl, imageAlt, cities, tabFlags, initialRental }: HeroProps) {
   const t = useTranslations("Hero");
   const locale = useLocale();
   const isRtl = locale === "ar";
@@ -65,7 +67,11 @@ export function Hero({ imageUrl, imageAlt, cities, tabFlags }: HeroProps) {
       >
         <div className="mx-auto w-full max-w-[84rem]">
           <HeroEntrance delay={0.12}>
-            <BookingWidget cities={cities} tabFlags={tabFlags} />
+            <BookingWidget
+              cities={cities}
+              tabFlags={tabFlags}
+              initialFromUrl={initialRental ? { rental: initialRental } : null}
+            />
           </HeroEntrance>
         </div>
       </div>

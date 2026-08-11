@@ -988,6 +988,23 @@ export function BookingSearchWidget({
     urlSp,
   ]);
 
+  /* الصفحة الرئيسية: لا بحث تلقائي، لكن تبويب الإيجار يُكتب في الرابط حتى
+     تتحدّث أسعار بطاقات الأسطول أسفل الويدجت (يومي/أسبوعي/شهري). */
+  useEffect(() => {
+    if (autoSearchEnabled || !mounted) return;
+    const current = urlSp.get("rental") ?? "";
+    const next = rental === "weekly" || rental === "monthly" ? rental : "";
+    if (current === next) return;
+    const sp = new URLSearchParams(urlSp.toString());
+    if (next) {
+      sp.set("rental", next);
+    } else {
+      sp.delete("rental");
+    }
+    const qs = sp.toString();
+    router.replace(`${window.location.pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
+  }, [autoSearchEnabled, mounted, rental, urlSp, router]);
+
   // Resolve label for a branch slug
   function branchLabel(slug: string): string {
     for (const city of dateCities) {

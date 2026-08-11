@@ -2,16 +2,38 @@ import Link from "next/link";
 import { Prisma } from "@prisma/client";
 import { requireAdminPage } from "@/lib/admin-page";
 import { prisma } from "@/lib/prisma";
+import {
+  buildFunnel,
+  buildSessions,
+  CHECKOUT_ERROR_LABELS,
+  FUNNEL_STAGE_LABELS,
+  median,
+  pathQuery,
+  shortBrowser,
+  tally,
+  type FunnelStage,
+} from "@/lib/activity-funnel";
 
 export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 50;
+
+/** سقف الصفوف التي تُحمَّل لحساب القمع — يحمي الصفحة عند نمو السجل. */
+const FUNNEL_ROW_CAP = 20000;
 
 const KIND_LABELS: Record<string, string> = {
   CUSTOMER_LOGIN: "دخول عميل",
   ADMIN_LOGIN: "دخول موظف",
   PAGE_VIEW: "مشاهدة صفحة",
   CAR_VIEW: "مشاهدة سيارة",
+  BOOK_NOW_CLICK: "ضغط احجز الآن",
+  OR_SIMILAR_CONFIRM: "أكّد «أو ما شابه»",
+  OR_SIMILAR_DISMISS: "أغلق «أو ما شابه»",
+  DATES_MODAL_SHOWN: "طُلبت التواريخ",
+  DATES_MODAL_CONFIRM: "أكمل التواريخ",
+  CAR_UNAVAILABLE: "السيارة غير متاحة",
+  CHECKOUT_SUBMIT: "أرسل النموذج",
+  CHECKOUT_ERROR: "خطأ في النموذج",
 };
 
 const KIND_BADGE_CLASSES: Record<string, string> = {
@@ -19,7 +41,39 @@ const KIND_BADGE_CLASSES: Record<string, string> = {
   ADMIN_LOGIN: "bg-amber-50 text-amber-700 border-amber-200",
   PAGE_VIEW: "bg-sky-50 text-sky-700 border-sky-200",
   CAR_VIEW: "bg-violet-50 text-violet-700 border-violet-200",
+  BOOK_NOW_CLICK: "bg-teal-50 text-teal-700 border-teal-200",
+  OR_SIMILAR_CONFIRM: "bg-teal-50 text-teal-700 border-teal-200",
+  OR_SIMILAR_DISMISS: "bg-orange-50 text-orange-700 border-orange-200",
+  DATES_MODAL_SHOWN: "bg-orange-50 text-orange-700 border-orange-200",
+  DATES_MODAL_CONFIRM: "bg-teal-50 text-teal-700 border-teal-200",
+  CAR_UNAVAILABLE: "bg-rose-50 text-rose-700 border-rose-200",
+  CHECKOUT_SUBMIT: "bg-indigo-50 text-indigo-700 border-indigo-200",
+  CHECKOUT_ERROR: "bg-rose-50 text-rose-700 border-rose-200",
 };
+
+/** عناوين محلية — تظهر أثناء التطوير ولا تمثّل زواراً. */
+const LOCAL_IPS = ["::1", "127.0.0.1", "::ffff:127.0.0.1"];
+
+/**
+ * عناوين تُستبعد يدوياً عبر `ANALYTICS_EXCLUDED_IPS` (مفصولة بفواصل). لازمة لأن اشتقاق
+ * عناوين الفريق من `ADMIN_LOGIN` لا يمسك جهازاً تتصفّح منه بحساب عميل للتجربة دون
+ * تسجيل دخول الإدارة — فيُحتسب زائراً حقيقياً ويلوّث الأرقام.
+ */
+const MANUALLY_EXCLUDED_IPS = (process.env.ANALYTICS_EXCLUDED_IPS ?? "")
+  .split(",")
+  .map((ip) => ip.trim())
+  .filter(Boolean);
+
+const pct = (v: number) => `${Math.round(v * 100)}%`;
+
+function formatDuration(ms: number): string {
+  if (ms < 1000) return "لحظة";
+  const totalSeconds = Math.round(ms / 1000);
+  if (totalSeconds < 60) return `${totalSeconds} ث`;
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return seconds ? `${minutes} د ${seconds} ث` : `${minutes} د`;
+}
 
 /** الأنواع التي تُحتسب «زيارة» للموقع العام. */
 const VIEW_KINDS = ["PAGE_VIEW", "CAR_VIEW"];
@@ -59,31 +113,6 @@ const COUNT_UNIT_LABEL: Record<"ip" | "actor", string> = {
   ip: "زائر منفرد (IP فريدة)",
   actor: "مستخدم مختلف",
 };
-
-/** اختصار الـ User-Agent إلى «متصفح — نظام» مثل: Chrome — Android */
-function shortBrowser(ua: string | null): string | null {
-  if (!ua) return null;
-
-  let browser: string;
-  if (/edg(a|ios)?\//i.test(ua)) browser = "Edge";
-  else if (/opr\/|opera/i.test(ua)) browser = "Opera";
-  else if (/samsungbrowser\//i.test(ua)) browser = "Samsung Internet";
-  else if (/firefox\/|fxios\//i.test(ua)) browser = "Firefox";
-  else if (/chrome\/|crios\//i.test(ua)) browser = "Chrome";
-  else if (/safari\//i.test(ua) && /version\//i.test(ua)) browser = "Safari";
-  else if (/whatsapp/i.test(ua)) browser = "WhatsApp";
-  else if (/curl|wget|postman/i.test(ua)) browser = "أداة برمجية";
-  else browser = ua.split(/[\s/]/)[0]?.slice(0, 24) || "غير معروف";
-
-  let os: string | null = null;
-  if (/windows/i.test(ua)) os = "Windows";
-  else if (/android/i.test(ua)) os = "Android";
-  else if (/iphone|ipad|ipod/i.test(ua)) os = "iOS";
-  else if (/mac os x|macintosh/i.test(ua)) os = "macOS";
-  else if (/linux/i.test(ua)) os = "Linux";
-
-  return os ? `${browser} — ${os}` : browser;
-}
 
 /** بداية يوم YYYY-MM-DD بتوقيت الرياض. */
 function riyadhDayStart(ymd: string): Date {
@@ -135,7 +164,26 @@ export default async function AdminActivityLogsPage({
     ? `${from ?? "البداية"} → ${to ?? "الآن"}`
     : range.label;
 
-  const where = filter.kinds ? { ...dateWhere, kind: { in: filter.kinds } } : dateWhere;
+  // عناوين الموظفين تُشتقّ من `ADMIN_LOGIN` عبر كل الفترة بدل قائمة ثابتة في الكود:
+  // أي جهاز سجّل دخول الإدارة منه مرة = جهاز داخلي، ولو تغيّر عنوانه لاحقاً تحدّث نفسه.
+  const adminIpRows = await prisma.activityLog.findMany({
+    where: { kind: "ADMIN_LOGIN", ip: { not: null } },
+    select: { ip: true },
+    distinct: ["ip"],
+  });
+  const staffIps = new Set<string>([
+    ...adminIpRows.map((r) => r.ip as string),
+    ...LOCAL_IPS,
+    ...MANUALLY_EXCLUDED_IPS,
+  ]);
+
+  // `real` (الافتراضي) يخفي زياراتك أنت وفريقك — بدونها تغرق الأرقام في ترافيك داخلي.
+  const traffic = sp.traffic === "all" ? "all" : "real";
+  const excludeIps = traffic === "real" ? [...staffIps] : [];
+
+  const trafficWhere = excludeIps.length ? { ip: { notIn: excludeIps } } : {};
+  const baseWhere = { ...dateWhere, ...trafficWhere };
+  const where = filter.kinds ? { ...baseWhere, kind: { in: filter.kinds } } : baseWhere;
 
   const dateSql =
     gte && lt
@@ -145,6 +193,10 @@ export default async function AdminActivityLogsPage({
         : lt
           ? Prisma.sql`AND createdAt < ${lt}`
           : Prisma.empty;
+
+  const trafficSql = excludeIps.length
+    ? Prisma.sql`AND (ip IS NULL OR ip NOT IN (${Prisma.join(excludeIps)}))`
+    : Prisma.empty;
 
   const [
     rows,
@@ -157,6 +209,7 @@ export default async function AdminActivityLogsPage({
     topVisitorGroups,
     kindIpPairs,
     kindActorPairs,
+    funnelRows,
   ] = await Promise.all([
     prisma.activityLog.findMany({
       where,
@@ -165,20 +218,20 @@ export default async function AdminActivityLogsPage({
       take: PAGE_SIZE,
     }),
     prisma.activityLog.count({ where }),
-    prisma.activityLog.count({ where: { ...dateWhere, kind: "CUSTOMER_LOGIN" } }),
-    prisma.activityLog.count({ where: { ...dateWhere, kind: "ADMIN_LOGIN" } }),
-    prisma.activityLog.count({ where: { ...dateWhere, kind: "PAGE_VIEW" } }),
-    prisma.activityLog.count({ where: { ...dateWhere, kind: "CAR_VIEW" } }),
+    prisma.activityLog.count({ where: { ...baseWhere, kind: "CUSTOMER_LOGIN" } }),
+    prisma.activityLog.count({ where: { ...baseWhere, kind: "ADMIN_LOGIN" } }),
+    prisma.activityLog.count({ where: { ...baseWhere, kind: "PAGE_VIEW" } }),
+    prisma.activityLog.count({ where: { ...baseWhere, kind: "CAR_VIEW" } }),
     prisma.activityLog.groupBy({
       by: ["carModelId"],
-      where: { ...dateWhere, kind: "CAR_VIEW", carModelId: { not: null } },
+      where: { ...baseWhere, kind: "CAR_VIEW", carModelId: { not: null } },
       _count: { _all: true },
       orderBy: { _count: { carModelId: "desc" } },
       take: 10,
     }),
     prisma.activityLog.groupBy({
       by: ["userId"],
-      where: { ...dateWhere, kind: { in: VIEW_KINDS }, userId: { not: null } },
+      where: { ...baseWhere, kind: { in: VIEW_KINDS }, userId: { not: null } },
       _count: { _all: true },
       orderBy: { _count: { userId: "desc" } },
       take: 10,
@@ -186,11 +239,66 @@ export default async function AdminActivityLogsPage({
     // القيم المميّزة لكل نوع — نحسب منها عدّاد كل تبويب في الذاكرة، لأن اتحاد
     // نوعين ليس مجموع منفرديهما (نفس الـ IP أو الشخص قد يظهر في الاثنين).
     prisma.$queryRaw<Array<{ kind: string; ip: string }>>`
-      SELECT DISTINCT kind, ip FROM ActivityLog WHERE ip IS NOT NULL ${dateSql}`,
+      SELECT DISTINCT kind, ip FROM ActivityLog WHERE ip IS NOT NULL ${dateSql} ${trafficSql}`,
     prisma.$queryRaw<Array<{ kind: string; actorLabel: string }>>`
       SELECT DISTINCT kind, actorLabel FROM ActivityLog
-      WHERE actorLabel IS NOT NULL AND kind IN (${Prisma.join(LOGIN_KINDS)}) ${dateSql}`,
+      WHERE actorLabel IS NOT NULL AND kind IN (${Prisma.join(LOGIN_KINDS)}) ${dateSql} ${trafficSql}`,
+    // كل أحداث الفترة (بلا ترقيم) — القمع يحتاج خيط الجلسة كاملاً لا صفحة منه.
+    prisma.activityLog.findMany({
+      where: baseWhere,
+      orderBy: { createdAt: "desc" },
+      take: FUNNEL_ROW_CAP,
+      select: {
+        id: true,
+        kind: true,
+        path: true,
+        ip: true,
+        userAgent: true,
+        userId: true,
+        carModelId: true,
+        referrer: true,
+        detail: true,
+        createdAt: true,
+      },
+    }),
   ]);
+
+  const allSessions = buildSessions(funnelRows, staffIps);
+  // الزواحف المتنكّرة بمتصفح عادي لا يمسكها فلتر الـ User-Agent، فتُستبعد هنا
+  // بسلوكها: عدة مسارات خلال ثوانٍ. تبقى ظاهرة في وضع «كل الترافيك».
+  const sessions = traffic === "real" ? allSessions.filter((s) => !s.isSuspectedBot) : allSessions;
+  const funnel = buildFunnel(sessions);
+  const botSessionCount = allSessions.filter((s) => s.isSuspectedBot).length;
+
+  const dropOff = new Map<string, number>();
+  for (const s of sessions) {
+    const key = s.deepestStage ?? "none";
+    dropOff.set(key, (dropOff.get(key) ?? 0) + 1);
+  }
+  const dropOffRows = [...dropOff.entries()]
+    .map(([stage, count]) => ({
+      label: stage === "none" ? "صفحات أخرى فقط" : FUNNEL_STAGE_LABELS[stage as FunnelStage],
+      count,
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  const errorTally = tally(
+    sessions.flatMap((s) => s.errorCodes),
+    (code) => code,
+  );
+  const referrerTally = tally(sessions, (s) => s.referrer);
+  const directSessions = sessions.filter((s) => !s.referrer).length;
+  const deviceTally = tally(sessions, (s) => s.device);
+  const searchQueryTally = tally(
+    funnelRows.filter((r) => r.kind === "PAGE_VIEW"),
+    (r) => pathQuery(r.path) || null,
+  );
+
+  const medianDurationMs = median(sessions.map((s) => s.durationMs));
+  const checkoutDwells = sessions
+    .filter((s) => s.stages.has("checkout"))
+    .map((s) => s.checkoutDwellMs ?? 0);
+  const medianCheckoutDwellMs = median(checkoutDwells);
 
   const groupValues = <T extends Record<string, string>>(
     pairs: T[],
@@ -266,7 +374,12 @@ export default async function AdminActivityLogsPage({
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   /** رابط يحافظ على باقي الفلاتر. تغيير التبويب أو الفترة يعيد الترقيم للصفحة الأولى. */
-  const hrefWith = (patch: { kind?: string; range?: string; page?: number }) => {
+  const hrefWith = (patch: {
+    kind?: string;
+    range?: string;
+    page?: number;
+    traffic?: "real" | "all";
+  }) => {
     const p = new URLSearchParams();
     const kind = patch.kind ?? filter.key;
     if (kind !== "all") p.set("kind", kind);
@@ -278,6 +391,8 @@ export default async function AdminActivityLogsPage({
     } else if (range.key !== "all") {
       p.set("range", range.key);
     }
+    const nextTraffic = patch.traffic ?? traffic;
+    if (nextTraffic !== "real") p.set("traffic", nextTraffic);
     if (patch.page && patch.page > 1) p.set("page", String(patch.page));
     const qs = p.toString();
     return qs ? `/admin/logs?${qs}` : "/admin/logs";
@@ -317,6 +432,7 @@ export default async function AdminActivityLogsPage({
 
           <form method="get" action="/admin/logs" className="ms-auto flex flex-wrap items-center gap-2">
             {filter.key !== "all" && <input type="hidden" name="kind" value={filter.key} />}
+            {traffic !== "real" && <input type="hidden" name="traffic" value={traffic} />}
             <label className="flex items-center gap-1.5 text-sm font-bold text-on-surface-variant">
               من
               <input
@@ -343,6 +459,33 @@ export default async function AdminActivityLogsPage({
             </button>
           </form>
         </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-outline-variant/20 pt-4">
+          <span className="text-sm font-bold text-on-surface-variant">الترافيك</span>
+          {(
+            [
+              { key: "real", label: "زوّار حقيقيون" },
+              { key: "all", label: "الكل (يشمل الفريق والزواحف)" },
+            ] as const
+          ).map((t) => (
+            <Link
+              key={t.key}
+              href={hrefWith({ traffic: t.key })}
+              className={`rounded-full border px-4 py-1.5 text-sm font-bold transition-colors ${
+                traffic === t.key
+                  ? "border-primary bg-primary text-on-primary"
+                  : "border-outline-variant/40 text-on-surface-variant hover:border-primary/40 hover:text-on-surface"
+              }`}
+            >
+              {t.label}
+            </Link>
+          ))}
+          <span className="text-xs text-on-surface-variant">
+            {traffic === "real"
+              ? `مستبعَد: ${staffIps.size} عنوان داخلي (كل عنوان سجّل منه دخول إدارة) و${botSessionCount} جلسة زاحف`
+              : "كل الترافيك ظاهر — الأرقام تشمل زياراتك أنت وفريقك"}
+          </span>
+        </div>
       </section>
 
       <p className="mb-3 text-sm text-on-surface-variant">
@@ -366,6 +509,178 @@ export default async function AdminActivityLogsPage({
           <p className="mt-1 text-3xl font-extrabold tabular-nums">{rangeCarViews}</p>
         </div>
       </section>
+
+      <section className="mb-8 rounded-2xl border border-outline-variant/30 bg-surface-container-low p-6">
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-extrabold tracking-tight">قمع الحجز</h2>
+            <p className="mt-1 text-sm text-on-surface-variant">
+              كم جلسة وصلت كل خطوة. الجلسة = أحداث نفس الزائر (IP + متصفح) بفاصل خمول أقل من
+              ٣٠ دقيقة.
+            </p>
+          </div>
+          <div className="flex gap-6 text-sm">
+            <div>
+              <p className="font-bold text-on-surface-variant">الجلسات</p>
+              <p className="text-2xl font-extrabold tabular-nums">{funnel.totalSessions}</p>
+            </div>
+            <div>
+              <p className="font-bold text-on-surface-variant">وسيط مدة الجلسة</p>
+              <p className="text-2xl font-extrabold tabular-nums">
+                {medianDurationMs == null ? "—" : formatDuration(medianDurationMs)}
+              </p>
+            </div>
+            <div>
+              <p className="font-bold text-on-surface-variant">وسيط البقاء في صفحة الحجز</p>
+              <p className="text-2xl font-extrabold tabular-nums">
+                {medianCheckoutDwellMs == null ? "—" : formatDuration(medianCheckoutDwellMs)}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {funnel.totalSessions === 0 ? (
+          <p className="mt-6 text-sm text-on-surface-variant">لا توجد جلسات في هذه الفترة.</p>
+        ) : (
+          <ol className="mt-6 space-y-3">
+            {funnel.rows.map((r) => {
+              // السقوط عند الخطوة يُقاس بالنسبة للخطوة السابقة: هو مكان النزيف الفعلي.
+              const dropped = r.shareOfPrevious != null && r.shareOfPrevious < 0.6;
+              return (
+                <li key={r.stage} className="flex items-center gap-3">
+                  <span className="w-40 shrink-0 text-sm font-bold">{r.label}</span>
+                  <div className="h-6 flex-1 overflow-hidden rounded-lg bg-outline-variant/20">
+                    <div
+                      className={`h-full rounded-lg ${dropped ? "bg-rose-500" : "bg-primary"}`}
+                      style={{ width: `${Math.max(1, Math.round(r.shareOfAll * 100))}%` }}
+                    />
+                  </div>
+                  <span className="w-14 shrink-0 text-end text-sm font-extrabold tabular-nums">
+                    {r.sessions}
+                  </span>
+                  <span className="w-16 shrink-0 text-end text-xs font-bold tabular-nums text-on-surface-variant">
+                    {pct(r.shareOfAll)}
+                  </span>
+                  <span
+                    className={`w-28 shrink-0 text-end text-xs font-bold tabular-nums ${
+                      dropped ? "text-rose-600" : "text-on-surface-variant"
+                    }`}
+                  >
+                    {r.shareOfPrevious == null ? "—" : `${pct(r.shareOfPrevious)} من السابقة`}
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
+        )}
+
+        <div className="mt-6 grid gap-6 border-t border-outline-variant/20 pt-6 md:grid-cols-2">
+          <div>
+            <h3 className="text-sm font-extrabold">أين يتوقفون</h3>
+            <ul className="mt-3 space-y-2 text-sm">
+              {dropOffRows.map((d) => (
+                <li key={d.label} className="flex items-baseline justify-between gap-3">
+                  <span className="text-on-surface-variant">{d.label}</span>
+                  <span className="font-extrabold tabular-nums">{d.count}</span>
+                </li>
+              ))}
+              {dropOffRows.length === 0 && (
+                <li className="text-on-surface-variant">—</li>
+              )}
+            </ul>
+          </div>
+          <div>
+            <h3 className="text-sm font-extrabold">الأجهزة</h3>
+            <ul className="mt-3 space-y-2 text-sm">
+              {deviceTally.map(([device, count]) => (
+                <li key={device} className="flex items-baseline justify-between gap-3">
+                  <span className="text-on-surface-variant">{device}</span>
+                  <span className="font-extrabold tabular-nums">{count}</span>
+                </li>
+              ))}
+              {deviceTally.length === 0 && <li className="text-on-surface-variant">—</li>}
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section className="mb-8 grid gap-6 md:grid-cols-2">
+        <div className="rounded-2xl border border-outline-variant/30 bg-surface-container-low p-6">
+          <h2 className="text-lg font-extrabold tracking-tight">أسباب فشل نموذج الحجز</h2>
+          <p className="mt-1 text-sm text-on-surface-variant">
+            عند أي حقل يتعثّر من ضغط «إتمام الحجز».
+          </p>
+          <ul className="mt-4 space-y-2 text-sm">
+            {errorTally.map(([code, count]) => (
+              <li key={code} className="flex items-baseline justify-between gap-3">
+                <span className="text-on-surface-variant">
+                  {CHECKOUT_ERROR_LABELS[code] ?? code}
+                </span>
+                <span className="font-extrabold tabular-nums">{count}</span>
+              </li>
+            ))}
+            {errorTally.length === 0 && (
+              <li className="text-on-surface-variant">لا أخطاء مسجّلة في هذه الفترة.</li>
+            )}
+          </ul>
+        </div>
+
+        <div className="rounded-2xl border border-outline-variant/30 bg-surface-container-low p-6">
+          <h2 className="text-lg font-extrabold tracking-tight">مصادر الزيارات</h2>
+          <p className="mt-1 text-sm text-on-surface-variant">
+            من أين جاء الزائر. «مباشر» = كتب العنوان أو جاء من تطبيق يخفي المصدر.
+          </p>
+          <ul className="mt-4 space-y-2 text-sm">
+            {referrerTally.map(([source, count]) => (
+              <li key={source} className="flex items-baseline justify-between gap-3">
+                <span className="text-on-surface-variant" dir="ltr">
+                  {source}
+                </span>
+                <span className="font-extrabold tabular-nums">{count}</span>
+              </li>
+            ))}
+            <li className="flex items-baseline justify-between gap-3">
+              <span className="text-on-surface-variant">مباشر / غير معروف</span>
+              <span className="font-extrabold tabular-nums">{directSessions}</span>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      {searchQueryTally.length > 0 && (
+        <details className="group mb-8 rounded-2xl border border-outline-variant/30 bg-surface-container-low p-6">
+          <summary className="flex cursor-pointer list-none items-center gap-3 [&::-webkit-details-marker]:hidden">
+            <div>
+              <h2 className="text-xl font-extrabold tracking-tight">معايير البحث المستخدَمة</h2>
+              <p className="mt-1 text-sm text-on-surface-variant">
+                التواريخ والفرع والفئة كما وصلت في رابط الصفحة — أكثر ٢٥ تركيبة.
+              </p>
+            </div>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="ms-auto size-5 shrink-0 text-on-surface-variant transition-transform group-open:rotate-180"
+              aria-hidden
+            >
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </summary>
+          <ul className="mt-4 space-y-2 text-xs">
+            {searchQueryTally.slice(0, 25).map(([query, count]) => (
+              <li key={query} className="flex items-baseline justify-between gap-3">
+                <span className="min-w-0 truncate text-on-surface-variant" dir="ltr" title={query}>
+                  {query}
+                </span>
+                <span className="shrink-0 font-extrabold tabular-nums">{count}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
 
       {topVisitors.length > 0 && (
         <details className="group mb-8 rounded-2xl border border-outline-variant/30 bg-surface-container-low p-6">
@@ -469,6 +784,97 @@ export default async function AdminActivityLogsPage({
               </li>
             ))}
           </ol>
+        </details>
+      )}
+
+      {sessions.length > 0 && (
+        <details className="group mb-8 rounded-2xl border border-outline-variant/30 bg-surface-container-low p-6">
+          <summary className="flex cursor-pointer list-none items-center gap-3 [&::-webkit-details-marker]:hidden">
+            <div>
+              <h2 className="text-xl font-extrabold tracking-tight">الجلسات</h2>
+              <p className="mt-1 text-sm text-on-surface-variant">
+                رحلة كل زائر على حدة — أحدث ١٠٠ جلسة. «الأثر» هو ترتيب الصفحات التي مرّ بها.
+              </p>
+            </div>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="ms-auto size-5 shrink-0 text-on-surface-variant transition-transform group-open:rotate-180"
+              aria-hidden
+            >
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </summary>
+
+          <div className="mt-5 overflow-hidden rounded-xl border border-outline-variant/25">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[900px] text-start text-sm">
+                <thead>
+                  <tr className="bg-surface-container text-xs font-extrabold uppercase tracking-wide text-on-surface-variant">
+                    <th className="px-4 py-3 text-start">البداية</th>
+                    <th className="px-4 py-3 text-start">الجهاز</th>
+                    <th className="px-4 py-3 text-start">IP</th>
+                    <th className="px-4 py-3 text-start">المدة</th>
+                    <th className="px-4 py-3 text-start">وصل إلى</th>
+                    <th className="px-4 py-3 text-start">الأثر</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sessions.slice(0, 100).map((s, i) => (
+                    <tr
+                      key={`${s.key}-${s.startedAt.getTime()}`}
+                      className={`border-t border-outline-variant/15 align-top ${
+                        i % 2 === 1 ? "bg-surface-container/40" : ""
+                      }`}
+                    >
+                      <td className="whitespace-nowrap px-4 py-3 tabular-nums text-on-surface-variant">
+                        {s.startedAt.toLocaleString("ar-SA", { timeZone: "Asia/Riyadh" })}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-on-surface-variant" dir="ltr">
+                        {s.browser ?? s.device}
+                        {s.isStaff && (
+                          <span className="ms-2 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700">
+                            داخلي
+                          </span>
+                        )}
+                        {s.isSuspectedBot && (
+                          <span className="ms-2 rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700">
+                            زاحف؟
+                          </span>
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 tabular-nums" dir="ltr">
+                        {s.ip ?? "—"}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 tabular-nums text-on-surface-variant">
+                        {formatDuration(s.durationMs)}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 font-bold">
+                        {s.deepestStage ? FUNNEL_STAGE_LABELS[s.deepestStage] : "—"}
+                        {s.errorCodes.length > 0 && (
+                          <span
+                            className="ms-2 rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700"
+                            title={s.errorCodes
+                              .map((c) => CHECKOUT_ERROR_LABELS[c] ?? c)
+                              .join("، ")}
+                          >
+                            {s.errorCodes.length} خطأ
+                          </span>
+                        )}
+                      </td>
+                      <td className="max-w-[360px] px-4 py-3 text-xs text-on-surface-variant" dir="ltr">
+                        {s.trail.join(" → ")}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </details>
       )}
 

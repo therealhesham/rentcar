@@ -1,35 +1,31 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useRef } from "react";
+import { trackEvent } from "@/lib/track-event";
 
 /** يرسل مشاهدة صفحة إلى /api/track/view عند كل تنقّل — يُحتسب في سجل النشاط بلوحة التحكم. */
-export function PageViewTracker() {
+function PageViewTrackerInner() {
   const pathname = usePathname();
+  // الـ query جزء من هوية الصفحة هنا: تغيّر تواريخ البحث أو الفرع = مشاهدة جديدة.
+  const search = useSearchParams().toString();
   const lastTracked = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!pathname || pathname === lastTracked.current) return;
-    lastTracked.current = pathname;
-    const payload = JSON.stringify({ path: pathname });
-    try {
-      if (navigator.sendBeacon) {
-        navigator.sendBeacon(
-          "/api/track/view",
-          new Blob([payload], { type: "application/json" }),
-        );
-      } else {
-        void fetch("/api/track/view", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: payload,
-          keepalive: true,
-        });
-      }
-    } catch {
-      /* التتبع لا يجب أن يكسر التصفح */
-    }
-  }, [pathname]);
+    if (!pathname) return;
+    const url = search ? `${pathname}?${search}` : pathname;
+    if (url === lastTracked.current) return;
+    lastTracked.current = url;
+    trackEvent("PAGE_VIEW", { path: url });
+  }, [pathname, search]);
 
   return null;
+}
+
+export function PageViewTracker() {
+  return (
+    <Suspense fallback={null}>
+      <PageViewTrackerInner />
+    </Suspense>
+  );
 }

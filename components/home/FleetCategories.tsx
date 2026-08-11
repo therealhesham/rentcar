@@ -9,7 +9,8 @@ import {
 import { Reveal } from "./HomeMotion";
 import { getLocale } from "next-intl/server";
 
-export async function FleetCategories() {
+/** `rentalTab` من `?rental=` — يتغيّر بتبويب الويدجت فوق فتتحدّث أسعار البطاقات */
+export async function FleetCategories({ rentalTab }: { rentalTab?: string | null }) {
   const locale = await getLocale();
   const categories = await getFleetCategoriesForHome(locale).catch(() => []);
 
@@ -20,7 +21,7 @@ export async function FleetCategories() {
   const allModelIds = categories.flatMap((c) => c.models.map((m) => m.id));
   const priceMode = await getRentalPriceDisplayMode();
   const [carByModel, cities, tabFlags] = await Promise.all([
-    getFleetCarMapByModelIds(allModelIds, priceMode, { locale }),
+    getFleetCarMapByModelIds(allModelIds, priceMode, { locale, rentalTab }),
     getActiveBookingCitiesWithBranches(locale).catch(() => []),
     getBookingWidgetTabFlags(),
   ]);

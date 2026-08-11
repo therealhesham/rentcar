@@ -57,6 +57,7 @@ import { sumCheckoutOneTimeFees } from "@/lib/checkout-one-time-fees";
 import type { FleetCheckoutEditPrefill } from "@/lib/fleet-checkout-edit-prefill";
 import { DdMmYyDateWithPicker } from "@/components/ui/DdMmYyDateWithPicker";
 import { BookingStepper } from "@/components/fleet/BookingStepper";
+import { trackEvent } from "@/lib/track-event";
 import {
   formatYmdAsDdMmYy,
   parseDdMmYyToYmd,
@@ -699,14 +700,25 @@ export function FleetCheckoutClient({
     ev.preventDefault();
   }
 
+  /**
+   * يعرض الخطأ للزائر **ويسجّل سببه** في سجل النشاط. بدون التسجيل لا نعرف عند أي
+   * حقل ينسحب الزوّار — وهو أهم ما نريد قياسه في نموذج الحجز.
+   */
+  function failWith(code: string, message: string) {
+    trackEvent("CHECKOUT_ERROR", { carModelId: car.modelId, detail: code });
+    setError(message);
+  }
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    trackEvent("CHECKOUT_SUBMIT", { carModelId: car.modelId });
     if (!trip.pickupIso) {
-      setError("لم يُعثر على تواريخ الحجز. ارجع إلى الأسطول أو الصفحة الرئيسية وابحث مجدداً.");
+      failWith("NO_DATES", "لم يُعثر على تواريخ الحجز. ارجع إلى الأسطول أو الصفحة الرئيسية وابحث مجدداً.");
       return;
     }
     if (slotBlocked) {
+      trackEvent("CHECKOUT_ERROR", { carModelId: car.modelId, detail: "SLOT_BLOCKED" });
       return;
     }
 
@@ -721,36 +733,37 @@ export function FleetCheckoutClient({
     const terms = fd.get("terms") === "on";
 
     if (name.trim().split(/\s+/).filter(Boolean).length < 3) {
-      setError("رجاء كتابة الاسم بالكامل");
+      failWith("NAME_INCOMPLETE", "رجاء كتابة الاسم بالكامل");
       return;
     }
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError("أدخل بريداً إلكترونياً صالحاً لإرسال الفاتورة بعد الدفع.");
+      failWith("EMAIL_INVALID", "أدخل بريداً إلكترونياً صالحاً لإرسال الفاتورة بعد الدفع.");
       return;
     }
 
     setKycFieldError(null);
     if (!licenseDocUrl) {
-      setError("يرجى رفع صورة الرخصة (إلزامي).");
+      failWith("LICENSE_IMAGE_MISSING", "يرجى رفع صورة الرخصة (إلزامي).");
       return;
     }
     const lic = licenseNumber.trim();
     if (!/^\d{10}$/.test(lic)) {
-      setError("رقم الرخصة يجب أن يتكوّن من 10 أرقام فقط.");
+      failWith("LICENSE_NUMBER_INVALID", "رقم الرخصة يجب أن يتكوّن من 10 أرقام فقط.");
       return;
     }
     const expYmd = parseDdMmYyToYmd(licenseExpiryDdmmyy);
     if (!expYmd) {
-      setError("أدخل تاريخ انتهاء الرخصة بصيغة يوم-شهر-سنة (DD-MM-YY).");
+      failWith("LICENSE_EXPIRY_FORMAT", "أدخل تاريخ انتهاء الرخصة بصيغة يوم-شهر-سنة (DD-MM-YY).");
       return;
     }
     if (!rentalLastDayYmdForLicense) {
-      setError("لم يُعثر على تواريخ الحجز. ارجع إلى الأسطول أو الصفحة الرئيسية وابحث مجدداً.");
+      failWith("NO_DATES", "لم يُعثر على تواريخ الحجز. ارجع إلى الأسطول أو الصفحة الرئيسية وابحث مجدداً.");
       return;
     }
     if (expYmd < rentalLastDayYmdForLicense) {
-      setError(
+      failWith(
+        "LICENSE_EXPIRED_BEFORE_RENTAL",
         `يجب أن يكون تاريخ انتهاء الرخصة في أو بعد آخر يوم من الإيجار (أقل تاريخ صالح: ${formatYmdAsDdMmYy(rentalLastDayYmdForLicense)}).`,
       );
       return;
@@ -759,18 +772,18 @@ export function FleetCheckoutClient({
     if (idDocKind === "SAUDI_ID") {
       const nid = nationalId.replace(/\D/g, "");
       if (!/^1\d{9}$/.test(nid) && !/^2\d{9}$/.test(nid)) {
-        setError("رقم الهوية أو الإقامة: 10 أرقام؛ يبدأ بـ 1 للمواطن أو بـ 2 للمقيم.");
+        failWith("NATIONAL_ID_INVALID", "رقم الهوية أو الإقامة: 10 أرقام؛ يبدأ بـ 1 للمواطن أو بـ 2 للمقيم.");
         return;
       }
       idDocumentKindForApi = nid.startsWith("1") ? "CITIZEN" : "RESIDENT";
     } else {
       const p = passportNumber.trim().toUpperCase();
       if (p.length < 6 || p.length > 24) {
-        setError("أدخل رقم الجواز (6–24 حرفاً).");
+        failWith("PASSPORT_LENGTH", "أدخل رقم الجواز (6–24 حرفاً).");
         return;
       }
       if (!/^[A-Z0-9\-]+$/.test(p)) {
-        setError("رقم الجواز: أحرف إنجليزية وأرقام وشرطة فقط.");
+        failWith("PASSPORT_CHARS", "رقم الجواز: أحرف إنجليزية وأرقام وشرطة فقط.");
         return;
       }
       idDocumentKindForApi = "VISITOR";
@@ -789,6 +802,7 @@ export function FleetCheckoutClient({
     if (pickupMode === "BRANCH" && trip.pickupIso && !tabFlags?.allowHolidayBooking) {
       const sch = lookupBranchOpeningSchedule(bookingCities, trip.pickupBranchSlugForHours);
       if (!isDateTimeWithinBranchSchedule(new Date(trip.pickupIso), sch)) {
+        trackEvent("CHECKOUT_ERROR", { carModelId: car.modelId, detail: "BRANCH_HOURS_PICKUP" });
         setBranchHoursMessage(
           `${trip.pickupLabel}: الفرع غير متاح في الوقت المحدّد. اختر موعداً ضمن مواعيد العمل أو فرعاً آخر.`,
         );
@@ -799,6 +813,7 @@ export function FleetCheckoutClient({
     if (trip.dropoffIso && trip.branchSlug && !tabFlags?.allowHolidayBooking) {
       const schR = lookupBranchOpeningSchedule(bookingCities, trip.branchSlug);
       if (!isDateTimeWithinBranchSchedule(new Date(trip.dropoffIso), schR)) {
+        trackEvent("CHECKOUT_ERROR", { carModelId: car.modelId, detail: "BRANCH_HOURS_RETURN" });
         setBranchHoursMessage(
           `${trip.returnLabel}: الفرع غير متاح في وقت التسليم المحدّد. عدّل الموعد أو الفرع.`,
         );
@@ -881,17 +896,19 @@ export function FleetCheckoutClient({
         return;
       }
       if (isDirectBookingCapacityMessage(data.error)) {
+        trackEvent("CHECKOUT_ERROR", { carModelId: car.modelId, detail: "CAPACITY_FULL" });
         setPostCapacityModal(true);
         return;
       }
       if (isBranchOutsideHoursBookingError(data.error)) {
+        trackEvent("CHECKOUT_ERROR", { carModelId: car.modelId, detail: "BRANCH_HOURS_SERVER" });
         setBranchHoursMessage(stripBranchHoursErrorCodeForDisplay(data.error ?? ""));
         setBranchHoursOpen(true);
         return;
       }
-      setError(data.error ?? "تعذّر إرسال الطلب.");
+      failWith("SERVER_REJECTED", data.error ?? "تعذّر إرسال الطلب.");
     } catch {
-      setError("تعذّر الاتصال بالخادم.");
+      failWith("NETWORK", "تعذّر الاتصال بالخادم.");
     } finally {
       setPending(false);
     }
@@ -915,6 +932,19 @@ export function FleetCheckoutClient({
 
   const showCarUnavailableModal =
     (slotBlocked && !unavailableDismissed) || postCapacityModal;
+
+  // «السيارة غير متاحة» يقتل الحجز قبل أن يبدأ الزائر، ولا يترك أثراً في السجل
+  // لأنه مودال لا صفحة — فنسجّله صراحةً مرة واحدة لكل ظهور.
+  const unavailableTracked = useRef(false);
+  useEffect(() => {
+    if (!showCarUnavailableModal) {
+      unavailableTracked.current = false;
+      return;
+    }
+    if (unavailableTracked.current) return;
+    unavailableTracked.current = true;
+    trackEvent("CAR_UNAVAILABLE", { carModelId: car.modelId });
+  }, [showCarUnavailableModal, car.modelId]);
 
   const prefillBookingRequestIdBanner = sp.get("prefillBookingRequestId")?.trim() ?? "";
   const excludeBookingRequestIdBanner = sp.get("excludeBookingRequestId")?.trim() ?? "";

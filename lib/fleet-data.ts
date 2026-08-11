@@ -201,11 +201,31 @@ function mapFleetRowToFleetCar(
   };
 }
 
+/**
+ * تبويب الإيجار → كيفية تسعير البطاقة: "monthly" سعر شهري مستقل،
+ * "weekly" إجمالي 7 أيام بالسعر اليومي، وغيرهما السعر اليومي كما هو.
+ */
+function resolveRentalTabPricing(
+  rentalTab: string | null | undefined,
+  rows: FleetRowWithModel[],
+): { period: PeriodPricing | null; monthlyPrices: Map<number, { price: number; varies: boolean }> | null } {
+  const tab = rentalTab?.trim().toLowerCase();
+  return {
+    period: tab === "weekly" ? WEEKLY_PERIOD : null,
+    monthlyPrices: tab === "monthly" ? buildMonthlyPriceMap(rows) : null,
+  };
+}
+
 /** صف واحد لكل `modelId` (أحدث `Fleet.id`) — للصفحة الرئيسية ومقارنات الموديل */
 export async function getFleetCarMapByModelIds(
   modelIds: number[],
   priceDisplayMode?: RentalPriceDisplayMode,
-  opts?: { branchId?: number | null; referenceDate?: Date | null; locale?: string },
+  opts?: {
+    branchId?: number | null;
+    referenceDate?: Date | null;
+    locale?: string;
+    rentalTab?: string | null;
+  },
 ): Promise<Map<number, FleetCar>> {
   const map = new Map<number, FleetCar>();
   const unique = [...new Set(modelIds.filter((id) => Number.isFinite(id)))];
@@ -237,11 +257,14 @@ export async function getFleetCarMapByModelIds(
     }
   }
 
+  const { period, monthlyPrices } = resolveRentalTabPricing(opts?.rentalTab, rows);
+
   for (const [modelId, pick] of pickCheapestRowPerModel(
     rows,
     discountRules,
     opts?.referenceDate,
   )) {
+    const monthly = monthlyPrices?.get(modelId);
     map.set(
       modelId,
       mapFleetRowToFleetCar(
@@ -251,8 +274,11 @@ export async function getFleetCarMapByModelIds(
         opts?.referenceDate,
         opts?.locale,
         opts?.branchId == null && pick.pricesVary,
-        null,
+        monthly
+          ? { price: monthly.price, varies: opts?.branchId == null && monthly.varies }
+          : null,
         availableSlugsMap.get(modelId),
+        period,
       ),
     );
   }
@@ -405,13 +431,10 @@ export async function getFleetCarsForDisplay(
   });
 
   const hasBranchFilter = Boolean(branchSlug?.trim());
-  const tab = rentalTab?.trim().toLowerCase();
-  const isMonthlyTab = tab === "monthly";
-  const period = tab === "weekly" ? WEEKLY_PERIOD : null;
+  const { period, monthlyPrices } = resolveRentalTabPricing(rentalTab, rows);
   const cars: FleetCar[] = [];
   const orderSeen: number[] = [];
   const picks = pickCheapestRowPerModel(rows, discountRules, pickupDate);
-  const monthlyPrices = isMonthlyTab ? buildMonthlyPriceMap(rows) : null;
   const seenModelIds = new Set<number>();
   for (const row of rows) {
     if (seenModelIds.has(row.modelId)) continue;
