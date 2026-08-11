@@ -1,5 +1,5 @@
 /**
- * تجميع صفوف `ActivityLog` الخام إلى **جلسات زيارة** وقمع حجز.
+ * تجميع صفوف `ActivityLog` الخام إلى **جلسات زيارة** ومراحل رحلة الحجز.
  *
  * الصفوف المفردة لا تجيب على السؤال المهم: «أين ينسحب الزائر؟». الجواب يحتاج ربط
  * أحداث الزائر الواحد في خيط زمني واحد، ثم قياس أعمق مرحلة وصلها. لا يوجد كوكي
@@ -22,7 +22,7 @@ export type ActivityRowForFunnel = {
 /** فاصل الخمول الذي يُنهي الجلسة — نصف ساعة، وهو العُرف في تحليلات الويب. */
 const SESSION_IDLE_MS = 30 * 60 * 1000;
 
-/** انتقال بين صفحتين أسرع من هذا = آلة لا إنسان (لا وقت لقراءة أي شيء). */
+/** انتقال بين صفحتين أسرع من هذا = بوت لا إنسان (لا وقت لقراءة أي شيء). */
 const BOT_HOP_MS = 1500;
 
 export const FUNNEL_STAGES = [
@@ -78,7 +78,7 @@ export function pathQuery(path: string | null): string {
   return (path ?? "").split("?").slice(1).join("?");
 }
 
-/** أي مرحلة من القمع يمثّلها هذا المسار، أو `null` لو خارج مسار الحجز. */
+/** أي مرحلة من رحلة الحجز يمثّلها هذا المسار، أو `null` لو خارجها. */
 export function pathStage(path: string | null): FunnelStage | null {
   const p = normalizePath(path);
   if (p === "/") return "home";
@@ -210,7 +210,7 @@ function finalizeSession(
   let userId: number | null = null;
   let referrer: string | null = null;
   let firstCheckoutAt: Date | null = null;
-  // انتقالات الصفحات وسرعتها — أساس كشف الزواحف المتنكّرة بمتصفح عادي.
+  // انتقالات الصفحات وسرعتها — أساس كشف البوتات المتنكّرة بمتصفح عادي.
   let hops = 0;
   let fastHops = 0;
   let lastPathAt: Date | null = null;
@@ -263,7 +263,7 @@ function finalizeSession(
     errorCodes,
     checkoutDwellMs: firstCheckoutAt ? last.createdAt.getTime() - firstCheckoutAt.getTime() : null,
     isStaff: ip != null && staffIps.has(ip),
-    // معظم الانتقالات فورية = زاحف. لا نعتمد على مدة الجلسة الكلية لأن الزاحف
+    // معظم الانتقالات فورية = بوت. لا نعتمد على مدة الجلسة الكلية لأن البوت
     // قد يعود بعد دقائق فتبدو جلسته طويلة بينما كل انتقالاته داخلها فورية.
     isSuspectedBot: fastHops >= 2 && fastHops / hops >= 0.5,
   };

@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 50;
 
-/** سقف الصفوف التي تُحمَّل لحساب القمع — يحمي الصفحة عند نمو السجل. */
+/** سقف الصفوف التي تُحمَّل لحساب رحلة الحجز — يحمي الصفحة عند نمو السجل. */
 const FUNNEL_ROW_CAP = 20000;
 
 const KIND_LABELS: Record<string, string> = {
@@ -243,7 +243,7 @@ export default async function AdminActivityLogsPage({
     prisma.$queryRaw<Array<{ kind: string; actorLabel: string }>>`
       SELECT DISTINCT kind, actorLabel FROM ActivityLog
       WHERE actorLabel IS NOT NULL AND kind IN (${Prisma.join(LOGIN_KINDS)}) ${dateSql} ${trafficSql}`,
-    // كل أحداث الفترة (بلا ترقيم) — القمع يحتاج خيط الجلسة كاملاً لا صفحة منه.
+    // كل أحداث الفترة (بلا ترقيم) — رحلة الحجز تحتاج خيط الجلسة كاملاً لا صفحة منه.
     prisma.activityLog.findMany({
       where: baseWhere,
       orderBy: { createdAt: "desc" },
@@ -264,7 +264,7 @@ export default async function AdminActivityLogsPage({
   ]);
 
   const allSessions = buildSessions(funnelRows, staffIps);
-  // الزواحف المتنكّرة بمتصفح عادي لا يمسكها فلتر الـ User-Agent، فتُستبعد هنا
+  // البوتات المتنكّرة بمتصفح عادي لا يمسكها فلتر الـ User-Agent، فتُستبعد هنا
   // بسلوكها: عدة مسارات خلال ثوانٍ. تبقى ظاهرة في وضع «كل الترافيك».
   const sessions = traffic === "real" ? allSessions.filter((s) => !s.isSuspectedBot) : allSessions;
   const funnel = buildFunnel(sessions);
@@ -465,7 +465,7 @@ export default async function AdminActivityLogsPage({
           {(
             [
               { key: "real", label: "زوّار حقيقيون" },
-              { key: "all", label: "الكل (يشمل الفريق والزواحف)" },
+              { key: "all", label: "الكل (يشمل الفريق والبوتات)" },
             ] as const
           ).map((t) => (
             <Link
@@ -482,7 +482,7 @@ export default async function AdminActivityLogsPage({
           ))}
           <span className="text-xs text-on-surface-variant">
             {traffic === "real"
-              ? `مستبعَد: ${staffIps.size} عنوان داخلي (كل عنوان سجّل منه دخول إدارة) و${botSessionCount} جلسة زاحف`
+              ? `مستبعَد: ${staffIps.size} عنوان داخلي (كل عنوان سجّل منه دخول إدارة) و${botSessionCount} جلسة بوت`
               : "كل الترافيك ظاهر — الأرقام تشمل زياراتك أنت وفريقك"}
           </span>
         </div>
@@ -513,7 +513,7 @@ export default async function AdminActivityLogsPage({
       <section className="mb-8 rounded-2xl border border-outline-variant/30 bg-surface-container-low p-6">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <div>
-            <h2 className="text-xl font-extrabold tracking-tight">قمع الحجز</h2>
+            <h2 className="text-xl font-extrabold tracking-tight">رحلة الحجز</h2>
             <p className="mt-1 text-sm text-on-surface-variant">
               كم جلسة وصلت كل خطوة. الجلسة = أحداث نفس الزائر (IP + متصفح) بفاصل خمول أقل من
               ٣٠ دقيقة.
@@ -843,7 +843,7 @@ export default async function AdminActivityLogsPage({
                         )}
                         {s.isSuspectedBot && (
                           <span className="ms-2 rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700">
-                            زاحف؟
+                            بوت؟
                           </span>
                         )}
                       </td>

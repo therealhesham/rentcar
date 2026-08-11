@@ -11,7 +11,7 @@ import { getCustomerSessionUserId } from "@/lib/customer-auth";
 export const dynamic = "force-dynamic";
 
 /**
- * زواحف ومكتبات HTTP. القائمة أوسع من مجرد `bot` لأن السجل أظهر زواحف تتنكّر
+ * بوتات ومكتبات HTTP. القائمة أوسع من مجرد `bot` لأن السجل أظهر بوتات تتنكّر
  * بـ User-Agent متصفح عادي — تلك تُصفّى في اللوحة عبر تحليل الجلسة لا هنا.
  */
 const BOT_UA_PATTERN =
