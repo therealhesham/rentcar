@@ -535,7 +535,7 @@ export default async function AdminActivityLogsPage({
     { sessions: 0, reachedCheckout: 0, createdBooking: 0, paidBooking: 0, revenueSar: 0 },
   );
 
-  const [geoClusters, geoReady, acIps, acPaths, acActors, acBrowsers] = await Promise.all([
+  const [geoClusters, geoReady, acIps, acPaths, acActors] = await Promise.all([
     clusterSessionsByCity(
       sessions.map((s) => ({ ip: s.ip, reachedCheckout: s.stages.has("checkout") })),
     ),
@@ -563,14 +563,6 @@ export default async function AdminActivityLogsPage({
       distinct: ["actorLabel"],
       orderBy: { createdAt: "desc" },
       take: 30,
-    }),
-    // autocomplete: userAgent فريد — محدود 50
-    prisma.activityLog.findMany({
-      where: { ...dateWhere, userAgent: { not: null } },
-      select: { userAgent: true },
-      distinct: ["userAgent"],
-      orderBy: { createdAt: "desc" },
-      take: 50,
     }),
   ]);
   // acBrowsers محتاجلهاش ثاني — rawBrowserUAs جبناها مبكراً وهي نفس البيانات
