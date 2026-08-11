@@ -496,13 +496,54 @@ export default async function AdminActivityLogsPage({
     { sessions: 0, reachedCheckout: 0, createdBooking: 0, paidBooking: 0, revenueSar: 0 },
   );
 
-  const [geoClusters, geoReady] = await Promise.all([
+  const [geoClusters, geoReady, acIps, acPaths, acActors, acBrowsers] = await Promise.all([
     clusterSessionsByCity(
       sessions.map((s) => ({ ip: s.ip, reachedCheckout: s.stages.has("checkout") })),
     ),
     isGeoDatabaseReady(),
+    // autocomplete: IPs الفريدة
+    prisma.activityLog.findMany({
+      where: { ...dateWhere, ip: { not: null } },
+      select: { ip: true },
+      distinct: ["ip"],
+      orderBy: { createdAt: "desc" },
+      take: 200,
+    }),
+    // autocomplete: مسارات الفريدة
+    prisma.activityLog.findMany({
+      where: { ...dateWhere, path: { not: null } },
+      select: { path: true },
+      distinct: ["path"],
+      orderBy: { createdAt: "desc" },
+      take: 200,
+    }),
+    // autocomplete: actorLabel الفريدة
+    prisma.activityLog.findMany({
+      where: { ...dateWhere, actorLabel: { not: null } },
+      select: { actorLabel: true },
+      distinct: ["actorLabel"],
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    }),
+    // autocomplete: userAgent الفريدة
+    prisma.activityLog.findMany({
+      where: { ...dateWhere, userAgent: { not: null } },
+      select: { userAgent: true },
+      distinct: ["userAgent"],
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    }),
   ]);
   const mappedSessions = geoClusters.reduce((sum, c) => sum + c.sessions, 0);
+
+  // القيم الفريدة للـ autocomplete
+  const acOptions = [
+    ...acIps.map((r) => r.ip as string),
+    ...acPaths.map((r) => r.path as string),
+    ...acActors.map((r) => r.actorLabel as string),
+    ...acBrowsers.map((r) => shortBrowser(r.userAgent)).filter(Boolean) as string[],
+  ];
+  const uniqueAcOptions = [...new Set(acOptions)];
 
   const medianDurationMs = median(sessions.map((s) => s.durationMs));
   const checkoutDwells = sessions
@@ -1447,14 +1488,22 @@ export default async function AdminActivityLogsPage({
               range.key !== "all" && <input type="hidden" name="range" value={range.key} />
             )}
 
+            {/* datalist للقيم الفريدة */}
+            <datalist id="ac-log-opts">
+              {uniqueAcOptions.map((opt) => (
+                <option key={opt} value={opt} />
+              ))}
+            </datalist>
+
             {/* تضمين / تحديد */}
             <div className="flex min-w-[220px] flex-1 items-center gap-2 rounded-xl border border-emerald-500/40 bg-surface px-3 py-1.5 focus-within:border-emerald-600 focus-within:ring-1 focus-within:ring-emerald-600/30">
               <span className="text-xs font-bold text-emerald-700 shrink-0">+ تحديد:</span>
               <input
                 type="text"
                 name="q"
+                list="ac-log-opts"
                 defaultValue={q}
-                placeholder="IP، مسار، اسم، متصفح..."
+                placeholder="اختر IP أو مسار أو اسم..."
                 className="w-full bg-transparent text-sm font-medium text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none"
               />
             </div>
@@ -1465,8 +1514,9 @@ export default async function AdminActivityLogsPage({
               <input
                 type="text"
                 name="exclude"
+                list="ac-log-opts"
                 defaultValue={exclude}
-                placeholder="IP، مسار، اسم، متصفح..."
+                placeholder="اختر IP أو مسار أو اسم..."
                 className="w-full bg-transparent text-sm font-medium text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none"
               />
             </div>
