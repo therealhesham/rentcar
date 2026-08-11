@@ -16,6 +16,7 @@ import {
   Truck,
   ChevronDown,
   Check,
+  Loader2,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { LocationPickerPopover } from "@/components/home/LocationPickerPopover";
@@ -237,9 +238,22 @@ export function BookingSearchWidget({
   const [corpPhone, setCorpPhone] = useState("");
   const [corpSuccess, setCorpSuccess] = useState(false);
   const [corpPending, startCorpTransition] = useTransition();
+  const [isSearchPending, startSearchTransition] = useTransition();
   const errorRef = useRef<HTMLDivElement>(null);
   const prevModeRef = useRef<ModeTab>("pickup");
+  const wasPendingRef = useRef(false);
   const uid = useId();
+
+  // التمرير التلقائي لأسفل إلى قسم النتائج بعد اكتمال البحث والتحميل
+  useEffect(() => {
+    if (wasPendingRef.current && !isSearchPending) {
+      const el = document.getElementById("fleet-results");
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+    wasPendingRef.current = isSearchPending;
+  }, [isSearchPending]);
 
   // ── Popover open states ──
   const [pickupLocOpen, setPickupLocOpen] = useState(false);
@@ -785,7 +799,9 @@ export function BookingSearchWidget({
       return;
     }
 
-    persistAndNavigate(built.params, built.ctx);
+    startSearchTransition(() => {
+      persistAndNavigate(built.params, built.ctx);
+    });
   }
 
   type BuiltFleetSearch =
@@ -963,7 +979,9 @@ export function BookingSearchWidget({
       lastAutoSearchSigRef.current = sig;
       setError(null);
       setBranchHoursNotice(null);
-      persistAndNavigate(built.params, built.ctx);
+      startSearchTransition(() => {
+        persistAndNavigate(built.params, built.ctx);
+      });
     }, AUTO_SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2089,7 +2107,7 @@ export function BookingSearchWidget({
               <div className="flex items-stretch">
                 <button
                   type="submit"
-                  disabled={dateCities.length === 0}
+                  disabled={isSearchPending || dateCities.length === 0}
                   className="cta-btn group relative mt-1 flex min-h-[52px] w-full items-center justify-center gap-2 overflow-hidden rounded-2xl px-5 py-4 text-white disabled:pointer-events-none disabled:opacity-45 xl:mt-0 xl:min-h-0 xl:rounded-none xl:rounded-l-full xl:px-9 xl:py-4 xl:text-[15px]"
                   style={{ background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)` }}
                 >
@@ -2097,13 +2115,21 @@ export function BookingSearchWidget({
                     className="cta-shimmer pointer-events-none absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0"
                     aria-hidden
                   />
-                  {isCheckout ? (
+                  {isSearchPending ? (
+                    <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
+                  ) : isCheckout ? (
                     <CalendarCheck2 className="size-4 shrink-0" aria-hidden />
                   ) : (
                     <Search className="size-4 shrink-0" aria-hidden />
                   )}
                   <span className="text-[14px] font-extrabold tracking-wide">
-                    {isCheckout ? t("continue") : t("searchCars")}
+                    {isSearchPending
+                      ? isCheckout
+                        ? "جاري التحديث..."
+                        : "جاري البحث..."
+                      : isCheckout
+                        ? t("continue")
+                        : t("searchCars")}
                   </span>
                 </button>
               </div>
@@ -2145,7 +2171,8 @@ export function BookingSearchWidget({
                   )}
                   <button
                     type="submit"
-                    className="cta-btn group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-white sm:w-auto"
+                    disabled={isSearchPending}
+                    className="cta-btn group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-white disabled:pointer-events-none disabled:opacity-45 sm:w-auto"
                     style={{
                       background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)`,
                     }}
@@ -2154,9 +2181,19 @@ export function BookingSearchWidget({
                       className="cta-shimmer pointer-events-none absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0"
                       aria-hidden
                     />
-                    <CalendarCheck2 className="size-4 shrink-0" aria-hidden />
+                    {isSearchPending ? (
+                      <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
+                    ) : (
+                      <CalendarCheck2 className="size-4 shrink-0" aria-hidden />
+                    )}
                     <span className="text-[14px] font-extrabold tracking-wide">
-                      {isCheckout ? t("continue") : t("searchCars")}
+                      {isSearchPending
+                        ? isCheckout
+                          ? "جاري التحديث..."
+                          : "جاري البحث..."
+                        : isCheckout
+                          ? t("continue")
+                          : t("searchCars")}
                     </span>
                   </button>
                 </div>
