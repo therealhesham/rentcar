@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { requireAdminPage } from "@/lib/admin-page";
 import { prisma } from "@/lib/prisma";
 import { VisitorMap } from "@/components/admin/VisitorMap";
+import { LogsFilterSelect, type LogsFilterGroup } from "@/components/admin/LogsFilterSelect";
 import { clusterSessionsByCity, isGeoDatabaseReady } from "@/lib/geo-ip";
 import {
   buildFunnel,
@@ -213,76 +214,32 @@ export default async function AdminActivityLogsPage({
   const countUnit = COUNT_MODES.find((m) => m.key === countMode)!.unit;
   const excludeIps = traffic === "real" ? [...staffIps] : [];
 
-  // صفاية البحث والاستبعاد
-  const q = typeof sp.q === "string" ? sp.q.trim() : "";
-  const exclude = typeof sp.exclude === "string" ? sp.exclude.trim() : "";
+  // صفاية البحث والاستبعاد — multi-value مفصولة بفواصل
+  const qRaw = typeof sp.q === "string" ? sp.q : "";
+  const excludeRaw = typeof sp.exclude === "string" ? sp.exclude : "";
+  const qValues = qRaw ? qRaw.split(",").map((v) => v.trim()).filter(Boolean) : [];
+  const excludeValues = excludeRaw ? excludeRaw.split(",").map((v) => v.trim()).filter(Boolean) : [];
+
+  /** بناء OR-clause لقيمة واحدة عبر جميع الحقول */
+  const makeMatchOr = (v: string): Prisma.ActivityLogWhereInput => ({
+    OR: [
+      { ip: { contains: v } },
+      { path: { contains: v } },
+      { actorLabel: { contains: v } },
+      { userAgent: { contains: v } },
+      { detail: { contains: v } },
+    ],
+  });
 
   const searchConditions: Prisma.ActivityLogWhereInput[] = [];
 
-  if (q) {
-    const qNum = Number(q);
-    const isQNum = !isNaN(qNum) && Number.isInteger(qNum);
-
-    const matchedUsers = await prisma.user.findMany({
-      where: {
-        OR: [
-          { name: { contains: q } },
-          { phone: { contains: q } },
-          { email: { contains: q } },
-        ],
-      },
-      select: { id: true },
-    });
-    const matchedUserIds = matchedUsers.map((u) => u.id);
-
-    const qOr: Prisma.ActivityLogWhereInput[] = [
-      { ip: { contains: q } },
-      { path: { contains: q } },
-      { actorLabel: { contains: q } },
-      { userAgent: { contains: q } },
-      { detail: { contains: q } },
-    ];
-    if (matchedUserIds.length > 0) {
-      qOr.push({ userId: { in: matchedUserIds } });
-    }
-    if (isQNum) {
-      qOr.push({ carModelId: qNum });
-      qOr.push({ userId: qNum });
-    }
-    searchConditions.push({ OR: qOr });
+  // كل قيمة تحديد يجب أن يطابقها الصف ولو واحدة منها (OR عبر القيم)
+  if (qValues.length > 0) {
+    searchConditions.push({ OR: qValues.map(makeMatchOr) });
   }
-
-  if (exclude) {
-    const exNum = Number(exclude);
-    const isExNum = !isNaN(exNum) && Number.isInteger(exNum);
-
-    const matchedExUsers = await prisma.user.findMany({
-      where: {
-        OR: [
-          { name: { contains: exclude } },
-          { phone: { contains: exclude } },
-          { email: { contains: exclude } },
-        ],
-      },
-      select: { id: true },
-    });
-    const matchedExUserIds = matchedExUsers.map((u) => u.id);
-
-    const exOr: Prisma.ActivityLogWhereInput[] = [
-      { ip: { contains: exclude } },
-      { path: { contains: exclude } },
-      { actorLabel: { contains: exclude } },
-      { userAgent: { contains: exclude } },
-      { detail: { contains: exclude } },
-    ];
-    if (matchedExUserIds.length > 0) {
-      exOr.push({ userId: { in: matchedExUserIds } });
-    }
-    if (isExNum) {
-      exOr.push({ carModelId: exNum });
-      exOr.push({ userId: exNum });
-    }
-    searchConditions.push({ NOT: { OR: exOr } });
+  // استبعاد: كل قيمة يجب ألّا يطابقها الصف (AND NOT)
+  for (const v of excludeValues) {
+    searchConditions.push({ NOT: makeMatchOr(v) });
   }
 
   const searchWhere: Prisma.ActivityLogWhereInput = searchConditions.length
@@ -306,13 +263,9 @@ export default async function AdminActivityLogsPage({
     ? Prisma.sql`AND (ip IS NULL OR ip NOT IN (${Prisma.join(excludeIps)}))`
     : Prisma.empty;
 
-  const qSql = q
-    ? Prisma.sql`AND (ip LIKE ${`%${q}%`} OR path LIKE ${`%${q}%`} OR actorLabel LIKE ${`%${q}%`} OR userAgent LIKE ${`%${q}%`})`
-    : Prisma.empty;
-
-  const excludeSql = exclude
-    ? Prisma.sql`AND NOT (ip LIKE ${`%${exclude}%`} OR path LIKE ${`%${exclude}%`} OR actorLabel LIKE ${`%${exclude}%`} OR userAgent LIKE ${`%${exclude}%`})`
-    : Prisma.empty;
+  // للعدّاد الدقيق للتبويبات نحتاج SQL للجلسات — لكن searchWhere مضمّن في baseWhere مسبقاً
+  const qSql = Prisma.empty;
+  const excludeSql = Prisma.empty;
 
   const [
     rows,
@@ -496,54 +449,53 @@ export default async function AdminActivityLogsPage({
     { sessions: 0, reachedCheckout: 0, createdBooking: 0, paidBooking: 0, revenueSar: 0 },
   );
 
-  const [geoClusters, geoReady, acIps, acPaths, acActors, acBrowsers] = await Promise.all([
+  const [geoClusters, geoReady, acIps, acPaths, acActors] = await Promise.all([
     clusterSessionsByCity(
       sessions.map((s) => ({ ip: s.ip, reachedCheckout: s.stages.has("checkout") })),
     ),
     isGeoDatabaseReady(),
-    // autocomplete: IPs الفريدة
+    // autocomplete: IPs الفريدة — محدودة 50
     prisma.activityLog.findMany({
       where: { ...dateWhere, ip: { not: null } },
       select: { ip: true },
       distinct: ["ip"],
       orderBy: { createdAt: "desc" },
-      take: 200,
+      take: 50,
     }),
-    // autocomplete: مسارات الفريدة
+    // autocomplete: مسارات فريدة — محدودة 40
     prisma.activityLog.findMany({
       where: { ...dateWhere, path: { not: null } },
       select: { path: true },
       distinct: ["path"],
       orderBy: { createdAt: "desc" },
-      take: 200,
+      take: 40,
     }),
-    // autocomplete: actorLabel الفريدة
+    // autocomplete: actorLabel فريدة — محدودة 30
     prisma.activityLog.findMany({
       where: { ...dateWhere, actorLabel: { not: null } },
       select: { actorLabel: true },
       distinct: ["actorLabel"],
       orderBy: { createdAt: "desc" },
-      take: 100,
-    }),
-    // autocomplete: userAgent الفريدة
-    prisma.activityLog.findMany({
-      where: { ...dateWhere, userAgent: { not: null } },
-      select: { userAgent: true },
-      distinct: ["userAgent"],
-      orderBy: { createdAt: "desc" },
-      take: 100,
+      take: 30,
     }),
   ]);
   const mappedSessions = geoClusters.reduce((sum, c) => sum + c.sessions, 0);
 
-  // القيم الفريدة للـ autocomplete
-  const acOptions = [
-    ...acIps.map((r) => r.ip as string),
-    ...acPaths.map((r) => r.path as string),
-    ...acActors.map((r) => r.actorLabel as string),
-    ...acBrowsers.map((r) => shortBrowser(r.userAgent)).filter(Boolean) as string[],
-  ];
-  const uniqueAcOptions = [...new Set(acOptions)];
+  // تجميع الخيارات حسب الفئة لـ LogsFilterSelect
+  const filterGroups: LogsFilterGroup[] = [
+    {
+      label: "عناوين IP",
+      options: acIps.map((r) => r.ip as string),
+    },
+    {
+      label: "الصفحات / المسارات",
+      options: acPaths.map((r) => r.path as string),
+    },
+    {
+      label: "العملاء / الموظفون",
+      options: acActors.map((r) => r.actorLabel as string),
+    },
+  ].filter((g) => g.options.length > 0);
 
   const medianDurationMs = median(sessions.map((s) => s.durationMs));
   const checkoutDwells = sessions
@@ -637,8 +589,8 @@ export default async function AdminActivityLogsPage({
     page?: number;
     traffic?: "real" | "all";
     count?: CountMode;
-    q?: string | null;
-    exclude?: string | null;
+    q?: string[] | null;
+    exclude?: string[] | null;
     hash?: string;
   }) => {
     const p = new URLSearchParams();
@@ -657,11 +609,11 @@ export default async function AdminActivityLogsPage({
     const nextCount = patch.count ?? countMode;
     if (nextCount !== "records") p.set("count", nextCount);
 
-    const nextQ = patch.q !== undefined ? patch.q : q;
-    if (nextQ) p.set("q", nextQ);
+    const nextQ = patch.q !== undefined ? patch.q : qValues;
+    if (nextQ && nextQ.length > 0) p.set("q", nextQ.join(","));
 
-    const nextExclude = patch.exclude !== undefined ? patch.exclude : exclude;
-    if (nextExclude) p.set("exclude", nextExclude);
+    const nextExclude = patch.exclude !== undefined ? patch.exclude : excludeValues;
+    if (nextExclude && nextExclude.length > 0) p.set("exclude", nextExclude.join(","));
 
     if (patch.page && patch.page > 1) p.set("page", String(patch.page));
     const qs = p.toString();
@@ -1473,103 +1425,32 @@ export default async function AdminActivityLogsPage({
           </div>
         </div>
 
-        {/* صفاية الأحداث (تحديد واستبعاد) */}
+            {/* صفاية الأحداث — Multi-select autocomplete */}
         <div className="mb-5 rounded-2xl border border-outline-variant/30 bg-surface/70 p-4">
-          <form method="get" action="/admin/logs#events" className="flex flex-wrap items-center gap-3">
-            {filter.key !== "all" && <input type="hidden" name="kind" value={filter.key} />}
-            {traffic !== "real" && <input type="hidden" name="traffic" value={traffic} />}
-            {countMode !== "records" && <input type="hidden" name="count" value={countMode} />}
-            {isCustomRange ? (
-              <>
-                {from && <input type="hidden" name="from" value={from} />}
-                {to && <input type="hidden" name="to" value={to} />}
-              </>
-            ) : (
-              range.key !== "all" && <input type="hidden" name="range" value={range.key} />
-            )}
-
-            {/* datalist للقيم الفريدة */}
-            <datalist id="ac-log-opts">
-              {uniqueAcOptions.map((opt) => (
-                <option key={opt} value={opt} />
-              ))}
-            </datalist>
-
-            {/* تضمين / تحديد */}
-            <div className="flex min-w-[220px] flex-1 items-center gap-2 rounded-xl border border-emerald-500/40 bg-surface px-3 py-1.5 focus-within:border-emerald-600 focus-within:ring-1 focus-within:ring-emerald-600/30">
-              <span className="text-xs font-bold text-emerald-700 shrink-0">+ تحديد:</span>
-              <input
-                type="text"
-                name="q"
-                list="ac-log-opts"
-                defaultValue={q}
-                placeholder="اختر IP أو مسار أو اسم..."
-                className="w-full bg-transparent text-sm font-medium text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none"
-              />
-            </div>
-
-            {/* استبعاد */}
-            <div className="flex min-w-[220px] flex-1 items-center gap-2 rounded-xl border border-rose-500/40 bg-surface px-3 py-1.5 focus-within:border-rose-600 focus-within:ring-1 focus-within:ring-rose-600/30">
-              <span className="text-xs font-bold text-rose-700 shrink-0">- استبعاد:</span>
-              <input
-                type="text"
-                name="exclude"
-                list="ac-log-opts"
-                defaultValue={exclude}
-                placeholder="اختر IP أو مسار أو اسم..."
-                className="w-full bg-transparent text-sm font-medium text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none"
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="rounded-xl border border-primary bg-primary px-5 py-2 text-sm font-bold text-on-primary shadow-sm hover:bg-primary/90 transition-colors shrink-0"
-            >
-              تطبيق الصفاية
-            </button>
-
-            {(q || exclude) && (
+          <div className="flex flex-wrap items-start gap-3">
+            <LogsFilterSelect
+              name="q"
+              value={qValues}
+              groups={filterGroups}
+              color="emerald"
+              label="+ تحديد:"
+            />
+            <LogsFilterSelect
+              name="exclude"
+              value={excludeValues}
+              groups={filterGroups}
+              color="rose"
+              label="- استبعاد:"
+            />
+            {(qValues.length > 0 || excludeValues.length > 0) && (
               <Link
                 href={hrefWith({ q: null, exclude: null, page: 1, hash: "events" })}
-                className="rounded-xl border border-outline-variant/40 bg-surface px-3.5 py-2 text-sm font-bold text-on-surface-variant hover:bg-outline-variant/15 hover:text-on-surface transition-colors shrink-0"
+                className="rounded-xl border border-outline-variant/40 bg-surface px-3.5 py-2 text-sm font-bold text-on-surface-variant hover:bg-outline-variant/15 hover:text-on-surface transition-colors shrink-0 self-center"
               >
-                إلغاء الصفاية
+                مسح الصفاية
               </Link>
             )}
-          </form>
-
-          {/* فلاتر نشطة */}
-          {(q || exclude) && (
-            <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-outline-variant/20 pt-3 text-xs">
-              <span className="font-bold text-on-surface-variant">الآلية النشطة:</span>
-              {q && (
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 font-bold text-emerald-900">
-                  <span>تحديد:</span>
-                  <span dir="ltr" className="font-mono">{q}</span>
-                  <Link
-                    href={hrefWith({ q: null, page: 1, hash: "events" })}
-                    className="ms-1 font-black text-emerald-700 hover:text-emerald-950"
-                    title="إزالة تحديد هذا النص"
-                  >
-                    ✕
-                  </Link>
-                </span>
-              )}
-              {exclude && (
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-300 bg-rose-50 px-3 py-1 font-bold text-rose-900">
-                  <span>استبعاد:</span>
-                  <span dir="ltr" className="font-mono">{exclude}</span>
-                  <Link
-                    href={hrefWith({ exclude: null, page: 1, hash: "events" })}
-                    className="ms-1 font-black text-rose-700 hover:text-rose-950"
-                    title="إزالة استبعاد هذا النص"
-                  >
-                    ✕
-                  </Link>
-                </span>
-              )}
-            </div>
-          )}
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {FILTERS.map((f) => {
@@ -1693,14 +1574,14 @@ export default async function AdminActivityLogsPage({
                           <span>{r.ip}</span>
                           <span className="inline-flex items-center gap-1 opacity-0 transition-opacity group-hover/ip:opacity-100">
                             <Link
-                              href={hrefWith({ q: r.ip, page: 1, hash: "events" })}
+                              href={hrefWith({ q: [...qValues, r.ip], page: 1, hash: "events" })}
                               className="rounded bg-emerald-100 px-1 py-0.5 text-[10px] font-extrabold text-emerald-800 hover:bg-emerald-200"
                               title="تحديد هذا الـ IP فقط"
                             >
                               +
                             </Link>
                             <Link
-                              href={hrefWith({ exclude: r.ip, page: 1, hash: "events" })}
+                              href={hrefWith({ exclude: [...excludeValues, r.ip], page: 1, hash: "events" })}
                               className="rounded bg-rose-100 px-1 py-0.5 text-[10px] font-extrabold text-rose-800 hover:bg-rose-200"
                               title="استبعاد هذا الـ IP"
                             >
