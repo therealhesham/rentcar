@@ -271,6 +271,8 @@ export default async function AdminActivityLogsPage({
   const sessions = traffic === "real" ? allSessions.filter((s) => !s.isSuspectedBot) : allSessions;
   const funnel = buildFunnel(sessions);
   const botSessionCount = allSessions.filter((s) => s.isSuspectedBot).length;
+  /** الجلسات المعروضة في الجدول — نحدّها حتى لا نجلب أسماء عملاء وسيارات بلا داعٍ. */
+  const shownSessions = sessions.slice(0, 100);
 
   const dropOff = new Map<string, number>();
   for (const s of sessions) {
@@ -341,6 +343,7 @@ export default async function AdminActivityLogsPage({
   const carIds = new Set<number>();
   for (const g of topCarGroups) if (g.carModelId != null) carIds.add(g.carModelId);
   for (const r of rows) if (r.carModelId != null) carIds.add(r.carModelId);
+  for (const s of shownSessions) if (s.exitCarModelId != null) carIds.add(s.exitCarModelId);
   const carModels = carIds.size
     ? await prisma.carModel.findMany({
         where: { id: { in: [...carIds] } },
@@ -363,6 +366,7 @@ export default async function AdminActivityLogsPage({
   const userIds = new Set<number>();
   for (const g of topVisitorGroups) if (g.userId != null) userIds.add(g.userId);
   for (const r of rows) if (r.userId != null && !r.actorLabel) userIds.add(r.userId);
+  for (const s of shownSessions) if (s.userId != null) userIds.add(s.userId);
   const users = userIds.size
     ? await prisma.user.findMany({
         where: { id: { in: [...userIds] } },
@@ -859,9 +863,12 @@ export default async function AdminActivityLogsPage({
         <details className="group mb-8 rounded-2xl border border-outline-variant/30 bg-surface-container-low p-6">
           <summary className="flex cursor-pointer list-none items-center gap-3 [&::-webkit-details-marker]:hidden">
             <div>
-              <h2 className="text-xl font-extrabold tracking-tight">الجلسات</h2>
+              <h2 className="text-xl font-extrabold tracking-tight">
+                أين توقّف كل زائر
+              </h2>
               <p className="mt-1 text-sm text-on-surface-variant">
-                رحلة كل زائر على حدة — أحدث ١٠٠ جلسة. «الأثر» هو ترتيب الصفحات التي مرّ بها.
+                أحدث ١٠٠ جلسة: من هو، وأين وصل، و<span className="font-bold">آخر عنوان فتحه
+                قبل أن يغادر</span> بالرابط كاملاً.
               </p>
             </div>
             <svg
@@ -880,19 +887,20 @@ export default async function AdminActivityLogsPage({
 
           <div className="mt-5 overflow-hidden rounded-xl border border-outline-variant/25">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[900px] text-start text-sm">
+              <table className="w-full min-w-[1100px] text-start text-sm">
                 <thead>
                   <tr className="bg-surface-container text-xs font-extrabold uppercase tracking-wide text-on-surface-variant">
                     <th className="px-4 py-3 text-start">البداية</th>
+                    <th className="px-4 py-3 text-start">العميل</th>
                     <th className="px-4 py-3 text-start">الجهاز</th>
-                    <th className="px-4 py-3 text-start">IP</th>
                     <th className="px-4 py-3 text-start">المدة</th>
-                    <th className="px-4 py-3 text-start">وصل إلى</th>
+                    <th className="px-4 py-3 text-start">توقّف عند</th>
+                    <th className="px-4 py-3 text-start">آخر عنوان فتحه</th>
                     <th className="px-4 py-3 text-start">الأثر</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {sessions.slice(0, 100).map((s, i) => (
+                  {shownSessions.map((s, i) => (
                     <tr
                       key={`${s.key}-${s.startedAt.getTime()}`}
                       className={`border-t border-outline-variant/15 align-top ${
@@ -901,6 +909,16 @@ export default async function AdminActivityLogsPage({
                     >
                       <td className="whitespace-nowrap px-4 py-3 tabular-nums text-on-surface-variant">
                         {s.startedAt.toLocaleString("ar-SA", { timeZone: "Asia/Riyadh" })}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 font-medium">
+                        {s.userId != null ? (
+                          userLabelById.get(s.userId) ?? `عميل #${s.userId}`
+                        ) : (
+                          <span className="text-on-surface-variant">زائر غير مسجّل</span>
+                        )}
+                        <span className="block text-[11px] font-normal text-on-surface-variant" dir="ltr">
+                          {s.ip ?? "—"}
+                        </span>
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-on-surface-variant" dir="ltr">
                         {s.browser ?? s.device}
@@ -915,26 +933,41 @@ export default async function AdminActivityLogsPage({
                           </span>
                         )}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-3 tabular-nums" dir="ltr">
-                        {s.ip ?? "—"}
-                      </td>
                       <td className="whitespace-nowrap px-4 py-3 tabular-nums text-on-surface-variant">
                         {formatDuration(s.durationMs)}
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 font-bold">
                         {s.deepestStage ? FUNNEL_STAGE_LABELS[s.deepestStage] : "—"}
-                        {s.errorCodes.length > 0 && (
-                          <span
-                            className="ms-2 rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700"
-                            title={s.errorCodes
-                              .map((c) => CHECKOUT_ERROR_LABELS[c] ?? c)
-                              .join("، ")}
-                          >
-                            {s.errorCodes.length} خطأ
+                        {s.lastErrorCode && (
+                          <span className="block text-[11px] font-bold text-rose-600">
+                            {CHECKOUT_ERROR_LABELS[s.lastErrorCode] ?? s.lastErrorCode}
                           </span>
                         )}
                       </td>
-                      <td className="max-w-[360px] px-4 py-3 text-xs text-on-surface-variant" dir="ltr">
+                      <td className="max-w-[340px] px-4 py-3">
+                        {s.exitPath ? (
+                          <>
+                            <a
+                              href={s.exitPath}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title={s.exitPath}
+                              className="block truncate text-xs text-primary hover:underline"
+                              dir="ltr"
+                            >
+                              {s.exitPath}
+                            </a>
+                            {s.exitCarModelId != null && (
+                              <span className="mt-0.5 block text-[11px] font-bold text-on-surface-variant">
+                                {carNameById.get(s.exitCarModelId) ?? `موديل #${s.exitCarModelId}`}
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-on-surface-variant">—</span>
+                        )}
+                      </td>
+                      <td className="max-w-[280px] px-4 py-3 text-xs text-on-surface-variant" dir="ltr">
                         {s.trail.join(" → ")}
                       </td>
                     </tr>

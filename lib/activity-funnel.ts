@@ -152,6 +152,17 @@ export type VisitorSession = {
   errorCodes: string[];
   /** الزمن بين أول فتح لصفحة الحجز وآخر حدث في الجلسة. */
   checkoutDwellMs: number | null;
+  /**
+   * الصفحة التي غادر منها الزائر — **بالـ query كاملاً** (التواريخ والفرع والموديل).
+   * هذا هو ما يلزم لإعادة إنتاج ما رآه بالضبط قبل أن ينسحب.
+   */
+  exitPath: string | null;
+  /** موديل السيارة المرتبط بصفحة الخروج، إن كانت صفحة حجز سيارة. */
+  exitCarModelId: number | null;
+  /** آخر حدث في الجلسة — يميّز «خرج من صفحة» عن «فشل عنده النموذج». */
+  lastKind: string;
+  /** سبب آخر خطأ واجهه، إن وُجد. */
+  lastErrorCode: string | null;
   isStaff: boolean;
   isSuspectedBot: boolean;
 };
@@ -243,6 +254,11 @@ function finalizeSession(
   let deepestStage: FunnelStage | null = null;
   for (const stage of FUNNEL_STAGES) if (stages.has(stage)) deepestStage = stage;
 
+  // صفحة الخروج = آخر حدث **يحمل مساراً**. لا نأخذ آخر حدث مطلقاً لأنه قد يكون
+  // حدث تفاعل (ضغط زر / خطأ نموذج) يحمل نفس مسار الصفحة أو لا يعني تنقّلاً.
+  const lastWithPath = [...events].reverse().find((e) => e.path?.trim());
+  const lastError = [...events].reverse().find((e) => e.kind === "CHECKOUT_ERROR" && e.detail);
+
   const ip = first.ip;
   return {
     key,
@@ -262,6 +278,10 @@ function finalizeSession(
     carModelIds,
     errorCodes,
     checkoutDwellMs: firstCheckoutAt ? last.createdAt.getTime() - firstCheckoutAt.getTime() : null,
+    exitPath: lastWithPath?.path?.trim() ?? null,
+    exitCarModelId: lastWithPath?.carModelId ?? null,
+    lastKind: last.kind,
+    lastErrorCode: lastError?.detail ?? null,
     isStaff: ip != null && staffIps.has(ip),
     // معظم الانتقالات فورية = بوت. لا نعتمد على مدة الجلسة الكلية لأن البوت
     // قد يعود بعد دقائق فتبدو جلسته طويلة بينما كل انتقالاته داخلها فورية.
