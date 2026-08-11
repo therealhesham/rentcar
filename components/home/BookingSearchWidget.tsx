@@ -242,14 +242,18 @@ export function BookingSearchWidget({
   const errorRef = useRef<HTMLDivElement>(null);
   const prevModeRef = useRef<ModeTab>("pickup");
   const wasPendingRef = useRef(false);
+  const userClickedSearchRef = useRef(false);
   const uid = useId();
 
-  // التمرير التلقائي لأسفل إلى قسم النتائج بعد اكتمال البحث والتحميل
+  // التمرير التلقائي لأسفل يعمل فقط عند الضغط الصريح على زر «ابحث عن السيارات»
   useEffect(() => {
     if (wasPendingRef.current && !isSearchPending) {
-      const el = document.getElementById("fleet-results");
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (userClickedSearchRef.current) {
+        userClickedSearchRef.current = false;
+        const el = document.getElementById("fleet-results");
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
       }
     }
     wasPendingRef.current = isSearchPending;
@@ -799,6 +803,7 @@ export function BookingSearchWidget({
       return;
     }
 
+    userClickedSearchRef.current = true;
     startSearchTransition(() => {
       persistAndNavigate(built.params, built.ctx);
     });
@@ -979,9 +984,7 @@ export function BookingSearchWidget({
       lastAutoSearchSigRef.current = sig;
       setError(null);
       setBranchHoursNotice(null);
-      startSearchTransition(() => {
-        persistAndNavigate(built.params, built.ctx);
-      });
+      persistAndNavigate(built.params, built.ctx);
     }, AUTO_SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
