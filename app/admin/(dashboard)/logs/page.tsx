@@ -256,17 +256,19 @@ export default async function AdminActivityLogsPage({
       // تطابق دقيق على raw userAgent strings
       orConds.push({ userAgent: { in: browserUAs } });
     } else {
-      // بحث حر في raw userAgent
-      orConds.push({ userAgent: { contains: v } });
+      // بحث حر في raw userAgent (لو كان التسمية من متصفح قديم غير موجود في أعلى 100، نبحث عن اسمه فقط)
+      const fallbackStr = v.includes(" — ") ? v.split(" — ")[0].trim() : v;
+      orConds.push({ userAgent: { contains: fallbackStr } });
     }
     return { OR: orConds };
   };
 
   const searchConditions: Prisma.ActivityLogWhereInput[] = [];
 
-  // كل قيمة تحديد يجب أن يطابقها الصف ولو واحدة منها (OR عبر القيم)
-  if (qValues.length > 0) {
-    searchConditions.push({ OR: qValues.map(makeMatchOr) });
+  // كل قيمة تحديد يجب أن يطابقها الصف (AND عبر القيم المختلفة لتضييق البحث)
+  // هكذا إذا اختار المستخدم IP ومتصفح معاً، يجلب الزيارات التي تطابق الاثنين
+  for (const v of qValues) {
+    searchConditions.push(makeMatchOr(v));
   }
   // استبعاد: كل قيمة يجب ألّا يطابقها الصف (AND NOT)
   for (const v of excludeValues) {
