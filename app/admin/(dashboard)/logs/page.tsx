@@ -246,10 +246,10 @@ export default async function AdminActivityLogsPage({
     ? { AND: searchConditions }
     : {};
 
-  // عندما يكون المستخدم يبحث بصراحة عن شيء بعينه لا نطبّق فلتر الترافيك —
-  // فلتر "IP موظف" سيتناقض مع طلب البحث ويعطي صفر نتائج.
-  const hasActiveSearch = qValues.length > 0 || excludeValues.length > 0;
-  const effectiveExcludeIps = hasActiveSearch ? [] : excludeIps;
+  // وقف فلتر الترافيك فقط لما في قيم تحديد (include) — لأن تحديد IP موظف يتناقض مع
+  // "ip NOT IN staffIps" ويعطي صفر نتائج. الاستبعاد لا يتناقض: الاثنين يستبعدان معاً.
+  const hasActiveSearch = qValues.length > 0 || excludeValues.length > 0; // لزر "مسح الصفاية"
+  const effectiveExcludeIps = qValues.length > 0 ? [] : excludeIps;
 
   const trafficWhere = effectiveExcludeIps.length ? { ip: { notIn: effectiveExcludeIps } } : {};
   const baseWhere = { ...dateWhere, ...trafficWhere, ...searchWhere };
