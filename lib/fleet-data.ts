@@ -265,6 +265,9 @@ export async function getFleetCarMapByModelIds(
     opts?.referenceDate,
   )) {
     const monthly = monthlyPrices?.get(modelId);
+    // نفس قاعدة `getFleetCarsForDisplay` — وإلا اختفت السيارة من الأسطول وبقيت
+    // ظاهرة في الرئيسية وبقية الأقسام التي تستهلك هذه الخريطة.
+    if (monthlyPrices && !monthly) continue;
     map.set(
       modelId,
       mapFleetRowToFleetCar(
@@ -399,17 +402,30 @@ export async function getFleetCarsForDisplay(
       : {};
 
   // فلتر الحد الأقصى للسعر: سعر الفرع إن وُجد وإلا سعر الموديل (COALESCE).
+  // في التبويب الشهري تُعرض الأسعار الشهرية، فيجب أن يقارَن الفلتر بعمود الشهري —
+  // مقارنته بالسعر اليومي كانت تعني أن شريط السعر يصفّي بمقياس غير الذي يراه الزائر.
+  const isMonthlyTab = rentalTab?.trim().toLowerCase() === "monthly";
   const maxPriceWhere =
     maxPriceExclTax != null
-      ? {
-          OR: [
-            { pricePerDayExclTax: { lte: maxPriceExclTax } },
-            {
-              pricePerDayExclTax: null,
-              model: { price: { lte: maxPriceExclTax } },
-            },
-          ],
-        }
+      ? isMonthlyTab
+        ? {
+            OR: [
+              { priceMonthlyExclTax: { lte: maxPriceExclTax } },
+              {
+                priceMonthlyExclTax: null,
+                model: { priceMonthlyExclTax: { lte: maxPriceExclTax } },
+              },
+            ],
+          }
+        : {
+            OR: [
+              { pricePerDayExclTax: { lte: maxPriceExclTax } },
+              {
+                pricePerDayExclTax: null,
+                model: { price: { lte: maxPriceExclTax } },
+              },
+            ],
+          }
       : {};
 
   const branchFilter = branchSlug?.trim()
@@ -462,6 +478,11 @@ export async function getFleetCarsForDisplay(
     const pick = picks.get(modelId);
     if (!pick) continue;
     const monthly = monthlyPrices?.get(modelId);
+    // تبويب «شهري» يعرض ما له سعر شهري فقط. بدون هذا الاستبعاد كانت السيارة بلا سعر
+    // شهري تظهر بسعرها **اليومي** بجوار أسعار شهرية فتبدو أرخص بأضعاف وهي ليست كذلك،
+    // ثم تُسعَّر عند الحجز يومياً × عدد الأيام (`isMonthlyBooking` تكون false).
+    // `monthlyPrices` ليست null إلا في التبويب الشهري، فاليومي والأسبوعي لا يتأثران.
+    if (monthlyPrices && !monthly) continue;
     cars.push(
       mapFleetRowToFleetCar(
         pick.row,
@@ -514,19 +535,39 @@ export async function getFleetBrandsForFilter(locale: string = "ar"): Promise<Fl
 }
 
 /** أدنى وأعلى سعر يومي (دون ضريبة) للمركبات المعروضة — يراعي تجاوزات أسعار الفروع. */
-export async function getFleetPriceBounds(): Promise<FleetPriceBounds> {
+/**
+ * حدود شريط فلتر السعر. يجب أن تكون بنفس مقياس الأسعار المعروضة في التبويب،
+ * وإلا صار الشريط يتحرك في نطاق يومي بينما البطاقات تعرض أسعاراً شهرية.
+ */
+export async function getFleetPriceBounds(
+  rentalTab?: string | null,
+): Promise<FleetPriceBounds> {
+  const isMonthly = rentalTab?.trim().toLowerCase() === "monthly";
+
   // COALESCE(سعر الفرع, سعر الموديل) على صفوف الأسطول المتاحة في فروع نشطة.
-  const rows = await prisma.$queryRaw<{ minPrice: number | null; maxPrice: number | null }[]>`
-    SELECT
-      MIN(COALESCE(f.pricePerDayExclTax, m.price)) AS minPrice,
-      MAX(COALESCE(f.pricePerDayExclTax, m.price)) AS maxPrice
-    FROM Fleet f
-    JOIN CarModel m ON m.id = f.modelId
-    JOIN Branch b ON b.id = f.branchId
-    WHERE f.quantity > 0 AND b.isActive = true
-  `;
+  // في الشهري نستبعد الصفوف بلا سعر شهري — وهي المستبعدة أصلاً من النتائج.
+  const rows = isMonthly
+    ? await prisma.$queryRaw<{ minPrice: number | null; maxPrice: number | null }[]>`
+        SELECT
+          MIN(COALESCE(f.priceMonthlyExclTax, m.priceMonthlyExclTax)) AS minPrice,
+          MAX(COALESCE(f.priceMonthlyExclTax, m.priceMonthlyExclTax)) AS maxPrice
+        FROM Fleet f
+        JOIN CarModel m ON m.id = f.modelId
+        JOIN Branch b ON b.id = f.branchId
+        WHERE f.quantity > 0 AND b.isActive = true
+          AND COALESCE(f.priceMonthlyExclTax, m.priceMonthlyExclTax) IS NOT NULL
+      `
+    : await prisma.$queryRaw<{ minPrice: number | null; maxPrice: number | null }[]>`
+        SELECT
+          MIN(COALESCE(f.pricePerDayExclTax, m.price)) AS minPrice,
+          MAX(COALESCE(f.pricePerDayExclTax, m.price)) AS maxPrice
+        FROM Fleet f
+        JOIN CarModel m ON m.id = f.modelId
+        JOIN Branch b ON b.id = f.branchId
+        WHERE f.quantity > 0 AND b.isActive = true
+      `;
   const min = Number(rows[0]?.minPrice ?? 0);
-  const max = Number(rows[0]?.maxPrice ?? 5000);
+  const max = Number(rows[0]?.maxPrice ?? (isMonthly ? 20000 : 5000));
   return {
     min: Math.max(0, Math.floor(min)),
     max: Math.max(min, Math.ceil(max)),

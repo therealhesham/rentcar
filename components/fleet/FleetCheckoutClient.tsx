@@ -953,6 +953,19 @@ export function FleetCheckoutClient({
     /^\d+$/.test(prefillBookingRequestIdBanner) &&
     !/^\d+$/.test(excludeBookingRequestIdBanner);
 
+  /**
+   * ويدجت البحث كان يتصدّر صفحة الحجز فيملأ أول شاشة على الجوال — والزائر الذي ضغط
+   * «احجز الآن» يقرأها كأنه رُدَّ إلى بداية البحث. سجل النشاط أظهر تنقّلاً متكرراً
+   * `/fleet/checkout → /fleet` بلا محاولة إرسال واحدة، فصار الويدجت مطوياً.
+   *
+   * يُفتح وحده في الحالتين اللتين لا يُكمَل الحجز بدونه: غياب التواريخ (‏`handleSubmit`
+   * يرفض بـ `NO_DATES`، وهي حالة العودة من `CarUnavailableModal` لأنها تُسقط كل
+   * الـ params)، وإعادة حجز سابق حيث المطلوب صراحةً اختيار تواريخ جديدة.
+   */
+  const [tripEditorOpen, setTripEditorOpen] = useState(
+    () => !trip.pickupIso || sp.get("rebook") === "1",
+  );
+
   return (
     <div className="flex min-h-screen flex-col bg-[#fdfbf6] text-on-surface pb-[76px] lg:pb-0">
       <SiteNav active="fleet" />
@@ -981,20 +994,57 @@ export function FleetCheckoutClient({
                 لتغيير التواريخ أو الفروع: عدّلوا الحقول أدناه ثم «تطبيق التواريخ على الحجز».
               </p>
             ) : null} */}
-            <BookingWidget
-              cities={bookingCities}
-              variant="checkout"
-              checkoutModelId={car.modelId}
-              tabFlags={tabFlags}
-              initialFromUrl={fleetUrlHydrate}
-            />
+            <div dir="rtl" className="rounded-2xl border border-[#ebe4d3] bg-white/70">
+              <button
+                type="button"
+                onClick={() => setTripEditorOpen((v) => !v)}
+                aria-expanded={tripEditorOpen}
+                aria-controls="trip-editor"
+                className="flex w-full items-center justify-between gap-3 px-4 py-3 text-start"
+              >
+                <span className="min-w-0">
+                  <span className="block text-[13px] font-extrabold text-[#003749]">
+                    تعديل التواريخ أو الفرع
+                  </span>
+                  {trip.pickupIso ? (
+                    <span className="mt-0.5 block truncate text-[12px] font-semibold text-[#6b5a3b]">
+                      {pu.date} {pu.time} ← {du.date} {du.time}
+                    </span>
+                  ) : (
+                    <span className="mt-0.5 block text-[12px] font-bold text-red-600">
+                      لم تُحدَّد تواريخ الحجز بعد
+                    </span>
+                  )}
+                </span>
+                <ChevronDown
+                  className={`size-4 shrink-0 text-[#8a7752] transition-transform ${
+                    tripEditorOpen ? "rotate-180" : ""
+                  }`}
+                  aria-hidden
+                />
+              </button>
+              {tripEditorOpen ? (
+                <div id="trip-editor" className="border-t border-[#ebe4d3] p-3">
+                  <BookingWidget
+                    cities={bookingCities}
+                    variant="checkout"
+                    checkoutModelId={car.modelId}
+                    tabFlags={tabFlags}
+                    initialFromUrl={fleetUrlHydrate}
+                  />
+                </div>
+              ) : null}
+            </div>
           </div>
 
           {/* Core Layout */}
           <div dir="rtl" className="grid gap-8 lg:grid-cols-[1fr_360px] xl:gap-12">
             {/* ─── Main Content (Left side in LTR, Right side in RTL) ─── */}
-            {/* على الجوال: الفورم أولاً ثم كارت الملخص أسفله (السعر يظل ظاهراً في الشريط السفلي الثابت). */}
-            <div className="space-y-8">
+            {/* على الجوال: كارت السيارة والسعر أولاً ثم الفورم (انظر `order` على الطرفين).
+                عكسُه كان يضع السيارة المختارة في آخر صفحة طولها خمس شاشات، فيواجه الزائرَ
+                طلبُ رفع صورة رخصته قبل أن يرى ما اختاره أو كم سيدفع. على lg يعود الفورم
+                لليمين والملخص لعمود جانبي لاصق. */}
+            <div className="order-2 space-y-8 lg:order-1">
               {/* Header Title */}
               <div>
                 <h1 className="text-2xl font-extrabold tracking-tight text-[#003749] sm:text-3xl">
@@ -1625,7 +1675,7 @@ export function FleetCheckoutClient({
             </div>
 
             {/* ─── Sidebar (Checkout Summary) ─── */}
-            <aside id="order-summary" className="scroll-mt-24">
+            <aside id="order-summary" className="order-1 scroll-mt-24 lg:order-2">
               <div className="sticky top-24 overflow-hidden rounded-3xl border border-[#ebe4d3] bg-white shadow-[0_24px_60px_-20px_rgba(15,61,71,0.15)]">
                 {/* Car Image Area */}
                 <div className="relative aspect-[16/10] overflow-hidden bg-gradient-to-br from-[#fdfbf6] via-[#f7f2e9] to-[#f0ebe0]">
@@ -1952,7 +2002,8 @@ export function FleetCheckoutClient({
       </div>
       <SiteFooter />
 
-      {/* شريط الإجمالي الثابت — جوال فقط (الملخص الكامل صار أسفل الفورم) */}
+      {/* شريط الإجمالي الثابت — جوال فقط: يبقي السعر ظاهراً بعد أن يمرّ الزائر
+          بكارت الملخص في أعلى الصفحة وينزل إلى الفورم. */}
       <div
         dir="rtl"
         className="fixed inset-x-0 bottom-0 z-40 border-t border-[#dbb878]/30 bg-[#003749]/95 px-4 py-3 shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.5)] backdrop-blur-md lg:hidden"

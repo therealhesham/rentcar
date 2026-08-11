@@ -319,6 +319,8 @@
     "noAvailableSub": "Try changing pickup/return dates or browse the full fleet without availability filters.",
     "noMatchingTitle": "No vehicles match these filters",
     "noMatchingSub": "Try changing category, brand, or price range.",
+    "noMonthlyTitle": "No vehicles available for monthly rental",
+    "noMonthlySub": "No vehicle within these filters has a monthly price set. Try daily or weekly rental.",
     "searchResults": "Search Results",
     "type": "Type",
     "duration": "Duration",

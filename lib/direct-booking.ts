@@ -124,6 +124,12 @@ const AGE_OPTIONS = new Set(["25-35", "35-50", "50+"]);
 
 const CONTACT_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/**
+ * أقصى مدة تُقبل بالتسعير الشهري — حدّ **مؤقت** لأن الإجمالي الشهري لا يتأثر بعدد
+ * الأيام إطلاقاً. التفاصيل والبدائل: `docs/monthly-booking-days-limit.md`.
+ */
+export const MONTHLY_BOOKING_MAX_DAYS = 31;
+
 export function parseRentalTabFromJson(body: JsonBody): string | null {
   const raw = String(body.rental ?? body.rentalTab ?? "").trim().toLowerCase();
   if (!raw) return null;
@@ -1275,6 +1281,24 @@ export async function createDirectBooking(
   const isMonthlyBooking =
     commonNormalized.rentalTab?.trim().toLowerCase() === "monthly" && branchMonthlyPrice != null;
   const periodKind: RentalPeriodKind = isMonthlyBooking ? "MONTHLY" : "DAILY";
+
+  /*
+   * حدّ **مؤقت** — الشرح الكامل والبدائل في docs/monthly-booking-days-limit.md
+   *
+   * التسعير الشهري يقسم إجمالي الشهر على الأيام (`toPerDay` أدناه) ثم يضربه
+   * `computeCheckoutTotals` في الأيام مجدداً، فيُختصر `days` ويصير الإجمالي = سعر
+   * الشهر مهما بلغت المدة. حجز ٤٥ أو ٦٠ يوماً بتواريخ صحيحة تماماً يدفع سعر شهر واحد.
+   *
+   * المنطق سليم لشهر واحد (الحساب على الإجمالي يمنع ضياع فروق التقريب) لكنه يفترض
+   * ضمناً أن المدة ≈ شهر. نمنع ما فوقها ريثما يُحسم تسعير المدد الأطول: رفض الحجز
+   * أهون من بيعه بنصف سعره.
+   */
+  if (isMonthlyBooking && days > MONTHLY_BOOKING_MAX_DAYS) {
+    return {
+      ok: false,
+      error: `الحجز الشهري متاح حتى ${MONTHLY_BOOKING_MAX_DAYS} يوماً. للمدد الأطول اختر الإيجار اليومي أو تواصل معنا.`,
+    };
+  }
 
   // أرضية السعر الأدنى (دون ضريبة): تجاوز الفرع إن وُجد وإلا حد الموديل.
   const priceFloor = await resolvePriceFloorForModel(model.id, returnBranchRow?.id ?? null, {

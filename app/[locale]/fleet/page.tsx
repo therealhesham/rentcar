@@ -70,7 +70,7 @@ export default async function FleetPage({
     getRentalPriceDisplayMode(),
     getFleetCategoriesForFilter(locale),
     getFleetBrandsForFilter(locale),
-    getFleetPriceBounds(),
+    getFleetPriceBounds(rentalRaw),
   ]);
 
   const resolveBranchName = (slug: string) => {
@@ -294,9 +294,13 @@ export default async function FleetPage({
                   <path d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
-              <p className="text-lg font-extrabold text-[#003749]">{t("noMatchingTitle")}</p>
+              {/* التبويب الشهري يستبعد ما ليس له سعر شهري، فنصيحة «غيّر الفلاتر» العامة
+                  مضلِّلة هنا — السبب هو التبويب لا الفلاتر. */}
+              <p className="text-lg font-extrabold text-[#003749]">
+                {rentalRaw === "monthly" ? t("noMonthlyTitle") : t("noMatchingTitle")}
+              </p>
               <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-neutral-500">
-                {t("noMatchingSub")}
+                {rentalRaw === "monthly" ? t("noMonthlySub") : t("noMatchingSub")}
               </p>
             </div>
           ) : (
