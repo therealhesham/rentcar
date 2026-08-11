@@ -68,8 +68,18 @@ export function validateFleetBookNowSearchParams(
   return { ok: true };
 }
 
+/**
+ * ينقل الزائر إلى نموذج البحث أعلى الصفحة ليختار التواريخ والفرع بنفسه.
+ * يغطي مضيفَي بطاقات السيارات: صفحة الأسطول (`fleet-booking`) والرئيسية (`home-booking`).
+ */
 export function scrollToBookingSearchForm(): void {
   const el =
     document.getElementById("fleet-booking") ?? document.getElementById("home-booking");
-  el?.scrollIntoView({ behavior: "smooth", block: "start" });
+  if (!el) return;
+  el.scrollIntoView({ behavior: "smooth", block: "start" });
+  // التمرير وحده يترك الزائر أمام نموذج لا يعرف لماذا قفزت به الصفحة إليه. تركيز أول
+  // عنصر تفاعلي يوجّه نظره — و`preventScroll` كي لا يُلغي التركيزُ التمريرَ الناعم.
+  el.querySelector<HTMLElement>(
+    "button, input, select, [tabindex]:not([tabindex='-1'])",
+  )?.focus({ preventScroll: true });
 }

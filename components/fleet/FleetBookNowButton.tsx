@@ -2,13 +2,12 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense } from "react";
 import { useTranslations } from "next-intl";
-import { FleetBookNowHintModal } from "@/components/fleet/FleetBookNowHintModal";
-import { OrSimilarModal } from "@/components/fleet/OrSimilarModal";
 import { trackEvent } from "@/lib/track-event";
 import type { BookingCityBranchesOption } from "@/lib/booking-location-options";
 import {
+  scrollToBookingSearchForm,
   validateFleetBookNowSearchParams,
 } from "@/lib/fleet-book-now-validation";
 
@@ -82,216 +81,61 @@ type FleetBookNowButtonProps = {
   availableBranchSlugs?: string[];
 };
 
-function formatAsDatetimeLocal(raw: string | null): string {
-  if (!raw) return "";
-  const d = new Date(raw);
-  if (Number.isNaN(d.getTime())) return "";
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mi = String(d.getMinutes()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
-}
+/**
+ * حدث «طُلبت التواريخ» — الاسم يحمل `MODAL` لأنه قيمة مخزَّنة في `ActivityLog` منذ أن
+ * كان الطلب يتم عبر مودال؛ تغييره يقطع الجلسات السابقة في لوحة `/admin/logs`. المعنى
+ * المعروض هناك («طُلبت التواريخ») ما زال دقيقاً بعد استبدال المودال بالتمرير للنموذج.
+ */
+const DATES_REQUESTED_EVENT = "DATES_MODAL_SHOWN";
 
-const FALLBACK_CITIES: BookingCityBranchesOption[] = [
-  {
-    slug: "default",
-    name: "الفروع",
-    branches: [
-      { slug: "jeddah", name: "جدة", openingHours: null },
-      { slug: "madinah", name: "المدينة المنورة", openingHours: null },
-      { slug: "tabuk", name: "تبوك", openingHours: null },
-    ],
-  },
-];
-
-function firstBranchSlug(cities: BookingCityBranchesOption[], availableBranchSlugs?: string[]): string {
-  const allowedSet = availableBranchSlugs && availableBranchSlugs.length > 0
-    ? new Set(availableBranchSlugs.map(s => s.toLowerCase()))
-    : null;
-  for (const c of cities) {
-    for (const b of c.branches) {
-      if (!allowedSet || allowedSet.has(b.slug.toLowerCase())) {
-        return b.slug;
-      }
-    }
-  }
-  return "";
-}
-
-function FleetBookNowButtonInner({ modelId, cities = FALLBACK_CITIES, carName, allowHolidayBooking = false, availableBranchSlugs }: FleetBookNowButtonProps) {
+function FleetBookNowButtonInner({ modelId }: FleetBookNowButtonProps) {
   const router = useRouter();
   const sp = useSearchParams();
   const extra = sp.toString();
   const href = `/fleet/checkout?modelId=${modelId}${extra ? `&${extra}` : ""}`;
-  const [orSimilarOpen, setOrSimilarOpen] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [draftBranch, setDraftBranch] = useState(() => firstBranchSlug(cities, availableBranchSlugs));
-  const [draftPickup, setDraftPickup] = useState("");
-  const [draftDropoff, setDraftDropoff] = useState("");
-
-  useEffect(() => {
-    setModalOpen(false);
-  }, [extra]);
-
-  useEffect(() => {
-    const spRaw = sp.toString();
-    const spObj = new URLSearchParams(spRaw);
-    // الاحتياطي مقيّد بفروع هذه السيارة — الفرع الافتراضي العام قد لا تتوفر فيه،
-    // فيصل للمودال كقيمة أولية لا يعرفها ولا يعرضها.
-    const branch =
-      spObj.get("pickupBranch")?.trim() ||
-      spObj.get("returnBranch")?.trim() ||
-      spObj.get("branch")?.trim() ||
-      firstBranchSlug(cities, availableBranchSlugs) ||
-      "";
-    setDraftBranch(branch);
-    setDraftPickup(formatAsDatetimeLocal(spObj.get("pickup")));
-    setDraftDropoff(formatAsDatetimeLocal(spObj.get("dropoff")));
-  }, [sp, cities, availableBranchSlugs]);
 
   function onBookClick(e: React.MouseEvent<HTMLAnchorElement>) {
     e.preventDefault();
     trackEvent("BOOK_NOW_CLICK", { carModelId: modelId });
-    setOrSimilarOpen(true);
-  }
 
-  function handleOrSimilarConfirm() {
-    setOrSimilarOpen(false);
-    trackEvent("OR_SIMILAR_CONFIRM", { carModelId: modelId });
-    const check = validateFleetBookNowSearchParams(new URLSearchParams(sp.toString()));
+    // بحث ناقص التواريخ أو الفرع: نرفع الزائر إلى نموذج البحث ليختار بنفسه بدل
+    // مودال يحجب الصفحة. الاختيار في النموذج يحدّث الرابط، فتصير الضغطة التالية
+    // انتقالاً مباشراً إلى صفحة الحجز.
+    const check = validateFleetBookNowSearchParams(new URLSearchParams(extra));
     if (!check.ok) {
-      trackEvent("DATES_MODAL_SHOWN", { carModelId: modelId });
-      setModalOpen(true);
-    } else {
-      router.push(`/fleet/checkout?modelId=${modelId}&${sp.toString()}`);
+      trackEvent(DATES_REQUESTED_EVENT, { carModelId: modelId });
+      scrollToBookingSearchForm();
+      return;
     }
+
+    router.push(href);
   }
 
-  function handleConfirmModal(draft: { branch: string; pickup: string; dropoff: string }) {
-    trackEvent("DATES_MODAL_CONFIRM", { carModelId: modelId });
-    const next = new URLSearchParams(sp.toString());
-    next.set("mode", "pickup");
-    next.set("rental", next.get("rental")?.trim() || "daily");
-    next.delete("dlat");
-    next.delete("dlng");
-    next.delete("daddr");
-    next.set("pickup", draft.pickup);
-    next.set("dropoff", draft.dropoff);
-    next.set("pickupBranch", draft.branch);
-    next.set("returnBranch", draft.branch);
-    next.set("branch", draft.branch);
-    setModalOpen(false);
-    router.push(`/fleet/checkout?modelId=${modelId}&${next.toString()}`);
-  }
-
-  return (
-    <>
-      <BookNowLink href={href} onClick={onBookClick} />
-      <OrSimilarModal
-        open={orSimilarOpen}
-        carName={carName}
-        onConfirm={handleOrSimilarConfirm}
-        onClose={() => {
-          trackEvent("OR_SIMILAR_DISMISS", { carModelId: modelId });
-          setOrSimilarOpen(false);
-        }}
-      />
-      <FleetBookNowHintModal
-        open={modalOpen}
-        cities={cities}
-        initialBranch={draftBranch}
-        initialPickup={draftPickup}
-        initialDropoff={draftDropoff}
-        allowHolidayBooking={allowHolidayBooking}
-        availableBranchSlugs={availableBranchSlugs}
-        onConfirm={handleConfirmModal}
-        onClose={() => setModalOpen(false)}
-      />
-    </>
-  );
+  return <BookNowLink href={href} onClick={onBookClick} />;
 }
 
-function FleetBookNowButtonFallback({
-  modelId,
-  cities = FALLBACK_CITIES,
-  carName,
-  allowHolidayBooking = false,
-  availableBranchSlugs,
-}: FleetBookNowButtonProps) {
-  const router = useRouter();
-  const [orSimilarOpen, setOrSimilarOpen] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [draftBranch, setDraftBranch] = useState(() => firstBranchSlug(cities, availableBranchSlugs));
-  const [draftPickup, setDraftPickup] = useState("");
-  const [draftDropoff, setDraftDropoff] = useState("");
-
-  useEffect(() => {
-    setDraftBranch(firstBranchSlug(cities, availableBranchSlugs));
-  }, [cities, availableBranchSlugs]);
-
+/**
+ * بديل `Suspense` — لا يصل إليه `useSearchParams`، فلا سبيل للتحقق من اكتمال البحث.
+ * نرفع الزائر إلى النموذج دائماً: أسوأ الحالات خطوة زائدة، لا انتقال إلى صفحة حجز
+ * بلا تواريخ ترفضه لاحقاً بـ `NO_DATES`.
+ */
+function FleetBookNowButtonFallback({ modelId }: FleetBookNowButtonProps) {
   function onBookClick(e: React.MouseEvent<HTMLAnchorElement>) {
     e.preventDefault();
     trackEvent("BOOK_NOW_CLICK", { carModelId: modelId });
-    setOrSimilarOpen(true);
-  }
-
-  function handleOrSimilarConfirm() {
-    setOrSimilarOpen(false);
-    trackEvent("OR_SIMILAR_CONFIRM", { carModelId: modelId });
-    trackEvent("DATES_MODAL_SHOWN", { carModelId: modelId });
-    setModalOpen(true);
-  }
-
-  function handleConfirmModal(draft: { branch: string; pickup: string; dropoff: string }) {
-    trackEvent("DATES_MODAL_CONFIRM", { carModelId: modelId });
-    const next = new URLSearchParams();
-    next.set("mode", "pickup");
-    next.set("rental", "daily");
-    next.set("pickup", draft.pickup);
-    next.set("dropoff", draft.dropoff);
-    next.set("pickupBranch", draft.branch);
-    next.set("returnBranch", draft.branch);
-    next.set("branch", draft.branch);
-    setModalOpen(false);
-    router.push(`/fleet/checkout?modelId=${modelId}&${next.toString()}`);
+    trackEvent(DATES_REQUESTED_EVENT, { carModelId: modelId });
+    scrollToBookingSearchForm();
   }
 
   return (
-    <>
-      <BookNowLink
-        href={`/fleet/checkout?modelId=${modelId}`}
-        onClick={onBookClick}
-      />
-      <OrSimilarModal
-        open={orSimilarOpen}
-        carName={carName}
-        onConfirm={handleOrSimilarConfirm}
-        onClose={() => {
-          trackEvent("OR_SIMILAR_DISMISS", { carModelId: modelId });
-          setOrSimilarOpen(false);
-        }}
-      />
-      <FleetBookNowHintModal
-        open={modalOpen}
-        cities={cities}
-        initialBranch={draftBranch}
-        initialPickup={draftPickup}
-        initialDropoff={draftDropoff}
-        allowHolidayBooking={allowHolidayBooking}
-        availableBranchSlugs={availableBranchSlugs}
-        onConfirm={handleConfirmModal}
-        onClose={() => setModalOpen(false)}
-      />
-    </>
+    <BookNowLink href={`/fleet/checkout?modelId=${modelId}`} onClick={onBookClick} />
   );
 }
 
-export function FleetBookNowButton({ modelId, cities = FALLBACK_CITIES, carName, allowHolidayBooking = false, availableBranchSlugs }: FleetBookNowButtonProps) {
+export function FleetBookNowButton(props: FleetBookNowButtonProps) {
   return (
-    <Suspense fallback={<FleetBookNowButtonFallback modelId={modelId} cities={cities} carName={carName} allowHolidayBooking={allowHolidayBooking} availableBranchSlugs={availableBranchSlugs} />}>
-      <FleetBookNowButtonInner modelId={modelId} cities={cities} carName={carName} allowHolidayBooking={allowHolidayBooking} availableBranchSlugs={availableBranchSlugs} />
+    <Suspense fallback={<FleetBookNowButtonFallback {...props} />}>
+      <FleetBookNowButtonInner {...props} />
     </Suspense>
   );
 }
