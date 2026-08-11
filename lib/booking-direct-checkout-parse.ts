@@ -1,4 +1,8 @@
-import { DROPOFF_AFTER_PICKUP_ERROR_AR, isDropoffAfterPickup } from "@/lib/booking-days";
+import {
+  computeBookingDays,
+  DROPOFF_AFTER_PICKUP_ERROR_AR,
+  isDropoffAfterPickup,
+} from "@/lib/booking-days";
 import type { CreateDirectBookingInput } from "@/lib/direct-booking";
 import {
   parseAddonIdsFromJsonBody,
@@ -38,6 +42,32 @@ export function parseCreateDirectBookingInputFromCheckoutJson(
     !isDropoffAfterPickup(parsed.data.pickupDate, dropoffParsed.dropoffDate)
   ) {
     return { ok: false, error: DROPOFF_AFTER_PICKUP_ERROR_AR };
+  }
+
+  /*
+   * `days` هو **المضاعِف الوحيد** للسعر (`pricePerDayExclTax × days`) وهو أيضاً أساس
+   * حجز التوفّر. لذلك لا يجوز قبوله من العميل كما هو: طلب مباشر إلى الـ API يستطيع
+   * إرسال `days: 1` مع تسليم بعد أسبوع فيدفع يوماً ويحتجز السيارة سبعة، وتظهر
+   * السيارة متاحة بعد اليوم الأول فتُحجز مرتين.
+   *
+   * غرامة التأخير لا تلتقط هذا: `computeDelayPenaltySnap` تعود بـ `null` لأي تبويب
+   * غير `daily`، والتبويب نفسه يأتي من العميل.
+   *
+   * الواجهة تحسب `days` بنفس `computeBookingDays` (FleetCheckoutClient)، فأي طلب
+   * شرعي يطابق تماماً. الاختلاف = تلاعب ⇒ نرفض ولا نصحّح بصمت، حتى لا يُنشأ حجز
+   * بمدة أو سعر لم يرهما العميل.
+   */
+  if (dropoffParsed.dropoffDate) {
+    const daysFromDates = computeBookingDays(
+      parsed.data.pickupDate,
+      dropoffParsed.dropoffDate,
+    );
+    if (daysFromDates !== parsed.data.numberOfDays) {
+      return {
+        ok: false,
+        error: "عدد أيام الحجز لا يطابق تاريخي الاستلام والتسليم. أعد تحميل الصفحة وحاول مجدداً.",
+      };
+    }
   }
 
   const emailParsed = parseContactEmailFromJson(obj);
