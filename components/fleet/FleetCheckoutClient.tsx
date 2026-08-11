@@ -920,7 +920,7 @@ export function FleetCheckoutClient({
     !/^\d+$/.test(excludeBookingRequestIdBanner);
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#fdfbf6] text-on-surface">
+    <div className="flex min-h-screen flex-col bg-[#fdfbf6] text-on-surface pb-[76px] lg:pb-0">
       <SiteNav active="fleet" />
       <div className={`pt-24 pb-20 transition-opacity duration-500 ease-out ${mounted ? 'opacity-100' : 'opacity-0'}`}>
         <main className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
@@ -959,7 +959,8 @@ export function FleetCheckoutClient({
           {/* Core Layout */}
           <div dir="rtl" className="grid gap-8 lg:grid-cols-[1fr_360px] xl:gap-12">
             {/* ─── Main Content (Left side in LTR, Right side in RTL) ─── */}
-            <div className="order-2 space-y-8 lg:order-1">
+            {/* على الجوال: الفورم أولاً ثم كارت الملخص أسفله (السعر يظل ظاهراً في الشريط السفلي الثابت). */}
+            <div className="space-y-8">
               {/* Header Title */}
               <div>
                 <h1 className="text-2xl font-extrabold tracking-tight text-[#003749] sm:text-3xl">
@@ -1590,7 +1591,7 @@ export function FleetCheckoutClient({
             </div>
 
             {/* ─── Sidebar (Checkout Summary) ─── */}
-            <aside className="order-1 lg:order-2">
+            <aside id="order-summary" className="scroll-mt-24">
               <div className="sticky top-24 overflow-hidden rounded-3xl border border-[#ebe4d3] bg-white shadow-[0_24px_60px_-20px_rgba(15,61,71,0.15)]">
                 {/* Car Image Area */}
                 <div className="relative aspect-[16/10] overflow-hidden bg-gradient-to-br from-[#fdfbf6] via-[#f7f2e9] to-[#f0ebe0]">
@@ -1901,6 +1902,36 @@ export function FleetCheckoutClient({
         </main>
       </div>
       <SiteFooter />
+
+      {/* شريط الإجمالي الثابت — جوال فقط (الملخص الكامل صار أسفل الفورم) */}
+      <div
+        dir="rtl"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-[#dbb878]/30 bg-[#003749]/95 px-4 py-3 shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.5)] backdrop-blur-md lg:hidden"
+      >
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-white/55">
+              المجموع النهائي
+            </p>
+            <p
+              className="mt-0.5 text-[19px] font-extrabold leading-none tabular-nums text-white"
+              dir="ltr"
+              aria-label={`${formatSarAmount(totals.totalInclTax)} ريال سعودي`}
+            >
+              {formatSarAmount(totals.totalInclTax)}{" "}
+              <span className="text-[#dbb878]" aria-hidden>
+                <SarCurrencyGlyph />
+              </span>
+            </p>
+          </div>
+          <a
+            href="#order-summary"
+            className="shrink-0 rounded-xl border border-[#dbb878]/50 px-3.5 py-2 text-[12px] font-extrabold text-[#dbb878] transition-colors hover:bg-[#dbb878]/10"
+          >
+            تفاصيل التسعير
+          </a>
+        </div>
+      </div>
 
       <CarUnavailableModal
         open={showCarUnavailableModal}
