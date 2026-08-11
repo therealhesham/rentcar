@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { OrSimilarModal } from "@/components/fleet/OrSimilarModal";
 import { trackEvent } from "@/lib/track-event";
 import type { BookingCityBranchesOption } from "@/lib/booking-location-options";
 import {
@@ -88,30 +89,59 @@ type FleetBookNowButtonProps = {
  */
 const DATES_REQUESTED_EVENT = "DATES_MODAL_SHOWN";
 
-function FleetBookNowButtonInner({ modelId }: FleetBookNowButtonProps) {
+/**
+ * التمرير يجب أن يتأخّر إلى ما بعد تفكيك `OrSimilarModal`: المودال يضبط
+ * `document.body.style.overflow = "hidden"` ويستعيده في تنظيف الـeffect. لو صدر أمر
+ * التمرير داخل نفس المعالج لَنُفِّذ والجسم ما زال مقفولاً فلا تتحرّك الصفحة إطلاقاً.
+ */
+function scrollToSearchAfterModalCloses(): void {
+  setTimeout(scrollToBookingSearchForm, 0);
+}
+
+function FleetBookNowButtonInner({ modelId, carName }: FleetBookNowButtonProps) {
   const router = useRouter();
   const sp = useSearchParams();
   const extra = sp.toString();
   const href = `/fleet/checkout?modelId=${modelId}${extra ? `&${extra}` : ""}`;
+  const [orSimilarOpen, setOrSimilarOpen] = useState(false);
 
   function onBookClick(e: React.MouseEvent<HTMLAnchorElement>) {
     e.preventDefault();
     trackEvent("BOOK_NOW_CLICK", { carModelId: modelId });
+    setOrSimilarOpen(true);
+  }
+
+  function handleOrSimilarConfirm() {
+    setOrSimilarOpen(false);
+    trackEvent("OR_SIMILAR_CONFIRM", { carModelId: modelId });
 
     // بحث ناقص التواريخ أو الفرع: نرفع الزائر إلى نموذج البحث ليختار بنفسه بدل
-    // مودال يحجب الصفحة. الاختيار في النموذج يحدّث الرابط، فتصير الضغطة التالية
-    // انتقالاً مباشراً إلى صفحة الحجز.
+    // مودال ثانٍ يحجب الصفحة. الاختيار في النموذج يحدّث الرابط، فتصير الضغطة
+    // التالية انتقالاً مباشراً إلى صفحة الحجز.
     const check = validateFleetBookNowSearchParams(new URLSearchParams(extra));
     if (!check.ok) {
       trackEvent(DATES_REQUESTED_EVENT, { carModelId: modelId });
-      scrollToBookingSearchForm();
+      scrollToSearchAfterModalCloses();
       return;
     }
 
     router.push(href);
   }
 
-  return <BookNowLink href={href} onClick={onBookClick} />;
+  return (
+    <>
+      <BookNowLink href={href} onClick={onBookClick} />
+      <OrSimilarModal
+        open={orSimilarOpen}
+        carName={carName}
+        onConfirm={handleOrSimilarConfirm}
+        onClose={() => {
+          trackEvent("OR_SIMILAR_DISMISS", { carModelId: modelId });
+          setOrSimilarOpen(false);
+        }}
+      />
+    </>
+  );
 }
 
 /**
@@ -119,16 +149,33 @@ function FleetBookNowButtonInner({ modelId }: FleetBookNowButtonProps) {
  * نرفع الزائر إلى النموذج دائماً: أسوأ الحالات خطوة زائدة، لا انتقال إلى صفحة حجز
  * بلا تواريخ ترفضه لاحقاً بـ `NO_DATES`.
  */
-function FleetBookNowButtonFallback({ modelId }: FleetBookNowButtonProps) {
+function FleetBookNowButtonFallback({ modelId, carName }: FleetBookNowButtonProps) {
+  const [orSimilarOpen, setOrSimilarOpen] = useState(false);
+
   function onBookClick(e: React.MouseEvent<HTMLAnchorElement>) {
     e.preventDefault();
     trackEvent("BOOK_NOW_CLICK", { carModelId: modelId });
-    trackEvent(DATES_REQUESTED_EVENT, { carModelId: modelId });
-    scrollToBookingSearchForm();
+    setOrSimilarOpen(true);
   }
 
   return (
-    <BookNowLink href={`/fleet/checkout?modelId=${modelId}`} onClick={onBookClick} />
+    <>
+      <BookNowLink href={`/fleet/checkout?modelId=${modelId}`} onClick={onBookClick} />
+      <OrSimilarModal
+        open={orSimilarOpen}
+        carName={carName}
+        onConfirm={() => {
+          setOrSimilarOpen(false);
+          trackEvent("OR_SIMILAR_CONFIRM", { carModelId: modelId });
+          trackEvent(DATES_REQUESTED_EVENT, { carModelId: modelId });
+          scrollToSearchAfterModalCloses();
+        }}
+        onClose={() => {
+          trackEvent("OR_SIMILAR_DISMISS", { carModelId: modelId });
+          setOrSimilarOpen(false);
+        }}
+      />
+    </>
   );
 }
 
