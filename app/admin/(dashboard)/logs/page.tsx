@@ -449,7 +449,7 @@ export default async function AdminActivityLogsPage({
     { sessions: 0, reachedCheckout: 0, createdBooking: 0, paidBooking: 0, revenueSar: 0 },
   );
 
-  const [geoClusters, geoReady, acIps, acPaths, acActors] = await Promise.all([
+  const [geoClusters, geoReady, acIps, acPaths, acActors, acBrowsers] = await Promise.all([
     clusterSessionsByCity(
       sessions.map((s) => ({ ip: s.ip, reachedCheckout: s.stages.has("checkout") })),
     ),
@@ -478,10 +478,23 @@ export default async function AdminActivityLogsPage({
       orderBy: { createdAt: "desc" },
       take: 30,
     }),
+    // autocomplete: userAgent فريد — محدود 50
+    prisma.activityLog.findMany({
+      where: { ...dateWhere, userAgent: { not: null } },
+      select: { userAgent: true },
+      distinct: ["userAgent"],
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    }),
   ]);
   const mappedSessions = geoClusters.reduce((sum, c) => sum + c.sessions, 0);
 
   // تجميع الخيارات حسب الفئة لـ LogsFilterSelect
+  const uniqueBrowsers = [
+    ...new Set(
+      acBrowsers.map((r) => shortBrowser(r.userAgent)).filter((b): b is string => Boolean(b)),
+    ),
+  ];
   const filterGroups: LogsFilterGroup[] = [
     {
       label: "عناوين IP",
@@ -494,6 +507,10 @@ export default async function AdminActivityLogsPage({
     {
       label: "العملاء / الموظفون",
       options: acActors.map((r) => r.actorLabel as string),
+    },
+    {
+      label: "المتصفحات",
+      options: uniqueBrowsers,
     },
   ].filter((g) => g.options.length > 0);
 
