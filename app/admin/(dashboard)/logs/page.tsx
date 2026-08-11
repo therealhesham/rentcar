@@ -112,27 +112,28 @@ const YMD_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const LOGIN_KINDS = ["CUSTOMER_LOGIN", "ADMIN_LOGIN"];
 
 /**
- * `countBy` يحدد وحدة عدّاد التبويب: `actor` = عدد الأشخاص المختلفين (من `actorLabel`)
- * وهو المعنى المفيد لتبويبات الدخول، و`ip` = عدد الزوّار المنفردين للمشاهدات.
+ * التبويبات تحمل **وحدة قياس واحدة** يختارها المستخدم من مبدّل `count`. سابقاً كان كل
+ * تبويب يعدّ بوحدته (أشخاص للدخول، عناوين للمشاهدات) فكانت الأرقام تبدو متناقضة:
+ * صف واحد فيه ثلاث وحدات، وتحته إجمالي سجلات لا يساويها أيٌّ منها.
  */
-const FILTERS: Array<{
-  key: string;
-  label: string;
-  kinds: string[] | null;
-  countBy: "ip" | "actor";
-}> = [
-  { key: "all", label: "الكل", kinds: null, countBy: "ip" },
-  { key: "logins", label: "تسجيلات الدخول", kinds: LOGIN_KINDS, countBy: "actor" },
-  { key: "customer-logins", label: "دخول العملاء", kinds: ["CUSTOMER_LOGIN"], countBy: "actor" },
-  { key: "admin-logins", label: "دخول الموظفين", kinds: ["ADMIN_LOGIN"], countBy: "actor" },
-  { key: "views", label: "مشاهدات الصفحات", kinds: ["PAGE_VIEW"], countBy: "ip" },
-  { key: "car-views", label: "مشاهدات السيارات", kinds: ["CAR_VIEW"], countBy: "ip" },
+const FILTERS: Array<{ key: string; label: string; kinds: string[] | null }> = [
+  { key: "all", label: "الكل", kinds: null },
+  { key: "logins", label: "تسجيلات الدخول", kinds: LOGIN_KINDS },
+  { key: "customer-logins", label: "دخول العملاء", kinds: ["CUSTOMER_LOGIN"] },
+  { key: "admin-logins", label: "دخول الموظفين", kinds: ["ADMIN_LOGIN"] },
+  { key: "views", label: "مشاهدات الصفحات", kinds: ["PAGE_VIEW"] },
+  { key: "car-views", label: "مشاهدات السيارات", kinds: ["CAR_VIEW"] },
+  // بدون هذا التبويب تبقى أحداث التفاعل محسوبة في «الكل» وغير قابلة للعرض،
+  // فيبدو الفرق بين «الكل» ومجموع التبويبات بلا تفسير.
+  { key: "interactions", label: "تفاعلات الحجز", kinds: INTERACTION_KINDS },
 ];
 
-const COUNT_UNIT_LABEL: Record<"ip" | "actor", string> = {
-  ip: "زائر منفرد (IP فريدة)",
-  actor: "مستخدم مختلف",
-};
+type CountMode = "records" | "unique";
+
+const COUNT_MODES: Array<{ key: CountMode; label: string; unit: string }> = [
+  { key: "records", label: "كل السجلات", unit: "سجل" },
+  { key: "unique", label: "زوّار منفردون", unit: "زائر منفرد (IP فريدة)" },
+];
 
 /** بداية يوم YYYY-MM-DD بتوقيت الرياض. */
 function riyadhDayStart(ymd: string): Date {
@@ -207,6 +208,9 @@ export default async function AdminActivityLogsPage({
 
   // `real` (الافتراضي) يخفي زياراتك أنت وفريقك — بدونها تغرق الأرقام في ترافيك داخلي.
   const traffic = sp.traffic === "all" ? "all" : "real";
+  // الافتراضي «كل السجلات»: هو الوحدة التي تتطابق مع إجمالي السجلات أسفل الجدول.
+  const countMode: CountMode = sp.count === "unique" ? "unique" : "records";
+  const countUnit = COUNT_MODES.find((m) => m.key === countMode)!.unit;
   const excludeIps = traffic === "real" ? [...staffIps] : [];
 
   const trafficWhere = excludeIps.length ? { ip: { notIn: excludeIps } } : {};
@@ -236,7 +240,7 @@ export default async function AdminActivityLogsPage({
     topCarGroups,
     topVisitorGroups,
     kindIpPairs,
-    kindActorPairs,
+    kindRecordCounts,
     funnelRows,
   ] = await Promise.all([
     prisma.activityLog.findMany({
@@ -266,13 +270,16 @@ export default async function AdminActivityLogsPage({
       orderBy: { _count: { userId: "desc" } },
       take: 10,
     }),
-    // القيم المميّزة لكل نوع — نحسب منها عدّاد كل تبويب في الذاكرة، لأن اتحاد
-    // نوعين ليس مجموع منفرديهما (نفس الـ IP أو الشخص قد يظهر في الاثنين).
+    // العناوين المميّزة لكل نوع — نحسب منها عدّاد كل تبويب في الذاكرة، لأن اتحاد
+    // نوعين ليس مجموع منفرديهما (نفس الـ IP قد يظهر في الاثنين).
     prisma.$queryRaw<Array<{ kind: string; ip: string }>>`
       SELECT DISTINCT kind, ip FROM ActivityLog WHERE ip IS NOT NULL ${dateSql} ${trafficSql}`,
-    prisma.$queryRaw<Array<{ kind: string; actorLabel: string }>>`
-      SELECT DISTINCT kind, actorLabel FROM ActivityLog
-      WHERE actorLabel IS NOT NULL AND kind IN (${Prisma.join(LOGIN_KINDS)}) ${dateSql} ${trafficSql}`,
+    // عدد السجلات لكل نوع — هذا الوضع جمعي بحت: مجموع التبويبات = إجمالي السجلات.
+    prisma.activityLog.groupBy({
+      by: ["kind"],
+      where: baseWhere,
+      _count: { _all: true },
+    }),
     // كل أحداث الفترة (بلا ترقيم) — رحلة الحجز تحتاج خيط الجلسة كاملاً لا صفحة منه.
     prisma.activityLog.findMany({
       where: baseWhere,
@@ -419,29 +426,33 @@ export default async function AdminActivityLogsPage({
     .map((s) => s.checkoutDwellMs ?? 0);
   const medianCheckoutDwellMs = median(checkoutDwells);
 
-  const groupValues = <T extends Record<string, string>>(
-    pairs: T[],
-    key: Exclude<keyof T & string, "kind">,
-  ): Map<string, Set<string>> => {
-    const byKind = new Map<string, Set<string>>();
-    for (const pair of pairs) {
-      const set = byKind.get(pair.kind) ?? new Set<string>();
-      set.add(pair[key]);
-      byKind.set(pair.kind, set);
-    }
-    return byKind;
-  };
-  const valuesByDimension = {
-    ip: groupValues(kindIpPairs, "ip"),
-    actor: groupValues(kindActorPairs, "actorLabel"),
-  };
+  const ipsByKind = new Map<string, Set<string>>();
+  for (const pair of kindIpPairs) {
+    const set = ipsByKind.get(pair.kind) ?? new Set<string>();
+    set.add(pair.ip);
+    ipsByKind.set(pair.kind, set);
+  }
+  const recordsByKind = new Map(kindRecordCounts.map((r) => [r.kind, r._count._all]));
 
-  /** عدّاد التبويب: عدد القيم المميّزة ضمن أنواعه — `kinds = null` يعني كل الأنواع. */
-  const distinctCount = (kinds: string[] | null, countBy: "ip" | "actor"): number => {
+  /**
+   * عدّاد التبويب بالوحدة المختارة. `kinds = null` يعني كل الأنواع.
+   *
+   * في وضع «منفردون» نأخذ **اتحاد** المجموعات لا مجموع أحجامها، لأن العنوان الواحد
+   * قد يظهر في أكثر من نوع فيُحتسب مرتين.
+   */
+  const tabCount = (kinds: string[] | null): number => {
+    if (countMode === "records") {
+      let total = 0;
+      for (const [kind, count] of recordsByKind) {
+        if (kinds && !kinds.includes(kind)) continue;
+        total += count;
+      }
+      return total;
+    }
     const union = new Set<string>();
-    for (const [kind, values] of valuesByDimension[countBy]) {
+    for (const [kind, ips] of ipsByKind) {
       if (kinds && !kinds.includes(kind)) continue;
-      for (const value of values) union.add(value);
+      for (const ip of ips) union.add(ip);
     }
     return union.size;
   };
@@ -500,6 +511,7 @@ export default async function AdminActivityLogsPage({
     range?: string;
     page?: number;
     traffic?: "real" | "all";
+    count?: CountMode;
     hash?: string;
   }) => {
     const p = new URLSearchParams();
@@ -515,6 +527,8 @@ export default async function AdminActivityLogsPage({
     }
     const nextTraffic = patch.traffic ?? traffic;
     if (nextTraffic !== "real") p.set("traffic", nextTraffic);
+    const nextCount = patch.count ?? countMode;
+    if (nextCount !== "records") p.set("count", nextCount);
     if (patch.page && patch.page > 1) p.set("page", String(patch.page));
     const qs = p.toString();
     const base = qs ? `/admin/logs?${qs}` : "/admin/logs";
@@ -1302,7 +1316,28 @@ export default async function AdminActivityLogsPage({
         id="events"
         className="scroll-mt-6 rounded-2xl border border-outline-variant/30 bg-surface-container-low p-6"
       >
-        <h2 className="mb-4 text-xl font-extrabold tracking-tight">سجل الأحداث</h2>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-xl font-extrabold tracking-tight">سجل الأحداث</h2>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-on-surface-variant">وحدة العدّ</span>
+            <div className="flex overflow-hidden rounded-full border border-outline-variant/40">
+              {COUNT_MODES.map((m) => (
+                <Link
+                  key={m.key}
+                  href={hrefWith({ count: m.key, hash: "events" })}
+                  title={`عدّ بوحدة: ${m.unit}`}
+                  className={`px-4 py-1.5 text-sm font-bold transition-colors ${
+                    countMode === m.key
+                      ? "bg-primary text-on-primary"
+                      : "text-on-surface-variant hover:bg-outline-variant/15 hover:text-on-surface"
+                  }`}
+                >
+                  {m.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           {FILTERS.map((f) => {
             const isActive = f.key === filter.key;
@@ -1310,7 +1345,7 @@ export default async function AdminActivityLogsPage({
               <Link
                 key={f.key}
                 href={hrefWith({ kind: f.key, hash: "events" })}
-                title={`عدد ${COUNT_UNIT_LABEL[f.countBy]} خلال: ${rangeLabel}`}
+                title={`عدد ${countUnit} خلال: ${rangeLabel}`}
                 className={`flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-bold transition-colors ${
                   isActive
                     ? "border-primary bg-primary text-on-primary"
@@ -1323,7 +1358,7 @@ export default async function AdminActivityLogsPage({
                     isActive ? "bg-on-primary/20" : "bg-outline-variant/25"
                   }`}
                 >
-                  {distinctCount(f.kinds, f.countBy)}
+                  {tabCount(f.kinds)}
                 </span>
               </Link>
             );
@@ -1333,9 +1368,18 @@ export default async function AdminActivityLogsPage({
           </span>
         </div>
         <p className="mt-2 text-xs text-on-surface-variant">
-          الرقم داخل كل تبويب ليس عدد السجلات: تبويبات الدخول تعدّ{" "}
-          <span className="font-bold">الأشخاص المختلفين</span>، وباقي التبويبات تعدّ{" "}
-          <span className="font-bold">الزوّار المنفردين</span> (IP فريدة).
+          {countMode === "records" ? (
+            <>
+              كل تبويب يعرض <span className="font-bold">عدد السجلات</span>، فمجموع التبويبات
+              يساوي «الكل» تماماً.
+            </>
+          ) : (
+            <>
+              كل تبويب يعرض <span className="font-bold">عدد الزوّار المنفردين</span> (IP فريدة).
+              مجموع التبويبات <span className="font-bold">أكبر من</span> «الكل» بشكل طبيعي: الزائر
+              الواحد يظهر في أكثر من تبويب، و«الكل» يعدّه مرة واحدة.
+            </>
+          )}
         </p>
 
         {rows.length === 0 ? (
