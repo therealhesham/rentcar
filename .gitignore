@@ -49,3 +49,7 @@ next-env.d.ts
 
 # Subscription document uploads (local dev)
 /subscription-uploads/
+
+# قاعدة GeoLite2 (~60MB) — تُنزَّل بـ npm run geo:update ولا تُرفع للمستودع
+/data/GeoLite2-City.mmdb
+/data/.geolite-tmp/

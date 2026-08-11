@@ -14,7 +14,8 @@
     "db:seed": "prisma db seed",
     "vehicles:upload-images": "tsx prisma/scripts/upload-vehicle-images.ts",
     "migrate:employee-permissions": "tsx prisma/scripts/migrate-employee-permissions-to-pages.ts",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "geo:update": "node scripts/download-geolite.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -29,6 +30,7 @@
     "jspdf": "^4.2.1",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.7.0",
+    "maxmind": "^5.0.7",
     "next": "^16.2.6",
     "next-intl": "^4.13.0",
     "nodemailer": "^8.0.7",

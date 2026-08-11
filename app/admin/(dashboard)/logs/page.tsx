@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Prisma } from "@prisma/client";
 import { requireAdminPage } from "@/lib/admin-page";
 import { prisma } from "@/lib/prisma";
+import { VisitorMap } from "@/components/admin/VisitorMap";
+import { clusterSessionsByCity, isGeoDatabaseReady } from "@/lib/geo-ip";
 import {
   buildFunnel,
   buildSessions,
@@ -293,6 +295,14 @@ export default async function AdminActivityLogsPage({
     funnelRows.filter((r) => r.kind === "PAGE_VIEW"),
     (r) => pathQuery(r.path) || null,
   );
+
+  const [geoClusters, geoReady] = await Promise.all([
+    clusterSessionsByCity(
+      sessions.map((s) => ({ ip: s.ip, reachedCheckout: s.stages.has("checkout") })),
+    ),
+    isGeoDatabaseReady(),
+  ]);
+  const mappedSessions = geoClusters.reduce((sum, c) => sum + c.sessions, 0);
 
   const medianDurationMs = median(sessions.map((s) => s.durationMs));
   const checkoutDwells = sessions
@@ -645,6 +655,64 @@ export default async function AdminActivityLogsPage({
             </li>
           </ul>
         </div>
+      </section>
+
+      <section className="mb-8 rounded-2xl border border-outline-variant/30 bg-surface-container-low p-6">
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-extrabold tracking-tight">خريطة الزوار</h2>
+            <p className="mt-1 text-sm text-on-surface-variant">
+              من أين يتصفّح الزوار — تجميع حسب المدينة.
+            </p>
+          </div>
+          {geoReady && (
+            <p className="text-sm text-on-surface-variant">
+              <span className="font-extrabold tabular-nums text-on-surface">{mappedSessions}</span>{" "}
+              من {sessions.length} جلسة أمكن تحديد موقعها في{" "}
+              <span className="font-extrabold tabular-nums text-on-surface">
+                {geoClusters.length}
+              </span>{" "}
+              مدينة
+            </p>
+          )}
+        </div>
+
+        {!geoReady ? (
+          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            <p className="font-bold">قاعدة تحديد المواقع غير منزَّلة بعد.</p>
+            <ol className="mt-2 list-inside list-decimal space-y-1">
+              <li>
+                أنشئ حساباً مجانياً على{" "}
+                <span className="font-mono text-xs" dir="ltr">
+                  maxmind.com/en/geolite2/signup
+                </span>
+              </li>
+              <li>
+                My Account ← Manage License Keys ← Generate new license key، وضعه في{" "}
+                <span className="font-mono text-xs" dir="ltr">
+                  .env
+                </span>{" "}
+                باسم{" "}
+                <span className="font-mono text-xs" dir="ltr">
+                  MAXMIND_LICENSE_KEY
+                </span>
+              </li>
+              <li>
+                شغّل{" "}
+                <span className="font-mono text-xs" dir="ltr">
+                  npm run geo:update
+                </span>
+              </li>
+            </ol>
+          </div>
+        ) : (
+          <VisitorMap clusters={geoClusters} />
+        )}
+
+        <p className="mt-3 text-xs text-on-surface-variant">
+          تنبيه: عناوين شبكات الجوال غالباً تُنسب لبوابة المشغّل لا لمدينة المستخدم، ومعظم
+          ترافيكك جوال — فاقرأ المدن كمؤشر عام لا كموقع دقيق.
+        </p>
       </section>
 
       {searchQueryTally.length > 0 && (
