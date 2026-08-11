@@ -99,18 +99,25 @@ function isRentalTabEnabled(f: BookingWidgetTabFlags, r: SearchRentalTab): boole
 const MAX_DROPOFF_SHIFT_DAYS = 14;
 
 /**
- * أقرب موعد تسليم لا يسبق `at` ويقع ضمن مواعيد فرع الإرجاع — تاريخ التسليم
- * المحسوب تلقائياً (أسبوعي/شهري) قد يقع في يوم إجازة، فيُزاح للأمام يوماً بيوم.
+ * تاريخ التسليم المحسوب تلقائياً (أسبوعي/شهري) قد يقع في يوم إجازة للفرع، فيُزاح
+ * إلى أقرب يوم عمل — الأقرب زمنياً أولاً وقبله الأبكر عند التساوي، حتى لا تطول
+ * المدة بلا داعٍ، مع البقاء فوق الحد الأدنى لأيام التبويب.
  * إن لم يوجد يوم مناسب خلال أسبوعين يعود الموعد الأصلي كما هو.
  */
-function nextDropoffWithinSchedule(
+function nearestDropoffWithinSchedule(
+  pickup: Date,
   at: Date,
+  rental: RentalTab,
   schedule: Parameters<typeof isDateTimeWithinBranchSchedule>[1],
 ): Date {
-  for (let i = 0; i <= MAX_DROPOFF_SHIFT_DAYS; i += 1) {
-    const candidate = new Date(at.getTime());
-    candidate.setDate(candidate.getDate() + i);
-    if (isDateTimeWithinBranchSchedule(candidate, schedule)) return candidate;
+  for (let step = 0; step <= MAX_DROPOFF_SHIFT_DAYS; step += 1) {
+    for (const offset of step === 0 ? [0] : [-step, step]) {
+      const candidate = new Date(at.getTime());
+      candidate.setDate(candidate.getDate() + offset);
+      if (!isDropoffAfterPickup(pickup, candidate)) continue;
+      if (validateRentalMinDays(rental, computeBookingDays(pickup, candidate))) continue;
+      if (isDateTimeWithinBranchSchedule(candidate, schedule)) return candidate;
+    }
   }
   return at;
 }
@@ -491,7 +498,7 @@ export function BookingSearchWidget({
       toDatetimeLocalValue(
         tabFlagsEff.allowHolidayBooking
           ? auto
-          : nextDropoffWithinSchedule(auto, dropoffTimeBranchSchedule),
+          : nearestDropoffWithinSchedule(p, auto, rental, dropoffTimeBranchSchedule),
       ),
     );
   }, [rental, pickupDt, dropoffTimeBranchSchedule, tabFlagsEff.allowHolidayBooking]);
