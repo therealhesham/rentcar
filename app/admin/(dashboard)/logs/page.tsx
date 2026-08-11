@@ -53,6 +53,21 @@ const KIND_BADGE_CLASSES: Record<string, string> = {
   CHECKOUT_ERROR: "bg-rose-50 text-rose-700 border-rose-200",
 };
 
+/**
+ * أحداث التفاعل التي أُضيفت بعد إطلاق السجل. الجلسات الأقدم منها لا تحمل هذه
+ * الأحداث إطلاقاً، فتبدو مراحلها صفراً — وهو نقص قياس لا انسحاب زوّار.
+ */
+const INTERACTION_KINDS = [
+  "BOOK_NOW_CLICK",
+  "OR_SIMILAR_CONFIRM",
+  "OR_SIMILAR_DISMISS",
+  "DATES_MODAL_SHOWN",
+  "DATES_MODAL_CONFIRM",
+  "CAR_UNAVAILABLE",
+  "CHECKOUT_SUBMIT",
+  "CHECKOUT_ERROR",
+];
+
 /** عناوين محلية — تظهر أثناء التطوير ولا تمثّل زواراً. */
 const LOCAL_IPS = ["::1", "127.0.0.1", "::ffff:127.0.0.1"];
 
@@ -67,6 +82,9 @@ const MANUALLY_EXCLUDED_IPS = (process.env.ANALYTICS_EXCLUDED_IPS ?? "")
   .filter(Boolean);
 
 const pct = (v: number) => `${Math.round(v * 100)}%`;
+
+const formatSar = (v: number) =>
+  v.toLocaleString("en-US", { maximumFractionDigits: 2, minimumFractionDigits: 0 });
 
 function formatDuration(ms: number): string {
   if (ms < 1000) return "لحظة";
@@ -168,11 +186,19 @@ export default async function AdminActivityLogsPage({
 
   // عناوين الموظفين تُشتقّ من `ADMIN_LOGIN` عبر كل الفترة بدل قائمة ثابتة في الكود:
   // أي جهاز سجّل دخول الإدارة منه مرة = جهاز داخلي، ولو تغيّر عنوانه لاحقاً تحدّث نفسه.
-  const adminIpRows = await prisma.activityLog.findMany({
-    where: { kind: "ADMIN_LOGIN", ip: { not: null } },
-    select: { ip: true },
-    distinct: ["ip"],
-  });
+  const [adminIpRows, firstInteraction] = await Promise.all([
+    prisma.activityLog.findMany({
+      where: { kind: "ADMIN_LOGIN", ip: { not: null } },
+      select: { ip: true },
+      distinct: ["ip"],
+    }),
+    prisma.activityLog.findFirst({
+      where: { kind: { in: INTERACTION_KINDS } },
+      orderBy: { createdAt: "asc" },
+      select: { createdAt: true },
+    }),
+  ]);
+  const trackingStartedAt = firstInteraction?.createdAt ?? null;
   const staffIps = new Set<string>([
     ...adminIpRows.map((r) => r.ip as string),
     ...LOCAL_IPS,
@@ -220,8 +246,10 @@ export default async function AdminActivityLogsPage({
       take: PAGE_SIZE,
     }),
     prisma.activityLog.count({ where }),
-    prisma.activityLog.count({ where: { ...baseWhere, kind: "CUSTOMER_LOGIN" } }),
-    prisma.activityLog.count({ where: { ...baseWhere, kind: "ADMIN_LOGIN" } }),
+    // تسجيلات الدخول لا تخضع لفلتر الترافيك: `ADMIN_LOGIN` يأتي بحكم التعريف من
+    // عناوين الفريق، فاستبعادها كان يجعل العدّاد صفراً دائماً في وضع «زوّار حقيقيون».
+    prisma.activityLog.count({ where: { ...dateWhere, kind: "CUSTOMER_LOGIN" } }),
+    prisma.activityLog.count({ where: { ...dateWhere, kind: "ADMIN_LOGIN" } }),
     prisma.activityLog.count({ where: { ...baseWhere, kind: "PAGE_VIEW" } }),
     prisma.activityLog.count({ where: { ...baseWhere, kind: "CAR_VIEW" } }),
     prisma.activityLog.groupBy({
@@ -274,6 +302,19 @@ export default async function AdminActivityLogsPage({
   /** الجلسات المعروضة في الجدول — نحدّها حتى لا نجلب أسماء عملاء وسيارات بلا داعٍ. */
   const shownSessions = sessions.slice(0, 100);
 
+  // جلسات أقدم من تفعيل تتبّع التفاعلات: مراحل «ضغط احجز الآن» و«أرسل النموذج»
+  // تظهر لها صفراً بحكم عدم القياس، فنُعلن العدد بدل ترك الرقم يُقرأ كانسحاب.
+  const sessionsBeforeTracking = trackingStartedAt
+    ? sessions.filter((s) => s.startedAt < trackingStartedAt).length
+    : sessions.length;
+
+  // الجلسات المقيسة بالكامل — عليها وحدها يصحّ سؤال «دخل صفحة الحجز بدون الزرار؟»
+  const trackedSessions = trackingStartedAt
+    ? sessions.filter((s) => s.startedAt >= trackingStartedAt)
+    : [];
+  const trackedCheckout = trackedSessions.filter((s) => s.stages.has("checkout"));
+  const checkoutWithoutButton = trackedCheckout.filter((s) => !s.stages.has("book_now")).length;
+
   const dropOff = new Map<string, number>();
   for (const s of sessions) {
     const key = s.deepestStage ?? "none";
@@ -296,6 +337,72 @@ export default async function AdminActivityLogsPage({
   const searchQueryTally = tally(
     funnelRows.filter((r) => r.kind === "PAGE_VIEW"),
     (r) => pathQuery(r.path) || null,
+  );
+
+  // ── الترافيك الإعلاني ───────────────────────────────────────────────────
+  // «نجح» تعني حجزاً **مدفوعاً فعلاً**، لا مجرد وصول لصفحة الدفع. لذلك نربط رقم
+  // الحجز المستخرَج من مسار صفحة الدفع بجدول الحجوزات ونقرأ `paymentStatus`.
+  const adSessions = sessions.filter((s) => s.adClick);
+  const adBookingIds = [...new Set(adSessions.flatMap((s) => s.bookingRequestIds))];
+  const adBookings = adBookingIds.length
+    ? await prisma.bookingRequest.findMany({
+        where: { id: { in: adBookingIds } },
+        select: { id: true, paymentStatus: true, status: true, paidAmountSar: true },
+      })
+    : [];
+  const bookingById = new Map(adBookings.map((b) => [b.id, b]));
+  const isPaidBooking = (id: number) => bookingById.get(id)?.paymentStatus === "PAID";
+
+  type AdCampaignStats = {
+    key: string;
+    network: string;
+    campaign: string;
+    paid: boolean;
+    sessions: number;
+    reachedCheckout: number;
+    createdBooking: number;
+    paidBooking: number;
+    revenueSar: number;
+  };
+  const adCampaigns = new Map<string, AdCampaignStats>();
+  for (const s of adSessions) {
+    const ad = s.adClick!;
+    const key = `${ad.network}|${ad.campaign}`;
+    const stats =
+      adCampaigns.get(key) ??
+      ({
+        key,
+        network: ad.network,
+        campaign: ad.campaign,
+        paid: ad.paid,
+        sessions: 0,
+        reachedCheckout: 0,
+        createdBooking: 0,
+        paidBooking: 0,
+        revenueSar: 0,
+      } satisfies AdCampaignStats);
+    stats.sessions++;
+    if (s.stages.has("checkout")) stats.reachedCheckout++;
+    if (s.bookingRequestIds.length > 0) stats.createdBooking++;
+    const paidIds = s.bookingRequestIds.filter(isPaidBooking);
+    if (paidIds.length > 0) {
+      stats.paidBooking++;
+      for (const id of paidIds) stats.revenueSar += bookingById.get(id)?.paidAmountSar ?? 0;
+    }
+    adCampaigns.set(key, stats);
+  }
+  const adRows = [...adCampaigns.values()].sort(
+    (a, b) => b.paidBooking - a.paidBooking || b.sessions - a.sessions,
+  );
+  const adTotals = adRows.reduce(
+    (acc, r) => ({
+      sessions: acc.sessions + r.sessions,
+      reachedCheckout: acc.reachedCheckout + r.reachedCheckout,
+      createdBooking: acc.createdBooking + r.createdBooking,
+      paidBooking: acc.paidBooking + r.paidBooking,
+      revenueSar: acc.revenueSar + r.revenueSar,
+    }),
+    { sessions: 0, reachedCheckout: 0, createdBooking: 0, paidBooking: 0, revenueSar: 0 },
   );
 
   const [geoClusters, geoReady] = await Promise.all([
@@ -509,18 +616,26 @@ export default async function AdminActivityLogsPage({
         <div className="rounded-2xl border border-outline-variant/30 bg-surface-container-low p-5">
           <p className="text-sm font-bold text-on-surface-variant">دخول العملاء</p>
           <p className="mt-1 text-3xl font-extrabold tabular-nums">{rangeCustomerLogins}</p>
+          <p className="mt-1 text-[11px] text-on-surface-variant">كل الترافيك</p>
         </div>
         <div className="rounded-2xl border border-outline-variant/30 bg-surface-container-low p-5">
           <p className="text-sm font-bold text-on-surface-variant">دخول الموظفين</p>
           <p className="mt-1 text-3xl font-extrabold tabular-nums">{rangeAdminLogins}</p>
+          <p className="mt-1 text-[11px] text-on-surface-variant">كل الترافيك</p>
         </div>
         <div className="rounded-2xl border border-outline-variant/30 bg-surface-container-low p-5">
           <p className="text-sm font-bold text-on-surface-variant">مشاهدات الصفحات</p>
           <p className="mt-1 text-3xl font-extrabold tabular-nums">{rangeViews}</p>
+          <p className="mt-1 text-[11px] text-on-surface-variant">
+            {traffic === "real" ? "زوّار حقيقيون فقط" : "كل الترافيك"}
+          </p>
         </div>
         <div className="rounded-2xl border border-outline-variant/30 bg-surface-container-low p-5">
           <p className="text-sm font-bold text-on-surface-variant">مشاهدات السيارات</p>
           <p className="mt-1 text-3xl font-extrabold tabular-nums">{rangeCarViews}</p>
+          <p className="mt-1 text-[11px] text-on-surface-variant">
+            {traffic === "real" ? "زوّار حقيقيون فقط" : "كل الترافيك"}
+          </p>
         </div>
       </section>
 
@@ -552,6 +667,24 @@ export default async function AdminActivityLogsPage({
             </div>
           </div>
         </div>
+
+        {sessionsBeforeTracking > 0 && (
+          <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            <p className="font-bold">
+              {sessionsBeforeTracking} من {funnel.totalSessions} جلسة أقدم من تفعيل تتبّع
+              التفاعلات
+              {trackingStartedAt &&
+                ` (${trackingStartedAt.toLocaleString("ar-SA", { timeZone: "Asia/Riyadh" })})`}
+              .
+            </p>
+            <p className="mt-1">
+              مرحلتا <span className="font-bold">«ضغط احجز الآن»</span> و
+              <span className="font-bold">«أرسل النموذج»</span> تظهران أقل من الحقيقة لهذه
+              الجلسات — لأنها لم تُقَس أصلاً، لا لأن الزوّار انسحبوا. اختر فترة تبدأ بعد هذا
+              التاريخ لقراءة سليمة.
+            </p>
+          </div>
+        )}
 
         {funnel.totalSessions === 0 ? (
           <p className="mt-6 text-sm text-on-surface-variant">لا توجد جلسات في هذه الفترة.</p>
@@ -588,6 +721,18 @@ export default async function AdminActivityLogsPage({
           </ol>
         )}
 
+        {trackedCheckout.length > 0 && (
+          <p className="mt-4 text-xs text-on-surface-variant">
+            «ضغط احجز الآن» ليست خطوة إجبارية:{" "}
+            <span className="font-extrabold tabular-nums text-on-surface">
+              {checkoutWithoutButton}
+            </span>{" "}
+            من {trackedCheckout.length} جلسة وصلت صفحة الحجز دون المرور بالزرار — عبر رابط
+            مباشر أو إعادة حجز أو رجوع من خطوة لاحقة. لذلك قد يتجاوز عدد «فتح صفحة الحجز»
+            عدد الضغطات دون أن يكون في الأمر خطأ.
+          </p>
+        )}
+
         <div className="mt-6 grid gap-6 border-t border-outline-variant/20 pt-6 md:grid-cols-2">
           <div>
             <h3 className="text-sm font-extrabold">أين يتوقفون</h3>
@@ -616,6 +761,123 @@ export default async function AdminActivityLogsPage({
             </ul>
           </div>
         </div>
+      </section>
+
+      <section className="mb-8 rounded-2xl border border-outline-variant/30 bg-surface-container-low p-6">
+        <div>
+          <h2 className="text-xl font-extrabold tracking-tight">الترافيك الإعلاني</h2>
+          <p className="mt-1 text-sm text-on-surface-variant">
+            الزيارات القادمة من إعلان (معرّف نقرة أو وسم UTM). «حجز ناجح» تعني حجزاً{" "}
+            <span className="font-bold text-on-surface">مدفوعاً فعلاً</span> — لا مجرد وصول
+            لصفحة الدفع.
+          </p>
+        </div>
+
+        {adTotals.sessions === 0 ? (
+          <p className="mt-5 text-sm text-on-surface-variant">
+            لا توجد زيارات إعلانية في هذه الفترة. الزيارة تُحتسب إعلانية إذا حمل رابط الدخول{" "}
+            <span className="font-mono text-xs" dir="ltr">
+              gclid
+            </span>{" "}
+            أو{" "}
+            <span className="font-mono text-xs" dir="ltr">
+              fbclid
+            </span>{" "}
+            أو وسوم{" "}
+            <span className="font-mono text-xs" dir="ltr">
+              utm_*
+            </span>
+            .
+          </p>
+        ) : (
+          <>
+            <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+                <p className="text-sm font-bold text-emerald-800">حجوزات ناجحة (مدفوعة)</p>
+                <p className="mt-1 text-3xl font-extrabold tabular-nums text-emerald-900">
+                  {adTotals.paidBooking}
+                </p>
+                <p className="mt-1 text-[11px] font-bold text-emerald-800">
+                  {formatSar(adTotals.revenueSar)} ريال
+                </p>
+              </div>
+              <div className="rounded-2xl border border-outline-variant/30 bg-surface p-5">
+                <p className="text-sm font-bold text-on-surface-variant">أنشأت حجزاً ولم تدفع</p>
+                <p className="mt-1 text-3xl font-extrabold tabular-nums">
+                  {adTotals.createdBooking - adTotals.paidBooking}
+                </p>
+                <p className="mt-1 text-[11px] text-on-surface-variant">وصلت صفحة الدفع وتوقفت</p>
+              </div>
+              <div className="rounded-2xl border border-outline-variant/30 bg-surface p-5">
+                <p className="text-sm font-bold text-on-surface-variant">فتحت صفحة الحجز فقط</p>
+                <p className="mt-1 text-3xl font-extrabold tabular-nums">
+                  {adTotals.reachedCheckout - adTotals.createdBooking}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5">
+                <p className="text-sm font-bold text-rose-800">لم تصل صفحة الحجز</p>
+                <p className="mt-1 text-3xl font-extrabold tabular-nums text-rose-900">
+                  {adTotals.sessions - adTotals.reachedCheckout}
+                </p>
+                <p className="mt-1 text-[11px] font-bold text-rose-800">
+                  من {adTotals.sessions} زيارة إعلانية
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 overflow-hidden rounded-xl border border-outline-variant/25">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[760px] text-start text-sm">
+                  <thead>
+                    <tr className="bg-surface-container text-xs font-extrabold uppercase tracking-wide text-on-surface-variant">
+                      <th className="px-4 py-3 text-start">الحملة</th>
+                      <th className="px-4 py-3 text-start">الشبكة</th>
+                      <th className="px-4 py-3 text-start">زيارات</th>
+                      <th className="px-4 py-3 text-start">صفحة الحجز</th>
+                      <th className="px-4 py-3 text-start">أنشأت حجزاً</th>
+                      <th className="px-4 py-3 text-start">حجز ناجح</th>
+                      <th className="px-4 py-3 text-start">الإيراد</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {adRows.map((r, i) => (
+                      <tr
+                        key={r.key}
+                        className={`border-t border-outline-variant/15 ${
+                          i % 2 === 1 ? "bg-surface-container/40" : ""
+                        } ${r.paidBooking > 0 ? "bg-emerald-50/60" : ""}`}
+                      >
+                        <td className="px-4 py-3 font-bold">
+                          {r.campaign}
+                          {!r.paid && (
+                            <span
+                              className="ms-2 rounded-full border border-outline-variant/40 px-2 py-0.5 text-[10px] font-bold text-on-surface-variant"
+                              title="وسم UTM بلا معرّف نقرة — قد لا يكون إعلاناً مدفوعاً"
+                            >
+                              UTM فقط
+                            </span>
+                          )}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-on-surface-variant">
+                          {r.network}
+                        </td>
+                        <td className="px-4 py-3 tabular-nums">{r.sessions}</td>
+                        <td className="px-4 py-3 tabular-nums">{r.reachedCheckout}</td>
+                        <td className="px-4 py-3 tabular-nums">{r.createdBooking}</td>
+                        <td className="px-4 py-3 font-extrabold tabular-nums text-emerald-700">
+                          {r.paidBooking}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 tabular-nums">
+                          {r.revenueSar > 0 ? `${formatSar(r.revenueSar)} ر.س` : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
       </section>
 
       <section className="mb-8 grid gap-6 md:grid-cols-2">

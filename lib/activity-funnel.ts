@@ -78,6 +78,73 @@ export function pathQuery(path: string | null): string {
   return (path ?? "").split("?").slice(1).join("?");
 }
 
+export type AdClick = {
+  /** شبكة الإعلان المستنتَجة من معرّف النقرة. */
+  network: string;
+  /** اسم الحملة كما وسمتَها — `utm_campaign` أو رقم حملة جوجل. */
+  campaign: string;
+  /** هل النقرة مدفوعة يقيناً (معرّف نقرة حقيقي) أم مجرّد وسم UTM؟ */
+  paid: boolean;
+};
+
+/** معرّفات النقر التي تثبت أن الزيارة جاءت من إعلان مدفوع. */
+const CLICK_ID_NETWORKS: Array<[param: string, network: string]> = [
+  ["gclid", "Google Ads"],
+  ["wbraid", "Google Ads"],
+  ["gbraid", "Google Ads"],
+  ["gad_campaignid", "Google Ads"],
+  ["gad_source", "Google Ads"],
+  ["fbclid", "Meta"],
+  ["msclkid", "Microsoft Ads"],
+  ["ttclid", "TikTok"],
+  ["twclid", "X (Twitter)"],
+  ["li_fat_id", "LinkedIn"],
+];
+
+/** قيم `utm_medium` التي تعني ترافيكاً مدفوعاً حتى بلا معرّف نقرة. */
+const PAID_MEDIUMS = new Set(["cpc", "ppc", "paid", "paidsearch", "paid_search", "display", "cpm"]);
+
+/**
+ * استخراج بيانات الإعلان من رابط الصفحة. نميّز **المدفوع يقيناً** (معرّف نقرة تضعه
+ * الشبكة نفسها ولا يوجد بلا نقرة إعلان) عن **الموسوم بـ UTM فقط** — فالأخير قد يكون
+ * نشرة بريدية أو رابطاً وسمته يدوياً، وخلطهما يضخّم أداء الإعلانات الظاهر.
+ */
+export function detectAdClick(path: string | null): AdClick | null {
+  const query = pathQuery(path);
+  if (!query) return null;
+
+  const params = new URLSearchParams(query);
+  const utmCampaign = params.get("utm_campaign")?.trim();
+  const utmSource = params.get("utm_source")?.trim();
+  const utmMedium = params.get("utm_medium")?.trim().toLowerCase();
+
+  for (const [param, network] of CLICK_ID_NETWORKS) {
+    if (!params.get(param)?.trim()) continue;
+    const campaign =
+      utmCampaign ||
+      params.get("gad_campaignid")?.trim() ||
+      params.get("utm_id")?.trim() ||
+      "بلا اسم حملة";
+    return { network, campaign, paid: true };
+  }
+
+  if (utmMedium && PAID_MEDIUMS.has(utmMedium)) {
+    return { network: utmSource || "غير محدد", campaign: utmCampaign || "بلا اسم حملة", paid: true };
+  }
+  if (utmSource || utmCampaign) {
+    return { network: utmSource || "غير محدد", campaign: utmCampaign || "بلا اسم حملة", paid: false };
+  }
+  return null;
+}
+
+/** رقم الحجز من مسار صفحة الدفع `/fleet/payment/123` — وجوده يعني أن حجزاً أُنشئ. */
+export function bookingIdFromPath(path: string | null): number | null {
+  const match = /^\/fleet\/payment\/(\d+)/.exec(normalizePath(path));
+  if (!match) return null;
+  const id = Number(match[1]);
+  return Number.isInteger(id) && id >= 1 ? id : null;
+}
+
 /** أي مرحلة من رحلة الحجز يمثّلها هذا المسار، أو `null` لو خارجها. */
 export function pathStage(path: string | null): FunnelStage | null {
   const p = normalizePath(path);
@@ -163,6 +230,10 @@ export type VisitorSession = {
   lastKind: string;
   /** سبب آخر خطأ واجهه، إن وُجد. */
   lastErrorCode: string | null;
+  /** بيانات الإعلان الذي جاء منه، إن وُجد. */
+  adClick: AdClick | null;
+  /** أرقام الحجوزات التي أنشأتها هذه الجلسة (من صفحات الدفع التي فتحها). */
+  bookingRequestIds: number[];
   isStaff: boolean;
   isSuspectedBot: boolean;
 };
@@ -221,6 +292,8 @@ function finalizeSession(
   let userId: number | null = null;
   let referrer: string | null = null;
   let firstCheckoutAt: Date | null = null;
+  let adClick: AdClick | null = null;
+  const bookingRequestIds: number[] = [];
   // انتقالات الصفحات وسرعتها — أساس كشف البوتات المتنكّرة بمتصفح عادي.
   let hops = 0;
   let fastHops = 0;
@@ -249,6 +322,14 @@ function finalizeSession(
     if (event.kind === "CHECKOUT_ERROR" && event.detail) errorCodes.push(event.detail);
     if (event.userId != null) userId = event.userId;
     if (!referrer && event.referrer) referrer = event.referrer;
+
+    // أول وسم إعلاني في الجلسة هو مصدرها — الروابط اللاحقة تفقد المعرّفات عند التنقّل.
+    if (!adClick) adClick = detectAdClick(event.path);
+
+    const bookingId = bookingIdFromPath(event.path);
+    if (bookingId != null && !bookingRequestIds.includes(bookingId)) {
+      bookingRequestIds.push(bookingId);
+    }
   }
 
   let deepestStage: FunnelStage | null = null;
@@ -282,6 +363,8 @@ function finalizeSession(
     exitCarModelId: lastWithPath?.carModelId ?? null,
     lastKind: last.kind,
     lastErrorCode: lastError?.detail ?? null,
+    adClick,
+    bookingRequestIds,
     isStaff: ip != null && staffIps.has(ip),
     // معظم الانتقالات فورية = بوت. لا نعتمد على مدة الجلسة الكلية لأن البوت
     // قد يعود بعد دقائق فتبدو جلسته طويلة بينما كل انتقالاته داخلها فورية.
