@@ -500,6 +500,7 @@ export default async function AdminActivityLogsPage({
     range?: string;
     page?: number;
     traffic?: "real" | "all";
+    hash?: string;
   }) => {
     const p = new URLSearchParams();
     const kind = patch.kind ?? filter.key;
@@ -516,7 +517,58 @@ export default async function AdminActivityLogsPage({
     if (nextTraffic !== "real") p.set("traffic", nextTraffic);
     if (patch.page && patch.page > 1) p.set("page", String(patch.page));
     const qs = p.toString();
-    return qs ? `/admin/logs?${qs}` : "/admin/logs";
+    const base = qs ? `/admin/logs?${qs}` : "/admin/logs";
+    return patch.hash ? `${base}#${patch.hash}` : base;
+  };
+
+  /**
+   * بطاقة رقم قابلة للضغط تفتح جدول الأحداث مفلتَراً على نوعها.
+   *
+   * `traffic` تُمرَّر صراحةً لبطاقات الدخول: عدّادها يشمل كل الترافيك، فلو بقي الجدول
+   * على «زوّار حقيقيون» لظهر فارغاً — رقم في البطاقة وصفر في الجدول.
+   */
+  const StatCard = ({
+    label,
+    value,
+    scope,
+    filterKey,
+    forceTraffic,
+  }: {
+    label: string;
+    value: number;
+    scope: string;
+    filterKey: string;
+    forceTraffic?: "real" | "all";
+  }) => {
+    const isActive = filter.key === filterKey && (!forceTraffic || traffic === forceTraffic);
+    return (
+      <Link
+        href={hrefWith({ kind: filterKey, traffic: forceTraffic, hash: "events" })}
+        className={`group rounded-2xl border p-5 transition-all hover:-translate-y-0.5 hover:shadow-md ${
+          isActive
+            ? "border-primary bg-primary/[0.06] shadow-sm"
+            : "border-outline-variant/30 bg-surface-container-low hover:border-primary/40"
+        }`}
+      >
+        <p className="flex items-center gap-1.5 text-sm font-bold text-on-surface-variant">
+          {label}
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="size-3.5 opacity-0 transition-opacity group-hover:opacity-70"
+            aria-hidden
+          >
+            <path d="M19 12H5M12 19l-7-7 7-7" />
+          </svg>
+        </p>
+        <p className="mt-1 text-3xl font-extrabold tabular-nums">{value}</p>
+        <p className="mt-1 text-[11px] text-on-surface-variant">{scope}</p>
+      </Link>
+    );
   };
 
   return (
@@ -613,31 +665,36 @@ export default async function AdminActivityLogsPage({
         الأرقام التالية عن: <span className="font-bold text-on-surface">{rangeLabel}</span>
       </p>
       <section className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-2xl border border-outline-variant/30 bg-surface-container-low p-5">
-          <p className="text-sm font-bold text-on-surface-variant">دخول العملاء</p>
-          <p className="mt-1 text-3xl font-extrabold tabular-nums">{rangeCustomerLogins}</p>
-          <p className="mt-1 text-[11px] text-on-surface-variant">كل الترافيك</p>
-        </div>
-        <div className="rounded-2xl border border-outline-variant/30 bg-surface-container-low p-5">
-          <p className="text-sm font-bold text-on-surface-variant">دخول الموظفين</p>
-          <p className="mt-1 text-3xl font-extrabold tabular-nums">{rangeAdminLogins}</p>
-          <p className="mt-1 text-[11px] text-on-surface-variant">كل الترافيك</p>
-        </div>
-        <div className="rounded-2xl border border-outline-variant/30 bg-surface-container-low p-5">
-          <p className="text-sm font-bold text-on-surface-variant">مشاهدات الصفحات</p>
-          <p className="mt-1 text-3xl font-extrabold tabular-nums">{rangeViews}</p>
-          <p className="mt-1 text-[11px] text-on-surface-variant">
-            {traffic === "real" ? "زوّار حقيقيون فقط" : "كل الترافيك"}
-          </p>
-        </div>
-        <div className="rounded-2xl border border-outline-variant/30 bg-surface-container-low p-5">
-          <p className="text-sm font-bold text-on-surface-variant">مشاهدات السيارات</p>
-          <p className="mt-1 text-3xl font-extrabold tabular-nums">{rangeCarViews}</p>
-          <p className="mt-1 text-[11px] text-on-surface-variant">
-            {traffic === "real" ? "زوّار حقيقيون فقط" : "كل الترافيك"}
-          </p>
-        </div>
+        <StatCard
+          label="دخول العملاء"
+          value={rangeCustomerLogins}
+          scope="كل الترافيك"
+          filterKey="customer-logins"
+          forceTraffic="all"
+        />
+        <StatCard
+          label="دخول الموظفين"
+          value={rangeAdminLogins}
+          scope="كل الترافيك"
+          filterKey="admin-logins"
+          forceTraffic="all"
+        />
+        <StatCard
+          label="مشاهدات الصفحات"
+          value={rangeViews}
+          scope={traffic === "real" ? "زوّار حقيقيون فقط" : "كل الترافيك"}
+          filterKey="views"
+        />
+        <StatCard
+          label="مشاهدات السيارات"
+          value={rangeCarViews}
+          scope={traffic === "real" ? "زوّار حقيقيون فقط" : "كل الترافيك"}
+          filterKey="car-views"
+        />
       </section>
+      <p className="-mt-5 mb-8 text-xs text-on-surface-variant">
+        اضغط أي بطاقة لعرض سجلّاتها في الجدول بالأسفل.
+      </p>
 
       <section className="mb-8 rounded-2xl border border-outline-variant/30 bg-surface-container-low p-6">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
@@ -1241,14 +1298,18 @@ export default async function AdminActivityLogsPage({
         </details>
       )}
 
-      <section className="rounded-2xl border border-outline-variant/30 bg-surface-container-low p-6">
+      <section
+        id="events"
+        className="scroll-mt-6 rounded-2xl border border-outline-variant/30 bg-surface-container-low p-6"
+      >
+        <h2 className="mb-4 text-xl font-extrabold tracking-tight">سجل الأحداث</h2>
         <div className="flex flex-wrap items-center gap-2">
           {FILTERS.map((f) => {
             const isActive = f.key === filter.key;
             return (
               <Link
                 key={f.key}
-                href={hrefWith({ kind: f.key })}
+                href={hrefWith({ kind: f.key, hash: "events" })}
                 title={`عدد ${COUNT_UNIT_LABEL[f.countBy]} خلال: ${rangeLabel}`}
                 className={`flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-bold transition-colors ${
                   isActive
@@ -1367,7 +1428,7 @@ export default async function AdminActivityLogsPage({
           <div className="mt-6 flex items-center justify-center gap-3">
             {page > 1 && (
               <Link
-                href={hrefWith({ page: page - 1 })}
+                href={hrefWith({ page: page - 1, hash: "events" })}
                 className="rounded-xl border border-outline-variant/40 px-4 py-2 text-sm font-bold hover:border-primary/40"
               >
                 الأحدث
@@ -1375,7 +1436,7 @@ export default async function AdminActivityLogsPage({
             )}
             {page < totalPages && (
               <Link
-                href={hrefWith({ page: page + 1 })}
+                href={hrefWith({ page: page + 1, hash: "events" })}
                 className="rounded-xl border border-outline-variant/40 px-4 py-2 text-sm font-bold hover:border-primary/40"
               >
                 الأقدم
