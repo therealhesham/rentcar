@@ -220,16 +220,47 @@ export default async function AdminActivityLogsPage({
   const qValues = qRaw ? qRaw.split(",").map((v) => v.trim()).filter(Boolean) : [];
   const excludeValues = excludeRaw ? excludeRaw.split(",").map((v) => v.trim()).filter(Boolean) : [];
 
-  /** بناء OR-clause لقيمة واحدة عبر جميع الحقول */
-  const makeMatchOr = (v: string): Prisma.ActivityLogWhereInput => ({
-    OR: [
+  // جلب mبكر للـ userAgents الفريدة — لبناء خريطة "اسم المتصفح → raw UAs" قبل بناء شرط البحث.
+  // بدونه لو المستخدم اختار "سفاري – آيفون" كان contains يدور على هذا النص الحرفي في الـ DB ولن يجده.
+  const rawBrowserUAs = await prisma.activityLog.findMany({
+    where: { ...dateWhere, userAgent: { not: null } },
+    select: { userAgent: true },
+    distinct: ["userAgent"],
+    orderBy: { createdAt: "desc" },
+    take: 100,
+  });
+  /** اسم المتصفح (shortBrowser) → قائمة raw userAgent strings */
+  const browserLabelToUAs = new Map<string, string[]>();
+  for (const r of rawBrowserUAs) {
+    const ua = r.userAgent as string;
+    const label = shortBrowser(ua);
+    if (label) {
+      const list = browserLabelToUAs.get(label) ?? [];
+      list.push(ua);
+      browserLabelToUAs.set(label, list);
+    }
+  }
+
+  /** بناء OR-clause لقيمة واحدة عبر جميع الحقول.
+   * لو كانت القيمة اسم متصفح معروف (shortBrowser label) نستخدم IN على raw UAs الحقيقية.
+   * لو كانت نص حر (IP أو مسار...) نستخدم contains العادي. */
+  const makeMatchOr = (v: string): Prisma.ActivityLogWhereInput => {
+    const browserUAs = browserLabelToUAs.get(v);
+    const orConds: Prisma.ActivityLogWhereInput[] = [
       { ip: { contains: v } },
       { path: { contains: v } },
       { actorLabel: { contains: v } },
-      { userAgent: { contains: v } },
       { detail: { contains: v } },
-    ],
-  });
+    ];
+    if (browserUAs && browserUAs.length > 0) {
+      // تطابق دقيق على raw userAgent strings
+      orConds.push({ userAgent: { in: browserUAs } });
+    } else {
+      // بحث حر في raw userAgent
+      orConds.push({ userAgent: { contains: v } });
+    }
+    return { OR: orConds };
+  };
 
   const searchConditions: Prisma.ActivityLogWhereInput[] = [];
 
@@ -542,6 +573,8 @@ export default async function AdminActivityLogsPage({
       take: 50,
     }),
   ]);
+  // acBrowsers محتاجلهاش ثاني — rawBrowserUAs جبناها مبكراً وهي نفس البيانات
+  const acBrowsers = rawBrowserUAs;
   const mappedSessions = geoClusters.reduce((sum, c) => sum + c.sessions, 0);
 
   // تجميع الخيارات حسب الفئة لـ LogsFilterSelect
