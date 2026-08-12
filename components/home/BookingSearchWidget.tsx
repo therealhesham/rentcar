@@ -245,7 +245,7 @@ export function BookingSearchWidget({
   const userClickedSearchRef = useRef(false);
   const uid = useId();
 
-  // التمرير التلقائي لأسفل يعمل فقط عند الضغط الصريح على زر «ابحث عن السيارات»
+  // التمرير التلقائي لأسفل يعمل عند الضغط الصريح أو عند فتح الصفحة مع الهاش #fleet-results
   useEffect(() => {
     if (wasPendingRef.current && !isSearchPending) {
       if (userClickedSearchRef.current) {
@@ -258,6 +258,20 @@ export function BookingSearchWidget({
     }
     wasPendingRef.current = isSearchPending;
   }, [isSearchPending]);
+
+  // تمرير تلقائي عند الانتقال من الصفحة الرئيسية بوصلة تفترض الهاش #fleet-results
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.location.hash === "#fleet-results") {
+      const timer = setTimeout(() => {
+        const el = document.getElementById("fleet-results");
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   // ── Popover open states ──
   const [pickupLocOpen, setPickupLocOpen] = useState(false);
@@ -760,7 +774,7 @@ export function BookingSearchWidget({
       router.replace(`/fleet/checkout?${search.toString()}`);
       return;
     }
-    router.push(`/fleet?${search.toString()}`);
+    router.push(`/fleet?${search.toString()}#fleet-results`);
   }
 
   function handleSearch(e: React.FormEvent) {
