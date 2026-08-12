@@ -116,47 +116,47 @@ export default async function FleetPage({
               ? t("monthlyPackagesRental")
               : t("dailyRental");
 
-      searchBanner = (
-        <div className="mb-8 overflow-hidden rounded-2xl border border-[#003749]/15 bg-gradient-to-l from-[#003749]/5 via-white to-[#003749]/5 shadow-sm">
-          <div className="flex items-start gap-4 px-5 py-4 sm:px-6 sm:py-5">
-            <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#003749]/10 text-[#003749]">
-              <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" aria-hidden>
-                <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-extrabold text-[#003749]">{t("searchResults")}</p>
-              <div className="mt-1.5 flex flex-wrap gap-2">
-                {[
-                  { label: t("type"), value: rental },
-                  { label: t("duration"), value: durationLabel },
-                  { label: t("pickup"), value: modeLabel },
-                  qFirst(params.returnBranch) ? { label: t("branch"), value: resolveBranchName(qFirst(params.returnBranch)!) } : null,
-                  qFirst(params.mode) === "delivery" && qFirst(params.daddr)
-                    ? { label: t("deliveryAddress"), value: qFirst(params.daddr)! }
-                    : null,
-                ]
-                  .filter(Boolean)
-                  .map((item) => (
-                    <span
-                      key={item!.label}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-[#003749]/15 bg-white px-3 py-1 text-xs font-bold text-[#1a3a44] shadow-sm"
-                    >
-                      <span className="text-[#775927]">{item!.label}</span>
-                      <span className="text-[#003749]/40">·</span>
-                      <span>
-                        {item!.value}
-                      </span>
-                    </span>
-                  ))}
-              </div>
-              <p className="mt-2 text-[11px] text-neutral-500">
-                {t("searchBannerNote")}
-              </p>
-            </div>
-          </div>
-        </div>
-      );
+      // searchBanner = (
+      //   <div className="mb-8 overflow-hidden rounded-2xl border border-[#003749]/15 bg-gradient-to-l from-[#003749]/5 via-white to-[#003749]/5 shadow-sm">
+      //     <div className="flex items-start gap-4 px-5 py-4 sm:px-6 sm:py-5">
+      //       <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#003749]/10 text-[#003749]">
+      //         <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" aria-hidden>
+      //           <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      //         </svg>
+      //       </div>
+      //       <div className="min-w-0 flex-1">
+      //         <p className="text-sm font-extrabold text-[#003749]">{t("searchResults")}</p>
+      //         <div className="mt-1.5 flex flex-wrap gap-2">
+      //           {[
+      //             { label: t("type"), value: rental },
+      //             { label: t("duration"), value: durationLabel },
+      //             { label: t("pickup"), value: modeLabel },
+      //             qFirst(params.returnBranch) ? { label: t("branch"), value: resolveBranchName(qFirst(params.returnBranch)!) } : null,
+      //             qFirst(params.mode) === "delivery" && qFirst(params.daddr)
+      //               ? { label: t("deliveryAddress"), value: qFirst(params.daddr)! }
+      //               : null,
+      //           ]
+      //             .filter(Boolean)
+      //             .map((item) => (
+      //               <span
+      //                 key={item!.label}
+      //                 className="inline-flex items-center gap-1.5 rounded-full border border-[#003749]/15 bg-white px-3 py-1 text-xs font-bold text-[#1a3a44] shadow-sm"
+      //               >
+      //                 <span className="text-[#775927]">{item!.label}</span>
+      //                 <span className="text-[#003749]/40">·</span>
+      //                 <span>
+      //                   {item!.value}
+      //                 </span>
+      //               </span>
+      //             ))}
+      //         </div>
+      //         <p className="mt-2 text-[11px] text-neutral-500">
+      //           {t("searchBannerNote")}
+      //         </p>
+      //       </div>
+      //     </div>
+      //   </div>
+      // );
     }
   }
 
@@ -172,8 +172,8 @@ export default async function FleetPage({
   const maxPriceParsed = maxPriceRaw ? Number(maxPriceRaw) : NaN;
   const maxPriceExclTax =
     Number.isFinite(maxPriceParsed) &&
-    maxPriceParsed >= priceBounds.min &&
-    maxPriceParsed < priceBounds.max
+      maxPriceParsed >= priceBounds.min &&
+      maxPriceParsed < priceBounds.max
       ? maxPriceParsed
       : undefined;
 
@@ -209,7 +209,7 @@ export default async function FleetPage({
           className="border-b border-outline-variant/60 bg-surface-container-low/90 shadow-[0_8px_28px_-8px_rgba(15,61,71,0.12)] backdrop-blur-md"
         >
           <div className="mx-auto max-w-screen-2xl px-4 py-4 sm:px-6 sm:py-5 lg:px-8">
-            
+
             <div
               id="fleet-booking"
               className="scroll-mt-28 overflow-hidden rounded-2xl bg-white/[0.97] shadow-[0_28px_72px_-20px_rgba(15,61,71,0.18),0_8px_24px_-6px_rgba(15,61,71,0.07)] ring-1 ring-black/[0.03] backdrop-blur-xl"
