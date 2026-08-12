@@ -25,11 +25,20 @@ export function isDropoffAfterPickup(pickup: Date, dropoff: Date): boolean {
   return d > p;
 }
 
+/**
+ * أيام الإيجار = فترات ٢٤ ساعة كاملة منذ لحظة الاستلام، لا أيام تقويمية.
+ *
+ * الساعات المتبقّية بعد آخر فترة كاملة لا تُدوَّر هنا: تتولّاها قواعد الساعات
+ * الإضافية (سماح حتى ساعتين، ثم رسم بالساعة، ثم يوم كامل فوق ٤ ساعات) في
+ * `booking-delay-penalty`. تدويرها هنا كان يحاسب مرتين على نفس الساعات.
+ *
+ * الحساب على الفارق الزمني المطلق فيخرج نفس النتيجة على الخادم والمتصفح أياً
+ * كان توقيت أيّهما — وهذا شرط لازم لأن `booking-direct-checkout-parse` يقارن
+ * حساب الطرفين ويرفض الحجز عند اختلافهما.
+ */
 export function computeBookingDays(pickup: Date, dropoff: Date): number {
-  const a = startOfBranchDay(pickup).getTime();
-  const b = startOfBranchDay(dropoff).getTime();
-  const diff = Math.round((b - a) / DAY_MS);
-  if (!Number.isFinite(diff)) return 1;
-  return Math.max(1, Math.min(60, diff === 0 ? 1 : diff));
+  const ms = dropoff.getTime() - pickup.getTime();
+  if (!Number.isFinite(ms)) return 1;
+  return Math.max(1, Math.min(60, Math.floor(ms / DAY_MS)));
 }
 
