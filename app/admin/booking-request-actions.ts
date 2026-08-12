@@ -22,6 +22,7 @@ import { createNotification } from "@/lib/notification-service";
 import { computeCheckoutTotals } from "@/lib/booking-checkout-pricing";
 import { parseBookingPricingSnapshot, resolveBookingRentalPricePerDayExclTax } from "@/lib/booking-pricing-snapshot";
 import { logBookingEvent } from "@/lib/booking-audit";
+import { currentRequestMeta, logActivity } from "@/lib/activity-log";
 import { recordPaymentTransaction } from "@/lib/payment-transaction";
 
 export async function convertInquiryToDirect(
@@ -69,6 +70,10 @@ export async function convertInquiryToDirect(
   revalidatePath("/fleet");
   revalidatePath("/admin/car-bookings");
   revalidatePath(`/admin/bookings/${bookingRequestId}`);
+  // الصفحات الفرعية لا تُبطَّل تلقائياً مع الصفحة الأم — بدونها تبقى أرقام
+  // المالية وكشف الحساب على النسخة المخزّنة قبل التعديل.
+  revalidatePath(`/admin/bookings/${bookingRequestId}/finance`);
+  revalidatePath(`/admin/bookings/${bookingRequestId}/statement`);
   return { ok: true };
 }
 
@@ -104,6 +109,10 @@ export async function revertDirectToInquiry(
   revalidatePath("/fleet");
   revalidatePath("/admin/car-bookings");
   revalidatePath(`/admin/bookings/${bookingRequestId}`);
+  // الصفحات الفرعية لا تُبطَّل تلقائياً مع الصفحة الأم — بدونها تبقى أرقام
+  // المالية وكشف الحساب على النسخة المخزّنة قبل التعديل.
+  revalidatePath(`/admin/bookings/${bookingRequestId}/finance`);
+  revalidatePath(`/admin/bookings/${bookingRequestId}/statement`);
   return { ok: true };
 }
 
@@ -139,7 +148,13 @@ export async function updateBookingRequest(
 
   const beforeUpdate = await prisma.bookingRequest.findUnique({
     where: { id: bookingRequestId },
-    select: { status: true, paymentMethod: true, kind: true },
+    select: {
+      status: true,
+      paymentMethod: true,
+      kind: true,
+      branchId: true,
+      returnBranchId: true,
+    },
   });
 
   const inquirySlug = String(scopedForm.get("inquiryCarType") ?? "").trim();
@@ -167,6 +182,48 @@ export async function updateBookingRequest(
 
   if (!result.ok) {
     return { ok: false, error: result.error };
+  }
+
+  // أثر التعديل في سجل الحجز — بدونه يرى الموظف التواريخ الجديدة بلا أي بيان
+  // لمن غيّرها ولا ما كانت عليه. مطابِق لما يُسجَّل عند تعديل العميل الذاتي.
+  const [daysBefore, daysAfter] = result.changes?.numberOfDays ?? [0, 0];
+  await logBookingEvent({
+    bookingId: bookingRequestId,
+    event: "BOOKING_UPDATED",
+    actorKind: "ADMIN",
+    actorName: auth.session.displayName,
+    fromStatus: beforeUpdate?.status,
+    toStatus: status,
+    notes:
+      daysBefore !== daysAfter ? `المدة: ${daysBefore} ← ${daysAfter} يوم` : undefined,
+    meta: {
+      numberOfDaysBefore: daysBefore,
+      numberOfDaysAfter: daysAfter,
+      snapshotTotalAmountSar: result.changes?.snapshotTotalAmountSar ?? null,
+      ...(result.creditForCustomerSar ? { creditForCustomerSar: result.creditForCustomerSar } : {}),
+    },
+  });
+
+  // مستحقات جديدة للعميل بعد التعديل — تنبيه الفرع وقسم «مستحقات للعميل».
+  if (result.creditForCustomerSar && result.creditForCustomerSar > 0) {
+    const amount = result.creditForCustomerSar;
+    try {
+      await createNotification(
+        { branchId: beforeUpdate?.branchId ?? beforeUpdate?.returnBranchId ?? null },
+        "مستحقات للعميل بعد تعديل حجز",
+        `الحجز #${bookingRequestId} عُدِّل من الإدارة وأصبح للعميل مستحقات ${amount} ر.س — تُسوَّى من قسم «مستحقات للعميل».`,
+      );
+      const meta = await currentRequestMeta();
+      await logActivity({
+        kind: "BOOKING_REFUND",
+        path: `/admin/customer-dues`,
+        actorLabel: `${auth.session.displayName} — تعديل الحجز #${bookingRequestId} أنشأ مستحقات ${amount} ر.س`,
+        ip: meta.ip,
+        userAgent: meta.userAgent,
+      });
+    } catch (e) {
+      console.error("[customer-dues] بعد تعديل الحجز من الإدارة:", e);
+    }
   }
 
   const wasNotConfirmed =
@@ -204,8 +261,14 @@ export async function updateBookingRequest(
 
   revalidatePath("/admin");
   revalidatePath("/fleet");
+  revalidatePath("/account");
   revalidatePath("/admin/car-bookings");
+  revalidatePath("/admin/customer-dues");
   revalidatePath(`/admin/bookings/${bookingRequestId}`);
+  // الصفحات الفرعية لا تُبطَّل تلقائياً مع الصفحة الأم — بدونها تبقى أرقام
+  // المالية وكشف الحساب على النسخة المخزّنة قبل التعديل.
+  revalidatePath(`/admin/bookings/${bookingRequestId}/finance`);
+  revalidatePath(`/admin/bookings/${bookingRequestId}/statement`);
   revalidatePath(`/fleet/payment/${bookingRequestId}`);
   return { ok: true };
 }
@@ -293,6 +356,10 @@ export async function quickUpdateBookingStatus(
   revalidatePath("/fleet");
   revalidatePath("/admin/car-bookings");
   revalidatePath(`/admin/bookings/${bookingRequestId}`);
+  // الصفحات الفرعية لا تُبطَّل تلقائياً مع الصفحة الأم — بدونها تبقى أرقام
+  // المالية وكشف الحساب على النسخة المخزّنة قبل التعديل.
+  revalidatePath(`/admin/bookings/${bookingRequestId}/finance`);
+  revalidatePath(`/admin/bookings/${bookingRequestId}/statement`);
   revalidatePath(`/fleet/payment/${bookingRequestId}`);
   return { ok: true };
 }
@@ -332,17 +399,19 @@ export async function processAdminQuickPayment(
   // حساب المبلغ الكامل شامل الضريبة
   let paidAmountSar: number | null = null;
   if (beforeUpdate.carModel) {
-    const { addons, interCityShipping, checkoutOneTimeFees, couponCode } = parseBookingPricingSnapshot(beforeUpdate.addonsJson);
+    const { addons, interCityShipping, checkoutOneTimeFees, delayPenalty, couponCode } = parseBookingPricingSnapshot(beforeUpdate.addonsJson);
     const effectivePrice = resolveBookingRentalPricePerDayExclTax(beforeUpdate.carModel.price, beforeUpdate.addonsJson);
     const shipFee = interCityShipping?.feeExclVatSar ?? 0;
     const feesSum = checkoutOneTimeFees.reduce((s, x) => s + x.feeExclVatSar, 0);
+    // غرامة التأخير جزء من مستحقات العميل — إسقاطها هنا يسجّل مبلغاً أقل من الواجب.
+    const delayFee = delayPenalty?.feeExclVatSar ?? 0;
     const discountExclTax = couponCode?.scope === "FULL_TOTAL" ? couponCode.discountExclTax : 0;
     const totals = computeCheckoutTotals(
       effectivePrice,
       beforeUpdate.numberOfDays,
       beforeUpdate.carModel.vatRatePercent,
       addons.map((a) => ({ pricePerDay: a.pricePerDayExclTax })),
-      { oneTimeFeesExclTax: shipFee + feesSum, discountExclTax },
+      { oneTimeFeesExclTax: shipFee + feesSum + delayFee, discountExclTax },
     );
     paidAmountSar = totals.totalInclTax;
   }
@@ -416,6 +485,10 @@ export async function processAdminQuickPayment(
   revalidatePath("/fleet");
   revalidatePath("/admin/car-bookings");
   revalidatePath(`/admin/bookings/${bookingRequestId}`);
+  // الصفحات الفرعية لا تُبطَّل تلقائياً مع الصفحة الأم — بدونها تبقى أرقام
+  // المالية وكشف الحساب على النسخة المخزّنة قبل التعديل.
+  revalidatePath(`/admin/bookings/${bookingRequestId}/finance`);
+  revalidatePath(`/admin/bookings/${bookingRequestId}/statement`);
   revalidatePath(`/fleet/payment/${bookingRequestId}`);
   return { ok: true };
 }
@@ -482,6 +555,10 @@ export async function processAdminBalancePayment(
   revalidatePath("/admin");
   revalidatePath("/admin/car-bookings");
   revalidatePath(`/admin/bookings/${bookingRequestId}`);
+  // الصفحات الفرعية لا تُبطَّل تلقائياً مع الصفحة الأم — بدونها تبقى أرقام
+  // المالية وكشف الحساب على النسخة المخزّنة قبل التعديل.
+  revalidatePath(`/admin/bookings/${bookingRequestId}/finance`);
+  revalidatePath(`/admin/bookings/${bookingRequestId}/statement`);
   revalidatePath(`/admin/bookings/${bookingRequestId}/finance`);
   return { ok: true };
 }

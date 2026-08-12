@@ -89,6 +89,40 @@ export function bookingDaysPriceInputFromSnapshot(
 }
 
 /**
+ * يعيد تسعير لقطة الحجز على موديل جديد (تبديل السيارة من الإدارة):
+ * يستبدل سعر الإيجار اليومي المجمَّد وأرضية السعر بقيم الموديل الجديد في فرع الإرجاع،
+ * ويُسقط لقطة الخصم القديمة (كانت تخص الموديل السابق — الخصم الجديد مدموج أصلاً في السعر).
+ *
+ * الإضافات والرسوم لمرة واحدة وكوبون `FULL_TOTAL` تبقى كما هي: مبالغ مستقلة عن الموديل.
+ * كوبون `RENTAL_ONLY` مدموج في السعر اليومي القديم ولا يمكن إعادة اشتقاقه هنا — الاستدعاء
+ * يجب أن يرفض التبديل في تلك الحالة (انظر `updateBookingRequestByAdmin`).
+ */
+export function repriceAddonsJsonForModel(
+  addonsJson: string | null,
+  pricePerDayExclTax: number,
+  floorPerDayExclTax: number | null,
+): string {
+  let data: Record<string, unknown> = {};
+  if (addonsJson?.trim()) {
+    try {
+      const parsed = JSON.parse(addonsJson);
+      if (parsed && typeof parsed === "object") data = parsed as Record<string, unknown>;
+    } catch {
+      data = {};
+    }
+  }
+  data.rentalPricePerDayExclTax = Math.round(pricePerDayExclTax * 100) / 100;
+  if (floorPerDayExclTax != null && floorPerDayExclTax > 0) {
+    data.rentalFloorPerDayExclTax = Math.round(floorPerDayExclTax * 100) / 100;
+  } else {
+    delete data.rentalFloorPerDayExclTax;
+  }
+  delete data.rentalDiscount;
+  if (!Array.isArray(data.items)) data.items = [];
+  return JSON.stringify(data);
+}
+
+/**
  * يعيد بناء لقطة الإضافات (addonsJson) بعدد أيام جديد:
  * - يضبط days وlineTotalExclTax لكل إضافة على عدد الأيام الجديد.
  * - يُبقي رسوم الشحن بين المدن ورسوم الإتمام ولقطة الخصم وسعر الإيجار اليومي وأرضية السعر المجمَّدين كما هي.

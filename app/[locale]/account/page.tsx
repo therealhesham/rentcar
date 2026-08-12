@@ -226,6 +226,8 @@ export default async function AccountDashboardPage() {
         paymentStatus: b.paymentStatus,
         paymentMethod: b.paymentMethod,
         started: false,
+        // الحجز الشهري سعره إجمالي الشهر — المدة مقفلة وتغيير الموعد فقط مسموح.
+        fixedDuration: b.rentalPeriodKind?.trim().toUpperCase() === "MONTHLY",
         pickupIso: b.pickupDate.toISOString(),
         numberOfDays: b.numberOfDays,
         priceInput,

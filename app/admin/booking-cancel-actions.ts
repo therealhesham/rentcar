@@ -53,6 +53,10 @@ export async function cancelAdminBooking(
   revalidatePath("/admin");
   revalidatePath("/admin/car-bookings");
   revalidatePath(`/admin/bookings/${bookingRequestId}`);
+  // الصفحات الفرعية لا تُبطَّل تلقائياً مع الصفحة الأم — بدونها تبقى أرقام
+  // المالية وكشف الحساب على النسخة المخزّنة قبل التعديل.
+  revalidatePath(`/admin/bookings/${bookingRequestId}/finance`);
+  revalidatePath(`/admin/bookings/${bookingRequestId}/statement`);
   revalidatePath("/account");
   revalidatePath(`/fleet/payment/${bookingRequestId}`);
 
@@ -119,6 +123,10 @@ export async function cancelAdminBookingWithFullRefund(
   revalidatePath("/admin");
   revalidatePath("/admin/car-bookings");
   revalidatePath(`/admin/bookings/${bookingRequestId}`);
+  // الصفحات الفرعية لا تُبطَّل تلقائياً مع الصفحة الأم — بدونها تبقى أرقام
+  // المالية وكشف الحساب على النسخة المخزّنة قبل التعديل.
+  revalidatePath(`/admin/bookings/${bookingRequestId}/finance`);
+  revalidatePath(`/admin/bookings/${bookingRequestId}/statement`);
   revalidatePath("/admin/customer-dues");
   revalidatePath("/admin/company-dues");
   revalidatePath("/account");
@@ -176,6 +184,10 @@ export async function cancelAdminBookingWithoutRefund(
   revalidatePath("/admin");
   revalidatePath("/admin/car-bookings");
   revalidatePath(`/admin/bookings/${bookingRequestId}`);
+  // الصفحات الفرعية لا تُبطَّل تلقائياً مع الصفحة الأم — بدونها تبقى أرقام
+  // المالية وكشف الحساب على النسخة المخزّنة قبل التعديل.
+  revalidatePath(`/admin/bookings/${bookingRequestId}/finance`);
+  revalidatePath(`/admin/bookings/${bookingRequestId}/statement`);
   revalidatePath("/admin/customer-dues");
   revalidatePath("/admin/company-dues");
   revalidatePath("/account");

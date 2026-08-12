@@ -14,6 +14,8 @@ export type EditableBookingRow = {
   deliveryAddress: string | null;
   pickupDateYmd: string;
   numberOfDays: number;
+  /** حجز شهري: المدة ثابتة (سعر الشهر مقسوم على أيامه) — لا يُسمح بتغييرها. */
+  fixedDuration: boolean;
   termsAccepted: boolean;
   status: string;
   carModelId: number | null;

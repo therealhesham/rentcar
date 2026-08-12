@@ -134,10 +134,25 @@ export function BookingDetailView({
   const [updatePlateModalOpen, setUpdatePlateModalOpen] = useState(false);
   const kycAttachments = resolveBookingKycForDisplay(booking, booking.customer);
 
+  const {
+    addons,
+    interCityShipping,
+    checkoutOneTimeFees,
+    delayPenalty,
+    tripDurationLabelAr,
+    couponCode,
+  } = parseBookingPricingSnapshot(booking.addonsJson);
+
   const pickupYmd = booking.pickupDate.toISOString().slice(0, 10);
   const returnYmd = addDaysToYmd(pickupYmd, booking.numberOfDays);
   const pickupDateTimeAr = formatFullDateTimeAr(booking.pickupDate);
-  const scheduledReturnDateObj = new Date(new Date(booking.pickupDate).getTime() + booking.numberOfDays * 24 * 60 * 60 * 1000);
+  // موعد الإرجاع المتفق عليه ليس دائماً «الاستلام + عدد الأيام»: لو اختار العميل
+  // إرجاعاً بعد حدّ اليوم الكامل، تُحتسب عليه أيام إضافية ويُحفظ الموعد الحقيقي في
+  // لقطة `delayPenalty.actualDropoffAt`. عرض الحدّ اليومي هنا كان يُظهر للموظف
+  // موعداً أبكر من الواقع رغم أن العميل دفع فرق تلك الساعات.
+  const scheduledReturnDateObj = delayPenalty?.actualDropoffAt
+    ? new Date(delayPenalty.actualDropoffAt)
+    : new Date(new Date(booking.pickupDate).getTime() + booking.numberOfDays * 24 * 60 * 60 * 1000);
   const scheduledReturnDateTimeAr = formatFullDateTimeAr(scheduledReturnDateObj);
 
   const carLabel = booking.carModel
@@ -165,14 +180,15 @@ export function BookingDetailView({
       returnBranch: booking.returnBranch,
     });
 
-  const { addons, interCityShipping, checkoutOneTimeFees, delayPenalty, couponCode } =
-    parseBookingPricingSnapshot(booking.addonsJson);
   const effectiveRentalPrice = booking.carModel
     ? resolveBookingRentalPricePerDayExclTax(booking.carModel.price, booking.addonsJson)
     : 0;
+  // غرامة التأخير جزء من مستحقات العميل — إسقاطها هنا كان يعرض إجمالياً أقل من
+  // الواجب ويخالف `computeBookingOutstanding` الذي تعتمده صفحة المالية.
   const oneTimeFeesTotal =
     (interCityShipping?.feeExclVatSar ?? 0) +
-    checkoutOneTimeFees.reduce((acc, f) => acc + f.feeExclVatSar, 0);
+    checkoutOneTimeFees.reduce((acc, f) => acc + f.feeExclVatSar, 0) +
+    (delayPenalty?.feeExclVatSar ?? 0);
   const couponDiscountExclTax = couponCode?.scope === "FULL_TOTAL" ? couponCode.discountExclTax : 0;
 
   const amountTotals = computeCheckoutTotals(
@@ -284,7 +300,10 @@ export function BookingDetailView({
                   <span className="font-extrabold text-[#003749]">{scheduledReturnDateTimeAr}</span>
                 </div>
                 <span className="rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-black text-primary ms-auto">
-                  المدة: {booking.numberOfDays} {booking.numberOfDays === 1 ? "يوم" : "أيام"}
+                  {/* الوصف المخزّن يحمل الساعات الزائدة (مثل «٣ أيام + ٧ ساعات») */}
+                  المدة:{" "}
+                  {tripDurationLabelAr ??
+                    `${booking.numberOfDays} ${booking.numberOfDays === 1 ? "يوم" : "أيام"}`}
                 </span>
               </div>
             </div>
@@ -429,7 +448,7 @@ export function BookingDetailView({
             <BookingDetailSection
               icon={Receipt}
               title="تفاصيل المبلغ"
-              description="لقطة تفصيل السعر عند إنشاء الحجز"
+              description="تفصيل السعر بالمدة الحالية وأي غرامة تأخير مسجّلة"
             >
               <dl className="space-y-3">
                 <DetailRow
@@ -453,6 +472,16 @@ export function BookingDetailView({
                     <SarAmountWithSymbol>{formatSarAmount(f.feeExclVatSar)}</SarAmountWithSymbol>
                   </DetailRow>
                 ))}
+                {delayPenalty ? (
+                  <DetailRow
+                    label={`${delayPenalty.labelAr} (${delayPenalty.lateHours} ساعة تأخير)`}
+                    mono
+                  >
+                    <SarAmountWithSymbol>
+                      {formatSarAmount(delayPenalty.feeExclVatSar)}
+                    </SarAmountWithSymbol>
+                  </DetailRow>
+                ) : null}
                 <DetailRow label={`ضريبة القيمة المضافة (${booking.carModel?.vatRatePercent ?? 15}٪)`} mono>
                   <SarAmountWithSymbol>{formatSarAmount(amountTotals.vatAmount)}</SarAmountWithSymbol>
                 </DetailRow>

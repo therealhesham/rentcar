@@ -396,9 +396,19 @@ export function EditBookingModalInner({
                   min={1}
                   max={60}
                   required
+                  readOnly={request.fixedDuration}
                   defaultValue={request.numberOfDays}
-                  className="mt-1 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+                  className={`mt-1 w-full rounded-xl border border-outline-variant px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary ${
+                    request.fixedDuration
+                      ? "cursor-not-allowed bg-surface-container text-on-surface-variant"
+                      : "bg-surface-container-lowest"
+                  }`}
                 />
+                {request.fixedDuration ? (
+                  <span className="mt-1 block text-[11px] font-bold text-on-surface-variant">
+                    حجز شهري بمدة ثابتة — سعره إجمالي الشهر، فلا يمكن تغيير أيامه.
+                  </span>
+                ) : null}
               </label>
               <label className="sm:col-span-2 block text-sm font-bold text-on-surface">
                 حالة الطلب

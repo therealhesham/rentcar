@@ -32,17 +32,19 @@ export async function markBookingAsPaid(_prev: any, formData: FormData) {
       // حساب المبلغ الكامل شامل الضريبة
       let paidAmountSar: number | null = null;
       if (beforeUpdate?.carModel) {
-        const { addons, interCityShipping, checkoutOneTimeFees, couponCode } = parseBookingPricingSnapshot(beforeUpdate.addonsJson);
+        const { addons, interCityShipping, checkoutOneTimeFees, delayPenalty, couponCode } = parseBookingPricingSnapshot(beforeUpdate.addonsJson);
         const effectivePrice = resolveBookingRentalPricePerDayExclTax(beforeUpdate.carModel.price, beforeUpdate.addonsJson);
         const shipFee = interCityShipping?.feeExclVatSar ?? 0;
         const feesSum = checkoutOneTimeFees.reduce((s, x) => s + x.feeExclVatSar, 0);
+        // غرامة التأخير جزء من مستحقات العميل — إسقاطها هنا يسجّل مبلغاً أقل من الواجب.
+        const delayFee = delayPenalty?.feeExclVatSar ?? 0;
         const discountExclTax = couponCode?.scope === "FULL_TOTAL" ? couponCode.discountExclTax : 0;
         const totals = computeCheckoutTotals(
           effectivePrice,
           beforeUpdate.numberOfDays,
           beforeUpdate.carModel.vatRatePercent,
           addons.map((a) => ({ pricePerDay: a.pricePerDayExclTax })),
-          { oneTimeFeesExclTax: shipFee + feesSum, discountExclTax },
+          { oneTimeFeesExclTax: shipFee + feesSum + delayFee, discountExclTax },
         );
         paidAmountSar = totals.totalInclTax;
       }

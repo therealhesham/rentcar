@@ -244,6 +244,7 @@ export default async function AdminDashboardPage(props: {
       (request as { deliveryAddress?: string | null }).deliveryAddress ?? null,
     pickupDateYmd: request.pickupDate.toISOString().slice(0, 10),
     numberOfDays: request.numberOfDays,
+    fixedDuration: request.rentalPeriodKind?.trim().toUpperCase() === "MONTHLY",
     termsAccepted: request.termsAccepted,
     status: request.status,
     carModelId: request.carModelId,

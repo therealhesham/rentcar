@@ -20,6 +20,7 @@ export function toEditableBookingRow(booking: AdminBookingDetail): EditableBooki
     deliveryAddress: booking.deliveryAddress,
     pickupDateYmd: booking.pickupDate.toISOString().slice(0, 10),
     numberOfDays: booking.numberOfDays,
+    fixedDuration: booking.rentalPeriodKind?.trim().toUpperCase() === "MONTHLY",
     termsAccepted: booking.termsAccepted,
     status: booking.status,
     carModelId: booking.carModelId,

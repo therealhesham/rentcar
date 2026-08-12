@@ -124,6 +124,7 @@ export async function updateCustomerBookingDates(
       snapshotTotalAmountSar: true,
       refundDueToCustomerSar: true,
       refundDueSettledAt: true,
+      rentalPeriodKind: true,
       branchId: true,
       returnBranchId: true,
       carModel: { select: { price: true, vatRatePercent: true } },
@@ -156,6 +157,18 @@ export async function updateCustomerBookingDates(
     return { ok: false, error: "عدد الأيام يجب أن يكون من 1 إلى 60." };
   }
   const numberOfDays = Math.round(daysRaw);
+
+  // الحجز الشهري سعره إجمالي الشهر مقسوماً على أيامه، فتغيير المدة يجعل الإجمالي
+  // نسبةً من سعر الشهر بدل سعر الشهر نفسه. تغيير الموعد مسموح، المدة لا.
+  if (
+    booking.rentalPeriodKind?.trim().toUpperCase() === "MONTHLY" &&
+    numberOfDays !== booking.numberOfDays
+  ) {
+    return {
+      ok: false,
+      error: "الحجز الشهري بمدة ثابتة — يمكنك تغيير موعد الاستلام دون تغيير المدة.",
+    };
+  }
 
   if (profile.licenseExpiryDate && !Number.isNaN(profile.licenseExpiryDate.getTime())) {
     const expYmd = profile.licenseExpiryDate.toISOString().slice(0, 10);
@@ -242,6 +255,27 @@ export async function updateCustomerBookingDates(
     refundDueToCustomerSar,
   });
   if (!result.ok) return result;
+
+  // أثر التعديل في سجل الحجز — بدونه يرى الموظف التواريخ الجديدة بلا أي بيان
+  // لمن غيّرها ولا ما كانت عليه.
+  await logBookingEvent({
+    bookingId: id,
+    event: "BOOKING_UPDATED",
+    actorKind: "CUSTOMER",
+    actorName: profile.name ?? profile.phone ?? undefined,
+    notes:
+      booking.numberOfDays !== numberOfDays
+        ? `المدة: ${booking.numberOfDays} ← ${numberOfDays} يوم`
+        : "تغيير موعد الاستلام",
+    meta: {
+      numberOfDaysBefore: booking.numberOfDays,
+      numberOfDaysAfter: numberOfDays,
+      pickupDateBefore: booking.pickupDate.toISOString(),
+      pickupDateAfter: pickupDate.toISOString(),
+      snapshotTotalAmountSar,
+      ...(creditForCustomerSar > 0 ? { creditForCustomerSar } : {}),
+    },
+  });
 
   if (creditForCustomerSar > 0) {
     // تنبيه لوحة الإدارة: مستحقات جديدة للعميل تُسوَّى من قسم «مستحقات للعميل».

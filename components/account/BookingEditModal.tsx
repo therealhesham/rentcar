@@ -24,6 +24,8 @@ export type BookingEditModalData = {
   paymentStatus: string;
   paymentMethod: string | null;
   started: boolean;
+  /** حجز شهري: المدة ثابتة (سعر الشهر مقسوم على أيامه) — يُسمح بتغيير الموعد فقط. */
+  fixedDuration: boolean;
   pickupIso: string;
   numberOfDays: number;
   priceInput: BookingDaysPriceInput;
@@ -161,6 +163,11 @@ export function BookingEditModal(props: BookingEditModalProps) {
   const effMin = props.started ? pickupYmd : (today ?? "");
 
   function handleDayClick(ymd: string) {
+    if (props.fixedDuration) {
+      // المدة مقفلة — النقر ينقل موعد الاستلام ويحرّك العودة معه بنفس عدد الأيام.
+      setPickupYmd(ymd);
+      return;
+    }
     if (props.started) {
       if (ymd <= pickupYmd) return;
       setDays(clampDays(diffDaysYmd(pickupYmd, ymd)));
@@ -308,7 +315,14 @@ export function BookingEditModal(props: BookingEditModalProps) {
 
           {/* التقويم */}
           <div className="rounded-2xl border border-neutral-200 bg-white p-4">
-            {props.started ? (
+            {props.fixedDuration ? (
+              <div className="mb-3 flex items-start gap-2 rounded-xl border border-sky-200 bg-sky-50 p-3 text-[12px] font-bold leading-relaxed text-sky-950">
+                <svg viewBox="0 0 24 24" fill="none" className="mt-0.5 h-4 w-4 shrink-0" aria-hidden>
+                  <path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+                حجز شهري بمدة ثابتة ({props.numberOfDays} يوم) — اختر يوماً لنقل موعد الاستلام، وتتحرك العودة معه.
+              </div>
+            ) : props.started ? (
               <div className="mb-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-[12px] font-bold leading-relaxed text-amber-950">
                 <svg viewBox="0 0 24 24" fill="none" className="mt-0.5 h-4 w-4 shrink-0" aria-hidden>
                   <path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -409,6 +423,12 @@ export function BookingEditModal(props: BookingEditModalProps) {
             {/* المدة */}
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
               <span className="text-xs font-bold text-on-surface-variant">مدة الإيجار</span>
+              {props.fixedDuration ? (
+                <span className="inline-flex items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm font-extrabold tabular-nums text-on-surface">
+                  {days} يوم
+                  <span className="text-[11px] font-bold text-on-surface-variant">(ثابتة)</span>
+                </span>
+              ) : (
               <div className="flex items-center gap-2">
                 <button
                   type="button"
@@ -432,6 +452,7 @@ export function BookingEditModal(props: BookingEditModalProps) {
                   +
                 </button>
               </div>
+              )}
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-3">

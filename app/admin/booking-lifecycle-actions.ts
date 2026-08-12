@@ -65,6 +65,10 @@ export async function recordPickupFromBranchAction(
   revalidatePath("/admin");
   revalidatePath("/admin/car-bookings");
   revalidatePath(`/admin/bookings/${bookingRequestId}`);
+  // الصفحات الفرعية لا تُبطَّل تلقائياً مع الصفحة الأم — بدونها تبقى أرقام
+  // المالية وكشف الحساب على النسخة المخزّنة قبل التعديل.
+  revalidatePath(`/admin/bookings/${bookingRequestId}/finance`);
+  revalidatePath(`/admin/bookings/${bookingRequestId}/statement`);
   revalidatePath(`/fleet/payment/${bookingRequestId}`);
   revalidatePath("/account");
   return { ok: true };
@@ -150,6 +154,10 @@ export async function recordReturnToBranchAction(
   revalidatePath("/admin/late-returns");
   revalidatePath("/admin/company-dues");
   revalidatePath(`/admin/bookings/${bookingRequestId}`);
+  // الصفحات الفرعية لا تُبطَّل تلقائياً مع الصفحة الأم — بدونها تبقى أرقام
+  // المالية وكشف الحساب على النسخة المخزّنة قبل التعديل.
+  revalidatePath(`/admin/bookings/${bookingRequestId}/finance`);
+  revalidatePath(`/admin/bookings/${bookingRequestId}/statement`);
   revalidatePath(`/fleet/payment/${bookingRequestId}`);
   revalidatePath("/account");
   return { ok: true };
@@ -203,6 +211,10 @@ export async function updateBookingVehiclePlateAction(
   revalidatePath("/admin");
   revalidatePath("/admin/car-bookings");
   revalidatePath(`/admin/bookings/${bookingRequestId}`);
+  // الصفحات الفرعية لا تُبطَّل تلقائياً مع الصفحة الأم — بدونها تبقى أرقام
+  // المالية وكشف الحساب على النسخة المخزّنة قبل التعديل.
+  revalidatePath(`/admin/bookings/${bookingRequestId}/finance`);
+  revalidatePath(`/admin/bookings/${bookingRequestId}/statement`);
 
   return { ok: true };
 }
