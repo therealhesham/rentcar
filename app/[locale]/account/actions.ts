@@ -181,7 +181,7 @@ export async function updateCustomerBookingDates(
     }
   }
 
-  const newAddonsJson = rebuildAddonsJsonForDays(booking.addonsJson, numberOfDays);
+  const newAddonsJson = rebuildAddonsJsonForDays(booking.addonsJson, numberOfDays, pickupDate);
 
   // تسوية فرق السعر بعد التعديل (حجز مدفوع):
   // - العميل عليه فلوس (تمديد) → يُسجَّل رصيد مستحق ويُوجَّه لصفحة الدفع لسداده أونلاين.

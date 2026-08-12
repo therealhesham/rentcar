@@ -2265,7 +2265,7 @@ export async function updateBookingRequestByAdmin(
           repricedAddonsJson !== undefined ? repricedAddonsJson : booking.addonsJson;
         if (days !== booking.numberOfDays || repricedAddonsJson !== undefined) {
           const { rebuildAddonsJsonForDays } = await import("@/lib/booking-edit");
-          newAddonsJson = rebuildAddonsJsonForDays(addonsBase, days);
+          newAddonsJson = rebuildAddonsJsonForDays(addonsBase, days, input.pickupDate);
         }
 
         const updated = await tx.bookingRequest.updateMany({

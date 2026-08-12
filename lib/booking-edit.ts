@@ -2,6 +2,12 @@
 
 import { computeCheckoutTotals } from "@/lib/booking-checkout-pricing";
 import {
+  computeDelayPenaltySnap,
+  type DelayPenaltySnap,
+} from "@/lib/booking-delay-penalty";
+import { computeBookingReturnAt } from "@/lib/booking-return-schedule";
+import { formatDailyBookingDurationAr } from "@/lib/booking-duration-display";
+import {
   parseBookingPricingSnapshot,
   resolveBookingRentalPricePerDayExclTax,
 } from "@/lib/booking-pricing-snapshot";
@@ -126,11 +132,17 @@ export function repriceAddonsJsonForModel(
  * يعيد بناء لقطة الإضافات (addonsJson) بعدد أيام جديد:
  * - يضبط days وlineTotalExclTax لكل إضافة على عدد الأيام الجديد.
  * - يُبقي رسوم الشحن بين المدن ورسوم الإتمام ولقطة الخصم وسعر الإيجار اليومي وأرضية السعر المجمَّدين كما هي.
- * - يُسقط غرامة التأخير ووصف المدة (يُعاد احتسابهما عند الإرجاع).
+ * - يعيد احتساب الساعات/الأيام الإضافية ووصف المدة على المدة الجديدة.
+ *
+ * `pickupDate` مطلوب للحفاظ على الساعات الإضافية المتفق عليها: العميل الذي اختار
+ * إرجاعاً بعد حدّ اليوم الكامل دفع فرقها، وإسقاطها هنا كان يمحو ذلك المبلغ من
+ * الحجز ويضيّع موعد الإرجاع الحقيقي. المحفوظ هو **فارق الساعات** لا التوقيت
+ * المطلق، فيتحرّك الإرجاع مع أي تغيير في موعد الاستلام أو عدد الأيام.
  */
 export function rebuildAddonsJsonForDays(
   addonsJson: string | null,
   newDays: number,
+  pickupDate?: Date | null,
 ): string | null {
   if (!addonsJson?.trim()) return null;
   let data: {
@@ -141,6 +153,7 @@ export function rebuildAddonsJsonForDays(
     rentalPricePerDayExclTax?: unknown;
     rentalFloorPerDayExclTax?: unknown;
     couponCode?: unknown;
+    delayPenalty?: DelayPenaltySnap;
   };
   try {
     data = JSON.parse(addonsJson);
@@ -164,6 +177,8 @@ export function rebuildAddonsJsonForDays(
     rentalPricePerDayExclTax?: unknown;
     rentalFloorPerDayExclTax?: unknown;
     couponCode?: unknown;
+    delayPenalty?: DelayPenaltySnap;
+    tripDurationLabelAr?: string;
   } = { items };
 
   if (data.interCityShipping) payload.interCityShipping = data.interCityShipping;
@@ -180,6 +195,35 @@ export function rebuildAddonsJsonForDays(
   }
   if (data.couponCode) payload.couponCode = data.couponCode;
 
+  // الساعات الزائدة عن حدّ اليوم الكامل: نحتفظ بفارقها لا بتوقيتها المطلق، ونعيد
+  // احتساب الرسم بالمدة الجديدة — تمديد يوم قد يبتلع تلك الساعات فتسقط الرسوم.
+  const oldDelay = data.delayPenalty;
+  if (pickupDate && !Number.isNaN(pickupDate.getTime()) && oldDelay?.scheduledReturnAt && oldDelay?.actualDropoffAt) {
+    const extraMs =
+      new Date(oldDelay.actualDropoffAt).getTime() -
+      new Date(oldDelay.scheduledReturnAt).getTime();
+    if (Number.isFinite(extraMs) && extraMs > 0) {
+      const newDropoff = new Date(computeBookingReturnAt(pickupDate, days).getTime() + extraMs);
+      const snap = computeDelayPenaltySnap({
+        // وجود اللقطة أصلاً يعني أن الحجز يومي — الشهري لا يُنتج هذه اللقطة.
+        rentalTab: "daily",
+        pricePerDayExclTax:
+          typeof data.rentalPricePerDayExclTax === "number" ? data.rentalPricePerDayExclTax : 0,
+        pickupDate,
+        numberOfDays: days,
+        actualDropoffDate: newDropoff,
+      });
+      if (snap) payload.delayPenalty = snap;
+      // نبنيه من الأيام المعروفة والساعات المحفوظة مباشرةً؛ إعادة اشتقاق المدة من
+      // التاريخين تمرّ بـ`computeBookingDays` التي تعتمد التوقيت المحلي للخادم،
+      // فيختلف الوصف باختلاف إعداد الخادم (UTC → «3 أيام + 7 ساعات»، الرياض → «4 أيام»).
+      payload.tripDurationLabelAr = formatDailyBookingDurationAr({
+        days,
+        extraHours: Math.ceil(extraMs / 3_600_000),
+      });
+    }
+  }
+
   const hasAny =
     items.length > 0 ||
     payload.interCityShipping != null ||
@@ -187,7 +231,8 @@ export function rebuildAddonsJsonForDays(
     payload.rentalDiscount != null ||
     payload.rentalPricePerDayExclTax != null ||
     payload.rentalFloorPerDayExclTax != null ||
-    payload.couponCode != null;
+    payload.couponCode != null ||
+    payload.delayPenalty != null;
 
   return hasAny ? JSON.stringify(payload) : null;
 }

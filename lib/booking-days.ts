@@ -1,8 +1,6 @@
 /** حساب أيام الحجز للبحث والتوفر — يُستخدم في الخادم والعميل. */
 
-function startOfLocalDay(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-}
+const DAY_MS = 86_400_000;
 
 /** رسالة موحّدة عند عدم كون التسليم بعد الاستلام (يشمل تطابق التاريخ والوقت). */
 export const DROPOFF_AFTER_PICKUP_ERROR_AR =
@@ -20,8 +18,8 @@ export function isDropoffAfterPickup(pickup: Date, dropoff: Date): boolean {
 }
 
 export function computeBookingDays(pickup: Date, dropoff: Date): number {
-  const a = startOfLocalDay(pickup).getTime();
-  const b = startOfLocalDay(dropoff).getTime();
+  const a = startOfBranchDay(pickup).getTime();
+  const b = startOfBranchDay(dropoff).getTime();
   const diff = Math.round((b - a) / 86400000);
   if (!Number.isFinite(diff)) return 1;
   return Math.max(1, Math.min(60, diff === 0 ? 1 : diff));
