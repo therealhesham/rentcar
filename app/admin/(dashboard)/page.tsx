@@ -272,9 +272,9 @@ export default async function AdminDashboardPage(props: {
     vehiclePlateNumber: request.vehiclePlateNumber ?? null,
     pickupBranchName: request.pickupBranch?.name ?? null,
     returnBranchName: request.returnBranch?.name ?? null,
-    createdAtLabel: new Date(request.createdAt).toLocaleString("ar-SA"),
+    createdAtLabel: new Date(request.createdAt).toLocaleString("ar-SA", { timeZone: "Asia/Riyadh" }),
     createdAtIso: request.createdAt.toISOString(),
-    pickupDateLabel: new Date(request.pickupDate).toLocaleDateString("ar-SA"),
+    pickupDateLabel: new Date(request.pickupDate).toLocaleDateString("ar-SA", { timeZone: "Asia/Riyadh" }),
   }));
 
   let cardTitle = "آخر الحجوزات";

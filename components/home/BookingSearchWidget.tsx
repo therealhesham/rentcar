@@ -862,7 +862,10 @@ export function BookingSearchWidget({
     const dayStr = isRtl ? DAY_SHORT_AR[dt.getDay()] : DAY_SHORT_EN[dt.getDay()];
     const monthStr = isRtl ? MONTH_SHORT_AR[m - 1] : MONTH_SHORT_EN[m - 1];
 
-    const formattedTime = timeStr ? timeStr.toLowerCase() : "05:00 pm";
+    let formattedTime = timeStr ? timeStr.toLowerCase() : "05:00 pm";
+    if (isRtl) {
+      formattedTime = formattedTime.replace("am", "ص").replace("pm", "م").trim();
+    }
 
     return `${dayStr}, ${d} ${monthStr} ${y} · ${formattedTime}`;
   }
@@ -1678,8 +1681,126 @@ export function BookingSearchWidget({
               </div>
             </SubscriptionPackagesInWidget>
           ) : (
-            /* ═══ SIXT-STYLE ELEGANT PILL ═══ */
-            <div className="search-pill flex flex-col gap-3 xl:flex-row xl:items-stretch xl:gap-0">
+            <>
+              {/* ═══════════════════════════════════════
+                  MOBILE SEARCH WIDGET (Image 1 Style)
+              ═══════════════════════════════════════ */}
+              <div className="block xl:hidden space-y-3 font-sans pb-2" dir={isRtl ? "rtl" : "ltr"}>
+                {/* Title above search card */}
+                <h2 className="text-xl font-extrabold text-[#003749] mb-2 text-start">
+                  {isRtl ? "استعد للاكتشاف" : "Get Ready to Discover"}
+                </h2>
+
+                <div className="bg-[#fdfbf6] rounded-2xl p-4 shadow-sm border border-[#ebe4d3] space-y-3.5">
+                  {/* Pickup Location Field */}
+                  <div className="relative">
+                    <div
+                      ref={pickupLocRef}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => { setPickupLocOpen((v) => !v); setReturnLocOpen(false); closeSchedulePopovers(); }}
+                      className="flex items-center justify-between gap-3 w-full border border-[#ebe4d3] bg-white p-3.5 rounded-xl text-start focus:outline-none cursor-pointer hover:border-[#dbb878] transition-colors"
+                    >
+                      <span className="text-sm font-bold text-[#003749] truncate">
+                        {branchLabel(pickupBranchEffective) || (
+                          <span className="text-[#aaa08e] font-medium">
+                            {returnLocationDifferent ? "موقع الاستلام" : "موقع الاستلام و التسليم"}
+                          </span>
+                        )}
+                      </span>
+                      <MapPin className="size-5 shrink-0 text-[#c9a356]" />
+                    </div>
+                  </div>
+
+                  {/* Return Location Field (If return different is checked) */}
+                  {returnLocationDifferent && (
+                    <div className="relative">
+                      <div
+                        ref={returnLocRef}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => { setReturnLocOpen((v) => !v); setPickupLocOpen(false); closeSchedulePopovers(); }}
+                        className="flex items-center justify-between gap-3 w-full border border-[#ebe4d3] bg-white p-3.5 rounded-xl text-start focus:outline-none cursor-pointer hover:border-[#dbb878] transition-colors"
+                      >
+                        <span className="text-sm font-bold text-[#003749] truncate">
+                          {branchLabel(returnBranchEffective) || (
+                            <span className="text-[#aaa08e] font-medium">موقع التسليم</span>
+                          )}
+                        </span>
+                        <MapPin className="size-5 shrink-0 text-[#c9a356]" />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Date & Time Field */}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPickupLocOpen(false);
+                        setReturnLocOpen(false);
+                        toggleDateRange("pickup");
+                      }}
+                      className="flex items-center justify-between gap-3 w-full border border-[#ebe4d3] bg-white p-3.5 rounded-xl text-start focus:outline-none cursor-pointer hover:border-[#dbb878] transition-colors"
+                    >
+                      <span className="text-sm font-bold text-[#003749] truncate">
+                        {pickupDateDraft && dropoffDateDraft ? (
+                          `${pickupDateDraft} (${isRtl ? pickupTimeDraft.replace("am", "ص").replace("pm", "م") : pickupTimeDraft}) — ${dropoffDateDraft} (${isRtl ? dropoffTimeDraft.replace("am", "ص").replace("pm", "م") : dropoffTimeDraft})`
+                        ) : (
+                          <span className="text-[#aaa08e] font-medium">إختيار التاريخ و الوقت</span>
+                        )}
+                      </span>
+                      <CalendarClock className="size-5 shrink-0 text-[#c9a356]" />
+                    </button>
+                  </div>
+
+                  {/* Checkbox: الرجوع لموقع مختلف */}
+                  <div className="flex items-center gap-2 pt-1">
+                    <label className="flex items-center gap-2 text-xs font-semibold text-[#6b5a3b] cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={returnLocationDifferent}
+                        onChange={(ev) => handleReturnLocationDifferentChange(ev.target.checked)}
+                        className="size-4 rounded border-[#c9a356]/60 text-[#dbb878] focus:ring-[#dbb878]/35 accent-[#dbb878] cursor-pointer"
+                      />
+                      <span>الرجوع لموقع مختلف</span>
+                    </label>
+                  </div>
+
+                  {/* Search CTA Button */}
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      disabled={isSearchPending || dateCities.length === 0}
+                      className="cta-btn group relative w-full items-center justify-center gap-2 overflow-hidden text-white font-extrabold py-3.5 rounded-xl text-base text-center transition-all shadow-md flex disabled:opacity-50"
+                      style={{ background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)` }}
+                    >
+                      <span
+                        className="cta-shimmer pointer-events-none absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0"
+                        aria-hidden
+                      />
+                      {isSearchPending ? (
+                        <Loader2 className="size-5 animate-spin" />
+                      ) : (
+                        <span>بحث</span>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Link below button: لديك حجز؟ */}
+                  <div className="text-center pt-1">
+                    <a
+                      href="/account/login"
+                      className="text-[#003749] font-extrabold text-sm hover:text-[#c9a356] hover:underline inline-block"
+                    >
+                      لديك حجز؟
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              {/* ═══ SIXT-STYLE ELEGANT PILL (DESKTOP ONLY) ═══ */}
+              <div className="search-pill hidden xl:flex flex-row items-stretch gap-0">
 
               {/* ── 1. موقع الاستلام ── */}
               {/* في وضع التوصيل يحمل اسم فرع فقط، فيتنازل عن مساحته لحقل عنوان التوصيل */}
@@ -2000,8 +2121,9 @@ export function BookingSearchWidget({
                 </button>
               </div>
             </div>
-          )}
-        </div>
+          </>
+        )}
+      </div>
 
         {/* ═══════════════════════════════════════
             SECTION 3: CTA + Info Footer

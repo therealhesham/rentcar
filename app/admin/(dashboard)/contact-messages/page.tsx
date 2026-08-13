@@ -136,12 +136,14 @@ export default async function AdminContactMessagesPage() {
                             year: "numeric",
                             month: "short",
                             day: "numeric",
+                            timeZone: "Asia/Riyadh",
                           })}
                         </span>
                         <span className="text-xs text-on-surface-variant/70" dir="ltr">
                           {r.createdAt.toLocaleTimeString("en-US", {
                             hour: "2-digit",
                             minute: "2-digit",
+                            timeZone: "Asia/Riyadh",
                           })}
                         </span>
                       </div>
@@ -183,7 +185,9 @@ export default async function AdminContactMessagesPage() {
                           subject: r.subject,
                           message: r.message,
                           status: r.status,
-                          createdAt: r.createdAt.toLocaleString("ar-SA"),
+                          createdAt: r.createdAt.toLocaleString("ar-SA", {
+                            timeZone: "Asia/Riyadh",
+                          }),
                         }}
                       />
                     </td>

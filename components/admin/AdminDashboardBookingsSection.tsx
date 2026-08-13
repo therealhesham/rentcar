@@ -7,6 +7,13 @@ import { BookingListQuickActions } from "@/components/admin/BookingListQuickActi
 import { AdminQuickPaymentModal } from "@/components/admin/AdminQuickPaymentModal";
 import { BookingRowActionsDropdown } from "@/components/admin/BookingRowActionsDropdown";
 
+/** بداية اليوم التقويمي بتوقيت الرياض — لتجميع «اليوم/الأمس» بنفس التوقيت المعروض. */
+const RIYADH_YMD_FMT = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Riyadh" });
+
+function riyadhDayStart(d: Date): Date {
+  return new Date(`${RIYADH_YMD_FMT.format(d)}T00:00:00.000Z`);
+}
+
 export type DashboardBookingRow = {
   id: number;
   kind: "INQUIRY" | "DIRECT";
@@ -127,12 +134,10 @@ export function AdminDashboardBookingsSection({ rows, categories, models }: Prop
     { title: "أقدم من ذلك", rows: [] as DashboardBookingRow[] },
   ];
 
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const today = riyadhDayStart(new Date());
 
   rows.forEach((r) => {
-    const d = new Date(r.createdAtIso);
-    const dDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const dDay = riyadhDayStart(new Date(r.createdAtIso));
     const diffTime = today.getTime() - dDay.getTime();
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 

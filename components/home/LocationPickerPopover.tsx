@@ -12,6 +12,7 @@ import {
   Navigation,
   Clock,
   Phone,
+  MessageSquare,
 } from "lucide-react";
 import { useLocale } from "next-intl";
 import type { BookingCityBranchesOption, BookingBranchOption } from "@/lib/booking-location-options";
@@ -62,6 +63,14 @@ export function LocationPickerPopover({
   const [, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [previewBranchSlug, setPreviewBranchSlug] = useState<string>(selectedBranchSlug || defaultBranchSlug);
   const [showHours, setShowHours] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   const { style: panelStyle, ready: panelReady } = useAnchoredPopoverPosition(
     isOpen,
@@ -193,11 +202,118 @@ export function LocationPickerPopover({
 
   const activeBranch = activeBranchItem?.branch || null;
 
-  if (!isOpen || !panelReady || typeof document === "undefined") return null;
+  if (!isOpen || (!isMobile && !panelReady) || typeof document === "undefined") return null;
 
   function selectBranch(branchSlug: string, citySlug: string) {
     onBranchSelect(branchSlug, citySlug);
     onClose();
+  }
+
+  if (isMobile) {
+    return createPortal(
+      <div
+        role="dialog"
+        aria-label="مكان البحث"
+        className="fixed inset-0 z-[100] flex flex-col bg-white text-right font-sans"
+        dir={isRTL ? "rtl" : "ltr"}
+      >
+        {/* Header Bar */}
+        <div className="flex items-center justify-between border-b border-[#f0ebe4] px-4 py-3.5 bg-gradient-to-l from-[#fdfbf6] to-[#f9f5ee]">
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-[#003749] font-bold text-sm hover:text-[#c9a356] hover:underline focus:outline-none"
+          >
+            إغلاق
+          </button>
+          <h3 className="text-base font-bold text-[#003749]">مكان البحث</h3>
+        </div>
+
+        {/* Search Input Box */}
+        <div className="p-4 bg-white">
+          <div className="relative flex items-center gap-2 rounded-xl border border-[#ebe4d3] bg-[#fdfbf6] px-3 py-2.5 shadow-sm focus-within:border-[#dbb878] focus-within:bg-white">
+            <MapPin className="size-4 shrink-0 text-[#c9a356]" aria-hidden />
+            <input
+              ref={searchRef}
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="المدينة"
+              className="flex-1 bg-transparent text-sm font-semibold text-[#003749] placeholder:text-[#aaa08e] outline-none"
+            />
+            {query ? (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                className="flex size-5 items-center justify-center rounded-full text-gray-400 hover:text-gray-600"
+              >
+                <X className="size-4" />
+              </button>
+            ) : null}
+          </div>
+        </div>
+
+        {/* Grouped Results */}
+        <div className="flex-1 overflow-y-auto pb-10">
+          {airportBranches.length === 0 && cityGroups.length === 0 ? (
+            <p className="py-8 text-center text-xs text-[#aaa08e]">
+              {isRTL ? "لا توجد نتائج مطابقة" : "No matching results"}
+            </p>
+          ) : (
+            <>
+              {/* Category 1: Airport Branches */}
+              {airportBranches.length > 0 && (
+                <div>
+                  <div className="bg-[#f9f6f0] border-y border-[#ebe4d3]/60 px-4 py-2 text-xs font-bold text-[#003749] flex items-center justify-between">
+                    <span>فروع المطار</span>
+                  </div>
+                  <div className="divide-y divide-[#f0ebe4]">
+                    {airportBranches.map(({ branch, citySlug }) => (
+                      <button
+                        key={branch.slug}
+                        type="button"
+                        onClick={() => selectBranch(branch.slug, citySlug)}
+                        className="flex items-center justify-between gap-3 w-full px-4 py-3.5 text-start hover:bg-[#fdfbf6] active:bg-[#f9f5ee] transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Plane className="size-4 shrink-0 text-[#c9a356]" />
+                          <span className="text-sm font-bold text-[#003749]">{branch.name}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Category 2: Dynamic City Groups (فروع كل مدينة على حدة) */}
+              {cityGroups.map((group) => (
+                <div key={group.citySlug}>
+                  <div className="bg-[#f9f6f0] border-y border-[#ebe4d3]/60 px-4 py-2 text-xs font-bold text-[#003749] flex items-center justify-between">
+                    <span>{group.headerTitle}</span>
+                  </div>
+                  <div className="divide-y divide-[#f0ebe4]">
+                    {group.branches.map(({ branch, citySlug }) => (
+                      <button
+                        key={branch.slug}
+                        type="button"
+                        onClick={() => selectBranch(branch.slug, citySlug)}
+                        className="flex items-center justify-between gap-3 w-full px-4 py-3.5 text-start hover:bg-[#fdfbf6] active:bg-[#f9f5ee] transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Building2 className="size-4 shrink-0 text-[#c9a356]" />
+                          <span className="text-sm font-bold text-[#003749]">{branch.name}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+      </div>,
+      document.body
+    );
   }
 
   // Google Maps Embed URL for active branch
