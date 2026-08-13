@@ -79,6 +79,8 @@ export async function cancelBookingWithPolicy(input: {
   role: CancelRole;
   customerId?: number;
   customerPhone?: string | null;
+  /** سبب اختياري يكتبه موظف الإدارة — لا يُطلب من العميل في الإلغاء الذاتي. */
+  reasonAr?: string | null;
 }): Promise<CancelBookingWithPolicyResult> {
   const row = await loadBookingForCancel(input.bookingRequestId);
   if (!row) {
@@ -139,10 +141,13 @@ export async function cancelBookingWithPolicy(input: {
         row.numberOfDays,
       );
 
+  const reasonAr = input.reasonAr?.trim() || null;
+
   const baseData = {
     status: "CANCELLED" as const,
     cancelledAt: nowCancel,
     cancellationDeductedDays: deductDays > 0 ? deductDays : null,
+    cancellationReasonAr: reasonAr,
   };
 
   // مطالبة ذرّية بالإلغاء (compare-and-swap على الحالة): يمرّ طلب واحد فقط،
@@ -193,6 +198,7 @@ export async function cancelBookingWithPolicy(input: {
             status: row.status,
             cancelledAt: null,
             cancellationDeductedDays: null,
+            cancellationReasonAr: null,
           },
         });
         return {

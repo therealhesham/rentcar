@@ -32,12 +32,20 @@ export async function cancelAdminBooking(
   const scope = await assertBookingRequestInScope(auth.session, bookingRequestId);
   if (!scope.ok) return { ok: false, error: scope.error };
 
+  // سبب اختياري — الإلغاء بالسياسة لا يتجاوز شيئاً فلا يُلزَم الموظف بتبريره.
+  const reasonAr = String(formData.get("reasonAr") ?? "").trim().slice(0, 500);
+
   const result = await cancelBookingWithPolicy({
     bookingRequestId,
     role: "admin",
+    reasonAr,
   });
 
   if (!result.ok) return result;
+
+  const refundNote = result.refundInclTaxSar
+    ? `استرداد ${result.refundInclTaxSar} ر.س — ${result.paymentMethod ?? ""}`
+    : "";
 
   await logBookingEvent({
     bookingId: bookingRequestId,
@@ -45,9 +53,7 @@ export async function cancelAdminBooking(
     actorKind: "ADMIN",
     actorName: auth.session.displayName,
     toStatus: "CANCELLED",
-    notes: result.refundInclTaxSar
-      ? `استرداد ${result.refundInclTaxSar} ر.س — ${result.paymentMethod ?? ""}`
-      : undefined,
+    notes: [refundNote, reasonAr].filter(Boolean).join(" — ") || undefined,
   });
 
   revalidatePath("/admin");

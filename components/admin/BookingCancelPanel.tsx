@@ -81,6 +81,7 @@ export function BookingCancelPanel({
   const [pending, startTransition] = useTransition();
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
 
   const [fullRefundModalOpen, setFullRefundModalOpen] = useState(false);
   const [fullRefundReason, setFullRefundReason] = useState("");
@@ -234,6 +235,21 @@ export function BookingCancelPanel({
             </div>
           ) : null}
 
+          <label className="mb-3 block text-xs font-bold text-red-950">
+            سبب الإلغاء{" "}
+            <span className="font-semibold text-red-900/70">(اختياري)</span>
+            <textarea
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              rows={2}
+              maxLength={500}
+              className="mt-1.5 w-full rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-on-surface focus:border-red-400 focus:ring-2 focus:ring-red-500/15"
+            />
+            <span className="mt-1 block text-[11px] font-semibold text-red-900/70">
+              يُحفَظ على الحجز ويظهر في سجل الأحداث.
+            </span>
+          </label>
+
           <p className="mb-3 text-xs font-semibold text-red-950">
             هل تريد إلغاء هذا الطلب؟ لا يمكن التراجع بعد التأكيد.
           </p>
@@ -247,12 +263,14 @@ export function BookingCancelPanel({
                 startTransition(async () => {
                   const fd = new FormData();
                   fd.set("bookingRequestId", String(bookingRequestId));
+                  fd.set("reasonAr", cancelReason.trim());
                   const r = await cancelAdminBooking(fd);
                   if (!r.ok) {
                     setCancelError(r.error ?? "تعذّر الإلغاء.");
                     return;
                   }
                   setCancelOpen(false);
+                  setCancelReason("");
                   router.refresh();
                 });
               }}
@@ -266,6 +284,7 @@ export function BookingCancelPanel({
               onClick={() => {
                 setCancelOpen(false);
                 setCancelError(null);
+                setCancelReason("");
               }}
               className="inline-flex flex-1 items-center justify-center rounded-xl border border-outline-variant bg-white px-4 py-2.5 text-sm font-bold text-on-surface hover:bg-surface-container-low"
             >
