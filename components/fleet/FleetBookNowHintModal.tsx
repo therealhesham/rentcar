@@ -525,8 +525,18 @@ export function FleetBookNowHintModal({
                 onClose={() => setDateRangeOpen(false)}
                 startDateDdMmYy={pickupDateDraft}
                 endDateDdMmYy={dropoffDateDraft}
+                pickupTime={pickupTimeDraft}
+                dropoffTime={dropoffTimeDraft}
                 onStartChange={applyPickupDateOnly}
                 onRangeChange={applyDateRange}
+                onPickupTimeChange={(t) => setPickupTimeDraft(t)}
+                onDropoffTimeChange={(t) => setDropoffTimeDraft(t)}
+                onConfirmRangeAndTimes={(start, end, pTime, dTime) => {
+                  applyDateRange(start, end);
+                  if (pTime) setPickupTimeDraft(pTime);
+                  if (dTime) setDropoffTimeDraft(dTime);
+                  setDateRangeOpen(false);
+                }}
                 anchorRef={dateRangeActiveRef}
                 extraAnchorRefs={[pickupDateRef, dropoffDateRef]}
                 schedule={allowHolidayBooking ? null : selectedBranchSchedule}

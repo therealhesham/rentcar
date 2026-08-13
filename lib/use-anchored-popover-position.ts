@@ -1,11 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { OVERLAY_PANEL_Z } from "@/lib/overlay-z-index";
 
 type Options = {
   panelWidth: number;
   gap?: number;
+  forceBelow?: boolean;
+  autoScrollOnOpen?: boolean;
 };
 
 /**
@@ -16,10 +18,32 @@ export function useAnchoredPopoverPosition(
   isOpen: boolean,
   anchorRef: React.RefObject<HTMLElement | null>,
   panelRef: React.RefObject<HTMLElement | null>,
-  { panelWidth, gap = 8 }: Options,
+  { panelWidth, gap = 8, forceBelow = false, autoScrollOnOpen = false }: Options,
 ) {
   const [style, setStyle] = useState<React.CSSProperties>({});
   const [ready, setReady] = useState(false);
+  const hasAutoScrolledRef = useRef(false);
+
+  // التمرير التلقائي لأسفل عند فتح النافذة حتى تظهر أسفل الويدجت بوضوح
+  useEffect(() => {
+    if (!isOpen) {
+      hasAutoScrolledRef.current = false;
+      return;
+    }
+    if (autoScrollOnOpen && !hasAutoScrolledRef.current) {
+      hasAutoScrolledRef.current = true;
+      const el = anchorRef.current;
+      if (el) {
+        const r = el.getBoundingClientRect();
+        const vh = window.innerHeight;
+        const panelH = panelRef.current?.offsetHeight ?? 380;
+        if (r.bottom + panelH > vh - 20 || r.top > 120) {
+          const targetScroll = Math.max(0, window.scrollY + r.top - 80);
+          window.scrollTo({ top: targetScroll, behavior: "smooth" });
+        }
+      }
+    }
+  }, [isOpen, autoScrollOnOpen, anchorRef, panelRef]);
 
   const update = useCallback(() => {
     const el = anchorRef.current;
@@ -41,7 +65,7 @@ export function useAnchoredPopoverPosition(
     const panelH = panelRef.current?.offsetHeight ?? 300;
     const belowTop = r.bottom + gap;
     const fitsBelow = belowTop + panelH <= vh - 8;
-    const top = fitsBelow
+    const top = forceBelow || fitsBelow
       ? belowTop
       : Math.max(8, r.top - gap - panelH);
 
@@ -54,7 +78,7 @@ export function useAnchoredPopoverPosition(
     });
     setReady(true);
     return true;
-  }, [anchorRef, panelRef, panelWidth, gap]);
+  }, [anchorRef, panelRef, panelWidth, gap, forceBelow]);
 
   useLayoutEffect(() => {
     if (!isOpen) {

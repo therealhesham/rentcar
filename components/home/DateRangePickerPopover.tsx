@@ -2,8 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useTranslations } from "next-intl";
-import { CalendarRange, X, ChevronRight, ChevronLeft } from "lucide-react";
+import { CalendarRange, Clock, Info, X, ChevronRight, ChevronLeft } from "lucide-react";
 import { useAnchoredPopoverPosition } from "@/lib/use-anchored-popover-position";
 import { computeBookingDays } from "@/lib/booking-days";
 import { formatYmdAsDdMmYy, parseDdMmYyToYmd } from "@/lib/booking-search-shared";
@@ -18,12 +17,20 @@ type Props = {
   onClose: () => void;
   startDateDdMmYy: string;
   endDateDdMmYy: string;
+  pickupTime?: string;
+  dropoffTime?: string;
   minDateYmd?: string;
   onRangeChange: (startDdMmYy: string, endDdMmYy: string) => void;
-  /** يُستدعى عند اختيار تاريخ البداية فقط — لتحديث حقل الاستلام قبل اكتمال النطاق */
   onStartChange?: (startDdMmYy: string) => void;
-  anchorRef: React.RefObject<HTMLElement | null>;
-  /** حقول التاريخ الأخرى — لا يُغلق التقويم عند النقر عليها */
+  onPickupTimeChange?: (time: string) => void;
+  onDropoffTimeChange?: (time: string) => void;
+  onConfirmRangeAndTimes?: (
+    startDdMmYy: string,
+    endDdMmYy: string,
+    pickupTime: string,
+    dropoffTime: string,
+  ) => void;
+  anchorRef?: React.RefObject<HTMLElement | null>;
   extraAnchorRefs?: React.RefObject<HTMLElement | null>[];
   startLabel?: string;
   endLabel?: string;
@@ -31,11 +38,18 @@ type Props = {
   allowHolidayBooking?: boolean;
 };
 
-const MONTHS_AR = [
-  "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
-  "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر",
+const MONTHS_NAMES_EN = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
 ];
-const DAYS_AR = ["ح", "ن", "ث", "ر", "خ", "ج", "س"];
+
+const DAY_HEADER_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+
+const MONTH_SHORT_EN = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+const DAY_SHORT_EN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function ymdToDate(ymd: string): Date | null {
   if (!ymd || ymd.length < 10) return null;
@@ -50,27 +64,87 @@ function todayYmd(): string {
 }
 
 function normalizeRange(startYmd: string, endYmd: string): { start: string; end: string } {
-  if (startYmd <= endYmd) return { start: startYmd, end: endYmd };
+  if (!endYmd || startYmd <= endYmd) return { start: startYmd, end: endYmd };
   return { start: endYmd, end: startYmd };
 }
+
+function formatYmdShortEn(ymd: string): string {
+  if (!ymd) return "—";
+  const dt = ymdToDate(ymd);
+  if (!dt) return "—";
+  const dayName = DAY_SHORT_EN[dt.getDay()];
+  const monthName = MONTH_SHORT_EN[dt.getMonth()];
+  return `${dayName}, ${dt.getDate()} ${monthName} ${dt.getFullYear()}`;
+}
+
+function formatTime12h(timeStr: string): string {
+  if (!timeStr) return "05:00 pm";
+  const lower = timeStr.toLowerCase().trim();
+  if (lower.includes("am") || lower.includes("pm")) return lower;
+  const parts = lower.split(":");
+  if (parts.length < 2) return timeStr;
+  let h = parseInt(parts[0], 10);
+  const m = parts[1] || "00";
+  if (isNaN(h)) return timeStr;
+  const ampm = h >= 12 ? "pm" : "am";
+  h = h % 12;
+  if (h === 0) h = 12;
+  return `${String(h).padStart(2, "0")}:${m} ${ampm}`;
+}
+
+function parseTimeTo24h(timeStr: string): string {
+  if (!timeStr) return "17:00";
+  const lower = timeStr.toLowerCase().trim();
+  if (lower.includes("am") || lower.includes("pm")) {
+    const isPm = lower.includes("pm");
+    const cleaned = lower.replace(/(am|pm|\s)/g, "");
+    const parts = cleaned.split(":");
+    let h = parseInt(parts[0], 10);
+    const m = parts[1] || "00";
+    if (isNaN(h)) return "17:00";
+    if (isPm && h < 12) h += 12;
+    if (!isPm && h === 12) h = 0;
+    return `${String(h).padStart(2, "0")}:${m}`;
+  }
+  return timeStr;
+}
+
+const TIME_SLOT_OPTIONS = (() => {
+  const slots: Array<{ value24h: string; label12h: string }> = [];
+  for (let h = 0; h < 24; h++) {
+    for (const m of [0, 30]) {
+      const hm = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+      slots.push({
+        value24h: hm,
+        label12h: formatTime12h(hm),
+      });
+    }
+  }
+  return slots;
+})();
 
 export function DateRangePickerPopover({
   isOpen,
   onClose,
   startDateDdMmYy,
   endDateDdMmYy,
+  pickupTime = "05:00 pm",
+  dropoffTime = "05:00 pm",
   minDateYmd,
   onRangeChange,
   onStartChange,
+  onPickupTimeChange,
+  onDropoffTimeChange,
+  onConfirmRangeAndTimes,
   anchorRef,
   extraAnchorRefs,
-  startLabel = "الاستلام",
-  endLabel = "التسليم",
   schedule = null,
   allowHolidayBooking = false,
 }: Props) {
-  const t = useTranslations("Common");
   const panelRef = useRef<HTMLDivElement>(null);
+  const fallbackAnchorRef = useRef<HTMLElement | null>(null);
+  const activeAnchorRef = anchorRef ?? fallbackAnchorRef;
+
   const startYmdInit = (startDateDdMmYy ? parseDdMmYyToYmd(startDateDdMmYy) : null) || "";
   const endYmdInit = (endDateDdMmYy ? parseDdMmYyToYmd(endDateDdMmYy) : null) || "";
   const anchorYmd = startYmdInit || minDateYmd || todayYmd();
@@ -81,6 +155,16 @@ export function DateRangePickerPopover({
   const [rangeStart, setRangeStart] = useState(startYmdInit);
   const [rangeEnd, setRangeEnd] = useState(endYmdInit);
   const [hoverYmd, setHoverYmd] = useState<string | null>(null);
+
+  const [selectedPickupTime, setSelectedPickupTime] = useState(formatTime12h(pickupTime));
+  const [selectedDropoffTime, setSelectedDropoffTime] = useState(formatTime12h(dropoffTime));
+
+  const { style: panelStyle, ready: panelReady } = useAnchoredPopoverPosition(
+    isOpen,
+    activeAnchorRef,
+    panelRef,
+    { panelWidth: 740, gap: 8, forceBelow: true, autoScrollOnOpen: true },
+  );
 
   useEffect(() => {
     if (!isOpen) return;
@@ -93,24 +177,28 @@ export function DateRangePickerPopover({
     setRangeStart(s);
     setRangeEnd(e);
     setHoverYmd(null);
-  }, [isOpen, startDateDdMmYy, endDateDdMmYy, minDateYmd]);
+    setSelectedPickupTime(formatTime12h(pickupTime));
+    setSelectedDropoffTime(formatTime12h(dropoffTime));
+  }, [isOpen, startDateDdMmYy, endDateDdMmYy, minDateYmd, pickupTime, dropoffTime]);
 
+  // Click outside listener
   useEffect(() => {
     if (!isOpen) return;
     function handler(e: MouseEvent) {
       const panel = panelRef.current;
       if (!panel) return;
       const target = e.target as Node;
-      const anchors = [anchorRef, ...(extraAnchorRefs ?? [])];
-      const insideAnchor = anchors.some((ref) => ref.current?.contains(target));
+      const anchors = [activeAnchorRef, ...(extraAnchorRefs ?? [])];
+      const insideAnchor = anchors.some((ref) => ref?.current?.contains(target));
       if (!panel.contains(target) && !insideAnchor) {
         onClose();
       }
     }
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [isOpen, onClose, anchorRef, extraAnchorRefs]);
+  }, [isOpen, onClose, activeAnchorRef, extraAnchorRefs]);
 
+  // Escape key listener
   useEffect(() => {
     if (!isOpen) return;
     function handler(e: KeyboardEvent) {
@@ -120,34 +208,49 @@ export function DateRangePickerPopover({
     return () => document.removeEventListener("keydown", handler);
   }, [isOpen, onClose]);
 
-  function buildCalendarDays(): Array<{ ymd: string; day: number; currMonth: boolean; disabled: boolean }> {
-    const firstDay = new Date(calYear, calMonth, 1).getDay();
+  if (!isOpen || !panelReady || typeof document === "undefined") return null;
+
+  function buildMonthCells(year: number, month: number) {
+    const firstDay = new Date(year, month, 1).getDay(); // 0 = Sunday (Su)
     const cells: Array<{ ymd: string; day: number; currMonth: boolean; disabled: boolean }> = [];
-    const prevMonthDays = new Date(calYear, calMonth, 0).getDate();
+
+    const prevMonthDays = new Date(year, month, 0).getDate();
     for (let i = firstDay - 1; i >= 0; i--) {
       const d = prevMonthDays - i;
-      const m = calMonth === 0 ? 12 : calMonth;
-      const y = calMonth === 0 ? calYear - 1 : calYear;
+      const m = month === 0 ? 12 : month;
+      const y = month === 0 ? year - 1 : year;
       const ymd = `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
       cells.push({ ymd, day: d, currMonth: false, disabled: true });
     }
-    const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
     const effMin = minDateYmd || todayYmd();
     for (let d = 1; d <= daysInMonth; d++) {
-      const ymd = `${calYear}-${String(calMonth + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      const ymd = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
       const isClosedHoliday = !allowHolidayBooking && isBranchClosedOnDate(ymd, schedule);
       cells.push({ ymd, day: d, currMonth: true, disabled: ymd < effMin || isClosedHoliday });
     }
+
+    const targetTotal = cells.length > 35 ? 42 : 35;
     let nextDay = 1;
-    while (cells.length < 42) {
-      const m = calMonth === 11 ? 1 : calMonth + 2;
-      const y = calMonth === 11 ? calYear + 1 : calYear;
+    while (cells.length < targetTotal) {
+      const m = month === 11 ? 1 : month + 2;
+      const y = month === 11 ? year + 1 : year;
       const ymd = `${y}-${String(m).padStart(2, "0")}-${String(nextDay).padStart(2, "0")}`;
       cells.push({ ymd, day: nextDay, currMonth: false, disabled: true });
       nextDay++;
     }
+
     return cells;
   }
+
+  const month1Year = calYear;
+  const month1Index = calMonth;
+  const month2Index = (calMonth + 1) % 12;
+  const month2Year = calMonth === 11 ? calYear + 1 : calYear;
+
+  const month1Cells = buildMonthCells(month1Year, month1Index);
+  const month2Cells = buildMonthCells(month2Year, month2Index);
 
   function prevMonth() {
     setCalMonth((m) => {
@@ -186,7 +289,13 @@ export function DateRangePickerPopover({
     const startFmt = formatYmdAsDdMmYy(start);
     const endFmt = formatYmdAsDdMmYy(end);
     if (startFmt && endFmt) onRangeChange(startFmt, endFmt);
-    onClose();
+  }
+
+  function previewStart(): string {
+    if (!rangeStart) return "";
+    if (rangeEnd) return rangeStart;
+    if (hoverYmd) return normalizeRange(rangeStart, hoverYmd).start;
+    return rangeStart;
   }
 
   function previewEnd(): string {
@@ -198,22 +307,16 @@ export function DateRangePickerPopover({
     return "";
   }
 
-  function previewStart(): string {
-    if (!rangeStart) return "";
-    if (rangeEnd) return rangeStart;
-    if (hoverYmd) return normalizeRange(rangeStart, hoverYmd).start;
-    return rangeStart;
-  }
-
   const effStart = previewStart();
   const effEnd = previewEnd();
+  const pickingEnd = Boolean(rangeStart && !rangeEnd);
 
   function cellInRange(ymd: string): boolean {
     if (!effStart || !effEnd) return false;
     return ymd >= effStart && ymd <= effEnd;
   }
 
-  function daysPreview(): number | null {
+  function computeDays(): number | null {
     if (!effStart || !effEnd) return null;
     const a = ymdToDate(effStart);
     const b = ymdToDate(effEnd);
@@ -221,34 +324,42 @@ export function DateRangePickerPopover({
     return computeBookingDays(a, b);
   }
 
-  const { style: panelStyle, ready: panelReady } = useAnchoredPopoverPosition(
-    isOpen,
-    anchorRef,
-    panelRef,
-    { panelWidth: 320 },
-  );
+  const daysCount = computeDays();
 
-  if (!isOpen || !panelReady || typeof document === "undefined") return null;
+  function handleConfirm() {
+    const startFmt = formatYmdAsDdMmYy(effStart || rangeStart);
+    const endFmt = formatYmdAsDdMmYy(effEnd || rangeEnd || effStart || rangeStart);
+    const pTime24 = parseTimeTo24h(selectedPickupTime);
+    const dTime24 = parseTimeTo24h(selectedDropoffTime);
 
-  const cells = buildCalendarDays();
-  const days = daysPreview();
-  const pickingEnd = Boolean(rangeStart && !rangeEnd);
+    if (startFmt && endFmt) {
+      onRangeChange(startFmt, endFmt);
+      onPickupTimeChange?.(pTime24);
+      onDropoffTimeChange?.(dTime24);
+      onConfirmRangeAndTimes?.(startFmt, endFmt, pTime24, dTime24);
+    }
+    onClose();
+  }
+
+  const formattedPickupDateStr = formatYmdShortEn(effStart);
+  const formattedDropoffDateStr = formatYmdShortEn(effEnd);
 
   return createPortal(
     <div
       ref={panelRef}
       role="dialog"
-      aria-label={t("selectDate")}
+      aria-label="تواريخ وأوقات الحجز"
       style={panelStyle}
-      className="datetime-popover flex flex-col overflow-hidden rounded-2xl border border-[#ebe4d3] bg-white shadow-[0_20px_60px_-10px_rgba(0,55,73,0.22),0_4px_16px_-4px_rgba(0,55,73,0.12)]"
+      className="datetime-popover flex flex-col overflow-hidden rounded-2xl border border-[#ebe4d3] bg-white shadow-[0_20px_60px_-10px_rgba(0,55,73,0.22),0_4px_16px_-4px_rgba(0,55,73,0.12)] text-right"
       dir="rtl"
     >
+      {/* Header */}
       <div className="flex items-center justify-between border-b border-[#f0ebe4] bg-gradient-to-l from-[#fdfbf6] to-[#f9f5ee] px-4 py-3">
         <div className="flex items-center gap-2">
           <span className="flex size-7 items-center justify-center rounded-full bg-[#dbb878]/15">
             <CalendarRange className="size-3.5 text-[#dbb878]" />
           </span>
-          <span className="text-[13px] font-bold text-[#003749]">تواريخ الحجز</span>
+          <span className="text-[13px] font-bold text-[#003749]">تواريخ وأوقات الحجز</span>
         </div>
         <button
           type="button"
@@ -260,105 +371,252 @@ export function DateRangePickerPopover({
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 border-b border-[#f0ebe4] bg-[#fdfbf6] px-4 py-2.5 text-[11px]">
-        <div className={`rounded-lg px-2 py-1.5 ${pickingEnd ? "ring-2 ring-[#dbb878]/50 bg-white" : ""}`}>
-          <span className="block font-bold text-[#8a7752]">{startLabel}</span>
-          <span className="font-bold text-[#003749]">
-            {rangeStart ? formatYmdAsDdMmYy(rangeStart) : "—"}
-          </span>
-        </div>
-        <div className={`rounded-lg px-2 py-1.5 ${pickingEnd ? "bg-white/60" : rangeEnd ? "bg-white" : ""}`}>
-          <span className="block font-bold text-[#8a7752]">{endLabel}</span>
-          <span className="font-bold text-[#003749]">
-            {rangeEnd ? formatYmdAsDdMmYy(rangeEnd) : pickingEnd ? t("selectDate") : "—"}
-          </span>
+      {/* Main Content */}
+      <div className="p-4 sm:p-5 bg-white">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
+          {/* Dual Month Calendar (Right Side in RTL - First in DOM) */}
+          <div className="md:col-span-7 flex flex-col gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Month 1 (August / Far Right Month) */}
+              <div className="flex flex-col">
+                <div className="flex items-center justify-between mb-2 px-1">
+                  <button
+                    type="button"
+                    onClick={prevMonth}
+                    className="flex size-6 items-center justify-center rounded-full text-[#8a7752] transition-colors hover:bg-[#f0ebe4] hover:text-[#003749]"
+                    title="الشهر السابق"
+                  >
+                    <ChevronRight className="size-3.5" />
+                  </button>
+                  <span className="text-[12px] font-bold text-[#003749] dir-ltr">
+                    {MONTHS_NAMES_EN[month1Index]} {month1Year}
+                  </span>
+                  <div className="size-6" />
+                </div>
+
+                <div className="grid grid-cols-7 text-center mb-1">
+                  {DAY_HEADER_LABELS.map((d) => (
+                    <span key={d} className="text-[10px] font-bold text-[#8a7752] py-0.5">
+                      {d}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-7 gap-0.5">
+                  {month1Cells.map((cell, i) => {
+                    const inRange = cellInRange(cell.ymd);
+                    const isStart = cell.ymd === effStart;
+                    const isEnd = cell.ymd === effEnd && Boolean(effEnd);
+                    const isToday = cell.ymd === todayYmd();
+
+                    return (
+                      <button
+                        key={`m1-${i}`}
+                        type="button"
+                        disabled={cell.disabled || !cell.currMonth}
+                        onMouseEnter={() => {
+                          if (pickingEnd && !cell.disabled && cell.currMonth) setHoverYmd(cell.ymd);
+                        }}
+                        onMouseLeave={() => setHoverYmd(null)}
+                        onClick={() => !cell.disabled && cell.currMonth && handleDayClick(cell.ymd)}
+                        className={`relative flex h-7 w-full items-center justify-center text-[11px] font-semibold transition-all rounded-md
+                          ${!cell.currMonth ? "pointer-events-none opacity-0" : ""}
+                          ${cell.disabled && cell.currMonth ? "cursor-not-allowed text-[#ddd] opacity-50" : ""}
+                          ${
+                            isStart || isEnd
+                              ? "z-10 bg-gradient-to-br from-[#dbb878] to-[#c9a356] text-white font-bold shadow-[0_2px_8px_-2px_rgba(219,184,120,0.6)]"
+                              : inRange && !cell.disabled
+                                ? "rounded-none bg-[#dbb878]/20 text-[#003749] font-semibold"
+                                : isToday && !cell.disabled
+                                  ? "border border-[#dbb878]/60 text-[#003749] font-bold"
+                                  : !cell.disabled && cell.currMonth
+                                    ? "text-[#3a2f1e] hover:bg-[#fdfbf6]"
+                                    : ""
+                          }`}
+                      >
+                        {cell.day}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Month 2 (September / Middle Right Month) */}
+              <div className="flex flex-col">
+                <div className="flex items-center justify-between mb-2 px-1">
+                  <div className="size-6" />
+                  <span className="text-[12px] font-bold text-[#003749] dir-ltr">
+                    {MONTHS_NAMES_EN[month2Index]} {month2Year}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={nextMonth}
+                    className="flex size-6 items-center justify-center rounded-full text-[#8a7752] transition-colors hover:bg-[#f0ebe4] hover:text-[#003749]"
+                    title="الشهر التالي"
+                  >
+                    <ChevronLeft className="size-3.5" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-7 text-center mb-1">
+                  {DAY_HEADER_LABELS.map((d) => (
+                    <span key={d} className="text-[10px] font-bold text-[#8a7752] py-0.5">
+                      {d}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-7 gap-0.5">
+                  {month2Cells.map((cell, i) => {
+                    const inRange = cellInRange(cell.ymd);
+                    const isStart = cell.ymd === effStart;
+                    const isEnd = cell.ymd === effEnd && Boolean(effEnd);
+                    const isToday = cell.ymd === todayYmd();
+
+                    return (
+                      <button
+                        key={`m2-${i}`}
+                        type="button"
+                        disabled={cell.disabled || !cell.currMonth}
+                        onMouseEnter={() => {
+                          if (pickingEnd && !cell.disabled && cell.currMonth) setHoverYmd(cell.ymd);
+                        }}
+                        onMouseLeave={() => setHoverYmd(null)}
+                        onClick={() => !cell.disabled && cell.currMonth && handleDayClick(cell.ymd)}
+                        className={`relative flex h-7 w-full items-center justify-center text-[11px] font-semibold transition-all rounded-md
+                          ${!cell.currMonth ? "pointer-events-none opacity-0" : ""}
+                          ${cell.disabled && cell.currMonth ? "cursor-not-allowed text-[#ddd] opacity-50" : ""}
+                          ${
+                            isStart || isEnd
+                              ? "z-10 bg-gradient-to-br from-[#dbb878] to-[#c9a356] text-white font-bold shadow-[0_2px_8px_-2px_rgba(219,184,120,0.6)]"
+                              : inRange && !cell.disabled
+                                ? "rounded-none bg-[#dbb878]/20 text-[#003749] font-semibold"
+                                : isToday && !cell.disabled
+                                  ? "border border-[#dbb878]/60 text-[#003749] font-bold"
+                                  : !cell.disabled && cell.currMonth
+                                    ? "text-[#3a2f1e] hover:bg-[#fdfbf6]"
+                                    : ""
+                          }`}
+                      >
+                        {cell.day}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Time Columns (Left Side in RTL - Second in DOM) */}
+          <div className="md:col-span-5 grid grid-cols-2 gap-2.5 border-t md:border-t-0 md:border-s border-[#f0ebe4] pt-4 md:pt-0 md:ps-4">
+            {/* Pickup Time Column */}
+            <div className="flex flex-col gap-1.5">
+              <h4 className="text-[12px] font-bold text-[#003749]">اختر وقت الاستلام</h4>
+              <p className="text-[10px] font-semibold text-[#8a7752] min-h-[14px]">
+                {formattedPickupDateStr !== "—" ? formattedPickupDateStr : ""}
+              </p>
+              <div className="grid grid-cols-2 gap-1 max-h-[220px] overflow-y-auto pe-1 custom-scrollbar">
+                {TIME_SLOT_OPTIONS.map((slot) => {
+                  const isSelected = slot.label12h === selectedPickupTime;
+                  return (
+                    <button
+                      key={`pickup-${slot.value24h}`}
+                      type="button"
+                      onClick={() => setSelectedPickupTime(slot.label12h)}
+                      className={`h-8 w-full rounded-lg text-[11px] font-semibold transition-all ${
+                        isSelected
+                          ? "bg-gradient-to-br from-[#dbb878] to-[#c9a356] text-white shadow-[0_2px_8px_-2px_rgba(219,184,120,0.6)]"
+                          : "bg-[#fdfbf6] border border-[#ebe4d3] text-[#003749] hover:border-[#dbb878] hover:bg-[#f0ebe4]"
+                      }`}
+                    >
+                      {slot.label12h}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Return Time Column */}
+            <div className="flex flex-col gap-1.5">
+              <h4 className="text-[12px] font-bold text-[#003749]">اختر وقت العودة</h4>
+              <p className="text-[10px] font-semibold text-[#8a7752] min-h-[14px]">
+                {formattedDropoffDateStr !== "—" ? formattedDropoffDateStr : ""}
+              </p>
+              <div className="grid grid-cols-2 gap-1 max-h-[220px] overflow-y-auto pe-1 custom-scrollbar">
+                {TIME_SLOT_OPTIONS.map((slot) => {
+                  const isSelected = slot.label12h === selectedDropoffTime;
+                  return (
+                    <button
+                      key={`dropoff-${slot.value24h}`}
+                      type="button"
+                      onClick={() => setSelectedDropoffTime(slot.label12h)}
+                      className={`h-8 w-full rounded-lg text-[11px] font-semibold transition-all ${
+                        isSelected
+                          ? "bg-gradient-to-br from-[#dbb878] to-[#c9a356] text-white shadow-[0_2px_8px_-2px_rgba(219,184,120,0.6)]"
+                          : "bg-[#fdfbf6] border border-[#ebe4d3] text-[#003749] hover:border-[#dbb878] hover:bg-[#f0ebe4]"
+                      }`}
+                    >
+                      {slot.label12h}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="p-3">
-        <div className="mb-3 flex items-center justify-between">
-          <button
-            type="button"
-            onClick={prevMonth}
-            className="flex size-7 items-center justify-center rounded-full text-[#8a7752] transition-colors hover:bg-[#f0ebe4] hover:text-[#003749]"
-          >
-            <ChevronRight className="size-4" />
-          </button>
-          <span className="text-[13px] font-bold text-[#003749]">
-            {MONTHS_AR[calMonth]} {calYear}
-          </span>
-          <button
-            type="button"
-            onClick={nextMonth}
-            className="flex size-7 items-center justify-center rounded-full text-[#8a7752] transition-colors hover:bg-[#f0ebe4] hover:text-[#003749]"
-          >
-            <ChevronLeft className="size-4" />
-          </button>
-        </div>
-        <div className="mb-1 grid grid-cols-7 gap-0.5 text-center">
-          {DAYS_AR.map((d) => (
-            <span key={d} className="py-0.5 text-[10px] font-bold text-[#8a7752]">
-              {d}
-            </span>
-          ))}
-        </div>
-        <div className="grid grid-cols-7 gap-0.5">
-          {cells.map((cell, i) => {
-            const inRange = cellInRange(cell.ymd);
-            const isStart = cell.ymd === effStart;
-            const isEnd = cell.ymd === effEnd && Boolean(effEnd);
-            const isToday = cell.ymd === todayYmd();
-            return (
-              <button
-                key={i}
-                type="button"
-                disabled={cell.disabled || !cell.currMonth}
-                onMouseEnter={() => {
-                  if (pickingEnd && !cell.disabled && cell.currMonth) setHoverYmd(cell.ymd);
-                }}
-                onMouseLeave={() => setHoverYmd(null)}
-                onClick={() => !cell.disabled && cell.currMonth && handleDayClick(cell.ymd)}
-                className={`relative flex h-8 w-full items-center justify-center text-[12px] font-semibold transition-all
-                  ${!cell.currMonth ? "pointer-events-none opacity-0" : ""}
-                  ${cell.disabled && cell.currMonth ? "cursor-not-allowed text-[#ddd] opacity-50" : ""}
-                  ${
-                    isStart || isEnd
-                      ? "z-10 rounded-lg bg-gradient-to-br from-[#dbb878] to-[#c9a356] text-white shadow-[0_2px_8px_-2px_rgba(219,184,120,0.6)]"
-                      : inRange && !cell.disabled
-                        ? "rounded-none bg-[#dbb878]/20 text-[#003749]"
-                        : isToday && !cell.disabled
-                          ? "rounded-lg border border-[#dbb878]/60 text-[#003749]"
-                          : !cell.disabled && cell.currMonth
-                            ? "rounded-lg text-[#3a2f1e] hover:bg-[#fdfbf6]"
-                            : ""
-                  }`}
-              >
-                {cell.day}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      {/* Footer Bar */}
+      <div className="border-t border-[#f0ebe4] bg-[#fdfbf6] px-4 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-[11px]">
+        {/* Action Button */}
+        <button
+          type="button"
+          onClick={handleConfirm}
+          className="w-full sm:w-auto order-last sm:order-first px-5 py-2 rounded-xl bg-gradient-to-r from-[#dbb878] to-[#c9a356] hover:from-[#c9a356] hover:to-[#b89245] text-white font-bold shadow-md transition-all active:scale-95 text-[12px]"
+        >
+          إختر التواريخ
+        </button>
 
-      <div className="border-t border-[#f0ebe4] bg-[#fdfbf6] px-4 py-3">
-        <p className="text-center text-[12px] font-bold text-[#003749]">
-          {pickingEnd ? (
-            <span className="text-[#dbb878]">{t("select")} {endLabel}</span>
-          ) : days != null ? (
-            <span>
-              مدة الحجز: <span className="tabular-nums text-[#dbb878]">{days}</span> يوم
+        {/* Info note */}
+        <div className="flex items-center gap-1 text-[#8a7752] text-[10px] order-2 sm:order-2">
+          <Info className="size-3 text-[#dbb878] shrink-0" />
+          <span>تستند الأوقات إلى ساعات عمل الفرع المحدد.</span>
+        </div>
+
+        {/* Summary Items */}
+        <div className="flex flex-wrap items-center justify-center gap-3 text-[11px] font-semibold text-[#003749] order-1 sm:order-3">
+          {/* Duration */}
+          <div className="flex items-center gap-1">
+            <Clock className="size-3.5 text-[#dbb878]" />
+            <span className="text-[#8a7752]">مدة الإيجار:</span>
+            <span className="font-bold text-[#003749]">{daysCount ?? 0} أيام</span>
+          </div>
+
+          {/* Return */}
+          <div className="flex items-center gap-1">
+            <CalendarRange className="size-3.5 text-[#dbb878]" />
+            <span className="text-[#8a7752]">التسليم:</span>
+            <span className="font-bold text-[#003749] dir-ltr">
+              {formattedDropoffDateStr !== "—"
+                ? `${formattedDropoffDateStr} · ${selectedDropoffTime}`
+                : "—"}
             </span>
-          ) : (
-            <span className="text-[#aaa08e]">{t("select")} {startLabel} {t("select")} {endLabel}</span>
-          )}
-        </p>
-        {pickingEnd && days != null ? (
-          <p className="mt-1 text-center text-[11px] font-semibold text-[#6b5a3b]">
-            معاينة: <span className="tabular-nums">{days}</span> يوم
-          </p>
-        ) : null}
+          </div>
+
+          {/* Pickup */}
+          <div className="flex items-center gap-1">
+            <CalendarRange className="size-3.5 text-[#dbb878]" />
+            <span className="text-[#8a7752]">الاستلام:</span>
+            <span className="font-bold text-[#003749] dir-ltr">
+              {formattedPickupDateStr !== "—"
+                ? `${formattedPickupDateStr} · ${selectedPickupTime}`
+                : "—"}
+            </span>
+          </div>
+        </div>
       </div>
     </div>,
     document.body,
   );
 }
+

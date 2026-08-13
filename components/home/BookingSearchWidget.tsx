@@ -1443,16 +1443,21 @@ export function BookingSearchWidget({
                   onClose={() => setDateRangeOpen(false)}
                   startDateDdMmYy={pickupDateDraft}
                   endDateDdMmYy={dropoffDateDraft}
+                  pickupTime={pickupTimeDraft}
+                  dropoffTime={dropoffTimeDraft}
                   schedule={pickupTimeBranchSchedule}
                   allowHolidayBooking={tabFlagsEff.allowHolidayBooking}
                   onStartChange={applyPickupDateOnly}
                   onRangeChange={(start, end) => {
                     applyDateRange(start, end);
+                  }}
+                  onPickupTimeChange={(t) => applyPickupTime(t)}
+                  onDropoffTimeChange={(t) => applyDropoffTime(t)}
+                  onConfirmRangeAndTimes={(start, end, pTime, dTime) => {
+                    applyDateRange(start, end);
+                    if (pTime) applyPickupTime(pTime);
+                    if (dTime) applyDropoffTime(dTime);
                     setDateRangeOpen(false);
-                    setTimeout(() => {
-                      pickupTimeRef.current?.focus();
-                      setPickupTimeOpen(true);
-                    }, 150);
                   }}
                   anchorRef={dateRangeActiveRef}
                   extraAnchorRefs={[pickupDateRef, dropoffDateRef]}
@@ -2057,16 +2062,21 @@ export function BookingSearchWidget({
                     onClose={() => setDateRangeOpen(false)}
                     startDateDdMmYy={pickupDateDraft}
                     endDateDdMmYy={dropoffDateDraft}
+                    pickupTime={pickupTimeDraft}
+                    dropoffTime={dropoffTimeDraft}
                     schedule={pickupTimeBranchSchedule}
                     allowHolidayBooking={tabFlagsEff.allowHolidayBooking}
                     onStartChange={applyPickupDateOnly}
                     onRangeChange={(start, end) => {
                       applyDateRange(start, end);
+                    }}
+                    onPickupTimeChange={(t) => applyPickupTime(t)}
+                    onDropoffTimeChange={(t) => applyDropoffTime(t)}
+                    onConfirmRangeAndTimes={(start, end, pTime, dTime) => {
+                      applyDateRange(start, end);
+                      if (pTime) applyPickupTime(pTime);
+                      if (dTime) applyDropoffTime(dTime);
                       setDateRangeOpen(false);
-                      setTimeout(() => {
-                        pickupTimeRef.current?.focus();
-                        setPickupTimeOpen(true);
-                      }, 150);
                     }}
                     anchorRef={dateRangeActiveRef}
                     extraAnchorRefs={[pickupDateRef, dropoffDateRef]}
