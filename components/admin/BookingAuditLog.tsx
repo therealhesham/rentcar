@@ -50,6 +50,7 @@ const EVENT_ICONS: Record<string, string> = {
   CONVERTED_TO_DIRECT: "⇒",
   REVERTED_TO_INQUIRY: "⇐",
   INTER_BRANCH_RETURN: "↔",
+  STAFF_BOOKING_EMAIL_SENT: "✉",
 };
 
 function statusLabel(s: string | null) {
@@ -99,6 +100,7 @@ export function BookingAuditLog({ logs }: { logs: BookingLogEntry[] }) {
                     day: "numeric",
                     hour: "2-digit",
                     minute: "2-digit",
+                    timeZone: "Asia/Riyadh",
                   })}
                 </span>
               </div>

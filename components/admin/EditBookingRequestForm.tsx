@@ -249,7 +249,9 @@ export function EditBookingModalInner({
                   })()}
                   {request.paidAt ? (
                     <span className="text-on-surface-variant" dir="ltr">
-                      {new Date(request.paidAt).toLocaleString("ar-SA")}
+                      {new Date(request.paidAt).toLocaleString("ar-SA", {
+                        timeZone: "Asia/Riyadh",
+                      })}
                     </span>
                   ) : null}
                   {request.paymentMethod ? (
@@ -459,7 +461,10 @@ export function EditBookingModalInner({
                   <p className="font-bold text-on-surface">بيانات إلغاء ذاتي (إن وُجدت)</p>
                   {request.cancelledAt ? (
                     <p className="mt-1 text-xs text-on-surface-variant" dir="ltr">
-                      وقت الإلغاء: {new Date(request.cancelledAt).toLocaleString("ar-SA")}
+                      وقت الإلغاء:{" "}
+                      {new Date(request.cancelledAt).toLocaleString("ar-SA", {
+                        timeZone: "Asia/Riyadh",
+                      })}
                     </p>
                   ) : null}
                   {request.cancellationDeductedDays != null && request.cancellationDeductedDays > 0 ? (

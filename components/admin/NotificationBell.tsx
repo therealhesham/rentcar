@@ -231,7 +231,9 @@ export function NotificationBell() {
                             {n.message}
                           </p>
                           <p className="mt-1 text-[10px] text-on-surface-variant/70">
-                            {new Date(n.createdAt).toLocaleString("ar-SA")}
+                            {new Date(n.createdAt).toLocaleString("ar-SA", {
+                              timeZone: "Asia/Riyadh",
+                            })}
                           </p>
                         </div>
                         {!n.isRead && (

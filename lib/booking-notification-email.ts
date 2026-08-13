@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { BOOKING_EVENTS } from "@/lib/booking-audit";
 import { sendPlainTransactionalEmail } from "@/lib/booking-invoice-email";
 import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
 import { absoluteUrl } from "@/lib/seo";
@@ -181,7 +182,7 @@ function buildNotificationText(row: {
 }
 
 /** حدث في BookingLog يمثّل «تم إرسال إيميل الموظفين» — يمنع التكرار بين مسارات الإنشاء وتأكيد الدفع. */
-const STAFF_NOTIFY_EVENT = "STAFF_BOOKING_EMAIL_SENT";
+const STAFF_NOTIFY_EVENT = BOOKING_EVENTS.STAFF_BOOKING_EMAIL_SENT;
 
 /**
  * حجز مباشر لسه مستني العميل يختار وسيلة الدفع (وسيلة فاضية + غير مدفوع).

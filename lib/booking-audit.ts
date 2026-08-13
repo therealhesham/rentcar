@@ -33,6 +33,8 @@ export const BOOKING_EVENTS = {
   INTER_BRANCH_RETURN: "INTER_BRANCH_RETURN",
   MIN_PRICE_FLOOR_APPLIED: "MIN_PRICE_FLOOR_APPLIED",
   MIN_PRICE_FLOOR_BYPASSED: "MIN_PRICE_FLOOR_BYPASSED",
+  /// علامة داخلية تمنع تكرار إيميل الموظفين — تُكتب من `booking-notification-email`.
+  STAFF_BOOKING_EMAIL_SENT: "STAFF_BOOKING_EMAIL_SENT",
 } as const;
 
 export type BookingEvent = (typeof BOOKING_EVENTS)[keyof typeof BOOKING_EVENTS];
@@ -57,6 +59,7 @@ export const BOOKING_EVENT_LABELS: Record<BookingEvent, string> = {
   INTER_BRANCH_RETURN: "تأكيد إرجاع بين الفروع",
   MIN_PRICE_FLOOR_APPLIED: "تفعيل الحد الأدنى للسعر",
   MIN_PRICE_FLOOR_BYPASSED: "تجاوز الحد الأدنى بتصريح",
+  STAFF_BOOKING_EMAIL_SENT: "إشعار الموظفين بالحجز",
 };
 
 export async function logBookingEvent(input: BookingEventInput): Promise<void> {
