@@ -1,14 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { OVERLAY_PANEL_Z } from "@/lib/overlay-z-index";
 
 type Options = {
-  panelWidth?: number;
+  panelWidth: number;
   gap?: number;
-  forceBelow?: boolean;
-  autoScrollOnOpen?: boolean;
-  containerRef?: React.RefObject<HTMLElement | null>;
 };
 
 /**
@@ -19,32 +16,10 @@ export function useAnchoredPopoverPosition(
   isOpen: boolean,
   anchorRef: React.RefObject<HTMLElement | null>,
   panelRef: React.RefObject<HTMLElement | null>,
-  { panelWidth = 740, gap = 8, forceBelow = false, autoScrollOnOpen = false, containerRef }: Options,
+  { panelWidth, gap = 8 }: Options,
 ) {
   const [style, setStyle] = useState<React.CSSProperties>({});
   const [ready, setReady] = useState(false);
-  const hasAutoScrolledRef = useRef(false);
-
-  // التمرير التلقائي لأسفل عند فتح النافذة حتى تظهر أسفل الويدجت بوضوح
-  useEffect(() => {
-    if (!isOpen) {
-      hasAutoScrolledRef.current = false;
-      return;
-    }
-    if (autoScrollOnOpen && !hasAutoScrolledRef.current) {
-      hasAutoScrolledRef.current = true;
-      const el = anchorRef.current;
-      if (el) {
-        const r = el.getBoundingClientRect();
-        const vh = window.innerHeight;
-        const panelH = panelRef.current?.offsetHeight ?? 380;
-        if (r.bottom + panelH > vh - 20 || r.top > 120) {
-          const targetScroll = Math.max(0, window.scrollY + r.top - 80);
-          window.scrollTo({ top: targetScroll, behavior: "smooth" });
-        }
-      }
-    }
-  }, [isOpen, autoScrollOnOpen, anchorRef, panelRef]);
 
   const update = useCallback(() => {
     const el = anchorRef.current;
@@ -53,30 +28,20 @@ export function useAnchoredPopoverPosition(
     const r = el.getBoundingClientRect();
     if (r.width === 0 && r.height === 0) return false;
 
-    const container = containerRef?.current;
-    const cr = container ? container.getBoundingClientRect() : null;
-
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-
-    // إن وُجد containerRef، يُطابق عرض اللوحة عرض الحاوي الرئيسي للويدجت بالكامل
-    const targetW = cr && cr.width > 0 ? cr.width : panelWidth;
-    const panelW = Math.min(targetW, vw - 16);
+    const panelW = Math.min(panelWidth, vw - 16);
     const isNarrow = vw < 640;
-
     let left = isNarrow
       ? Math.max(8, (vw - panelW) / 2)
-      : cr && cr.width > 0
-        ? cr.left
-        : r.right - panelW;
-
+      : r.right - panelW;
     if (left < 8) left = 8;
     if (left + panelW > vw - 8) left = vw - 8 - panelW;
 
     const panelH = panelRef.current?.offsetHeight ?? 300;
     const belowTop = r.bottom + gap;
     const fitsBelow = belowTop + panelH <= vh - 8;
-    const top = forceBelow || fitsBelow
+    const top = fitsBelow
       ? belowTop
       : Math.max(8, r.top - gap - panelH);
 
@@ -89,7 +54,7 @@ export function useAnchoredPopoverPosition(
     });
     setReady(true);
     return true;
-  }, [anchorRef, panelRef, containerRef, panelWidth, gap, forceBelow]);
+  }, [anchorRef, panelRef, panelWidth, gap]);
 
   useLayoutEffect(() => {
     if (!isOpen) {

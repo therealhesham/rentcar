@@ -1,22 +1,19 @@
 "use client";
 
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import {
   MapPin,
   Building2,
-  Plane,
   X,
   Search,
   ChevronDown,
   Navigation,
   Clock,
-  Phone,
-  MessageSquare,
 } from "lucide-react";
-import { useLocale } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import type { BookingCityBranchesOption, BookingBranchOption } from "@/lib/booking-location-options";
-import { useAnchoredPopoverPosition } from "@/lib/use-anchored-popover-position";
+import { OVERLAY_PANEL_Z } from "@/lib/overlay-z-index";
 
 type Props = {
   isOpen: boolean;
@@ -26,24 +23,283 @@ type Props = {
   defaultBranchSlug: string;
   onBranchSelect: (branchSlug: string, citySlug: string) => void;
   anchorRef: React.RefObject<HTMLElement | null>;
+  /** إذا مُرِّر، يُطابق عرض اللوحة عرض هذا الحاوي (مثل النموذج كاملاً). */
   containerRef?: React.RefObject<HTMLElement | null>;
   label: string;
 };
 
+/** Hook: يضع اللوحة أسفل anchor بنفس عرض containerRef (أو anchor إن لم يُمرَّر). */
+function useWidgetAlignedPosition(
+  isOpen: boolean,
+  anchorRef: React.RefObject<HTMLElement | null>,
+  containerRef: React.RefObject<HTMLElement | null> | undefined,
+  panelRef: React.RefObject<HTMLElement | null>,
+  gap = 6,
+) {
+  const [style, setStyle] = useState<React.CSSProperties>({});
+  const [ready, setReady] = useState(false);
+
+  const update = useCallback(() => {
+    const anchor = anchorRef.current;
+    if (!anchor) return false;
+    const ar = anchor.getBoundingClientRect();
+    if (ar.width === 0 && ar.height === 0) return false;
+
+    const container = containerRef?.current;
+    const cr = container ? container.getBoundingClientRect() : ar;
+
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    // Width: full container width, clamped to viewport
+    const panelW = Math.min(cr.width, vw - 16);
+    // Left: align with container left, keeping inside viewport
+    let left = cr.left;
+    if (left < 8) left = 8;
+    if (left + panelW > vw - 8) left = vw - 8 - panelW;
+
+    const panelH = panelRef.current?.offsetHeight ?? 400;
+    const belowTop = ar.bottom + gap;
+    const fitsBelow = belowTop + panelH <= vh - 8;
+    const top = fitsBelow ? belowTop : Math.max(8, ar.top - gap - panelH);
+
+    setStyle({
+      position: "fixed",
+      top,
+      left,
+      width: panelW,
+      zIndex: OVERLAY_PANEL_Z,
+    });
+    setReady(true);
+    return true;
+  }, [anchorRef, containerRef, panelRef, gap]);
+
+  useLayoutEffect(() => {
+    if (!isOpen) { setReady(false); setStyle({}); return; }
+    let cancelled = false;
+    let raf = 0;
+    const run = () => { if (cancelled) return; if (update()) return; raf = requestAnimationFrame(run); };
+    run();
+    return () => { cancelled = true; if (raf) cancelAnimationFrame(raf); };
+  }, [isOpen, update]);
+
+  useLayoutEffect(() => { if (isOpen && ready) update(); }, [isOpen, ready, update]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onScroll = () => update();
+    const onResize = () => update();
+    window.addEventListener("scroll", onScroll, true);
+    window.addEventListener("resize", onResize);
+    return () => {
+      window.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("resize", onResize);
+    };
+  }, [isOpen, update]);
+
+  return { style, ready };
+}
+
 function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const R = 6371; // Radius of the earth in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;  
+  const dLon = (lon2 - lon1) * Math.PI / 180; 
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2)
+    ; 
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
   return R * c;
 }
 
+type BranchMatch = {
+  branch: BookingBranchOption;
+  citySlug: string;
+  cityName: string;
+};
+
+/* ─── Branch Card ─────────────────────────────────────────────────────────── */
+function BranchCard({
+  branch,
+  isSelected,
+  onClick,
+  isRTL,
+  userLocation,
+}: {
+  branch: BookingBranchOption;
+  isSelected: boolean;
+  onClick: () => void;
+  isRTL: boolean;
+  userLocation?: { lat: number; lng: number } | null;
+}) {
+  const hasCoords = branch.lat != null && branch.lng != null;
+  const hasMapLink = !!branch.mapUrl || hasCoords;
+
+  function handleMapClick(e: React.MouseEvent) {
+    e.stopPropagation();
+    let url = branch.mapUrl;
+    if (!url && branch.lat != null && branch.lng != null) {
+      url = `https://www.google.com/maps/search/?api=1&query=${branch.lat},${branch.lng}`;
+    }
+    if (url) {
+      window.open(url, "_blank", "noopener,noreferrer");
+    }
+  }
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }}
+      className={`group relative flex w-full cursor-pointer flex-col gap-2.5 rounded-xl border p-4 text-start transition-all duration-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#dbb878] ${
+        isSelected
+          ? "border-[#dbb878] bg-[#fffcf5] shadow-[0_4px_20px_-4px_rgba(219,184,120,0.3)] ring-1 ring-[#dbb878]/50"
+          : "border-[#e8e0d0] bg-white hover:-translate-y-0.5 hover:border-[#dbb878]/60 hover:bg-[#faf9f5] hover:shadow-[0_8px_24px_-8px_rgba(0,55,73,0.12)]"
+      }`}
+    >
+      {/* Selected indicator */}
+      {isSelected && (
+        <span className="absolute end-3 top-3 flex size-5 items-center justify-center rounded-full bg-[#dbb878]">
+          <svg className="size-3 text-white" viewBox="0 0 12 12" fill="none">
+            <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
+      )}
+
+      {/* Branch name and map pin */}
+      <div className="flex items-start justify-between gap-2 pe-6">
+        <span className="flex min-w-0 flex-1 items-center gap-2.5">
+          <span className={`flex size-8 shrink-0 items-center justify-center rounded-full ${isSelected ? "bg-[#dbb878]/20 shadow-inner" : "bg-[#f5f0e8] group-hover:bg-[#dbb878]/15"} transition-all duration-300`}>
+            {hasCoords
+              ? <MapPin className={`size-4 ${isSelected ? "text-[#c9a356]" : "text-[#8a7752]"}`} />
+              : <Building2 className={`size-4 ${isSelected ? "text-[#c9a356]" : "text-[#8a7752]"}`} />}
+          </span>
+          <span className={`min-w-0 flex-1 text-[14px] font-bold leading-snug whitespace-normal break-words ${isSelected ? "text-[#003749]" : "text-[#1a1a1a] group-hover:text-[#003749]"} transition-colors duration-300`}>
+            {branch.name}
+          </span>
+        </span>
+
+        {hasMapLink && (
+          <button
+            type="button"
+            onClick={handleMapClick}
+            title={isRTL ? "عرض الموقع على الخريطة" : "View on map"}
+            className="flex size-8 shrink-0 items-center justify-center rounded-full border border-[#e8e0d0] bg-white text-[#8a7752] shadow-sm transition-all duration-300 hover:scale-105 hover:border-[#dbb878] hover:bg-[#dbb878] hover:text-white hover:shadow-md"
+          >
+            <MapPin className="size-4" />
+          </button>
+        )}
+      </div>
+
+      {/* Address & Distance */}
+      <div className="flex items-start justify-between gap-2">
+        {branch.address && (
+          <span className="flex items-start gap-1.5 text-[12px] text-[#5c4d32] leading-relaxed opacity-90">
+            <MapPin className="mt-0.5 size-3 shrink-0 text-[#8a7752]/70" aria-hidden />
+            <span>{branch.address}</span>
+          </span>
+        )}
+        
+        {userLocation && branch.lat != null && branch.lng != null && (
+          <span className="shrink-0 flex items-center gap-1.5 text-[11px] font-bold text-[#003749] bg-[#e8e0d0]/40 px-2 py-1 rounded-md">
+            <Navigation className="size-3 text-[#dbb878]" />
+            <span dir="ltr">
+              {(() => {
+                const dist = getDistanceKm(userLocation.lat, userLocation.lng, branch.lat, branch.lng);
+                return dist < 1 
+                  ? `${(dist * 1000).toFixed(0)} ${isRTL ? "متر" : "m"}` 
+                  : `${dist.toFixed(1)} ${isRTL ? "كم" : "km"}`;
+              })()}
+            </span>
+          </span>
+        )}
+      </div>
+
+      {/* Opening hours hint */}
+      {branch.openingHours && (
+        <span className="flex items-center gap-1.5 text-[11px] text-[#8a7752]">
+          <Clock className="size-3 shrink-0" aria-hidden />
+          <span className="leading-tight">
+            {isRTL ? "متاح الأسبوع" : "Available"}
+          </span>
+        </span>
+      )}
+    </div>
+  );
+}
+
+/* ─── City Accordion Row ──────────────────────────────────────────────────── */
+function CityAccordion({
+  city,
+  isExpanded,
+  isRTL,
+  effectiveBranch,
+  userLocation,
+  onToggle,
+  onBranchSelect,
+}: {
+  city: BookingCityBranchesOption;
+  isExpanded: boolean;
+  isRTL: boolean;
+  effectiveBranch: string;
+  userLocation?: { lat: number; lng: number } | null;
+  onToggle: () => void;
+  onBranchSelect: (branchSlug: string, citySlug: string) => void;
+}) {
+  const selectedInThisCity = city.branches.some((b) => b.slug === effectiveBranch);
+
+  return (
+    <div className="border-b border-[#f0ebe4] last:border-0">
+      {/* Accordion header */}
+      <button
+        type="button"
+        onClick={onToggle}
+        className={`group flex w-full cursor-pointer items-center justify-between px-5 py-4 text-start transition-all duration-300 hover:bg-[#faf9f5] ${isExpanded ? "bg-[#faf9f5]" : ""}`}
+      >
+        <span className="flex items-center gap-3.5">
+          <span className={`flex size-9 shrink-0 items-center justify-center rounded-full border shadow-sm transition-all duration-300 ${isExpanded ? "border-[#dbb878]/50 bg-[#fffcf5] text-[#dbb878] scale-105" : "border-[#e8e0d0] bg-white text-[#8a7752] group-hover:border-[#dbb878]/30 group-hover:text-[#dbb878]"}`}>
+            <Building2 className="size-4" />
+          </span>
+          <span>
+            <span className={`block text-[14px] font-bold ${isExpanded ? "text-[#003749]" : "text-[#1a1a1a]"} transition-colors`}>
+              {city.name}
+              {selectedInThisCity && (
+                <span className="ms-2 inline-flex size-2 rounded-full bg-[#dbb878] align-middle" />
+              )}
+            </span>
+            <span className="block text-[11px] text-[#8a7752]">
+              {city.branches.length} {isRTL ? "فرع" : "branch"}
+            </span>
+          </span>
+        </span>
+        <ChevronDown
+          className={`size-4 text-[#8a7752] transition-transform duration-200 ${isExpanded ? "rotate-180 text-[#c9a356]" : ""}`}
+          aria-hidden
+        />
+      </button>
+
+      {/* Accordion body — branch cards list */}
+      {isExpanded && (
+        <div className="grid grid-cols-1 gap-2.5 px-4 pb-4">
+          {city.branches.map((branch) => (
+            <BranchCard
+              key={branch.slug}
+              branch={branch}
+              isSelected={branch.slug === effectiveBranch}
+              isRTL={isRTL}
+              userLocation={userLocation}
+              onClick={() => onBranchSelect(branch.slug, city.slug)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Main Popover ────────────────────────────────────────────────────────── */
 export function LocationPickerPopover({
   isOpen,
   onClose,
@@ -52,32 +308,23 @@ export function LocationPickerPopover({
   defaultBranchSlug,
   onBranchSelect,
   anchorRef,
+  containerRef,
   label,
 }: Props) {
   const panelRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const t = useTranslations("Common");
   const locale = useLocale();
   const isRTL = locale === "ar";
 
   const [query, setQuery] = useState("");
-  const [, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [previewBranchSlug, setPreviewBranchSlug] = useState<string>(selectedBranchSlug || defaultBranchSlug);
-  const [showHours, setShowHours] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
-
-  const { style: panelStyle, ready: panelReady } = useAnchoredPopoverPosition(
-    isOpen,
-    anchorRef,
-    panelRef,
-    { panelWidth: 840, gap: 8, forceBelow: true, autoScrollOnOpen: true },
-  );
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [expandedCities, setExpandedCities] = useState<Set<string>>(() => {
+    // Start with first city expanded
+    const s = new Set<string>();
+    if (dateCities[0]) s.add(dateCities[0].slug);
+    return s;
+  });
 
   // Close on outside click
   useEffect(() => {
@@ -107,480 +354,227 @@ export function LocationPickerPopover({
     return () => document.removeEventListener("keydown", handler);
   }, [isOpen, onClose]);
 
-  // Setup initial preview branch when opening
+  // Reset & setup when opening
   useEffect(() => {
     if (!isOpen) {
       setQuery("");
-      setShowHours(false);
       return;
     }
-    const initialSlug = selectedBranchSlug || defaultBranchSlug;
-    if (initialSlug) {
-      setPreviewBranchSlug(initialSlug);
-    }
-    setTimeout(() => searchRef.current?.focus(), 60);
-  }, [isOpen, selectedBranchSlug, defaultBranchSlug]);
 
-  // Find all branches flattened with city slug
-  const allBranches = useMemo(() => {
-    const list: Array<{ branch: BookingBranchOption; citySlug: string; cityName: string }> = [];
-    for (const c of dateCities) {
-      for (const b of c.branches) {
-        list.push({ branch: b, citySlug: c.slug, cityName: c.name });
-      }
-    }
-    return list;
-  }, [dateCities]);
-
-  // Filtered branches
-  const filteredBranches = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return allBranches;
-    return allBranches.filter(
-      (item) =>
-        item.branch.name.toLowerCase().includes(q) ||
-        item.cityName.toLowerCase().includes(q) ||
-        (item.branch.address && item.branch.address.toLowerCase().includes(q)),
+    // Auto-expand city of selected branch
+    const effectiveBranch = selectedBranchSlug;
+    const selectedCity = dateCities.find((c) =>
+      c.branches.some((b) => b.slug === effectiveBranch)
     );
-  }, [query, allBranches]);
 
-  // Group branches by Airport vs Dynamic Cities (from database)
-  const { airportBranches, cityGroups } = useMemo(() => {
+    setExpandedCities(() => {
+      const s = new Set<string>();
+      if (selectedCity) {
+        s.add(selectedCity.slug);
+      } else if (dateCities[0]) {
+        s.add(dateCities[0].slug);
+      }
+      return s;
+    });
+
+    // Auto-focus search field
+    setTimeout(() => searchRef.current?.focus(), 60);
+  }, [isOpen, selectedBranchSlug, defaultBranchSlug, dateCities]);
+
+  // Expand cities that match query
+  useEffect(() => {
     const q = query.trim().toLowerCase();
-    const airport: Array<{ branch: BookingBranchOption; citySlug: string }> = [];
-    const cities: Array<{
-      citySlug: string;
-      cityName: string;
-      headerTitle: string;
-      branches: Array<{ branch: BookingBranchOption; citySlug: string }>;
-    }> = [];
-
+    if (!q) return;
+    const toExpand = new Set<string>();
     for (const city of dateCities) {
-      const cityNonAirportBranches: Array<{ branch: BookingBranchOption; citySlug: string }> = [];
+      const cityMatches = city.name.toLowerCase().includes(q);
+      const branchMatches = city.branches.some((b) =>
+        b.name.toLowerCase().includes(q)
+      );
+      if (cityMatches || branchMatches) toExpand.add(city.slug);
+    }
+    setExpandedCities(toExpand);
+  }, [query, dateCities]);
 
-      for (const branch of city.branches) {
-        const nameLower = branch.name.toLowerCase();
-        const matchesQuery =
-          !q ||
-          nameLower.includes(q) ||
-          city.name.toLowerCase().includes(q) ||
-          (branch.address && branch.address.toLowerCase().includes(q));
-
-        if (!matchesQuery) continue;
-
-        if (nameLower.includes("مطار") || nameLower.includes("airport")) {
-          airport.push({ branch, citySlug: city.slug });
-        } else {
-          cityNonAirportBranches.push({ branch, citySlug: city.slug });
-        }
-      }
-
-      if (cityNonAirportBranches.length > 0) {
-        const headerTitle = isRTL
-          ? city.name.startsWith("فروع")
-            ? city.name
-            : `فروع ${city.name}`
-          : `${city.name} Branches`;
-
-        cities.push({
-          citySlug: city.slug,
-          cityName: city.name,
-          headerTitle,
-          branches: cityNonAirportBranches,
-        });
-      }
+  // Search results (filtered cities & branches)
+  const filteredCities = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    let cities = dateCities;
+    
+    if (q) {
+      cities = cities
+        .map((city) => {
+          const cityMatches = city.name.toLowerCase().includes(q);
+          const matchedBranches = cityMatches
+            ? city.branches
+            : city.branches.filter((b) => b.name.toLowerCase().includes(q));
+          return matchedBranches.length > 0 ? { ...city, branches: matchedBranches } : null;
+        })
+        .filter(Boolean) as BookingCityBranchesOption[];
     }
 
-    return { airportBranches: airport, cityGroups: cities };
-  }, [dateCities, query, isRTL]);
+    if (userLocation) {
+      cities = cities.map(city => {
+        const sortedBranches = [...city.branches].sort((a, b) => {
+          if (a.lat == null || a.lng == null) return 1;
+          if (b.lat == null || b.lng == null) return -1;
+          const distA = getDistanceKm(userLocation.lat, userLocation.lng, a.lat, a.lng);
+          const distB = getDistanceKm(userLocation.lat, userLocation.lng, b.lat, b.lng);
+          return distA - distB;
+        });
+        return { ...city, branches: sortedBranches };
+      }).sort((cityA, cityB) => {
+        const aFirst = cityA.branches[0];
+        const bFirst = cityB.branches[0];
+        if (!aFirst || aFirst.lat == null || aFirst.lng == null) return 1;
+        if (!bFirst || bFirst.lat == null || bFirst.lng == null) return -1;
+        const distA = getDistanceKm(userLocation.lat, userLocation.lng, aFirst.lat, aFirst.lng);
+        const distB = getDistanceKm(userLocation.lat, userLocation.lng, bFirst.lat, bFirst.lng);
+        return distA - distB;
+      });
+    }
 
-  // Active preview branch object
-  const activeBranchItem = useMemo(() => {
-    const found = allBranches.find((item) => item.branch.slug === previewBranchSlug);
-    return found || allBranches[0] || null;
-  }, [allBranches, previewBranchSlug]);
+    return cities;
+  }, [query, dateCities, userLocation]);
 
-  const activeBranch = activeBranchItem?.branch || null;
+  const effectiveBranch = selectedBranchSlug;
+  const isSearching = query.trim().length > 0;
+  const totalBranches = dateCities.reduce((s, c) => s + c.branches.length, 0);
 
-  if (!isOpen || (!isMobile && !panelReady) || typeof document === "undefined") return null;
+  const { style: panelStyle, ready: panelReady } = useWidgetAlignedPosition(
+    isOpen,
+    anchorRef,
+    containerRef,
+    panelRef,
+  );
+
+  if (!isOpen || !panelReady || typeof document === "undefined") return null;
 
   function selectBranch(branchSlug: string, citySlug: string) {
     onBranchSelect(branchSlug, citySlug);
     onClose();
   }
 
-  if (isMobile) {
-    return createPortal(
-      <div
-        role="dialog"
-        aria-label="مكان البحث"
-        className="fixed inset-0 z-[100] flex flex-col bg-white text-right font-sans"
-        dir={isRTL ? "rtl" : "ltr"}
-      >
-        {/* Header Bar */}
-        <div className="flex items-center justify-between border-b border-[#f0ebe4] px-4 py-3.5 bg-gradient-to-l from-[#fdfbf6] to-[#f9f5ee]">
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-[#003749] font-bold text-sm hover:text-[#c9a356] hover:underline focus:outline-none"
-          >
-            إغلاق
-          </button>
-          <h3 className="text-base font-bold text-[#003749]">مكان البحث</h3>
-        </div>
-
-        {/* Search Input Box */}
-        <div className="p-4 bg-white">
-          <div className="relative flex items-center gap-2 rounded-xl border border-[#ebe4d3] bg-[#fdfbf6] px-3 py-2.5 shadow-sm focus-within:border-[#dbb878] focus-within:bg-white">
-            <MapPin className="size-4 shrink-0 text-[#c9a356]" aria-hidden />
-            <input
-              ref={searchRef}
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="المدينة"
-              className="flex-1 bg-transparent text-sm font-semibold text-[#003749] placeholder:text-[#aaa08e] outline-none"
-            />
-            {query ? (
-              <button
-                type="button"
-                onClick={() => setQuery("")}
-                className="flex size-5 items-center justify-center rounded-full text-gray-400 hover:text-gray-600"
-              >
-                <X className="size-4" />
-              </button>
-            ) : null}
-          </div>
-        </div>
-
-        {/* Grouped Results */}
-        <div className="flex-1 overflow-y-auto pb-10">
-          {airportBranches.length === 0 && cityGroups.length === 0 ? (
-            <p className="py-8 text-center text-xs text-[#aaa08e]">
-              {isRTL ? "لا توجد نتائج مطابقة" : "No matching results"}
-            </p>
-          ) : (
-            <>
-              {/* Category 1: Airport Branches */}
-              {airportBranches.length > 0 && (
-                <div>
-                  <div className="bg-[#f9f6f0] border-y border-[#ebe4d3]/60 px-4 py-2 text-xs font-bold text-[#003749] flex items-center justify-between">
-                    <span>فروع المطار</span>
-                  </div>
-                  <div className="divide-y divide-[#f0ebe4]">
-                    {airportBranches.map(({ branch, citySlug }) => (
-                      <button
-                        key={branch.slug}
-                        type="button"
-                        onClick={() => selectBranch(branch.slug, citySlug)}
-                        className="flex items-center justify-between gap-3 w-full px-4 py-3.5 text-start hover:bg-[#fdfbf6] active:bg-[#f9f5ee] transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <Plane className="size-4 shrink-0 text-[#c9a356]" />
-                          <span className="text-sm font-bold text-[#003749]">{branch.name}</span>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Category 2: Dynamic City Groups (فروع كل مدينة على حدة) */}
-              {cityGroups.map((group) => (
-                <div key={group.citySlug}>
-                  <div className="bg-[#f9f6f0] border-y border-[#ebe4d3]/60 px-4 py-2 text-xs font-bold text-[#003749] flex items-center justify-between">
-                    <span>{group.headerTitle}</span>
-                  </div>
-                  <div className="divide-y divide-[#f0ebe4]">
-                    {group.branches.map(({ branch, citySlug }) => (
-                      <button
-                        key={branch.slug}
-                        type="button"
-                        onClick={() => selectBranch(branch.slug, citySlug)}
-                        className="flex items-center justify-between gap-3 w-full px-4 py-3.5 text-start hover:bg-[#fdfbf6] active:bg-[#f9f5ee] transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <Building2 className="size-4 shrink-0 text-[#c9a356]" />
-                          <span className="text-sm font-bold text-[#003749]">{branch.name}</span>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </>
-          )}
-        </div>
-      </div>,
-      document.body
-    );
+  function toggleCity(slug: string) {
+    setExpandedCities((prev) => {
+      const next = new Set(prev);
+      if (next.has(slug)) next.delete(slug);
+      else next.add(slug);
+      return next;
+    });
   }
-
-  // Google Maps Embed URL for active branch
-  const mapEmbedUrl = (() => {
-    if (!activeBranch) return "";
-    if (activeBranch.lat != null && activeBranch.lng != null) {
-      return `https://maps.google.com/maps?q=${activeBranch.lat},${activeBranch.lng}&z=14&output=embed`;
-    }
-    const q = encodeURIComponent(`${activeBranch.name} ${activeBranch.address || ""}`);
-    return `https://maps.google.com/maps?q=${q}&z=14&output=embed`;
-  })();
-
-  const phoneNum = activeBranch?.phone?.trim() || null;
 
   return createPortal(
     <div
       ref={panelRef}
       role="dialog"
-      aria-label={`اختر ${label}`}
+      aria-label={`${t("select")} ${label}`}
       style={panelStyle}
-      className="location-popover flex flex-col overflow-hidden rounded-2xl border border-[#ebe4d3] bg-white shadow-[0_20px_60px_-10px_rgba(0,55,73,0.22),0_4px_16px_-4px_rgba(0,55,73,0.12)] text-right"
+      className="location-popover flex flex-col overflow-hidden rounded-2xl border border-[#e8e0d0]/60 bg-white/95 backdrop-blur-md shadow-[0_32px_64px_-12px_rgba(0,55,73,0.25),0_8px_24px_-8px_rgba(0,55,73,0.15)] ring-1 ring-black/5"
       dir={isRTL ? "rtl" : "ltr"}
     >
-      {/* Popover Header */}
-      <div className="flex items-center justify-between border-b border-[#f0ebe4] bg-gradient-to-l from-[#fdfbf6] to-[#f9f5ee] px-4 py-3 shrink-0">
-        <div className="flex items-center gap-2">
-          <span className="flex size-7 items-center justify-center rounded-full bg-[#dbb878]/15">
-            <MapPin className="size-3.5 text-[#dbb878]" />
-          </span>
-          <span className="text-[13px] font-bold text-[#003749]">موقع الاستلام والتسليم</span>
+      {/* ── Search bar ─────────────────────────────────────── */}
+      <div className="shrink-0 bg-white/80 px-5 pt-5 pb-3">
+        <div className="relative flex items-center gap-2.5 rounded-xl border-2 border-[#e8e0d0] bg-[#faf9f5] px-4 py-3 transition-all duration-300 focus-within:border-[#dbb878] focus-within:bg-white focus-within:shadow-[0_4px_20px_-4px_rgba(219,184,120,0.2)]">
+          <Search className="size-4.5 shrink-0 text-[#dbb878]" aria-hidden />
+          <input
+            ref={searchRef}
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={isRTL ? "ابحث عن مدينة أو فرع…" : "Search for a city or branch…"}
+            className="flex-1 bg-transparent text-[15px] text-[#003749] placeholder:text-[#8a7752] outline-none"
+            aria-label={isRTL ? "بحث عن مدينة أو فرع" : "Search city or branch"}
+          />
+          {query ? (
+            <button
+              type="button"
+              onClick={() => setQuery("")}
+              className="flex size-7 cursor-pointer shrink-0 items-center justify-center rounded-full bg-[#f5f0e8] text-[#8a7752] transition-all hover:bg-[#e8e0d0] hover:text-[#003749]"
+              aria-label={isRTL ? "مسح البحث" : "Clear search"}
+            >
+              <X className="size-4" />
+            </button>
+          ) : null}
         </div>
+
+        {/* "Find branches near me" shortcut */}
         <button
           type="button"
-          onClick={onClose}
-          className="flex size-7 items-center justify-center rounded-full text-[#8a7752] transition-colors hover:bg-[#f0ebe4] hover:text-[#003749]"
-          aria-label="إغلاق"
+          className="mt-2.5 flex cursor-pointer items-center gap-2 text-[12px] font-semibold text-[#003749] transition-opacity hover:opacity-75"
+          onClick={() => {
+            if (!navigator.geolocation) return;
+            navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                const lat = pos.coords.latitude;
+                const lng = pos.coords.longitude;
+                setUserLocation({ lat, lng });
+                
+                // Find closest city to expand it
+                let bestCity: string | null = null;
+                let minDist = Infinity;
+                for (const city of dateCities) {
+                  for (const b of city.branches) {
+                    if (b.lat == null || b.lng == null) continue;
+                    const dist = getDistanceKm(lat, lng, b.lat, b.lng);
+                    if (dist < minDist) {
+                      minDist = dist;
+                      bestCity = city.slug;
+                    }
+                  }
+                }
+                if (bestCity) {
+                  setExpandedCities((prev) => {
+                    const next = new Set(prev);
+                    next.add(bestCity!);
+                    return next;
+                  });
+                }
+              },
+              () => {/* ignore */}
+            );
+          }}
         >
-          <X className="size-4" />
+          <Navigation className="size-3.5 text-[#dbb878]" aria-hidden />
+          {isRTL ? "البحث عن أقرب فرع" : "Find Branches Near Me"}
         </button>
       </div>
 
-      {/* Main Grid: Right Side (Branch Categories & List), Left Side (Map Preview) */}
-      <div className="p-4 bg-white">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
-          
-          {/* RIGHT SIDE: Branch Categories & Search List (1st in DOM -> Right in RTL) */}
-          <div className="md:col-span-5 flex flex-col gap-3 max-h-[440px] overflow-hidden pe-1">
-            {/* Search Input */}
-            <div className="relative flex items-center gap-2 rounded-xl border border-[#ebe4d3] bg-[#fdfbf6] px-3 py-2 transition-all focus-within:border-[#dbb878] focus-within:bg-white">
-              <Search className="size-4 shrink-0 text-[#dbb878]" aria-hidden />
-              <input
-                ref={searchRef}
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder={isRTL ? "مدينة أو فرع..." : "City or branch..."}
-                className="flex-1 bg-transparent text-[13px] text-[#003749] placeholder:text-[#aaa08e] outline-none"
-              />
-              {query ? (
-                <button
-                  type="button"
-                  onClick={() => setQuery("")}
-                  className="flex size-5 items-center justify-center rounded-full bg-[#f0ebe4] text-[#8a7752] hover:text-[#003749]"
-                >
-                  <X className="size-3" />
-                </button>
-              ) : null}
-            </div>
+      {/* ── City list heading ───────────────────────────────── */}
+      <div className="shrink-0 border-t border-b border-[#f0ebe4] bg-[#fdfbf6] px-4 py-2">
+        <span className="text-[12px] font-bold uppercase tracking-widest text-[#8a7752]">
+          {isSearching
+            ? isRTL
+              ? `${filteredCities.reduce((s, c) => s + c.branches.length, 0)} نتيجة`
+              : `${filteredCities.reduce((s, c) => s + c.branches.length, 0)} result(s)`
+            : isRTL
+              ? `${dateCities.length} مدينة — ${totalBranches} فرع`
+              : `${dateCities.length} cities — ${totalBranches} branches`}
+        </span>
+      </div>
 
-            {/* Find nearest branch shortcut */}
-            <button
-              type="button"
-              className="flex items-center gap-1.5 text-[11px] font-semibold text-[#003749] hover:text-[#dbb878] transition-colors"
-              onClick={() => {
-                if (!navigator.geolocation) return;
-                navigator.geolocation.getCurrentPosition(
-                  (pos) => {
-                    const lat = pos.coords.latitude;
-                    const lng = pos.coords.longitude;
-                    setUserLocation({ lat, lng });
-                    let bestSlug: string | null = null;
-                    let minDist = Infinity;
-                    for (const item of allBranches) {
-                      if (item.branch.lat == null || item.branch.lng == null) continue;
-                      const d = getDistanceKm(lat, lng, item.branch.lat, item.branch.lng);
-                      if (d < minDist) {
-                        minDist = d;
-                        bestSlug = item.branch.slug;
-                      }
-                    }
-                    if (bestSlug) setPreviewBranchSlug(bestSlug);
-                  },
-                  () => {},
-                );
-              }}
-            >
-              <Navigation className="size-3 text-[#dbb878]" />
-              <span>{isRTL ? "البحث عن أقرب فرع" : "Find Nearest Branch"}</span>
-            </button>
-
-            {/* Scrollable Branch List grouped by category */}
-            <div className="flex-1 overflow-y-auto pe-1 space-y-4 max-h-[360px] custom-scrollbar">
-              {airportBranches.length === 0 && cityGroups.length === 0 ? (
-                <p className="py-8 text-center text-[12px] text-[#aaa08e]">
-                  {isRTL ? "لا توجد نتائج مطابقة" : "No matching results"}
-                </p>
-              ) : (
-                <>
-                  {/* Category 1: Airport Branches (فروع المطار) */}
-                  {airportBranches.length > 0 && (
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex items-center gap-1.5 px-1">
-                        <Plane className="size-4 text-[#c9a356]" />
-                        <h4 className="text-[13px] font-bold text-[#c9a356]">
-                          {isRTL ? "فروع المطار" : "Airport Branches"}
-                        </h4>
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        {airportBranches.map(({ branch, citySlug }) => {
-                          const isSelected = branch.slug === selectedBranchSlug;
-                          const isPreviewed = branch.slug === previewBranchSlug;
-
-                          return (
-                            <button
-                              key={branch.slug}
-                              type="button"
-                              onMouseEnter={() => setPreviewBranchSlug(branch.slug)}
-                              onClick={() => selectBranch(branch.slug, citySlug)}
-                              className={`group flex items-center justify-between gap-2 w-full p-2.5 rounded-xl text-start transition-all ${
-                                isSelected
-                                  ? "bg-[#dbb878]/20 border border-[#dbb878] text-[#003749] font-bold"
-                                  : isPreviewed
-                                    ? "bg-[#fdfbf6] border border-[#dbb878]/60 text-[#003749]"
-                                    : "bg-white border border-[#f0ebe4] text-gray-700 hover:bg-[#fdfbf6] hover:border-[#dbb878]/40"
-                              }`}
-                            >
-                              <div className="flex items-center gap-2 min-w-0 flex-1">
-                                <Plane className={`size-3.5 shrink-0 ${isSelected || isPreviewed ? "text-[#dbb878]" : "text-gray-400"}`} />
-                                <span className="text-[12px] font-semibold truncate">{branch.name}</span>
-                              </div>
-                              {isSelected && (
-                                <span className="size-2 rounded-full bg-[#dbb878] shrink-0" />
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Category 2: Dynamic City Groups (فروع المدينة المنورة, فروع الرياض, إلخ) */}
-                  {cityGroups.map((group) => (
-                    <div key={group.citySlug} className="flex flex-col gap-1.5">
-                      <div className="flex items-center gap-1.5 px-1">
-                        <Building2 className="size-4 text-[#c9a356]" />
-                        <h4 className="text-[13px] font-bold text-[#c9a356]">
-                          {group.headerTitle}
-                        </h4>
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        {group.branches.map(({ branch, citySlug }) => {
-                          const isSelected = branch.slug === selectedBranchSlug;
-                          const isPreviewed = branch.slug === previewBranchSlug;
-
-                          return (
-                            <button
-                              key={branch.slug}
-                              type="button"
-                              onMouseEnter={() => setPreviewBranchSlug(branch.slug)}
-                              onClick={() => selectBranch(branch.slug, citySlug)}
-                              className={`group flex items-center justify-between gap-2 w-full p-2.5 rounded-xl text-start transition-all ${
-                                isSelected
-                                  ? "bg-[#dbb878]/20 border border-[#dbb878] text-[#003749] font-bold"
-                                  : isPreviewed
-                                    ? "bg-[#fdfbf6] border border-[#dbb878]/60 text-[#003749]"
-                                    : "bg-white border border-[#f0ebe4] text-gray-700 hover:bg-[#fdfbf6] hover:border-[#dbb878]/40"
-                              }`}
-                            >
-                              <div className="flex items-center gap-2 min-w-0 flex-1">
-                                <Building2 className={`size-3.5 shrink-0 ${isSelected || isPreviewed ? "text-[#dbb878]" : "text-gray-400"}`} />
-                                <span className="text-[12px] font-semibold truncate">{branch.name}</span>
-                              </div>
-                              {isSelected && (
-                                <span className="size-2 rounded-full bg-[#dbb878] shrink-0" />
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* LEFT SIDE: Interactive Map Preview & Info Card Overlay (2nd in DOM -> Left in RTL) */}
-          <div className="md:col-span-7 relative h-[400px] rounded-2xl overflow-hidden border border-[#ebe4d3] shadow-inner bg-[#f9f5ee]">
-            {activeBranch ? (
-              <>
-                {/* Embedded Map */}
-                <iframe
-                  title={`خريطة ${activeBranch.name}`}
-                  src={mapEmbedUrl}
-                  className="w-full h-full border-0"
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                />
-
-                {/* Floating Branch Info Card Overlay */}
-                <div className="absolute top-3 start-3 z-10 w-[270px] max-w-[calc(100%-24px)] rounded-xl bg-white/95 backdrop-blur-md p-3.5 shadow-lg border border-[#ebe4d3] text-right flex flex-col gap-2">
-                  {/* Branch Name */}
-                  <h5 className="text-[13px] font-bold text-[#003749] leading-snug">
-                    {activeBranch.name}
-                  </h5>
-
-                  {/* Address */}
-                  <p className="text-[11px] text-gray-500 leading-relaxed">
-                    {activeBranch.address || activeBranch.name}
-                  </p>
-
-                  {/* Working Hours Toggle */}
-                  <div className="flex flex-col">
-                    <button
-                      type="button"
-                      onClick={() => setShowHours((v) => !v)}
-                      className="flex items-center gap-1 text-[11px] font-semibold text-[#8a7752] hover:text-[#003749] transition-colors"
-                    >
-                      <Clock className="size-3 text-[#dbb878]" />
-                      <span>{isRTL ? "ساعات العمل" : "Working Hours"}</span>
-                      <ChevronDown className={`size-3 transition-transform ${showHours ? "rotate-180" : ""}`} />
-                    </button>
-
-                    {showHours && (
-                      <div className="mt-1.5 text-[10px] text-gray-600 bg-[#fdfbf6] p-2 rounded-lg border border-[#f0ebe4]">
-                        <p className="font-semibold text-[#003749]">طوال أيام الأسبوع</p>
-                        <p className="mt-0.5 text-gray-500">08:00 صباحاً - 11:00 مساءً</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Phone Call Pill Button */}
-                  {phoneNum && (
-                    <div className="pt-1">
-                      <a
-                        href={`tel:${phoneNum.replace(/\s+/g, "")}`}
-                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#fdfbf6] border border-[#ebe4d3] text-[11px] font-bold text-[#003749] hover:bg-[#dbb878] hover:text-white transition-all shadow-sm"
-                        dir="ltr"
-                      >
-                        <Phone className="size-3 text-[#dbb878]" />
-                        <span>{phoneNum}</span>
-                      </a>
-                    </div>
-                  )}
-                </div>
-              </>
-            ) : (
-              <div className="flex h-full items-center justify-center text-gray-400 text-[12px]">
-                {isRTL ? "اختر فرعاً لعرض الخريطة" : "Select a branch to view map"}
-              </div>
-            )}
-          </div>
-
-        </div>
+      {/* ── Scrollable accordion list ───────────────────────── */}
+      <div className="overflow-y-auto" style={{ maxHeight: 420 }}>
+        {filteredCities.length === 0 ? (
+          <p className="px-4 py-10 text-center text-[13px] text-[#aaa08e]">
+            {isRTL ? "لا توجد نتائج مطابقة" : "No results found"}
+          </p>
+        ) : (
+          filteredCities.map((city) => (
+            <CityAccordion
+              key={city.slug}
+              city={city}
+              isExpanded={expandedCities.has(city.slug)}
+              isRTL={isRTL}
+              effectiveBranch={effectiveBranch}
+              userLocation={userLocation}
+              onToggle={() => toggleCity(city.slug)}
+              onBranchSelect={selectBranch}
+            />
+          ))
+        )}
       </div>
     </div>,
     document.body,
   );
 }
-
