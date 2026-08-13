@@ -82,6 +82,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/admin/corporate-leads", label: "حجز الشركات", icon: "briefcase" },
       { href: "/admin/contact-messages", label: "رسائل تواصل معنا", icon: "message-square" },
       { href: "/admin/fleet-availability", label: "توفر المركبات", icon: "activity", hidden: true },
+      { href: "/admin/fleet-turnaround", label: "فترة التجهيز", icon: "repeat" },
     ],
   },
   {
