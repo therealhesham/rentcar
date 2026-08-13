@@ -11,6 +11,7 @@ export type BookingBranchOption = {
   address?: string;
   mapUrl?: string | null;
   deliveryFeePerKmSar?: number;
+  phone?: string | null;
 };
 
 /** مدينة نشطة مع فروعها المعروضة في البحث. */

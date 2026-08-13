@@ -12,6 +12,8 @@ import {
   type BranchOpeningHoursSchedule,
 } from "@/lib/branch-opening-hours";
 
+import { useLocale } from "next-intl";
+
 type Props = {
   isOpen: boolean;
   onClose: () => void;
@@ -32,23 +34,35 @@ type Props = {
   ) => void;
   anchorRef?: React.RefObject<HTMLElement | null>;
   extraAnchorRefs?: React.RefObject<HTMLElement | null>[];
+  containerRef?: React.RefObject<HTMLElement | null>;
   startLabel?: string;
   endLabel?: string;
   schedule?: BranchOpeningHoursSchedule | null;
   allowHolidayBooking?: boolean;
 };
 
+const MONTHS_NAMES_AR = [
+  "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
+  "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر",
+];
 const MONTHS_NAMES_EN = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
 ];
 
-const DAY_HEADER_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+const DAY_HEADER_LABELS_AR = ["أحد", "إثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة", "سبت"];
+const DAY_HEADER_LABELS_EN = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
+const MONTH_SHORT_AR = [
+  "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
+  "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر",
+];
 const MONTH_SHORT_EN = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
+
+const DAY_SHORT_AR = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
 const DAY_SHORT_EN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function ymdToDate(ymd: string): Date | null {
@@ -68,13 +82,15 @@ function normalizeRange(startYmd: string, endYmd: string): { start: string; end:
   return { start: endYmd, end: startYmd };
 }
 
-function formatYmdShortEn(ymd: string): string {
+function formatYmdShortLocale(ymd: string, isRTL: boolean): string {
   if (!ymd) return "—";
   const dt = ymdToDate(ymd);
   if (!dt) return "—";
-  const dayName = DAY_SHORT_EN[dt.getDay()];
-  const monthName = MONTH_SHORT_EN[dt.getMonth()];
-  return `${dayName}, ${dt.getDate()} ${monthName} ${dt.getFullYear()}`;
+  const dayName = isRTL ? DAY_SHORT_AR[dt.getDay()] : DAY_SHORT_EN[dt.getDay()];
+  const monthName = isRTL ? MONTH_SHORT_AR[dt.getMonth()] : MONTH_SHORT_EN[dt.getMonth()];
+  return isRTL
+    ? `${dayName}، ${dt.getDate()} ${monthName}`
+    : `${dayName}, ${dt.getDate()} ${monthName}`;
 }
 
 function formatTime12h(timeStr: string): string {
@@ -137,6 +153,7 @@ export function DateRangePickerPopover({
   onDropoffTimeChange,
   onConfirmRangeAndTimes,
   anchorRef,
+  containerRef,
   extraAnchorRefs,
   schedule = null,
   allowHolidayBooking = false,
@@ -163,7 +180,7 @@ export function DateRangePickerPopover({
     isOpen,
     activeAnchorRef,
     panelRef,
-    { panelWidth: 740, gap: 8, forceBelow: true, autoScrollOnOpen: true },
+    { panelWidth: 740, gap: 8, forceBelow: true, autoScrollOnOpen: true, containerRef },
   );
 
   useEffect(() => {
@@ -341,8 +358,13 @@ export function DateRangePickerPopover({
     onClose();
   }
 
-  const formattedPickupDateStr = formatYmdShortEn(effStart);
-  const formattedDropoffDateStr = formatYmdShortEn(effEnd);
+  const locale = useLocale();
+  const isRTL = locale === "ar";
+  const monthNames = isRTL ? MONTHS_NAMES_AR : MONTHS_NAMES_EN;
+  const dayHeaders = isRTL ? DAY_HEADER_LABELS_AR : DAY_HEADER_LABELS_EN;
+
+  const formattedPickupDateStr = formatYmdShortLocale(effStart, isRTL);
+  const formattedDropoffDateStr = formatYmdShortLocale(effEnd, isRTL);
 
   return createPortal(
     <div
@@ -351,7 +373,7 @@ export function DateRangePickerPopover({
       aria-label="تواريخ وأوقات الحجز"
       style={panelStyle}
       className="datetime-popover flex flex-col overflow-hidden rounded-2xl border border-[#ebe4d3] bg-white shadow-[0_20px_60px_-10px_rgba(0,55,73,0.22),0_4px_16px_-4px_rgba(0,55,73,0.12)] text-right"
-      dir="rtl"
+      dir={isRTL ? "rtl" : "ltr"}
     >
       {/* Header */}
       <div className="flex items-center justify-between border-b border-[#f0ebe4] bg-gradient-to-l from-[#fdfbf6] to-[#f9f5ee] px-4 py-3">
@@ -359,7 +381,9 @@ export function DateRangePickerPopover({
           <span className="flex size-7 items-center justify-center rounded-full bg-[#dbb878]/15">
             <CalendarRange className="size-3.5 text-[#dbb878]" />
           </span>
-          <span className="text-[13px] font-bold text-[#003749]">تواريخ وأوقات الحجز</span>
+          <span className="text-[13px] font-bold text-[#003749]">
+            {isRTL ? "تواريخ وأوقات الحجز" : "Booking Dates & Times"}
+          </span>
         </div>
         <button
           type="button"
@@ -384,18 +408,18 @@ export function DateRangePickerPopover({
                     type="button"
                     onClick={prevMonth}
                     className="flex size-6 items-center justify-center rounded-full text-[#8a7752] transition-colors hover:bg-[#f0ebe4] hover:text-[#003749]"
-                    title="الشهر السابق"
+                    title={isRTL ? "الشهر السابق" : "Previous Month"}
                   >
                     <ChevronRight className="size-3.5" />
                   </button>
-                  <span className="text-[12px] font-bold text-[#003749] dir-ltr">
-                    {MONTHS_NAMES_EN[month1Index]} {month1Year}
+                  <span className="text-[12px] font-bold text-[#003749]">
+                    {monthNames[month1Index]} {month1Year}
                   </span>
                   <div className="size-6" />
                 </div>
 
                 <div className="grid grid-cols-7 text-center mb-1">
-                  {DAY_HEADER_LABELS.map((d) => (
+                  {dayHeaders.map((d) => (
                     <span key={d} className="text-[10px] font-bold text-[#8a7752] py-0.5">
                       {d}
                     </span>
@@ -445,21 +469,21 @@ export function DateRangePickerPopover({
               <div className="flex flex-col">
                 <div className="flex items-center justify-between mb-2 px-1">
                   <div className="size-6" />
-                  <span className="text-[12px] font-bold text-[#003749] dir-ltr">
-                    {MONTHS_NAMES_EN[month2Index]} {month2Year}
+                  <span className="text-[12px] font-bold text-[#003749]">
+                    {monthNames[month2Index]} {month2Year}
                   </span>
                   <button
                     type="button"
                     onClick={nextMonth}
                     className="flex size-6 items-center justify-center rounded-full text-[#8a7752] transition-colors hover:bg-[#f0ebe4] hover:text-[#003749]"
-                    title="الشهر التالي"
+                    title={isRTL ? "الشهر التالي" : "Next Month"}
                   >
                     <ChevronLeft className="size-3.5" />
                   </button>
                 </div>
 
                 <div className="grid grid-cols-7 text-center mb-1">
-                  {DAY_HEADER_LABELS.map((d) => (
+                  {dayHeaders.map((d) => (
                     <span key={d} className="text-[10px] font-bold text-[#8a7752] py-0.5">
                       {d}
                     </span>

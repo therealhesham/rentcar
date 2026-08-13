@@ -1460,6 +1460,7 @@ export function BookingSearchWidget({
                     setDateRangeOpen(false);
                   }}
                   anchorRef={dateRangeActiveRef}
+                  containerRef={formRef}
                   extraAnchorRefs={[pickupDateRef, dropoffDateRef]}
                 />
                 <div className="relative min-w-0">
@@ -2079,6 +2080,7 @@ export function BookingSearchWidget({
                       setDateRangeOpen(false);
                     }}
                     anchorRef={dateRangeActiveRef}
+                    containerRef={formRef}
                     extraAnchorRefs={[pickupDateRef, dropoffDateRef]}
                   />
                 ) : null}

@@ -210,7 +210,7 @@ export function LocationPickerPopover({
     return `https://maps.google.com/maps?q=${q}&z=14&output=embed`;
   })();
 
-  const phoneNum = (activeBranch as any)?.phone || "212-212617393939";
+  const phoneNum = activeBranch?.phone?.trim() || null;
 
   return createPortal(
     <div
@@ -440,16 +440,18 @@ export function LocationPickerPopover({
                   </div>
 
                   {/* Phone Call Pill Button */}
-                  <div className="pt-1">
-                    <a
-                      href={`tel:${phoneNum.replace(/\s+/g, "")}`}
-                      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#fdfbf6] border border-[#ebe4d3] text-[11px] font-bold text-[#003749] hover:bg-[#dbb878] hover:text-white transition-all shadow-sm"
-                      dir="ltr"
-                    >
-                      <Phone className="size-3 text-[#dbb878]" />
-                      <span>{phoneNum}</span>
-                    </a>
-                  </div>
+                  {phoneNum && (
+                    <div className="pt-1">
+                      <a
+                        href={`tel:${phoneNum.replace(/\s+/g, "")}`}
+                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#fdfbf6] border border-[#ebe4d3] text-[11px] font-bold text-[#003749] hover:bg-[#dbb878] hover:text-white transition-all shadow-sm"
+                        dir="ltr"
+                      >
+                        <Phone className="size-3 text-[#dbb878]" />
+                        <span>{phoneNum}</span>
+                      </a>
+                    </div>
+                  )}
                 </div>
               </>
             ) : (
