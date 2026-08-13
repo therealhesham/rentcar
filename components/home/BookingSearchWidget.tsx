@@ -638,6 +638,15 @@ export function BookingSearchWidget({
       const c = composeDatetimeLocal(ymd, hm);
       if (c) setPickupDt(c);
     }
+    if (rental !== "daily") {
+      setDropoffTimeDraft(hm);
+      const dropYmd = dropoffDt.slice(0, 10);
+      if (dropYmd) {
+        const c = composeDatetimeLocal(dropYmd, hm);
+        if (c) setDropoffDt(c);
+      }
+      return;
+    }
     // تغيير وقت الاستلام قد يجعله مطابقاً/لاحقاً لوقت التسليم في نفس اليوم
     const dropYmd = dropoffDt.slice(0, 10);
     const nextDropoffHm = resolveDropoffTimeHm(
@@ -659,6 +668,14 @@ export function BookingSearchWidget({
     if (ymd) {
       const c = composeDatetimeLocal(ymd, hm);
       if (c) setDropoffDt(c);
+    }
+    if (rental !== "daily") {
+      setPickupTimeDraft(hm);
+      const pickYmd = pickupDt.slice(0, 10);
+      if (pickYmd) {
+        const c = composeDatetimeLocal(pickYmd, hm);
+        if (c) setPickupDt(c);
+      }
     }
   }
 
@@ -1440,6 +1457,7 @@ export function BookingSearchWidget({
                   anchorRef={dateRangeActiveRef}
                   containerRef={formRef}
                   extraAnchorRefs={[pickupDateRef, dropoffDateRef]}
+                  lockTimesEqual={rental !== "daily"}
                 />
               </div>
             </div>
@@ -1858,21 +1876,16 @@ export function BookingSearchWidget({
                   <button
                     ref={pickupDateRef}
                     type="button"
-                    aria-expanded={rental === "daily" ? dateRangeOpen && dateRangeAnchor === "pickup" : pickupDateOpen}
+                    aria-expanded={dateRangeOpen && dateRangeAnchor === "pickup"}
                     aria-haspopup="dialog"
                     onClick={() => {
-                      if (rental === "daily") {
-                        toggleDateRange("pickup");
-                        return;
-                      }
                       setPickupLocOpen(false);
                       setReturnLocOpen(false);
-                      setDateRangeOpen(false);
                       setPickupTimeOpen(false);
                       setDropoffTimeOpen(false);
-                      setPickupDateOpen((v) => !v);
+                      toggleDateRange("pickup");
                     }}
-                    className={`field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl xl:rounded-none xl:border-0 xl:border-e xl:border-[#ebe4d3] focus:outline-none ${rental === "daily" && dateRangeOpen && dateRangeAnchor === "pickup" ? "ring-2 ring-[#dbb878]/40" : ""}`}
+                    className={`field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl xl:rounded-none xl:border-0 xl:border-e xl:border-[#ebe4d3] focus:outline-none ${dateRangeOpen && dateRangeAnchor === "pickup" ? "ring-2 ring-[#dbb878]/40" : ""}`}
                   >
                     <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
                       <CalendarClock className="size-3 text-[#dbb878]" aria-hidden />
@@ -1886,25 +1899,10 @@ export function BookingSearchWidget({
                       <span className="text-[13px] font-medium text-[#aaa08e]">{t("selectDate")}</span>
                     )}
                     <ChevronDown
-                      className={`absolute end-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${(rental === "daily" ? dateRangeOpen && dateRangeAnchor === "pickup" : pickupDateOpen) ? "rotate-180" : ""}`}
+                      className={`absolute end-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${dateRangeOpen && dateRangeAnchor === "pickup" ? "rotate-180" : ""}`}
                       aria-hidden
                     />
                   </button>
-                  {rental !== "daily" ? (
-                    <DatePickerPopover
-                      isOpen={pickupDateOpen}
-                      onClose={() => setPickupDateOpen(false)}
-                      label={t("pickupDate")}
-                      dateDdMmYy={pickupDateDraft}
-                      schedule={pickupTimeBranchSchedule}
-                      allowHolidayBooking={tabFlagsEff.allowHolidayBooking}
-                      onConfirm={(dateDdMmYy) => {
-                        applyPickupDateFromDraft(dateDdMmYy);
-                        setPickupDateOpen(false);
-                      }}
-                      anchorRef={pickupDateRef}
-                    />
-                  ) : null}
                 </div>
 
                 {/* ── تاريخ و وقت العودة ── */}
@@ -1912,14 +1910,16 @@ export function BookingSearchWidget({
                   <button
                     ref={dropoffDateRef}
                     type="button"
-                    aria-expanded={rental === "daily" ? dateRangeOpen && dateRangeAnchor === "dropoff" : false}
+                    aria-expanded={dateRangeOpen && dateRangeAnchor === "dropoff"}
                     aria-haspopup="dialog"
-                    disabled={rental !== "daily"}
                     onClick={() => {
-                      if (rental !== "daily") return;
+                      setPickupLocOpen(false);
+                      setReturnLocOpen(false);
+                      setPickupTimeOpen(false);
+                      setDropoffTimeOpen(false);
                       toggleDateRange("dropoff");
                     }}
-                    className={`field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl xl:rounded-none xl:border-0 xl:border-e xl:border-[#ebe4d3] focus:outline-none disabled:opacity-60 ${rental === "daily" && dateRangeOpen && dateRangeAnchor === "dropoff" ? "ring-2 ring-[#dbb878]/40" : ""}`}
+                    className={`field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl xl:rounded-none xl:border-0 xl:border-e xl:border-[#ebe4d3] focus:outline-none ${dateRangeOpen && dateRangeAnchor === "dropoff" ? "ring-2 ring-[#dbb878]/40" : ""}`}
                   >
                     <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
                       <CalendarRange className="size-3 text-[#dbb878]" aria-hidden />
@@ -1937,34 +1937,33 @@ export function BookingSearchWidget({
                       aria-hidden
                     />
                   </button>
-                  {rental === "daily" ? (
-                    <DateRangePickerPopover
-                      key={dateRangeAnchor}
-                      isOpen={dateRangeOpen}
-                      onClose={() => setDateRangeOpen(false)}
-                      startDateDdMmYy={pickupDateDraft}
-                      endDateDdMmYy={dropoffDateDraft}
-                      pickupTime={pickupTimeDraft}
-                      dropoffTime={dropoffTimeDraft}
-                      schedule={pickupTimeBranchSchedule}
-                      allowHolidayBooking={tabFlagsEff.allowHolidayBooking}
-                      onStartChange={applyPickupDateOnly}
-                      onRangeChange={(start, end) => {
-                        applyDateRange(start, end);
-                      }}
-                      onPickupTimeChange={(t) => applyPickupTime(t)}
-                      onDropoffTimeChange={(t) => applyDropoffTime(t)}
-                      onConfirmRangeAndTimes={(start, end, pTime, dTime) => {
-                        applyDateRange(start, end);
-                        if (pTime) applyPickupTime(pTime);
-                        if (dTime) applyDropoffTime(dTime);
-                        setDateRangeOpen(false);
-                      }}
-                      anchorRef={dateRangeActiveRef}
-                      containerRef={formRef}
-                      extraAnchorRefs={[pickupDateRef, dropoffDateRef]}
-                    />
-                  ) : null}
+                  <DateRangePickerPopover
+                    key={dateRangeAnchor}
+                    isOpen={dateRangeOpen}
+                    onClose={() => setDateRangeOpen(false)}
+                    startDateDdMmYy={pickupDateDraft}
+                    endDateDdMmYy={dropoffDateDraft}
+                    pickupTime={pickupTimeDraft}
+                    dropoffTime={dropoffTimeDraft}
+                    schedule={pickupTimeBranchSchedule}
+                    allowHolidayBooking={tabFlagsEff.allowHolidayBooking}
+                    onStartChange={applyPickupDateOnly}
+                    onRangeChange={(start, end) => {
+                      applyDateRange(start, end);
+                    }}
+                    onPickupTimeChange={(t) => applyPickupTime(t)}
+                    onDropoffTimeChange={(t) => applyDropoffTime(t)}
+                    onConfirmRangeAndTimes={(start, end, pTime, dTime) => {
+                      applyDateRange(start, end);
+                      if (pTime) applyPickupTime(pTime);
+                      if (dTime) applyDropoffTime(dTime);
+                      setDateRangeOpen(false);
+                    }}
+                    anchorRef={dateRangeActiveRef}
+                    containerRef={formRef}
+                    extraAnchorRefs={[pickupDateRef, dropoffDateRef]}
+                    lockTimesEqual={rental !== "daily"}
+                  />
                 </div>
               </div>
 

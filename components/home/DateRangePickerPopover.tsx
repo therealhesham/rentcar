@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { CalendarRange, Clock, Info, X, ChevronRight, ChevronLeft } from "lucide-react";
 import { useAnchoredPopoverPosition } from "@/lib/use-anchored-popover-position";
@@ -9,6 +9,8 @@ import { formatYmdAsDdMmYy, parseDdMmYyToYmd } from "@/lib/booking-search-shared
 
 import {
   isBranchClosedOnDate,
+  parseHmToMinutes,
+  scheduleHasAnyRule,
   type BranchOpeningHoursSchedule,
 } from "@/lib/branch-opening-hours";
 
@@ -39,6 +41,7 @@ type Props = {
   endLabel?: string;
   schedule?: BranchOpeningHoursSchedule | null;
   allowHolidayBooking?: boolean;
+  lockTimesEqual?: boolean;
 };
 
 const MONTHS_NAMES_AR = [
@@ -50,7 +53,7 @@ const MONTHS_NAMES_EN = [
   "July", "August", "September", "October", "November", "December",
 ];
 
-const DAY_HEADER_LABELS_AR = ["أحد", "إثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة", "سبت"];
+const DAY_HEADER_LABELS_AR = ["ح", "ن", "ث", "ر", "خ", "ج", "س"];
 const DAY_HEADER_LABELS_EN = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
 const MONTH_SHORT_AR = [
@@ -125,19 +128,67 @@ function parseTimeTo24h(timeStr: string): string {
   return timeStr;
 }
 
-const TIME_SLOT_OPTIONS = (() => {
+type DayBounds =
+  | { kind: "unrestricted" }
+  | { kind: "closed" }
+  | { kind: "range"; openM: number; closeM: number };
+
+function resolveDayBounds(
+  schedule: BranchOpeningHoursSchedule | null | undefined,
+  ymdDate: string | null | undefined,
+): DayBounds {
+  if (!schedule || !scheduleHasAnyRule(schedule)) return { kind: "unrestricted" };
+  if (!ymdDate) return { kind: "unrestricted" };
+  const [y, m, d] = ymdDate.split("-").map(Number);
+  if (!y || !m || !d) return { kind: "unrestricted" };
+  const weekday = new Date(y, m - 1, d).getDay();
+  const row = schedule.days[String(weekday)];
+  if (!row || row.closed === true) return { kind: "closed" };
+  const openM = row.open ? parseHmToMinutes(row.open) : null;
+  const closeM = row.close ? parseHmToMinutes(row.close) : null;
+  if (openM == null || closeM == null || openM >= closeM) return { kind: "closed" };
+  return { kind: "range", openM, closeM };
+}
+
+function minMinutesIfToday(ymdDate: string | null | undefined): number | null {
+  if (!ymdDate || ymdDate !== todayYmd()) return null;
+  const now = new Date();
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  return Math.ceil(nowMinutes / 30) * 30;
+}
+
+function getTimeSlotOptionsForYmd(
+  schedule: BranchOpeningHoursSchedule | null | undefined,
+  ymdDate: string | null | undefined,
+): Array<{ value24h: string; label12h: string }> {
+  const bounds = resolveDayBounds(schedule, ymdDate);
+  if (bounds.kind === "closed") return [];
+
+  let startM = 0;
+  let endM = 1410; // 23:30
+
+  if (bounds.kind === "range") {
+    startM = bounds.openM;
+    endM = bounds.closeM;
+  }
+
+  const minToday = minMinutesIfToday(ymdDate);
+  if (minToday != null && minToday > startM) {
+    startM = minToday;
+  }
+
   const slots: Array<{ value24h: string; label12h: string }> = [];
-  for (let h = 0; h < 24; h++) {
-    for (const m of [0, 30]) {
-      const hm = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-      slots.push({
-        value24h: hm,
-        label12h: formatTime12h(hm),
-      });
-    }
+  for (let m = startM; m <= endM; m += 30) {
+    const h = Math.floor(m / 60);
+    const min = m % 60;
+    const hm = `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+    slots.push({
+      value24h: hm,
+      label12h: formatTime12h(hm),
+    });
   }
   return slots;
-})();
+}
 
 export function DateRangePickerPopover({
   isOpen,
@@ -157,6 +208,7 @@ export function DateRangePickerPopover({
   extraAnchorRefs,
   schedule = null,
   allowHolidayBooking = false,
+  lockTimesEqual = false,
 }: Props) {
   const panelRef = useRef<HTMLDivElement>(null);
   const fallbackAnchorRef = useRef<HTMLElement | null>(null);
@@ -182,6 +234,11 @@ export function DateRangePickerPopover({
     panelRef,
     { panelWidth: 740, gap: 8, forceBelow: true, autoScrollOnOpen: true, containerRef },
   );
+
+  const locale = useLocale();
+  const isRTL = locale === "ar";
+  const monthNames = isRTL ? MONTHS_NAMES_AR : MONTHS_NAMES_EN;
+  const dayHeaders = isRTL ? DAY_HEADER_LABELS_AR : DAY_HEADER_LABELS_EN;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -224,6 +281,36 @@ export function DateRangePickerPopover({
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
   }, [isOpen, onClose]);
+
+  const previewStart = () => {
+    if (!rangeStart) return "";
+    if (rangeEnd) return rangeStart;
+    if (hoverYmd) return normalizeRange(rangeStart, hoverYmd).start;
+    return rangeStart;
+  };
+
+  const previewEnd = () => {
+    if (rangeEnd) return rangeEnd;
+    if (rangeStart && hoverYmd) {
+      const { end } = normalizeRange(rangeStart, hoverYmd);
+      return end;
+    }
+    return "";
+  };
+
+  const effStart = previewStart();
+  const effEnd = previewEnd();
+  const pickingEnd = Boolean(rangeStart && !rangeEnd);
+
+  const pickupTimeSlots = useMemo(
+    () => getTimeSlotOptionsForYmd(schedule, effStart),
+    [schedule, effStart],
+  );
+
+  const dropoffTimeSlots = useMemo(
+    () => getTimeSlotOptionsForYmd(schedule, effEnd),
+    [schedule, effEnd],
+  );
 
   if (!isOpen || !panelReady || typeof document === "undefined") return null;
 
@@ -308,26 +395,6 @@ export function DateRangePickerPopover({
     if (startFmt && endFmt) onRangeChange(startFmt, endFmt);
   }
 
-  function previewStart(): string {
-    if (!rangeStart) return "";
-    if (rangeEnd) return rangeStart;
-    if (hoverYmd) return normalizeRange(rangeStart, hoverYmd).start;
-    return rangeStart;
-  }
-
-  function previewEnd(): string {
-    if (rangeEnd) return rangeEnd;
-    if (rangeStart && hoverYmd) {
-      const { end } = normalizeRange(rangeStart, hoverYmd);
-      return end;
-    }
-    return "";
-  }
-
-  const effStart = previewStart();
-  const effEnd = previewEnd();
-  const pickingEnd = Boolean(rangeStart && !rangeEnd);
-
   function cellInRange(ymd: string): boolean {
     if (!effStart || !effEnd) return false;
     return ymd >= effStart && ymd <= effEnd;
@@ -357,11 +424,6 @@ export function DateRangePickerPopover({
     }
     onClose();
   }
-
-  const locale = useLocale();
-  const isRTL = locale === "ar";
-  const monthNames = isRTL ? MONTHS_NAMES_AR : MONTHS_NAMES_EN;
-  const dayHeaders = isRTL ? DAY_HEADER_LABELS_AR : DAY_HEADER_LABELS_EN;
 
   const formattedPickupDateStr = formatYmdShortLocale(effStart, isRTL);
   const formattedDropoffDateStr = formatYmdShortLocale(effEnd, isRTL);
@@ -540,23 +602,32 @@ export function DateRangePickerPopover({
                 {formattedPickupDateStr !== "—" ? formattedPickupDateStr : ""}
               </p>
               <div className="grid grid-cols-2 gap-1 max-h-[220px] overflow-y-auto pe-1 custom-scrollbar">
-                {TIME_SLOT_OPTIONS.map((slot) => {
-                  const isSelected = slot.label12h === selectedPickupTime;
-                  return (
-                    <button
-                      key={`pickup-${slot.value24h}`}
-                      type="button"
-                      onClick={() => setSelectedPickupTime(slot.label12h)}
-                      className={`h-8 w-full rounded-lg text-[11px] font-semibold transition-all ${
-                        isSelected
-                          ? "bg-gradient-to-br from-[#dbb878] to-[#c9a356] text-white shadow-[0_2px_8px_-2px_rgba(219,184,120,0.6)]"
-                          : "bg-[#fdfbf6] border border-[#ebe4d3] text-[#003749] hover:border-[#dbb878] hover:bg-[#f0ebe4]"
-                      }`}
-                    >
-                      {slot.label12h}
-                    </button>
-                  );
-                })}
+                {pickupTimeSlots.length > 0 ? (
+                  pickupTimeSlots.map((slot) => {
+                    const isSelected = slot.label12h === selectedPickupTime;
+                    return (
+                      <button
+                        key={`pickup-${slot.value24h}`}
+                        type="button"
+                        onClick={() => {
+                          setSelectedPickupTime(slot.label12h);
+                          if (lockTimesEqual) setSelectedDropoffTime(slot.label12h);
+                        }}
+                        className={`h-8 w-full rounded-lg text-[11px] font-semibold transition-all ${
+                          isSelected
+                            ? "bg-gradient-to-br from-[#dbb878] to-[#c9a356] text-white shadow-[0_2px_8px_-2px_rgba(219,184,120,0.6)]"
+                            : "bg-[#fdfbf6] border border-[#ebe4d3] text-[#003749] hover:border-[#dbb878] hover:bg-[#f0ebe4]"
+                        }`}
+                      >
+                        {slot.label12h}
+                      </button>
+                    );
+                  })
+                ) : (
+                  <div className="col-span-2 py-4 text-center text-[11px] font-medium text-[#8a7752]">
+                    {isRTL ? "الفرع مغلق هذا اليوم" : "Closed on this day"}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -567,23 +638,32 @@ export function DateRangePickerPopover({
                 {formattedDropoffDateStr !== "—" ? formattedDropoffDateStr : ""}
               </p>
               <div className="grid grid-cols-2 gap-1 max-h-[220px] overflow-y-auto pe-1 custom-scrollbar">
-                {TIME_SLOT_OPTIONS.map((slot) => {
-                  const isSelected = slot.label12h === selectedDropoffTime;
-                  return (
-                    <button
-                      key={`dropoff-${slot.value24h}`}
-                      type="button"
-                      onClick={() => setSelectedDropoffTime(slot.label12h)}
-                      className={`h-8 w-full rounded-lg text-[11px] font-semibold transition-all ${
-                        isSelected
-                          ? "bg-gradient-to-br from-[#dbb878] to-[#c9a356] text-white shadow-[0_2px_8px_-2px_rgba(219,184,120,0.6)]"
-                          : "bg-[#fdfbf6] border border-[#ebe4d3] text-[#003749] hover:border-[#dbb878] hover:bg-[#f0ebe4]"
-                      }`}
-                    >
-                      {slot.label12h}
-                    </button>
-                  );
-                })}
+                {dropoffTimeSlots.length > 0 ? (
+                  dropoffTimeSlots.map((slot) => {
+                    const isSelected = slot.label12h === selectedDropoffTime;
+                    return (
+                      <button
+                        key={`dropoff-${slot.value24h}`}
+                        type="button"
+                        onClick={() => {
+                          setSelectedDropoffTime(slot.label12h);
+                          if (lockTimesEqual) setSelectedPickupTime(slot.label12h);
+                        }}
+                        className={`h-8 w-full rounded-lg text-[11px] font-semibold transition-all ${
+                          isSelected
+                            ? "bg-gradient-to-br from-[#dbb878] to-[#c9a356] text-white shadow-[0_2px_8px_-2px_rgba(219,184,120,0.6)]"
+                            : "bg-[#fdfbf6] border border-[#ebe4d3] text-[#003749] hover:border-[#dbb878] hover:bg-[#f0ebe4]"
+                        }`}
+                      >
+                        {slot.label12h}
+                      </button>
+                    );
+                  })
+                ) : (
+                  <div className="col-span-2 py-4 text-center text-[11px] font-medium text-[#8a7752]">
+                    {isRTL ? "الفرع مغلق هذا اليوم" : "Closed on this day"}
+                  </div>
+                )}
               </div>
             </div>
           </div>
