@@ -1440,7 +1440,8 @@ export function BookingSearchWidget({
                   endDateDdMmYy={dropoffDateDraft}
                   pickupTime={pickupTimeDraft}
                   dropoffTime={dropoffTimeDraft}
-                  schedule={pickupTimeBranchSchedule}
+                  pickupSchedule={pickupTimeBranchSchedule}
+                  dropoffSchedule={dropoffTimeBranchSchedule}
                   allowHolidayBooking={tabFlagsEff.allowHolidayBooking}
                   onStartChange={applyPickupDateOnly}
                   onRangeChange={(start, end) => {
@@ -1945,7 +1946,8 @@ export function BookingSearchWidget({
                     endDateDdMmYy={dropoffDateDraft}
                     pickupTime={pickupTimeDraft}
                     dropoffTime={dropoffTimeDraft}
-                    schedule={pickupTimeBranchSchedule}
+                    pickupSchedule={pickupTimeBranchSchedule}
+                  dropoffSchedule={dropoffTimeBranchSchedule}
                     allowHolidayBooking={tabFlagsEff.allowHolidayBooking}
                     onStartChange={applyPickupDateOnly}
                     onRangeChange={(start, end) => {

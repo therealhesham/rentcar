@@ -40,6 +40,8 @@ type Props = {
   startLabel?: string;
   endLabel?: string;
   schedule?: BranchOpeningHoursSchedule | null;
+  pickupSchedule?: BranchOpeningHoursSchedule | null;
+  dropoffSchedule?: BranchOpeningHoursSchedule | null;
   allowHolidayBooking?: boolean;
   lockTimesEqual?: boolean;
 };
@@ -207,12 +209,17 @@ export function DateRangePickerPopover({
   containerRef,
   extraAnchorRefs,
   schedule = null,
+  pickupSchedule = null,
+  dropoffSchedule = null,
   allowHolidayBooking = false,
   lockTimesEqual = false,
 }: Props) {
   const panelRef = useRef<HTMLDivElement>(null);
   const fallbackAnchorRef = useRef<HTMLElement | null>(null);
   const activeAnchorRef = anchorRef ?? fallbackAnchorRef;
+
+  const effPickupSchedule = pickupSchedule ?? schedule;
+  const effDropoffSchedule = dropoffSchedule ?? schedule;
 
   const startYmdInit = (startDateDdMmYy ? parseDdMmYyToYmd(startDateDdMmYy) : null) || "";
   const endYmdInit = (endDateDdMmYy ? parseDdMmYyToYmd(endDateDdMmYy) : null) || "";
@@ -303,13 +310,13 @@ export function DateRangePickerPopover({
   const pickingEnd = Boolean(rangeStart && !rangeEnd);
 
   const pickupTimeSlots = useMemo(
-    () => getTimeSlotOptionsForYmd(schedule, effStart),
-    [schedule, effStart],
+    () => getTimeSlotOptionsForYmd(effPickupSchedule, effStart),
+    [effPickupSchedule, effStart],
   );
 
   const dropoffTimeSlots = useMemo(
-    () => getTimeSlotOptionsForYmd(schedule, effEnd),
-    [schedule, effEnd],
+    () => getTimeSlotOptionsForYmd(effDropoffSchedule, effEnd),
+    [effDropoffSchedule, effEnd],
   );
 
   if (!isOpen || !panelReady || typeof document === "undefined") return null;
