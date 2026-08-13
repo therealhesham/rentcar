@@ -1,15 +1,6 @@
 /** حساب أيام الحجز للبحث والتوفر — يُستخدم في الخادم والعميل. */
 
 const DAY_MS = 86_400_000;
-const BRANCH_TZ = "Asia/Riyadh";
-
-/** تاريخ ووقت بداية اليوم التقويمي بتوقيت فرع السعودية (Asia/Riyadh). */
-export function startOfBranchDay(d: Date): Date {
-  if (Number.isNaN(d.getTime())) return new Date(NaN);
-  const ymd = new Intl.DateTimeFormat("en-CA", { timeZone: BRANCH_TZ }).format(d);
-  return new Date(`${ymd}T00:00:00+03:00`);
-}
-
 /** رسالة موحّدة عند عدم كون التسليم بعد الاستلام (يشمل تطابق التاريخ والوقت). */
 export const DROPOFF_AFTER_PICKUP_ERROR_AR =
   "وقت التسليم يجب أن يكون بعد وقت الاستلام — لا يمكن أن يكونا في نفس الموعد.";

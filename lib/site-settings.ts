@@ -448,3 +448,32 @@ export async function getCustomerCancellationPolicyAr(): Promise<string> {
     return "";
   }
 }
+
+/**
+ * دقائق التجهيز الافتراضية بين حجزين على نفس العربية (فحص ونظافة وتسليم).
+ * يعرّفها هذا الملف لا `direct-booking` تفادياً لاستيراد دائري.
+ */
+export const DEFAULT_FLEET_TURNAROUND_MINUTES = 120;
+
+export const SITE_KEY_FLEET_TURNAROUND_MINUTES = "fleet_turnaround_minutes_v1";
+
+/**
+ * دقائق التجهيز بين حجزين على نفس العربية — تُحجز بعد موعد الإرجاع فلا تُسلَّم
+ * العربية لعميل تالٍ قبل انقضائها. القيمة الاحتياطية `DEFAULT_FLEET_TURNAROUND_MINUTES`.
+ *
+ * صفر = تسليم فوري بعد الإرجاع مباشرةً (لا فترة تجهيز). السقف يوم كامل حتى لا
+ * يشلّ إعدادٌ خاطئ الأسطول بالكامل.
+ */
+export async function getFleetTurnaroundMinutes(): Promise<number> {
+  try {
+    const row = await prisma.siteSetting.findUnique({
+      where: { key: SITE_KEY_FLEET_TURNAROUND_MINUTES },
+      select: { value: true },
+    });
+    const raw = Number(row?.value?.trim());
+    if (!Number.isFinite(raw) || raw < 0) return DEFAULT_FLEET_TURNAROUND_MINUTES;
+    return Math.min(1440, Math.round(raw));
+  } catch {
+    return DEFAULT_FLEET_TURNAROUND_MINUTES;
+  }
+}

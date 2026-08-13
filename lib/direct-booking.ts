@@ -50,6 +50,11 @@ import {
 } from "@/lib/rental-discount";
 import { computeCheckoutTotals } from "@/lib/booking-checkout-pricing";
 import { parseBookingPricingSnapshot, type CouponCodeSnap } from "@/lib/booking-pricing-snapshot";
+import { computeBookingReturnAt } from "@/lib/booking-return-schedule";
+import {
+  DEFAULT_FLEET_TURNAROUND_MINUTES,
+  getFleetTurnaroundMinutes,
+} from "@/lib/site-settings";
 import { logBookingEvent } from "@/lib/booking-audit";
 import {
   computeCouponDiscountOnSubtotal,
@@ -336,25 +341,10 @@ function parseDeliveryPartFromFormData(
   return { ok: true, ...p.value };
 }
 
-function bookingRangeYmd(pickupDate: Date, numberOfDays: number): {
-  startYmd: string;
-  endExclusiveYmd: string;
-} {
-  const startYmd = dateOnlyYmd(pickupDate);
-  return {
-    startYmd,
-    endExclusiveYmd: addDaysToYmd(startYmd, numberOfDays),
-  };
-}
-
-function ymdRangesOverlap(
-  startA: string,
-  endExclusiveA: string,
-  startB: string,
-  endExclusiveB: string,
-): boolean {
-  return startA < endExclusiveB && startB < endExclusiveA;
-}
+// أُزيلت `bookingRangeYmd` و`ymdRangesOverlap`: كانتا تحجزان أياماً تقويمية كاملة
+// فتتحرّر العربية منتصف ليل آخر يوم بينما هي مع العميل حتى ساعة الاستلام من ذلك
+// اليوم (أو بعدها لو حجز ساعات إضافية). البديل مقارنة بالتوقيت في
+// `countOverlapsFromRows` مع فترة تجهيز.
 
 /** عميل DB يدعم جداول Fleet و BookingRequest (للمعاملات التفاعلية). */
 type FleetBookingClient = {
@@ -378,7 +368,12 @@ export async function getFleetUnitsForModel(carModelId: number): Promise<number>
   return sumFleetQuantityForModel(prisma, carModelId);
 }
 
-type OverlapRow = { pickupDate: Date; numberOfDays: number };
+type OverlapRow = {
+  pickupDate: Date;
+  numberOfDays: number;
+  /** لقطة التسعير — منها تُقرأ ساعات الإرجاع المتفق عليها بعد حدّ اليوم الكامل. */
+  addonsJson?: string | null;
+};
 
 async function loadBlockingDirectBookings(
   client: Pick<FleetBookingClient, "bookingRequest">,
@@ -396,7 +391,7 @@ async function loadBlockingDirectBookings(
         ? { id: { not: excludeBookingRequestId } }
         : {}),
     },
-    select: { pickupDate: true, numberOfDays: true },
+    select: { pickupDate: true, numberOfDays: true, addonsJson: true },
   });
 }
 
@@ -406,24 +401,58 @@ function safeBookingDays(days: number): number {
 }
 
 /**
+ * لحظة تحرّر العربية فعلياً: موعد الإرجاع المتفق عليه إن كان العميل قد حجز ساعات
+ * بعد حدّ اليوم الكامل (ودفع فرقها)، وإلا الاستلام + عدد الأيام.
+ */
+export function bookingOccupiedUntil(row: OverlapRow): Date {
+  const snap = parseBookingPricingSnapshot(row.addonsJson ?? null);
+  const agreed = snap.delayPenalty?.actualDropoffAt;
+  if (agreed) {
+    const d = new Date(agreed);
+    if (!Number.isNaN(d.getTime()) && d.getTime() > row.pickupDate.getTime()) return d;
+  }
+  return computeBookingReturnAt(row.pickupDate, safeBookingDays(row.numberOfDays));
+}
+
+/**
  * عدد الحجوزات المباشرة النشطة التي تتداخل مع الفترة المطلوبة لنفس الموديل.
+ *
+ * المقارنة بالتوقيت لا باليوم التقويمي: الحجز باليوم كان يحرّر العربية منتصف ليل
+ * آخر يوم بينما هي مع العميل حتى ساعة الاستلام من ذلك اليوم (أو بعدها لو حجز
+ * ساعات إضافية)، فتظهر متاحة لعميل آخر في نفس النافذة.
+ *
+ * كل حجز يحجز `[الاستلام, التحرّر + فترة التجهيز)` — فترة التجهيز تغطي الفحص
+ * والنظافة بين عميلين، وتسمح بتسليم نفس اليوم بعد انقضائها.
  */
 export function countOverlapsFromRows(
   rows: OverlapRow[],
   pickupDate: Date,
   numberOfDays: number,
+  opts?: {
+    /** لقطة تسعير الحجز المرشَّح — لقراءة ساعاته الإضافية المتفق عليها. */
+    addonsJson?: string | null;
+    /** دقائق التجهيز بين حجزين على نفس العربية. */
+    turnaroundMinutes?: number;
+  },
 ): number {
-  const safeDays = safeBookingDays(numberOfDays);
-  const { startYmd, endExclusiveYmd } = bookingRangeYmd(pickupDate, safeDays);
+  const bufferMs =
+    Math.max(0, Math.round(opts?.turnaroundMinutes ?? DEFAULT_FLEET_TURNAROUND_MINUTES)) *
+    60_000;
+  const aStart = pickupDate.getTime();
+  const aEnd =
+    bookingOccupiedUntil({
+      pickupDate,
+      numberOfDays,
+      addonsJson: opts?.addonsJson ?? null,
+    }).getTime() + bufferMs;
+  if (!Number.isFinite(aStart) || !Number.isFinite(aEnd)) return 0;
+
   let count = 0;
   for (const row of rows) {
-    const rowDays = safeBookingDays(row.numberOfDays);
-    const other = bookingRangeYmd(row.pickupDate, rowDays);
-    if (
-      ymdRangesOverlap(startYmd, endExclusiveYmd, other.startYmd, other.endExclusiveYmd)
-    ) {
-      count += 1;
-    }
+    const bStart = row.pickupDate.getTime();
+    const bEnd = bookingOccupiedUntil(row).getTime() + bufferMs;
+    if (!Number.isFinite(bStart) || !Number.isFinite(bEnd)) continue;
+    if (aStart < bEnd && bStart < aEnd) count += 1;
   }
   return count;
 }
@@ -439,7 +468,9 @@ export async function countOverlappingDirectBookings(
     carModelId,
     excludeBookingRequestId,
   );
-  return countOverlapsFromRows(rows, pickupDate, numberOfDays);
+  return countOverlapsFromRows(rows, pickupDate, numberOfDays, {
+    turnaroundMinutes: await getFleetTurnaroundMinutes(),
+  });
 }
 
 export type DirectAvailabilityResult = {
@@ -477,11 +508,9 @@ export async function getDirectBookingAvailability(input: {
     input.excludeBookingRequestId,
     branchSlug,
   );
-  const overlapping = countOverlapsFromRows(
-    rows,
-    input.pickupDate,
-    input.numberOfDays,
-  );
+  const overlapping = countOverlapsFromRows(rows, input.pickupDate, input.numberOfDays, {
+    turnaroundMinutes: await getFleetTurnaroundMinutes(),
+  });
   return {
     available: overlapping < fleetUnits,
     fleetUnits,
@@ -1514,6 +1543,8 @@ export async function createDirectBooking(
 
   const carType = model.category.slug || model.category.title;
 
+  const turnaroundMinutes = await getFleetTurnaroundMinutes();
+
   const runOnce = () =>
     prisma.$transaction(
       async (tx) => {
@@ -1538,7 +1569,12 @@ export async function createDirectBooking(
             verifiedExcludeBlockingId,
             returnBranchSlug,
           );
-          const overlapping = countOverlapsFromRows(rows, commonNormalized.pickupDate, days);
+          const overlapping = countOverlapsFromRows(
+            rows,
+            commonNormalized.pickupDate,
+            days,
+            { addonsJson: finalAddonsJson, turnaroundMinutes },
+          );
           if (overlapping >= fleetUnits) {
             throw new DirectBookingCapacityError(
               "SLOT_FULL",
@@ -1782,6 +1818,8 @@ export async function convertInquiryBookingToDirect(
   bookingRequestId: number,
   carModelId: number,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
+  const turnaroundMinutes = await getFleetTurnaroundMinutes();
+
   const runOnce = () =>
     prisma.$transaction(
       async (tx) => {
@@ -1839,6 +1877,7 @@ export async function convertInquiryBookingToDirect(
           rows,
           booking.pickupDate,
           booking.numberOfDays,
+          { turnaroundMinutes },
         );
         if (overlapping >= fleetUnits) {
           throw new DirectBookingCapacityError(
@@ -2188,6 +2227,11 @@ export async function updateBookingRequestByAdmin(
     return { ok: false, error: "اختر موديل السيارة." };
   }
 
+  const turnaroundMinutes = await getFleetTurnaroundMinutes();
+  // اللقطة بعد إعادة التسعير إن بُدِّل الموديل، وإلا لقطة الحجز الحالية.
+  const candidateAddonsJson =
+    repricedAddonsJson !== undefined ? repricedAddonsJson : booking.addonsJson;
+
   const runOnce = () =>
     prisma.$transaction(
       async (tx) => {
@@ -2248,7 +2292,10 @@ export async function updateBookingRequestByAdmin(
             bookingRequestId,
             branchSlug,
           );
-          const overlapping = countOverlapsFromRows(rows, input.pickupDate, days);
+          const overlapping = countOverlapsFromRows(rows, input.pickupDate, days, {
+            addonsJson: candidateAddonsJson,
+            turnaroundMinutes,
+          });
           if (overlapping >= fleetUnits) {
             throw new DirectBookingCapacityError(
               "SLOT_FULL",
@@ -2429,6 +2476,10 @@ export async function updateDirectBookingDates(input: {
     return { ok: false, error: "تعذّر التحقق من ملكية الطلب." };
   }
 
+  // فترة التجهيز تُقرأ قبل المعاملة حتى لا تُبقيها مفتوحة على استعلام إضافي.
+  const turnaroundMinutes = await getFleetTurnaroundMinutes();
+  const candidateAddonsJson = input.addonsJson;
+
   const runOnce = () =>
     prisma.$transaction(
       async (tx) => {
@@ -2486,7 +2537,10 @@ export async function updateDirectBookingDates(input: {
             bookingRequestId,
             branchSlug,
           );
-          const overlapping = countOverlapsFromRows(rows, input.pickupDate, days);
+          const overlapping = countOverlapsFromRows(rows, input.pickupDate, days, {
+            addonsJson: candidateAddonsJson,
+            turnaroundMinutes,
+          });
           if (overlapping >= fleetUnits) {
             throw new DirectBookingCapacityError(
               "SLOT_FULL",
