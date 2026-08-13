@@ -828,6 +828,28 @@ export function BookingSearchWidget({
     | { ok: false; error?: string; notice?: { title: string; message: string } };
 
   /** التحقق من النموذج وبناء معاملات البحث — يشترك فيه زر البحث والبحث التلقائي. */
+  function formatCombinedDateTimeStr(dateDdMmYy: string, timeStr: string, isRtl: boolean): string {
+    if (!dateDdMmYy) return "—";
+    const ymd = parseDdMmYyToYmd(dateDdMmYy);
+    if (!ymd) return dateDdMmYy;
+    const [y, m, d] = ymd.split("-").map(Number);
+    if (!y || !m || !d) return dateDdMmYy;
+    const dt = new Date(y, m - 1, d);
+    if (isNaN(dt.getTime())) return dateDdMmYy;
+
+    const DAY_SHORT_AR = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+    const DAY_SHORT_EN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const MONTH_SHORT_AR = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+    const MONTH_SHORT_EN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+    const dayStr = isRtl ? DAY_SHORT_AR[dt.getDay()] : DAY_SHORT_EN[dt.getDay()];
+    const monthStr = isRtl ? MONTH_SHORT_AR[m - 1] : MONTH_SHORT_EN[m - 1];
+
+    const formattedTime = timeStr ? timeStr.toLowerCase() : "05:00 pm";
+
+    return `${dayStr}, ${d} ${monthStr} ${y} · ${formattedTime}`;
+  }
+
   function buildFleetSearch(): BuiltFleetSearch {
     if (rental === "corporate") return { ok: false };
     let effPickupDt = pickupDt;
@@ -1340,7 +1362,7 @@ export function BookingSearchWidget({
                   </p>
                 </div>
               ) : null}
-              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-2 sm:gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
                 <div className="relative min-w-0">
                   <button
                     ref={pickupDateRef}
@@ -1352,10 +1374,12 @@ export function BookingSearchWidget({
                   >
                     <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
                       <CalendarClock className="size-3 text-[#dbb878]" aria-hidden />
-                      {t("pickupDate")}
+                      {isRtl ? "تاريخ و وقت الخروج" : "Pickup Date & Time"}
                     </span>
                     {pickupDateDraft ? (
-                      <span className="text-[13px] font-bold text-[#0f1923]">{pickupDateDraft}</span>
+                      <span className="text-[12px] font-bold text-[#0f1923] truncate">
+                        {formatCombinedDateTimeStr(pickupDateDraft, pickupTimeDraft, isRtl)}
+                      </span>
                     ) : (
                       <span className="text-[13px] font-medium text-[#aaa08e]">{t("selectDate")}</span>
                     )}
@@ -1364,54 +1388,6 @@ export function BookingSearchWidget({
                       aria-hidden
                     />
                   </button>
-                </div>
-                <div className="relative min-w-0">
-                  <button
-                    ref={pickupTimeRef}
-                    type="button"
-                    aria-expanded={pickupTimeOpen}
-                    aria-haspopup="dialog"
-                    onClick={() => {
-                      setPickupTimeOpen((v) => !v);
-                      setDateRangeOpen(false);
-                      setDropoffTimeOpen(false);
-                    }}
-                    className="field-trigger relative flex w-full flex-col gap-1 rounded-xl border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-right focus:outline-none"
-                  >
-                    <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
-                      <Clock className="size-3 text-[#dbb878]" aria-hidden />
-                      {t("pickUpTime")}
-                    </span>
-                    <span className="text-[13px] font-bold text-[#0f1923]" dir="ltr">
-                      {pickupTimeDraft}
-                    </span>
-                    <ChevronDown
-                      className={`absolute end-3 top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${pickupTimeOpen ? "rotate-180" : ""}`}
-                      aria-hidden
-                    />
-                  </button>
-                  <TimePickerPopover
-                    isOpen={pickupTimeOpen}
-                    onClose={() => setPickupTimeOpen(false)}
-                    label={t("pickUpTime")}
-                    time={pickupTimeDraft}
-                    schedule={pickupTimeBranchSchedule}
-                    dateDdMmYy={pickupDateDraft}
-                    onConfirm={(hm) => {
-                      applyPickupTime(hm);
-                      setPickupTimeOpen(false);
-                      setTimeout(() => {
-                        if (rental === "daily" && !dropoffDateDraft) {
-                          dropoffDateRef.current?.focus();
-                          toggleDateRange("dropoff");
-                        } else {
-                          dropoffTimeRef.current?.focus();
-                          setDropoffTimeOpen(true);
-                        }
-                      }, 150);
-                    }}
-                    anchorRef={pickupTimeRef}
-                  />
                 </div>
                 <div className="relative min-w-0">
                   <button
@@ -1424,10 +1400,12 @@ export function BookingSearchWidget({
                   >
                     <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
                       <CalendarRange className="size-3 text-[#dbb878]" aria-hidden />
-                      {t("returnDate")}
+                      {isRtl ? "تاريخ و وقت العودة" : "Return Date & Time"}
                     </span>
                     {dropoffDateDraft ? (
-                      <span className="text-[13px] font-bold text-[#0f1923]">{dropoffDateDraft}</span>
+                      <span className="text-[12px] font-bold text-[#0f1923] truncate">
+                        {formatCombinedDateTimeStr(dropoffDateDraft, dropoffTimeDraft, isRtl)}
+                      </span>
                     ) : (
                       <span className="text-[13px] font-medium text-[#aaa08e]">{t("selectDate")}</span>
                     )}
@@ -1463,43 +1441,6 @@ export function BookingSearchWidget({
                   containerRef={formRef}
                   extraAnchorRefs={[pickupDateRef, dropoffDateRef]}
                 />
-                <div className="relative min-w-0">
-                  <button
-                    ref={dropoffTimeRef}
-                    type="button"
-                    aria-expanded={dropoffTimeOpen}
-                    aria-haspopup="dialog"
-                    onClick={() => {
-                      setDropoffTimeOpen((v) => !v);
-                      setDateRangeOpen(false);
-                      setPickupTimeOpen(false);
-                    }}
-                    className="field-trigger relative flex w-full flex-col gap-1 rounded-xl border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start focus:outline-none"
-                  >
-                    <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
-                      <Clock className="size-3 text-[#dbb878]" aria-hidden />
-                      {t("deliveryTime")}
-                    </span>
-                    <span className="text-[13px] font-bold text-[#0f1923]" dir="ltr">
-                      {dropoffTimeDraft}
-                    </span>
-                    <ChevronDown
-                      className={`absolute end-3 top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${dropoffTimeOpen ? "rotate-180" : ""}`}
-                      aria-hidden
-                    />
-                  </button>
-                  <TimePickerPopover
-                    isOpen={dropoffTimeOpen}
-                    onClose={() => setDropoffTimeOpen(false)}
-                    label="وقت التسليم"
-                    time={dropoffTimeDraft}
-                    schedule={dropoffTimeBranchSchedule}
-                    dateDdMmYy={dropoffDateDraft}
-                    minExclusiveHm={dropoffMinExclusiveHm}
-                    onConfirm={applyDropoffTime}
-                    anchorRef={dropoffTimeRef}
-                  />
-                </div>
               </div>
             </div>
           ) : rental === "corporate" ? (
@@ -1910,226 +1851,121 @@ export function BookingSearchWidget({
                 </div>
               )}
 
-              {/* ── 3+4. التاريخ والوقت — يقترنان في صف واحد على الجوال ── */}
-              <div className="grid grid-cols-2 gap-2.5 xl:contents">
-              {/* ── 3. تاريخ الاستلام ── */}
-              <div className="relative flex-1 min-w-0 xl:flex-[1.15]">
-                <button
-                  ref={pickupDateRef}
-                  type="button"
-                  aria-expanded={rental === "daily" ? dateRangeOpen && dateRangeAnchor === "pickup" : pickupDateOpen}
-                  aria-haspopup="dialog"
-                  onClick={() => {
-                    if (rental === "daily") {
-                      toggleDateRange("pickup");
-                      return;
-                    }
-                    setPickupLocOpen(false);
-                    setReturnLocOpen(false);
-                    setDateRangeOpen(false);
-                    setPickupTimeOpen(false);
-                    setDropoffTimeOpen(false);
-                    setPickupDateOpen((v) => !v);
-                  }}
-                  className={`field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl xl:rounded-none xl:border-0 xl:border-e xl:border-[#ebe4d3] focus:outline-none ${rental === "daily" && dateRangeOpen && dateRangeAnchor === "pickup" ? "ring-2 ring-[#dbb878]/40" : ""}`}
-                >
-                  <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
-                    <CalendarClock className="size-3 text-[#dbb878]" aria-hidden />
-                    {t("pickupDate")}
-                  </span>
-                  {pickupDateDraft ? (
-                    <span className="text-[13px] font-bold text-[#0f1923]">{pickupDateDraft}</span>
-                  ) : (
-                    <span className="text-[13px] font-medium text-[#aaa08e]">{t("selectDate")}</span>
-                  )}
-                  <ChevronDown
-                    className={`absolute end-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${(rental === "daily" ? dateRangeOpen && dateRangeAnchor === "pickup" : pickupDateOpen) ? "rotate-180" : ""}`}
-                    aria-hidden
-                  />
-                </button>
-                {rental !== "daily" ? (
-                  <DatePickerPopover
-                    isOpen={pickupDateOpen}
-                    onClose={() => setPickupDateOpen(false)}
-                    label={t("pickupDate")}
-                    dateDdMmYy={pickupDateDraft}
-                    schedule={pickupTimeBranchSchedule}
-                    allowHolidayBooking={tabFlagsEff.allowHolidayBooking}
-                    onConfirm={(dateDdMmYy) => {
-                      applyPickupDateFromDraft(dateDdMmYy);
-                      setPickupDateOpen(false);
-                      setTimeout(() => {
-                        pickupTimeRef.current?.focus();
-                        setPickupTimeOpen(true);
-                      }, 150);
-                    }}
-                    anchorRef={pickupDateRef}
-                  />
-                ) : null}
-              </div>
-
-              {/* ── 4. وقت الاستلام ── */}
-              {/* «09:00» لا يحتاج عرض التاريخ */}
-              <div className="relative flex-1 min-w-0 xl:flex-[0.8]">
-                <button
-                  ref={pickupTimeRef}
-                  type="button"
-                  aria-expanded={pickupTimeOpen}
-                  aria-haspopup="dialog"
-                  onClick={() => {
-                    setPickupTimeOpen((v) => !v);
-                    setDateRangeOpen(false);
-                    setPickupDateOpen(false);
-                    setDropoffTimeOpen(false);
-                    setPickupLocOpen(false);
-                    setReturnLocOpen(false);
-                  }}
-                  className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl xl:rounded-none xl:border-0 xl:border-e xl:border-[#ebe4d3] focus:outline-none"
-                >
-                  <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
-                    <Clock className="size-3 text-[#dbb878]" aria-hidden />
-                    {t("pickUpTime")}
-                  </span>
-                  <span className="text-[13px] font-bold text-[#0f1923]" dir="ltr">
-                    {pickupTimeDraft}
-                  </span>
-                  <ChevronDown
-                    className={`absolute end-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${pickupTimeOpen ? "rotate-180" : ""}`}
-                    aria-hidden
-                  />
-                </button>
-                <TimePickerPopover
-                  isOpen={pickupTimeOpen}
-                  onClose={() => setPickupTimeOpen(false)}
-                  label={t("pickUpTime")}
-                  time={pickupTimeDraft}
-                  schedule={pickupTimeBranchSchedule}
-                  dateDdMmYy={pickupDateDraft}
-                  onConfirm={(hm) => {
-                    applyPickupTime(hm);
-                    setPickupTimeOpen(false);
-                    setTimeout(() => {
-                      if (rental === "daily" && !dropoffDateDraft) {
-                        dropoffDateRef.current?.focus();
-                        toggleDateRange("dropoff");
-                      } else {
-                        dropoffTimeRef.current?.focus();
-                        setDropoffTimeOpen(true);
+              {/* ── 3+4. التاريخ والوقت — مدمجان في خانتين (تاريخ ووقت الخروج / تاريخ ووقت العودة) ── */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 xl:contents">
+                {/* ── تاريخ و وقت الخروج (الاستلام) ── */}
+                <div className="relative flex-1 min-w-0 xl:flex-[1.4]">
+                  <button
+                    ref={pickupDateRef}
+                    type="button"
+                    aria-expanded={rental === "daily" ? dateRangeOpen && dateRangeAnchor === "pickup" : pickupDateOpen}
+                    aria-haspopup="dialog"
+                    onClick={() => {
+                      if (rental === "daily") {
+                        toggleDateRange("pickup");
+                        return;
                       }
-                    }, 150);
-                  }}
-                  anchorRef={pickupTimeRef}
-                />
-              </div>
-              </div>
-
-              {/* ── 5+6. التاريخ والوقت — يقترنان في صف واحد على الجوال ── */}
-              <div className="grid grid-cols-2 gap-2.5 xl:contents">
-              {/* ── 5. تاريخ التسليم ── */}
-              <div className="relative flex-1 min-w-0 xl:flex-[1.15]">
-                <button
-                  ref={dropoffDateRef}
-                  type="button"
-                  aria-expanded={rental === "daily" ? dateRangeOpen && dateRangeAnchor === "dropoff" : false}
-                  aria-haspopup="dialog"
-                  disabled={rental !== "daily"}
-                  onClick={() => {
-                    if (rental !== "daily") return;
-                    toggleDateRange("dropoff");
-                  }}
-                  className={`field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl xl:rounded-none xl:border-0 xl:border-e xl:border-[#ebe4d3] focus:outline-none disabled:opacity-60 ${rental === "daily" && dateRangeOpen && dateRangeAnchor === "dropoff" ? "ring-2 ring-[#dbb878]/40" : ""}`}
-                >
-                  <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
-                    <CalendarRange className="size-3 text-[#dbb878]" aria-hidden />
-                    {t("returnDate")}
-                    {rental !== "daily" ? (
-                      <span className="text-[9px] font-medium text-[#8a7752]/70"></span>
-                    ) : null}
-                  </span>
-                  {dropoffDateDraft ? (
-                    <span className="text-[13px] font-bold text-[#0f1923]">{dropoffDateDraft}</span>
-                  ) : (
-                    <span className="text-[13px] font-medium text-[#aaa08e]">{t("selectDate")}</span>
-                  )}
-                  <ChevronDown
-                    className={`absolute end-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${dateRangeOpen && dateRangeAnchor === "dropoff" ? "rotate-180" : ""}`}
-                    aria-hidden
-                  />
-                </button>
-                {rental === "daily" ? (
-                  <DateRangePickerPopover
-                    key={dateRangeAnchor}
-                    isOpen={dateRangeOpen}
-                    onClose={() => setDateRangeOpen(false)}
-                    startDateDdMmYy={pickupDateDraft}
-                    endDateDdMmYy={dropoffDateDraft}
-                    pickupTime={pickupTimeDraft}
-                    dropoffTime={dropoffTimeDraft}
-                    schedule={pickupTimeBranchSchedule}
-                    allowHolidayBooking={tabFlagsEff.allowHolidayBooking}
-                    onStartChange={applyPickupDateOnly}
-                    onRangeChange={(start, end) => {
-                      applyDateRange(start, end);
-                    }}
-                    onPickupTimeChange={(t) => applyPickupTime(t)}
-                    onDropoffTimeChange={(t) => applyDropoffTime(t)}
-                    onConfirmRangeAndTimes={(start, end, pTime, dTime) => {
-                      applyDateRange(start, end);
-                      if (pTime) applyPickupTime(pTime);
-                      if (dTime) applyDropoffTime(dTime);
+                      setPickupLocOpen(false);
+                      setReturnLocOpen(false);
                       setDateRangeOpen(false);
+                      setPickupTimeOpen(false);
+                      setDropoffTimeOpen(false);
+                      setPickupDateOpen((v) => !v);
                     }}
-                    anchorRef={dateRangeActiveRef}
-                    containerRef={formRef}
-                    extraAnchorRefs={[pickupDateRef, dropoffDateRef]}
-                  />
-                ) : null}
-              </div>
+                    className={`field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl xl:rounded-none xl:border-0 xl:border-e xl:border-[#ebe4d3] focus:outline-none ${rental === "daily" && dateRangeOpen && dateRangeAnchor === "pickup" ? "ring-2 ring-[#dbb878]/40" : ""}`}
+                  >
+                    <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
+                      <CalendarClock className="size-3 text-[#dbb878]" aria-hidden />
+                      {isRtl ? "تاريخ و وقت الخروج" : "Pickup Date & Time"}
+                    </span>
+                    {pickupDateDraft ? (
+                      <span className="text-[12px] font-bold text-[#0f1923] truncate">
+                        {formatCombinedDateTimeStr(pickupDateDraft, pickupTimeDraft, isRtl)}
+                      </span>
+                    ) : (
+                      <span className="text-[13px] font-medium text-[#aaa08e]">{t("selectDate")}</span>
+                    )}
+                    <ChevronDown
+                      className={`absolute end-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${(rental === "daily" ? dateRangeOpen && dateRangeAnchor === "pickup" : pickupDateOpen) ? "rotate-180" : ""}`}
+                      aria-hidden
+                    />
+                  </button>
+                  {rental !== "daily" ? (
+                    <DatePickerPopover
+                      isOpen={pickupDateOpen}
+                      onClose={() => setPickupDateOpen(false)}
+                      label={t("pickupDate")}
+                      dateDdMmYy={pickupDateDraft}
+                      schedule={pickupTimeBranchSchedule}
+                      allowHolidayBooking={tabFlagsEff.allowHolidayBooking}
+                      onConfirm={(dateDdMmYy) => {
+                        applyPickupDateFromDraft(dateDdMmYy);
+                        setPickupDateOpen(false);
+                      }}
+                      anchorRef={pickupDateRef}
+                    />
+                  ) : null}
+                </div>
 
-              {/* ── 6. وقت التسليم ── */}
-              <div className="relative flex-1 min-w-0 xl:flex-[0.8]">
-                <button
-                  ref={dropoffTimeRef}
-                  type="button"
-                  aria-expanded={dropoffTimeOpen}
-                  aria-haspopup="dialog"
-                  disabled={rental !== "daily"}
-                  onClick={() => {
-                    if (rental !== "daily") return;
-                    setDropoffTimeOpen((v) => !v);
-                    setDateRangeOpen(false);
-                    setPickupDateOpen(false);
-                    setPickupTimeOpen(false);
-                    setPickupLocOpen(false);
-                    setReturnLocOpen(false);
-                  }}
-                  className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl xl:rounded-none xl:border-0 xl:border-e xl:border-[#ebe4d3] focus:outline-none disabled:opacity-60"
-                >
-                  <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
-                    <Clock className="size-3 text-[#dbb878]" aria-hidden />
-                    {t("deliveryTime")}
-                  </span>
-                  <span className="text-[13px] font-bold text-[#0f1923]" dir="ltr">
-                    {dropoffTimeDraft}
-                  </span>
-                  <ChevronDown
-                    className={`absolute end-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${dropoffTimeOpen ? "rotate-180" : ""}`}
-                    aria-hidden
-                  />
-                </button>
-                <TimePickerPopover
-                  isOpen={dropoffTimeOpen}
-                  onClose={() => setDropoffTimeOpen(false)}
-                  label={t("deliveryTime")}
-                  time={dropoffTimeDraft}
-                  readOnly={rental !== "daily"}
-                  schedule={dropoffTimeBranchSchedule}
-                  dateDdMmYy={dropoffDateDraft}
-                  minExclusiveHm={dropoffMinExclusiveHm}
-                  onConfirm={applyDropoffTime}
-                  anchorRef={dropoffTimeRef}
-                />
-              </div>
+                {/* ── تاريخ و وقت العودة ── */}
+                <div className="relative flex-1 min-w-0 xl:flex-[1.4]">
+                  <button
+                    ref={dropoffDateRef}
+                    type="button"
+                    aria-expanded={rental === "daily" ? dateRangeOpen && dateRangeAnchor === "dropoff" : false}
+                    aria-haspopup="dialog"
+                    disabled={rental !== "daily"}
+                    onClick={() => {
+                      if (rental !== "daily") return;
+                      toggleDateRange("dropoff");
+                    }}
+                    className={`field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl xl:rounded-none xl:border-0 xl:border-e xl:border-[#ebe4d3] focus:outline-none disabled:opacity-60 ${rental === "daily" && dateRangeOpen && dateRangeAnchor === "dropoff" ? "ring-2 ring-[#dbb878]/40" : ""}`}
+                  >
+                    <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
+                      <CalendarRange className="size-3 text-[#dbb878]" aria-hidden />
+                      {isRtl ? "تاريخ و وقت العودة" : "Return Date & Time"}
+                    </span>
+                    {dropoffDateDraft ? (
+                      <span className="text-[12px] font-bold text-[#0f1923] truncate">
+                        {formatCombinedDateTimeStr(dropoffDateDraft, dropoffTimeDraft, isRtl)}
+                      </span>
+                    ) : (
+                      <span className="text-[13px] font-medium text-[#aaa08e]">{t("selectDate")}</span>
+                    )}
+                    <ChevronDown
+                      className={`absolute end-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${dateRangeOpen && dateRangeAnchor === "dropoff" ? "rotate-180" : ""}`}
+                      aria-hidden
+                    />
+                  </button>
+                  {rental === "daily" ? (
+                    <DateRangePickerPopover
+                      key={dateRangeAnchor}
+                      isOpen={dateRangeOpen}
+                      onClose={() => setDateRangeOpen(false)}
+                      startDateDdMmYy={pickupDateDraft}
+                      endDateDdMmYy={dropoffDateDraft}
+                      pickupTime={pickupTimeDraft}
+                      dropoffTime={dropoffTimeDraft}
+                      schedule={pickupTimeBranchSchedule}
+                      allowHolidayBooking={tabFlagsEff.allowHolidayBooking}
+                      onStartChange={applyPickupDateOnly}
+                      onRangeChange={(start, end) => {
+                        applyDateRange(start, end);
+                      }}
+                      onPickupTimeChange={(t) => applyPickupTime(t)}
+                      onDropoffTimeChange={(t) => applyDropoffTime(t)}
+                      onConfirmRangeAndTimes={(start, end, pTime, dTime) => {
+                        applyDateRange(start, end);
+                        if (pTime) applyPickupTime(pTime);
+                        if (dTime) applyDropoffTime(dTime);
+                        setDateRangeOpen(false);
+                      }}
+                      anchorRef={dateRangeActiveRef}
+                      containerRef={formRef}
+                      extraAnchorRefs={[pickupDateRef, dropoffDateRef]}
+                    />
+                  ) : null}
+                </div>
               </div>
 
               {/* ── 7. زر البحث ── */}
