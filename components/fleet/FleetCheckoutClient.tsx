@@ -209,6 +209,19 @@ export function FleetCheckoutClient({
   const [kycFieldError, setKycFieldError] = useState<string | null>(null);
   const [uploadingKyc, setUploadingKyc] = useState<"id" | "license" | null>(null);
   const prefillBookingIdRef = useRef<number | null>(null);
+  const formRef = useRef<HTMLFormElement | null>(null);
+  /** ضُغط زر التأكيد ولو مرة — عندها الانسحاب مغطّى بـ CHECKOUT_SUBMIT/ERROR. */
+  const submitAttemptedRef = useRef(false);
+  const abandonSentRef = useRef(false);
+  const openedAtRef = useRef(Date.now());
+  /**
+   * منتقي الملفات مفتوح أو الرفع جارٍ. على الجوال يفتح المنتقي الكاميرا أو
+   * الاستوديو فتُخفى الصفحة — وهذا ليس انسحاباً. بدون هذا العلم يتحوّل كل من
+   * حاول رفع رخصته إلى «منسحب عند رفع الصورة»، وهي بالضبط الفرضية التي نقيسها.
+   */
+  const uploadingRef = useRef(false);
+  /** المنتقي فُتح ولم يُختر منه ملف بعد — يُصفَّر عند عودة الصفحة للظهور. */
+  const pickerOpenRef = useRef(false);
 
   useEffect(() => setMounted(true), []);
 
@@ -599,6 +612,12 @@ export function FleetCheckoutClient({
   async function uploadKycImage(file: File, slot: "id" | "license") {
     setKycFieldError(null);
     setUploadingKyc(slot);
+    uploadingRef.current = true;
+    // حجم الملف بالميجابايت مقرَّباً — صور الجوال قد تتجاوز حدّ الخادم، وبدون
+    // الحجم لا نعرف هل الفشل بسبب الملف أم بسبب الشبكة.
+    const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+    const startedAt = Date.now();
+    trackEvent("KYC_UPLOAD_START", { carModelId: car.modelId, detail: `${slot}:${sizeMb}mb` });
     try {
       const fd = new FormData();
       fd.append("file", file);
@@ -609,9 +628,19 @@ export function FleetCheckoutClient({
       }
       if (slot === "id") setIdCardUrl(data.url);
       else setLicenseDocUrl(data.url);
+      trackEvent("KYC_UPLOAD_OK", {
+        carModelId: car.modelId,
+        detail: `${slot}:${sizeMb}mb:${Math.round((Date.now() - startedAt) / 1000)}s`,
+      });
     } catch (err) {
-      setKycFieldError(err instanceof Error ? err.message : "تعذّر رفع الملف.");
+      const message = err instanceof Error ? err.message : "تعذّر رفع الملف.";
+      setKycFieldError(message);
+      trackEvent("KYC_UPLOAD_FAIL", {
+        carModelId: car.modelId,
+        detail: `${slot}:${sizeMb}mb:${message}`.slice(0, 255),
+      });
     } finally {
+      uploadingRef.current = false;
       setUploadingKyc(null);
     }
   }
@@ -712,6 +741,7 @@ export function FleetCheckoutClient({
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    submitAttemptedRef.current = true;
     trackEvent("CHECKOUT_SUBMIT", { carModelId: car.modelId });
     if (!trip.pickupIso) {
       failWith("NO_DATES", "لم يُعثر على تواريخ الحجز. ارجع إلى الأسطول أو الصفحة الرئيسية وابحث مجدداً.");
@@ -945,6 +975,67 @@ export function FleetCheckoutClient({
     unavailableTracked.current = true;
     trackEvent("CAR_UNAVAILABLE", { carModelId: car.modelId });
   }, [showCarUnavailableModal, car.modelId]);
+
+  /**
+   * لقطة حيّة من حقول الهوية — يقرأها مستمع الانسحاب أدناه. المستمع يُسجَّل مرة
+   * واحدة فلا يرى الحالة إلا عبر مرجع يُحدَّث في كل رسم.
+   */
+  const kycSnapshotRef = useRef({ idDocKind, nationalId, passportNumber, licenseNumber, licenseExpiryDdmmyy, idCardUrl, licenseDocUrl });
+  kycSnapshotRef.current = { idDocKind, nationalId, passportNumber, licenseNumber, licenseExpiryDdmmyy, idCardUrl, licenseDocUrl };
+
+  /**
+   * أعمق مرحلة بلغها الزائر داخل النموذج، بترتيب ظهور الحقول. تُرسَل عند مغادرة
+   * الصفحة لمن لم يضغط زر التأكيد أصلاً — وهؤلاء كانوا حتى الآن بلا أثر إطلاقاً.
+   */
+  function deepestCheckoutStep(): string {
+    const k = kycSnapshotRef.current;
+    const fd = formRef.current ? new FormData(formRef.current) : null;
+    const filled = (field: string) => String(fd?.get(field) ?? "").trim().length > 0;
+
+    if (fd?.get("terms") === "on") return "terms";
+    if (k.licenseExpiryDdmmyy.trim()) return "license_expiry";
+    if (/^\d{10}$/.test(k.licenseNumber.trim())) return "license_no";
+    if (k.licenseNumber.trim()) return "license_no_partial";
+    if (k.idDocKind === "VISITOR" ? k.passportNumber.trim() : k.nationalId.trim()) return "id_number";
+    if (k.licenseDocUrl) return "license_image";
+    if (k.idCardUrl) return "id_image";
+    if (filled("email")) return "email";
+    if (filled("phone")) return "phone";
+    if (filled("name")) return "name";
+    return "opened";
+  }
+
+  useEffect(() => {
+    function reportAbandon() {
+      if (submitAttemptedRef.current || abandonSentRef.current) return;
+      abandonSentRef.current = true;
+      trackEvent("CHECKOUT_ABANDON", {
+        carModelId: car.modelId,
+        detail: `${deepestCheckoutStep()}:${Math.round((Date.now() - openedAtRef.current) / 1000)}s`,
+      });
+    }
+    // `pagehide` يغطّي إغلاق التبويب والرجوع للخلف، و`visibilitychange` يغطّي
+    // تبديل التطبيقات على الجوال — وهو الأشيع هنا لأن أغلب الزوار على الجوال.
+    //
+    // لكن فتح الكاميرا لتصوير الرخصة يُخفي الصفحة أيضاً وليس انسحاباً: لذلك
+    // نتجاهل الإخفاء أثناء الرفع، ونُعيد التسليح عند العودة. النتيجة أن الزائر
+    // قد يُنتج أكثر من حدث — **الأخير** هو الحالة النهائية عند التحليل.
+    function onVisibility() {
+      if (document.visibilityState === "hidden") {
+        if (uploadingRef.current || pickerOpenRef.current) return;
+        reportAbandon();
+      } else {
+        pickerOpenRef.current = false;
+        abandonSentRef.current = false;
+      }
+    }
+    window.addEventListener("pagehide", reportAbandon);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("pagehide", reportAbandon);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [car.modelId]);
 
   const prefillBookingRequestIdBanner = sp.get("prefillBookingRequestId")?.trim() ?? "";
   const excludeBookingRequestIdBanner = sp.get("excludeBookingRequestId")?.trim() ?? "";
@@ -1273,9 +1364,13 @@ export function FleetCheckoutClient({
                           accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
                           className="absolute inset-0 cursor-pointer opacity-0"
                           disabled={uploadingKyc !== null}
+                          onClick={() => {
+                            pickerOpenRef.current = true;
+                          }}
                           onChange={(e) => {
                             const f = e.target.files?.[0];
                             e.target.value = "";
+                            pickerOpenRef.current = false;
                             if (f) void uploadKycImage(f, "id");
                           }}
                         />
@@ -1317,9 +1412,13 @@ export function FleetCheckoutClient({
                           accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
                           className="absolute inset-0 cursor-pointer opacity-0"
                           disabled={uploadingKyc !== null}
+                          onClick={() => {
+                            pickerOpenRef.current = true;
+                          }}
                           onChange={(e) => {
                             const f = e.target.files?.[0];
                             e.target.value = "";
+                            pickerOpenRef.current = false;
                             if (f) void uploadKycImage(f, "license");
                           }}
                         />
@@ -1478,6 +1577,7 @@ export function FleetCheckoutClient({
 
                 <form
                   key={`checkout-${car.modelId}-${editPrefill?.bookingRequestId ?? "new"}`}
+                  ref={formRef}
                   onSubmit={handleSubmit}
                   onKeyDown={handleCheckoutFormKeyDown}
                   className="rounded-3xl border border-[#ebe4d3] bg-white p-6 shadow-sm sm:p-8"

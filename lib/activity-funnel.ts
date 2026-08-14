@@ -67,6 +67,31 @@ export const CHECKOUT_ERROR_LABELS: Record<string, string> = {
   NETWORK: "انقطاع الاتصال",
 };
 
+/**
+ * أعمق مرحلة بلغها من غادر صفحة الحجز دون ضغط زر التأكيد — أول جزء من `detail`
+ * في حدث `CHECKOUT_ABANDON` (الجزء الثاني هو المدة بالثواني).
+ */
+export const CHECKOUT_ABANDON_STEP_LABELS: Record<string, string> = {
+  opened: "فتح الصفحة ولم يملأ شيئاً",
+  name: "كتب الاسم فقط",
+  phone: "وصل إلى الجوال",
+  email: "وصل إلى البريد",
+  id_image: "رفع صورة الهوية",
+  license_image: "رفع صورة الرخصة",
+  id_number: "كتب رقم الهوية/الجواز",
+  license_no_partial: "بدأ رقم الرخصة ولم يكمله",
+  license_no: "أكمل رقم الرخصة",
+  license_expiry: "كتب تاريخ انتهاء الرخصة",
+  terms: "وافق على الشروط ولم يضغط التأكيد",
+};
+
+/** تفكيك `detail` الخاص بـ `CHECKOUT_ABANDON` إلى مرحلة ومدة بالثواني. */
+export function parseAbandonDetail(detail: string | null): { step: string; seconds: number | null } {
+  const [step = "", secsRaw = ""] = (detail ?? "").split(":");
+  const secs = Number.parseInt(secsRaw, 10);
+  return { step, seconds: Number.isFinite(secs) ? secs : null };
+}
+
 /** المسار بدون البادئة اللغوية وبدون الـ query — للمقارنة والتصنيف. */
 export function normalizePath(path: string | null): string {
   const withoutQuery = (path ?? "").split("?")[0];

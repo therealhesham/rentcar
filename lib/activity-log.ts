@@ -14,6 +14,13 @@ export type ActivityKind =
   | "CAR_UNAVAILABLE"
   | "CHECKOUT_SUBMIT"
   | "CHECKOUT_ERROR"
+  // أحداث ما **داخل** صفحة الحجز. بدونها نرى أن الزائر توقّف عند الصفحة ولا نرى
+  // أين توقّف فيها: `CHECKOUT_ERROR` لا يُسجَّل إلا بعد ضغط زر التأكيد، ومن ينسحب
+  // قبل الضغط لا يترك أثراً إطلاقاً. `detail` يحمل الخانة أو أعمق مرحلة بلغها.
+  | "KYC_UPLOAD_START"
+  | "KYC_UPLOAD_OK"
+  | "KYC_UPLOAD_FAIL"
+  | "CHECKOUT_ABANDON"
   | "BOOKING_PAYMENT"
   | "BOOKING_REFUND";
 
@@ -32,6 +39,10 @@ export const CLIENT_TRACKABLE_KINDS = [
   "CAR_UNAVAILABLE",
   "CHECKOUT_SUBMIT",
   "CHECKOUT_ERROR",
+  "KYC_UPLOAD_START",
+  "KYC_UPLOAD_OK",
+  "KYC_UPLOAD_FAIL",
+  "CHECKOUT_ABANDON",
 ] as const satisfies readonly ActivityKind[];
 
 export type ClientTrackableKind = (typeof CLIENT_TRACKABLE_KINDS)[number];
