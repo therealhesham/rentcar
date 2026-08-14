@@ -298,11 +298,25 @@ export function PaymentClient({
     ps === "NO_REFUND";
 
   const pickup = useMemo(() => fmtWhen(booking.pickupDate), [booking.pickupDate]);
+  /*
+   * موعد التسليم الذي طلبه العميل محفوظ في لقطة الغرامة وحدها — لا عمود
+   * `dropoffDate` في الجدول. واشتقاقه من الأيام الكاملة يُسقط الساعات الزائدة،
+   * فيعرض الصف موعداً أبكر من الطلب بينما يعرض سطر «مدة الإيجار» تحته تلك
+   * الساعات («يوم واحد + 4 ساعات») — فتناقض الصفحة نفسها ويظن العميل أن هناك خطأ.
+   *
+   * اللقطة تُسجَّل فقط حين تُستحق غرامة، أي حين يتجاوز الفارق ساعتين (ما دونها
+   * مجاني) — فالفروق الكبيرة وحدها تظهر بدقّة، وما يتبقّى فارقه ساعتان فأقل.
+   */
   const dropoff = useMemo(() => {
+    const requested = booking.delayPenalty?.actualDropoffAt;
+    if (requested) {
+      const exact = new Date(requested);
+      if (!Number.isNaN(exact.getTime())) return fmtWhen(exact);
+    }
     const d = new Date(booking.pickupDate);
     d.setDate(d.getDate() + booking.numberOfDays);
     return fmtWhen(d);
-  }, [booking.pickupDate, booking.numberOfDays]);
+  }, [booking.pickupDate, booking.numberOfDays, booking.delayPenalty]);
   const branchLabelAr =
     booking.pickupBranchLabelAr?.trim() || BRANCH_LABEL_AR[booking.branch] || booking.branch;
 
