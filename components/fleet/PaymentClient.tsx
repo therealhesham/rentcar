@@ -433,15 +433,15 @@ export function PaymentClient({
           {checkoutComplete ? (
             <div
               className={`overflow-hidden rounded-3xl border shadow-sm ${showAmberSuccessPanel
-                  ? "border-amber-200 bg-amber-50"
-                  : "border-emerald-200 bg-emerald-50"
+                ? "border-amber-200 bg-amber-50"
+                : "border-emerald-200 bg-emerald-50"
                 }`}
             >
               <div className="flex flex-col items-center gap-3 p-8 text-center sm:p-10">
                 <div
                   className={`grid size-16 place-items-center rounded-full ${showAmberSuccessPanel
-                      ? "bg-amber-100 text-amber-700"
-                      : "bg-emerald-100 text-emerald-700"
+                    ? "bg-amber-100 text-amber-700"
+                    : "bg-emerald-100 text-emerald-700"
                     }`}
                 >
                   <CheckCircle2 className="size-9" aria-hidden />
@@ -617,8 +617,8 @@ export function PaymentClient({
                         setClientError(null);
                       }}
                       className={`relative flex flex-col items-start gap-2 rounded-xl border px-4 py-3 text-start transition-all ${on
-                          ? "border-[#dbb878] bg-[#003749]/[0.04] ring-2 ring-[#dbb878]/35"
-                          : "border-[#ebe4d3] bg-white hover:border-[#dbb878]/40 hover:shadow-sm"
+                        ? "border-[#dbb878] bg-[#003749]/[0.04] ring-2 ring-[#dbb878]/35"
+                        : "border-[#ebe4d3] bg-white hover:border-[#dbb878]/40 hover:shadow-sm"
                         }`}
                     >
                       {on ? (
@@ -642,8 +642,8 @@ export function PaymentClient({
                         ) : (
                           <span
                             className={`grid size-10 shrink-0 place-items-center rounded-xl ring-1 transition-colors ${on
-                                ? "bg-[#003749]/[0.06] ring-[#dbb878]/40"
-                                : "bg-neutral-50 ring-black/[0.06]"
+                              ? "bg-[#003749]/[0.06] ring-[#dbb878]/40"
+                              : "bg-neutral-50 ring-black/[0.06]"
                               }`}
                           >
                             <opt.Icon
