@@ -2011,6 +2011,7 @@ export async function updateBookingRequestByAdmin(
   let updatedSnapshotTotalAmountSar: number | null | undefined = undefined;
   let updatedRefundDueToCustomerSar: number | null | undefined = undefined;
   let repricedAddonsJson: string | null | undefined = undefined; // إعادة تسعير على موديل جديد
+  let delayAdjustedAddonsJson: string | null | undefined = undefined; // ساعات تأخير من وقت تسليم صريح
   let creditForCustomerSar = 0;
 
   if (booking.kind === "DIRECT" && booking.carModel) {
@@ -2128,6 +2129,20 @@ export async function updateBookingRequestByAdmin(
       newAddonsForPricing = repricedAddonsJson;
     }
 
+    // مودال الإدارة صار يختار وقت التسليم صراحةً مثل إتمام العميل، فساعات ما بعد آخر
+    // يوم كامل تُعاد تسعيرها منه قبل حساب الإجمالي — وإلا ظهرت في المودال ولم تُحصَّل.
+    if (input.dropoffDate && booking.rentalPeriodKind?.trim().toUpperCase() === "DAILY") {
+      const { applyDropoffDelayPenaltyToAddonsJson } = await import("@/lib/booking-edit");
+      delayAdjustedAddonsJson = applyDropoffDelayPenaltyToAddonsJson({
+        addonsJson: newAddonsForPricing,
+        pickupDate: input.pickupDate,
+        numberOfDays: days,
+        actualDropoffDate: input.dropoffDate,
+        modelPricePerDayExclTax: modelChanged ? 0 : booking.carModel.price,
+      }).addonsJson;
+      newAddonsForPricing = delayAdjustedAddonsJson;
+    }
+
     const newPriceInput = bookingDaysPriceInputFromSnapshot(
       modelChanged ? 0 : booking.carModel.price,
       newVatRatePercent,
@@ -2167,12 +2182,13 @@ export async function updateBookingRequestByAdmin(
         updatedRefundDueToCustomerSar = null;
       }
     } else {
-      // غير مدفوع: الإجمالي الجديد يُدفع كاملاً عند إتمام الدفع — لا رصيد ولا مستحقات.
-      const rounded = Math.max(
-        0,
-        Math.round(((booking.balanceDueAtBranchSar ?? 0) + diff) * 100) / 100,
-      );
-      updatedBalanceDueAtBranchSar = rounded > 0 ? rounded : null;
+      // غير مدفوع: الإجمالي الجديد يُدفع كاملاً عند إتمام الدفع، وهو يُشتق من اللقطة
+      // نفسها (`computeBookingOutstanding`). ضمّ فرق التعديل إلى الرصيد كان يطالب
+      // العميل به مرتين: مرة داخل الإجمالي ومرة كرصيد عند الفرع.
+      //
+      // والرصيد لا يُصفَّر أيضاً: قد يحمل رسوماً إضافية أو غرامة تأخير سُجّلت قبل
+      // التحصيل، وتقليص المدة كان يبتلعها. فلا يُمسّ هنا إطلاقاً.
+      updatedBalanceDueAtBranchSar = undefined;
     }
   }
   const commonData = {
@@ -2228,9 +2244,15 @@ export async function updateBookingRequestByAdmin(
   }
 
   const turnaroundMinutes = await getFleetTurnaroundMinutes();
-  // اللقطة بعد إعادة التسعير إن بُدِّل الموديل، وإلا لقطة الحجز الحالية.
+  // اللقطة بعد ضبط ساعات التأخير وإعادة التسعير إن بُدِّل الموديل، وإلا لقطة الحجز
+  // الحالية. مهمّة هنا لأن `bookingOccupiedUntil` يقرأ منها الساعات الإضافية ليعرف
+  // متى تُفرَّغ العربية فعلاً.
   const candidateAddonsJson =
-    repricedAddonsJson !== undefined ? repricedAddonsJson : booking.addonsJson;
+    delayAdjustedAddonsJson !== undefined
+      ? delayAdjustedAddonsJson
+      : repricedAddonsJson !== undefined
+        ? repricedAddonsJson
+        : booking.addonsJson;
 
   const runOnce = () =>
     prisma.$transaction(
@@ -2309,8 +2331,16 @@ export async function updateBookingRequestByAdmin(
         // إعادة بناء addonsJson لتعكس عدد الأيام الجديد (وسعر الموديل الجديد إن بُدِّل)
         let newAddonsJson: string | null | undefined = undefined;
         const addonsBase =
-          repricedAddonsJson !== undefined ? repricedAddonsJson : booking.addonsJson;
-        if (days !== booking.numberOfDays || repricedAddonsJson !== undefined) {
+          delayAdjustedAddonsJson !== undefined
+            ? delayAdjustedAddonsJson
+            : repricedAddonsJson !== undefined
+              ? repricedAddonsJson
+              : booking.addonsJson;
+        if (
+          days !== booking.numberOfDays ||
+          repricedAddonsJson !== undefined ||
+          delayAdjustedAddonsJson !== undefined
+        ) {
           const { rebuildAddonsJsonForDays } = await import("@/lib/booking-edit");
           newAddonsJson = rebuildAddonsJsonForDays(addonsBase, days, input.pickupDate);
         }

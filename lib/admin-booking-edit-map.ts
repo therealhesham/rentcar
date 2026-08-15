@@ -1,6 +1,8 @@
 import type { AdminBookingDetail } from "@/lib/admin-booking-detail";
 import type { EditableBookingRow } from "@/lib/admin-booking-edit-types";
 import { resolveBookingKycForDisplay } from "@/lib/booking-kyc-display";
+import { resolveBookingRentalPricePerDayExclTax } from "@/lib/booking-pricing-snapshot";
+import { bookingOccupiedUntil } from "@/lib/direct-booking";
 
 export function toEditableBookingRow(booking: AdminBookingDetail): EditableBookingRow {
   const kyc = resolveBookingKycForDisplay(booking, booking.customer);
@@ -18,9 +20,18 @@ export function toEditableBookingRow(booking: AdminBookingDetail): EditableBooki
     deliveryLat: booking.deliveryLat,
     deliveryLng: booking.deliveryLng,
     deliveryAddress: booking.deliveryAddress,
-    pickupDateYmd: booking.pickupDate.toISOString().slice(0, 10),
+    pickupIso: booking.pickupDate.toISOString(),
+    dropoffIso: bookingOccupiedUntil({
+      pickupDate: booking.pickupDate,
+      numberOfDays: booking.numberOfDays,
+      addonsJson: booking.addonsJson,
+    }).toISOString(),
     numberOfDays: booking.numberOfDays,
     fixedDuration: booking.rentalPeriodKind?.trim().toUpperCase() === "MONTHLY",
+    isDailyRental: booking.rentalPeriodKind?.trim().toUpperCase() === "DAILY",
+    rentalPricePerDayExclTax: booking.carModel
+      ? resolveBookingRentalPricePerDayExclTax(booking.carModel.price, booking.addonsJson)
+      : null,
     termsAccepted: booking.termsAccepted,
     status: booking.status,
     carModelId: booking.carModelId,

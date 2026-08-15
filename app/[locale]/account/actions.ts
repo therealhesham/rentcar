@@ -236,10 +236,13 @@ export async function updateCustomerBookingDates(
         refundDueToCustomerSar = null;
       }
     } else {
-      // غير مدفوع: الإجمالي الجديد يُدفع كاملاً عند إتمام الدفع — لا رصيد ولا مستحقات.
-      const base = booking.balanceDueAtBranchSar ?? 0;
-      const rounded = Math.max(0, Math.round((base + diff) * 100) / 100);
-      balanceDueAtBranchSar = rounded > 0 ? rounded : null;
+      // غير مدفوع: الإجمالي الجديد يُدفع كاملاً عند إتمام الدفع، وهو يُشتق من اللقطة
+      // نفسها (`computeBookingOutstanding`). ضمّ فرق التعديل إلى الرصيد كان يطالب
+      // العميل به مرتين: مرة داخل الإجمالي ومرة كرصيد عند الفرع.
+      //
+      // والرصيد يبقى كما هو دون تصفير: قد يحمل رسوماً إضافية أو غرامة تأخير سُجّلت
+      // قبل التحصيل، وتقليص المدة كان يبتلعها.
+      balanceDueAtBranchSar = booking.balanceDueAtBranchSar ?? null;
     }
   }
 

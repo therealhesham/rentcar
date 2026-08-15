@@ -31,7 +31,8 @@ function formatDaysUnitAr(days: number): string {
   });
 }
 
-function formatHoursUnitAr(hours: number): string {
+/** «ساعة واحدة» / «ساعتين» / «4 ساعات» — تُجبر الكسور لأعلى مثل احتساب الغرامة. */
+export function formatHoursUnitAr(hours: number): string {
   const h = Math.ceil(hours);
   if (h === 1) return "ساعة واحدة";
   if (h === 2) return "ساعتين";

@@ -35,6 +35,8 @@ import {
 } from "@/lib/admin-scope";
 import { requireAdminPage } from "@/lib/admin-page";
 import { missedPickupCondition } from "@/lib/admin-missed-bookings";
+import { resolveBookingRentalPricePerDayExclTax } from "@/lib/booking-pricing-snapshot";
+import { bookingOccupiedUntil } from "@/lib/direct-booking";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -242,9 +244,18 @@ export default async function AdminDashboardPage(props: {
     deliveryLng: request.deliveryLng,
     deliveryAddress:
       (request as { deliveryAddress?: string | null }).deliveryAddress ?? null,
-    pickupDateYmd: request.pickupDate.toISOString().slice(0, 10),
+    pickupIso: request.pickupDate.toISOString(),
+    dropoffIso: bookingOccupiedUntil({
+      pickupDate: request.pickupDate,
+      numberOfDays: request.numberOfDays,
+      addonsJson: request.addonsJson,
+    }).toISOString(),
     numberOfDays: request.numberOfDays,
     fixedDuration: request.rentalPeriodKind?.trim().toUpperCase() === "MONTHLY",
+    isDailyRental: request.rentalPeriodKind?.trim().toUpperCase() === "DAILY",
+    rentalPricePerDayExclTax: request.carModel
+      ? resolveBookingRentalPricePerDayExclTax(request.carModel.price, request.addonsJson)
+      : null,
     termsAccepted: request.termsAccepted,
     status: request.status,
     carModelId: request.carModelId,

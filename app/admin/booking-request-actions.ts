@@ -9,6 +9,11 @@ import {
   requirePermissionForAction,
 } from "@/lib/admin-access";
 import { isCashPaymentMethod } from "@/lib/booking-cash-flow";
+import {
+  DROPOFF_AFTER_PICKUP_ERROR_AR,
+  computeBookingDays,
+  isDropoffAfterPickup,
+} from "@/lib/booking-days";
 import { syncLifecycleFromAdminStatusChange } from "@/lib/booking-lifecycle-service";
 import {
   convertDirectBookingToInquiry,
@@ -141,6 +146,22 @@ export async function updateBookingRequest(
   const parsed = parseCommonBookingFieldsFromFormData(scopedForm);
   if (!parsed.ok) {
     return parsed;
+  }
+
+  // المودال يرسل لحظتَي الاستلام والتسليم، والمدة تُحتسب هنا من الفارق بينهما —
+  // نفس حساب مسار العميل (computeBookingDays) ولا يُعتمد على رقم أيام من المتصفح.
+  const dropoffRaw = String(scopedForm.get("dropoffDate") ?? "").trim();
+  if (dropoffRaw) {
+    const dropoffDate = new Date(dropoffRaw);
+    if (Number.isNaN(dropoffDate.getTime())) {
+      return { ok: false, error: "يرجى اختيار تاريخ ووقت التسليم." };
+    }
+    if (!isDropoffAfterPickup(parsed.data.pickupDate, dropoffDate)) {
+      return { ok: false, error: DROPOFF_AFTER_PICKUP_ERROR_AR };
+    }
+    parsed.data.numberOfDays = computeBookingDays(parsed.data.pickupDate, dropoffDate);
+    // ساعات ما بعد آخر يوم كامل تُسعَّر من هذا الوقت بالذات — مطابقةً لما يعرضه المودال.
+    parsed.data.dropoffDate = dropoffDate;
   }
 
   const status = String(scopedForm.get("status") ?? "").trim();

@@ -95,6 +95,65 @@ export function bookingDaysPriceInputFromSnapshot(
 }
 
 /**
+ * يعيد احتساب لقطة ساعات التأخير من **وقت تسليم صريح**، ويكتبها في اللقطة دون
+ * المساس ببقية حقولها.
+ *
+ * `rebuildAddonsJsonForDays` يحافظ على *فارق* الساعات القديم، وهو الصحيح حين لا
+ * يُعرف وقت تسليم جديد. لكن مودال تعديل الإدارة صار يختار الاستلام والتسليم مثل
+ * إتمام العميل تماماً، فالفارق الجديد هو المرجع — وإلا بقيت رسوم ساعات لم يعد لها
+ * وجود، أو ضاعت ساعات اختارها الموظف ويدفعها العميل في مسار الإتمام.
+ */
+export function applyDropoffDelayPenaltyToAddonsJson(input: {
+  addonsJson: string | null;
+  pickupDate: Date;
+  numberOfDays: number;
+  actualDropoffDate: Date;
+  /** سعر اليوم من الموديل — اللقطة المجمَّدة تسبقه إن وُجدت. */
+  modelPricePerDayExclTax: number;
+}): { addonsJson: string | null; snap: DelayPenaltySnap | null } {
+  const snap = computeDelayPenaltySnap({
+    rentalTab: "daily",
+    pricePerDayExclTax: resolveBookingRentalPricePerDayExclTax(
+      input.modelPricePerDayExclTax,
+      input.addonsJson,
+    ),
+    pickupDate: input.pickupDate,
+    numberOfDays: input.numberOfDays,
+    actualDropoffDate: input.actualDropoffDate,
+  });
+
+  let data: Record<string, unknown> = {};
+  if (input.addonsJson?.trim()) {
+    try {
+      const parsed = JSON.parse(input.addonsJson);
+      if (parsed && typeof parsed === "object") data = parsed as Record<string, unknown>;
+    } catch {
+      return { addonsJson: input.addonsJson, snap };
+    }
+  }
+
+  const extraMs =
+    input.actualDropoffDate.getTime() -
+    computeBookingReturnAt(input.pickupDate, input.numberOfDays).getTime();
+  if (extraMs > 0) {
+    data.tripDurationLabelAr = formatDailyBookingDurationAr({
+      days: Math.max(1, Math.round(input.numberOfDays)),
+      extraHours: Math.ceil(extraMs / 3_600_000),
+    });
+  } else {
+    delete data.tripDurationLabelAr;
+  }
+  if (snap) {
+    data.delayPenalty = snap;
+  } else {
+    delete data.delayPenalty;
+  }
+
+  const json = Object.keys(data).length > 0 ? JSON.stringify(data) : null;
+  return { addonsJson: json, snap };
+}
+
+/**
  * يعيد تسعير لقطة الحجز على موديل جديد (تبديل السيارة من الإدارة):
  * يستبدل سعر الإيجار اليومي المجمَّد وأرضية السعر بقيم الموديل الجديد في فرع الإرجاع،
  * ويُسقط لقطة الخصم القديمة (كانت تخص الموديل السابق — الخصم الجديد مدموج أصلاً في السعر).

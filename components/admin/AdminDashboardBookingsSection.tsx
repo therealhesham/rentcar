@@ -26,10 +26,13 @@ export type DashboardBookingRow = {
   deliveryLat: number | null;
   deliveryLng: number | null;
   deliveryAddress: string | null;
-  pickupDateYmd: string;
+  pickupIso: string;
+  dropoffIso: string;
   numberOfDays: number;
   /** حجز شهري: المدة ثابتة — لا يُسمح بتغييرها. */
   fixedDuration: boolean;
+  isDailyRental: boolean;
+  rentalPricePerDayExclTax: number | null;
   termsAccepted: boolean;
   status: string;
   carModelId: number | null;
@@ -77,9 +80,12 @@ function editRequestPayload(request: DashboardBookingRow) {
     deliveryLat: request.deliveryLat,
     deliveryLng: request.deliveryLng,
     deliveryAddress: request.deliveryAddress,
-    pickupDateYmd: request.pickupDateYmd,
+    pickupIso: request.pickupIso,
+    dropoffIso: request.dropoffIso,
     numberOfDays: request.numberOfDays,
     fixedDuration: request.fixedDuration,
+    isDailyRental: request.isDailyRental,
+    rentalPricePerDayExclTax: request.rentalPricePerDayExclTax,
     termsAccepted: request.termsAccepted,
     status: request.status,
     carModelId: request.carModelId,

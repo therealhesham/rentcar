@@ -15,6 +15,20 @@ import { BookingAddonsSnapshot } from "@/components/admin/BookingAddonsSnapshot"
 import { BookingAttachmentsPanel } from "@/components/admin/BookingAttachmentsPanel";
 import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
 import { formatDeductDaysSummaryAr } from "@/lib/cancellation-deduct";
+import {
+  DROPOFF_AFTER_PICKUP_ERROR_AR,
+  computeBookingDays,
+  isDropoffAfterPickup,
+} from "@/lib/booking-days";
+import {
+  DELAY_PENALTY_FREE_HOURS,
+  computeDelayPenaltySnap,
+} from "@/lib/booking-delay-penalty";
+import { formatSarAmount } from "@/lib/booking-checkout-pricing";
+import {
+  formatDailyBookingDurationAr,
+  formatHoursUnitAr,
+} from "@/lib/booking-duration-display";
 
 import type { EditableBookingRow } from "@/lib/admin-booking-edit-types";
 
@@ -49,6 +63,34 @@ type Props = {
   triggerClassName?: string;
   onModalClose?: () => void;
 };
+
+const DAY_MS = 86_400_000;
+const MAX_BOOKING_DAYS = 60;
+
+function pad2(n: number): string {
+  return String(n).padStart(2, "0");
+}
+/** التاريخ والوقت بتوقيت متصفح الموظف — نفس ما يفعله مودال تعديل العميل بالضبط. */
+function ymdOfLocal(d: Date): string {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+function hmOfLocal(d: Date): string {
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+function parseLocalDateTime(ymd: string, hm: string): Date | null {
+  if (!ymd) return null;
+  const d = new Date(`${ymd}T${hm || "00:00"}:00`);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+function formatDateTimeAr(d: Date): string {
+  return d.toLocaleString("ar-SA", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 function localPhoneFromStored(phone: string): string {
   if (phone.startsWith("+966")) return phone.slice(4);
@@ -111,6 +153,86 @@ export function EditBookingModalInner({
       },
     ];
   }, [request.kind, request.carModelId, request.carModelLabel, models]);
+
+  // موعد الاستلام والتسليم — نفس آلية العميل: يُختار الطرفان وتُحتسب المدة منهما.
+  const originalPickup = useMemo(() => new Date(request.pickupIso), [request.pickupIso]);
+  // التسليم المتفق عليه كما هو مخزّن (بساعاته الإضافية) — لا الاستلام + الأيام.
+  const originalDropoff = useMemo(() => {
+    const d = new Date(request.dropoffIso);
+    return Number.isNaN(d.getTime()) || d.getTime() <= originalPickup.getTime()
+      ? new Date(originalPickup.getTime() + request.numberOfDays * DAY_MS)
+      : d;
+  }, [request.dropoffIso, originalPickup, request.numberOfDays]);
+  const [pickupYmd, setPickupYmd] = useState(() => ymdOfLocal(originalPickup));
+  const [pickupTime, setPickupTime] = useState(() => hmOfLocal(originalPickup));
+  const [dropoffYmd, setDropoffYmd] = useState(() => ymdOfLocal(originalDropoff));
+  const [dropoffTime, setDropoffTime] = useState(() => hmOfLocal(originalDropoff));
+
+  const pickupAt = useMemo(
+    () => parseLocalDateTime(pickupYmd, pickupTime),
+    [pickupYmd, pickupTime],
+  );
+  // الحجز الشهري مدته ثابتة — التسليم يتحرك مع الاستلام ولا يُحرَّر يدوياً.
+  const dropoffAt = useMemo(() => {
+    if (request.fixedDuration) {
+      return pickupAt ? new Date(pickupAt.getTime() + request.numberOfDays * DAY_MS) : null;
+    }
+    return parseLocalDateTime(dropoffYmd, dropoffTime);
+  }, [request.fixedDuration, request.numberOfDays, pickupAt, dropoffYmd, dropoffTime]);
+
+  const rangeValid = Boolean(pickupAt && dropoffAt && isDropoffAfterPickup(pickupAt, dropoffAt));
+  const rawDays =
+    pickupAt && dropoffAt
+      ? Math.floor((dropoffAt.getTime() - pickupAt.getTime()) / DAY_MS)
+      : 0;
+  const days = rangeValid && pickupAt && dropoffAt ? computeBookingDays(pickupAt, dropoffAt) : 0;
+
+  // ساعات ما بعد آخر فترة ٢٤ ساعة كاملة — نفس ما يعرضه إتمام العميل ويُحصّله.
+  const extraHours =
+    rangeValid && pickupAt && dropoffAt
+      ? (dropoffAt.getTime() - pickupAt.getTime() - days * DAY_MS) / 3_600_000
+      : 0;
+  const delayPenalty = useMemo(() => {
+    if (!rangeValid || !pickupAt || !dropoffAt) return null;
+    return computeDelayPenaltySnap({
+      rentalTab: request.isDailyRental ? "daily" : null,
+      pricePerDayExclTax: request.rentalPricePerDayExclTax ?? 0,
+      pickupDate: pickupAt,
+      numberOfDays: days,
+      actualDropoffDate: dropoffAt,
+    });
+  }, [
+    rangeValid,
+    pickupAt,
+    dropoffAt,
+    days,
+    request.isDailyRental,
+    request.rentalPricePerDayExclTax,
+  ]);
+  const rangeError = !pickupAt
+    ? "يرجى اختيار تاريخ ووقت الاستلام."
+    : !dropoffAt
+      ? "يرجى اختيار تاريخ ووقت التسليم."
+      : !rangeValid
+        ? DROPOFF_AFTER_PICKUP_ERROR_AR
+        : rawDays > MAX_BOOKING_DAYS
+          ? `المدة القصوى ${MAX_BOOKING_DAYS} يوماً — قرّب موعد التسليم.`
+          : null;
+
+  function handlePickupChange(nextYmd: string, nextHm: string) {
+    setPickupYmd(nextYmd);
+    setPickupTime(nextHm);
+    if (request.fixedDuration) return;
+    const prev = pickupAt;
+    const next = parseLocalDateTime(nextYmd, nextHm);
+    const drop = parseLocalDateTime(dropoffYmd, dropoffTime);
+    if (!prev || !next || !drop || drop.getTime() > next.getTime()) return;
+    // التسليم لم يعد بعد الاستلام — يُزاح معه محافظاً على المدة السابقة بدل ترك حالة غير صالحة.
+    const keptMs = Math.max(drop.getTime() - prev.getTime(), DAY_MS);
+    const shifted = new Date(next.getTime() + keptMs);
+    setDropoffYmd(ymdOfLocal(shifted));
+    setDropoffTime(hmOfLocal(shifted));
+  }
 
   useEffect(() => {
     if (state?.ok) {
@@ -380,38 +502,121 @@ export function EditBookingModalInner({
                   )}
                 </select>
               </label>
-              <label className="block text-sm font-bold text-on-surface">
-                تاريخ بداية الحجز
-                <input
-                  name="pickupDate"
-                  type="date"
-                  required
-                  defaultValue={request.pickupDateYmd}
-                  className="mt-1 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
-                />
-              </label>
-              <label className="block text-sm font-bold text-on-surface">
-                عدد الأيام
-                <input
-                  name="days"
-                  type="number"
-                  min={1}
-                  max={60}
-                  required
-                  readOnly={request.fixedDuration}
-                  defaultValue={request.numberOfDays}
-                  className={`mt-1 w-full rounded-xl border border-outline-variant px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary ${
-                    request.fixedDuration
-                      ? "cursor-not-allowed bg-surface-container text-on-surface-variant"
-                      : "bg-surface-container-lowest"
-                  }`}
-                />
+              <div className="sm:col-span-2 rounded-xl border border-outline-variant/40 bg-surface-container-low px-3 py-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <label className="block text-sm font-bold text-on-surface">
+                    تاريخ الاستلام
+                    <input
+                      type="date"
+                      required
+                      value={pickupYmd}
+                      onChange={(e) => handlePickupChange(e.target.value, pickupTime)}
+                      className="mt-1 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </label>
+                  <label className="block text-sm font-bold text-on-surface">
+                    وقت الاستلام
+                    <input
+                      type="time"
+                      required
+                      value={pickupTime}
+                      onChange={(e) => handlePickupChange(pickupYmd, e.target.value)}
+                      className="mt-1 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm tabular-nums outline-none focus:ring-2 focus:ring-primary"
+                      dir="ltr"
+                    />
+                  </label>
+                  <label className="block text-sm font-bold text-on-surface">
+                    تاريخ التسليم
+                    <input
+                      type="date"
+                      required
+                      disabled={request.fixedDuration}
+                      value={request.fixedDuration && dropoffAt ? ymdOfLocal(dropoffAt) : dropoffYmd}
+                      onChange={(e) => setDropoffYmd(e.target.value)}
+                      className={`mt-1 w-full rounded-xl border border-outline-variant px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary ${
+                        request.fixedDuration
+                          ? "cursor-not-allowed bg-surface-container text-on-surface-variant"
+                          : "bg-surface-container-lowest"
+                      }`}
+                    />
+                  </label>
+                  <label className="block text-sm font-bold text-on-surface">
+                    وقت التسليم
+                    <input
+                      type="time"
+                      required
+                      disabled={request.fixedDuration}
+                      value={request.fixedDuration && dropoffAt ? hmOfLocal(dropoffAt) : dropoffTime}
+                      onChange={(e) => setDropoffTime(e.target.value)}
+                      className={`mt-1 w-full rounded-xl border border-outline-variant px-3 py-2 text-sm tabular-nums outline-none focus:ring-2 focus:ring-primary ${
+                        request.fixedDuration
+                          ? "cursor-not-allowed bg-surface-container text-on-surface-variant"
+                          : "bg-surface-container-lowest"
+                      }`}
+                      dir="ltr"
+                    />
+                  </label>
+                </div>
+                {rangeError ? (
+                  <p className="mt-2 text-[11px] font-bold text-error">{rangeError}</p>
+                ) : (
+                  <p className="mt-2 text-[11px] font-bold text-on-surface-variant">
+                    المدة المحتسبة: {formatDailyBookingDurationAr({ days, extraHours })}
+                    {dropoffAt ? ` — التسليم ${formatDateTimeAr(dropoffAt)}` : ""}
+                  </p>
+                )}
                 {request.fixedDuration ? (
-                  <span className="mt-1 block text-[11px] font-bold text-on-surface-variant">
-                    حجز شهري بمدة ثابتة — سعره إجمالي الشهر، فلا يمكن تغيير أيامه.
-                  </span>
+                  <p className="mt-1 text-[11px] font-bold text-on-surface-variant">
+                    حجز شهري بمدة ثابتة ({request.numberOfDays} يوم) — تغيير موعد الاستلام ينقل
+                    التسليم معه، والمدة لا تتغيّر.
+                  </p>
                 ) : null}
-              </label>
+                {/* ساعات التأخير — نفس سطر إتمام العميل: تُعرض هنا ثم تُحصَّل في الإجمالي. */}
+                {request.isDailyRental && rangeError == null && extraHours > 0 ? (
+                  <div className="mt-2 rounded-lg border border-outline-variant/40 bg-surface-container-lowest px-2.5 py-2 text-[11px]">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-bold text-on-surface">
+                        {delayPenalty ? delayPenalty.labelAr : "ساعات إضافية"}:{" "}
+                        {formatHoursUnitAr(extraHours)} بعد نهاية المدة
+                      </span>
+                      {delayPenalty ? (
+                        <span className="font-extrabold tabular-nums text-on-surface" dir="ltr">
+                          {formatSarAmount(delayPenalty.feeExclVatSar)}{" "}
+                          <SarCurrencyGlyph className="inline h-[0.9em] w-[0.9em]" />
+                        </span>
+                      ) : (
+                        <span className="font-bold text-on-surface-variant">
+                          ضمن السماح المجاني (حتى {formatHoursUnitAr(DELAY_PENALTY_FREE_HOURS)})
+                        </span>
+                      )}
+                    </div>
+                    {delayPenalty ? (
+                      <p className="mt-1 font-bold text-on-surface-variant">
+                        {delayPenalty.kind === "full_day"
+                          ? `تتجاوز الحدّ فتُحتسب ${
+                              delayPenalty.billableDays === 1
+                                ? "يوم إيجار إضافي"
+                                : `${delayPenalty.billableDays} أيام إيجار إضافية`
+                            }`
+                          : `تُحتسب ${formatHoursUnitAr(delayPenalty.billableHours)} بسعر الساعة`}{" "}
+                        — تُضاف للإجمالي دون الضريبة عند الحفظ.
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+              {/* المدة لم تعد تُدخَل يدوياً — تُحتسب من الاستلام والتسليم كما في مسار العميل. */}
+              <input
+                type="hidden"
+                name="pickupDate"
+                value={pickupAt ? pickupAt.toISOString() : ""}
+              />
+              <input
+                type="hidden"
+                name="dropoffDate"
+                value={dropoffAt ? dropoffAt.toISOString() : ""}
+              />
+              <input type="hidden" name="days" value={days || request.numberOfDays} />
               <label className="sm:col-span-2 block text-sm font-bold text-on-surface">
                 حالة الطلب
                 <select
@@ -574,7 +779,7 @@ export function EditBookingModalInner({
             </button>
             <button
               type="submit"
-              disabled={pending}
+              disabled={pending || rangeError != null}
               className="rounded-xl bg-primary px-5 py-2 text-sm font-bold text-on-primary disabled:opacity-60"
             >
               {pending ? "جاري الحفظ…" : "حفظ التعديلات"}
