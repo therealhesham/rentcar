@@ -30,6 +30,7 @@ export type BookingCancelPanelProps = {
   cancellationRefundAmountSar?: number | null;
   cancellationRefundExternalRef?: string | null;
   cancellationReasonAr?: string | null;
+  rejectionReasonAr?: string | null;
   /** إجمالي المبلغ المدفوع فعلياً — يُعرض في مودال الاسترداد الكامل. */
   paidAmountSar?: number | null;
   cancellationPolicyAr?: string;
@@ -70,6 +71,7 @@ export function BookingCancelPanel({
   cancellationRefundAmountSar,
   cancellationRefundExternalRef,
   cancellationReasonAr,
+  rejectionReasonAr,
   paidAmountSar,
   cancellationPolicyAr = "",
   cancelMinHoursBeforePickup = 0,
@@ -98,6 +100,7 @@ export function BookingCancelPanel({
 
   const statusKey = status.trim().toUpperCase();
   const paymentKey = paymentStatus.trim().toUpperCase();
+
   const isTerminal =
     statusKey === "CANCELLED" || statusKey === "REJECTED" || statusKey === "RETURNED";
   const isPickedUp = statusKey === "PICKED_UP";
@@ -119,6 +122,7 @@ export function BookingCancelPanel({
         cancellationDeductTiers,
       );
     }
+
     const h = hoursBeforePickup(pickupDate, new Date());
     return computeCancellationDeductedDays(h, cancellationDeductTiers, numberOfDays);
   }, [numberOfDays, pickupDateIso, cancellationDeductTiers, isPickedUp]);

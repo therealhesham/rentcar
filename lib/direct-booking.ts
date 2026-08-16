@@ -1939,7 +1939,10 @@ export type AdminBookingUpdateInput = DirectBookingCommon & {
   directCarModelId: number | null;
   vehiclePlateNumber?: string | null;
   adminNotes?: string | null;
+  cancellationReasonAr?: string | null;
+  rejectionReasonAr?: string | null;
 };
+
 
 
 export async function updateBookingRequestByAdmin(
@@ -2209,7 +2212,10 @@ export async function updateBookingRequestByAdmin(
     status: statusTrim,
     ...(input.vehiclePlateNumber !== undefined ? { vehiclePlateNumber: input.vehiclePlateNumber?.trim() || null } : {}),
     ...(input.adminNotes !== undefined ? { adminNotes: input.adminNotes?.trim() || null } : {}),
+    ...(input.rejectionReasonAr !== undefined ? { rejectionReasonAr: input.rejectionReasonAr?.trim() || null } : {}),
+    ...(input.cancellationReasonAr !== undefined ? { cancellationReasonAr: input.cancellationReasonAr?.trim() || null } : {}),
   };
+
 
 
   if (booking.kind === "INQUIRY") {

@@ -227,6 +227,9 @@ export async function updateBookingRequest(
 
 
 
+  const rejectionReasonRaw = formData.get("rejectionReasonAr");
+  const rejectionReasonAr = rejectionReasonRaw !== null ? String(rejectionReasonRaw).trim() : undefined;
+
   const result = await updateBookingRequestByAdmin(bookingRequestId, {
     ...parsed.data,
     status,
@@ -235,7 +238,9 @@ export async function updateBookingRequest(
       Number.isInteger(directModelId) && directModelId > 0 ? directModelId : null,
     vehiclePlateNumber,
     adminNotes: adminNotesToSave,
+    rejectionReasonAr,
   });
+
 
 
 
@@ -334,7 +339,8 @@ export async function updateBookingRequest(
 
 export async function quickUpdateBookingStatus(
   bookingRequestId: number,
-  newStatus: string
+  newStatus: string,
+  rejectionReasonAr?: string,
 ): Promise<{ ok: boolean; error?: string }> {
   const auth = await requireAdminForAction();
   if (!auth.ok) return { ok: false, error: auth.error };
@@ -354,6 +360,11 @@ export async function quickUpdateBookingStatus(
   if (!beforeUpdate) return { ok: false, error: "الطلب غير موجود." };
 
   const statusUpper = newStatus.trim().toUpperCase();
+  const reasonClean = rejectionReasonAr?.trim() || null;
+
+  if (statusUpper === "REJECTED" && !reasonClean) {
+    return { ok: false, error: "يرجى تحديد سبب الرفض." };
+  }
 
   if (beforeUpdate.kind === "INQUIRY" && statusUpper === "CONFIRMED") {
     return { ok: false, error: "لا يمكن تأكيد طلب الاستفسار مباشرة. الرجاء فتح خيار (تعديل) واختيار السيارة أولاً." };
@@ -369,17 +380,22 @@ export async function quickUpdateBookingStatus(
 
   await prisma.bookingRequest.update({
     where: { id: bookingRequestId },
-    data: { status: statusUpper }
+    data: {
+      status: statusUpper,
+      ...(statusUpper === "REJECTED" ? { rejectionReasonAr: reasonClean, cancelledAt: new Date() } : {}),
+    },
   });
 
   await logBookingEvent({
     bookingId: bookingRequestId,
-    event: "STATUS_CHANGED",
+    event: statusUpper === "REJECTED" ? "BOOKING_REJECTED" : "STATUS_CHANGED",
     actorKind: "ADMIN",
     actorName: auth.session.displayName,
     fromStatus: beforeUpdate.status,
     toStatus: statusUpper,
+    notes: reasonClean ? `سبب الرفض: ${reasonClean}` : undefined,
   });
+
 
   const wasNotConfirmed = beforeUpdate.status.trim().toUpperCase() !== "CONFIRMED";
   const cashDirect = beforeUpdate.kind === "DIRECT" && isCashPaymentMethod(beforeUpdate.paymentMethod);
@@ -718,4 +734,61 @@ export async function deleteBookingAdminNoteAction(
     return { ok: false, error: "تعذّر حذف الملاحظة." };
   }
 }
+
+export async function rejectBookingRequestAction(
+  bookingRequestId: number,
+  rejectionReasonAr: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const auth = await requireAdminForAction();
+  if (!auth.ok) return { ok: false, error: auth.error };
+
+  if (!Number.isInteger(bookingRequestId) || bookingRequestId < 1) {
+    return { ok: false, error: "معرّف الطلب غير صالح." };
+  }
+
+  const reasonClean = rejectionReasonAr?.trim();
+  if (!reasonClean) {
+    return { ok: false, error: "يرجى كتابة سبب الرفض." };
+  }
+
+  const scope = await assertBookingRequestInScope(auth.session, bookingRequestId);
+  if (!scope.ok) return { ok: false, error: scope.error };
+
+  const beforeUpdate = await prisma.bookingRequest.findUnique({
+    where: { id: bookingRequestId },
+    select: { status: true },
+  });
+  if (!beforeUpdate) return { ok: false, error: "الطلب غير موجود." };
+
+  try {
+    await prisma.bookingRequest.update({
+      where: { id: bookingRequestId },
+      data: {
+        status: "REJECTED",
+        rejectionReasonAr: reasonClean,
+        cancelledAt: new Date(),
+      },
+    });
+
+    await logBookingEvent({
+      bookingId: bookingRequestId,
+      event: "BOOKING_REJECTED",
+      actorKind: "ADMIN",
+      actorName: auth.session.displayName,
+      fromStatus: beforeUpdate.status,
+      toStatus: "REJECTED",
+      notes: `سبب الرفض: ${reasonClean}`,
+    });
+
+    revalidatePath("/admin");
+    revalidatePath("/fleet");
+    revalidatePath("/admin/car-bookings");
+    revalidatePath(`/admin/bookings/${bookingRequestId}`);
+    return { ok: true };
+  } catch (e) {
+    console.error("rejectBookingRequestAction error:", e);
+    return { ok: false, error: "تعذّر رفض الطلب." };
+  }
+}
+
 

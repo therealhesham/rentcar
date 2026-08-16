@@ -49,5 +49,8 @@ export type EditableBookingRow = {
   balanceDueAtBranchSar?: number | null;
   vehiclePlateNumber?: string | null;
   adminNotes?: string | null;
+  cancellationReasonAr?: string | null;
+  rejectionReasonAr?: string | null;
 };
+
 

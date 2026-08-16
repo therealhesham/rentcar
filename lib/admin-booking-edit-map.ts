@@ -55,6 +55,9 @@ export function toEditableBookingRow(booking: AdminBookingDetail): EditableBooki
     cancellationRefundExternalRef: booking.cancellationRefundExternalRef,
     vehiclePlateNumber: booking.vehiclePlateNumber,
     adminNotes: booking.adminNotes,
+    cancellationReasonAr: booking.cancellationReasonAr,
+    rejectionReasonAr: booking.rejectionReasonAr,
   };
 }
+
 

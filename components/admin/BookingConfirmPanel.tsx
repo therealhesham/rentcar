@@ -11,6 +11,8 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, Check, Loader2, X } from "lucide-react";
 import { quickUpdateBookingStatus } from "@/app/admin/booking-request-actions";
+import { AdminRejectBookingModal } from "./AdminRejectBookingModal";
+
 
 type Props = {
   bookingRequestId: number;
@@ -75,42 +77,21 @@ export function BookingConfirmPanel({ bookingRequestId, kind, status, carModelId
         </button>
       )}
 
-      {confirmingReject ? (
-        <div className="rounded-xl border border-error/30 bg-error-container/30 p-4">
-          <p className="text-sm font-bold text-error">
-            هل أنت متأكد من رفض هذا الطلب؟ لا يمكن التراجع عن هذا الإجراء.
-          </p>
-          <div className="mt-3 flex gap-2">
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() => run("REJECTED")}
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-error px-3 py-2 text-xs font-bold text-white transition-colors hover:opacity-90 disabled:opacity-60"
-            >
-              {pending ? <Loader2 className="size-3.5 animate-spin" /> : <X className="size-3.5" />}
-              تأكيد الرفض
-            </button>
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() => setConfirmingReject(false)}
-              className="flex-1 rounded-lg border border-outline-variant/40 px-3 py-2 text-xs font-bold text-on-surface-variant transition-colors hover:bg-surface-container-low disabled:opacity-60"
-            >
-              تراجع
-            </button>
-          </div>
-        </div>
-      ) : (
-        <button
-          type="button"
-          disabled={pending}
-          onClick={() => setConfirmingReject(true)}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-error/25 px-4 py-3 text-sm font-bold text-error transition-colors hover:bg-error-container/40 disabled:opacity-60"
-        >
-          <X className="size-4" />
-          رفض الطلب
-        </button>
-      )}
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() => setConfirmingReject(true)}
+        className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-error/25 px-4 py-3 text-sm font-bold text-error transition-colors hover:bg-error-container/40 disabled:opacity-60 cursor-pointer"
+      >
+        <X className="size-4" />
+        رفض الطلب
+      </button>
+
+      <AdminRejectBookingModal
+        isOpen={confirmingReject}
+        onClose={() => setConfirmingReject(false)}
+        bookingRequestId={bookingRequestId}
+      />
 
       {error ? (
         <p className="flex items-start gap-2 rounded-xl bg-error-container/40 px-4 py-3 text-sm font-medium text-error">
@@ -121,3 +102,4 @@ export function BookingConfirmPanel({ bookingRequestId, kind, status, carModelId
     </div>
   );
 }
+

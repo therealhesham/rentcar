@@ -668,6 +668,22 @@ export function EditBookingModalInner({
                 </span>
               </label>
 
+              <label className="sm:col-span-2 block text-sm font-bold text-on-surface">
+
+                سبب رفض الطلب (خاص بحالة "مرفوض")
+                <textarea
+                  name="rejectionReasonAr"
+                  rows={2}
+                  defaultValue={request.rejectionReasonAr ?? ""}
+                  placeholder="أكتب سبب رفض الطلب إذا تم تغيير حالة الحجز إلى مرفوض..."
+                  className="mt-1 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface outline-none focus:ring-2 focus:ring-error"
+                />
+                <span className="mt-1 block text-xs text-on-surface-variant">
+                  حقل مخصص يظهر كسبب رسمي لرفض الطلب في صفحة تفاصيل الحجز.
+                </span>
+              </label>
+
+
 
 
               {request.status.trim().toUpperCase() === "CANCELLED" &&

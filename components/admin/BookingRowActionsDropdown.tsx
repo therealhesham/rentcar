@@ -20,6 +20,7 @@ import { EditBookingModalInner, type EditableBookingRow } from "./EditBookingReq
 import { quickUpdateBookingStatus } from "@/app/admin/booking-request-actions";
 
 import { VehiclePlateHandoverModal } from "./VehiclePlateHandoverModal";
+import { AdminRejectBookingModal } from "./AdminRejectBookingModal";
 
 type CategoryOption = { slug: string; title: string };
 type BookableModelOption = { id: number; label: string };
@@ -39,6 +40,8 @@ export function BookingRowActionsDropdown({ request, paymentStatus, categories, 
   const [balancePaymentModalOpen, setBalancePaymentModalOpen] = useState(false);
   const [handoverModalOpen, setHandoverModalOpen] = useState(false);
   const [updatePlateModalOpen, setUpdatePlateModalOpen] = useState(false);
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+
 
   const [isPending, startTransition] = useTransition();
   const [modalConfig, setModalConfig] = useState<{
@@ -175,16 +178,13 @@ export function BookingRowActionsDropdown({ request, paymentStatus, categories, 
                     ) : null}
                     <button
                       type="button"
-                      onClick={() =>
-                        confirmAction("هل أنت متأكد من رفض هذا الطلب؟ لا يمكن التراجع عن هذا الإجراء.", () =>
-                          handleAction("REJECTED"), "رفض الطلب"
-                        )
-                      }
+                      onClick={() => setRejectModalOpen(true)}
                       className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-start text-xs font-bold text-error hover:bg-error-container/50 transition-colors"
                     >
                       <X className="size-3.5" />
                       رفض الطلب
                     </button>
+
                   </>
                 )}
 
@@ -350,6 +350,16 @@ export function BookingRowActionsDropdown({ request, paymentStatus, categories, 
         mode="UPDATE_ONLY"
         currentPlateNumber={request.vehiclePlateNumber}
       />
+
+      {/* ─── Reject Booking Modal Popup ─────────────────────────────────── */}
+      <AdminRejectBookingModal
+        isOpen={rejectModalOpen}
+        onClose={() => setRejectModalOpen(false)}
+        bookingRequestId={request.id}
+        customerName={request.fullName}
+        carModelLabel={request.carModelLabel}
+      />
     </>
   );
 }
+

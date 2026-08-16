@@ -36,6 +36,7 @@ export const BOOKING_EVENTS = {
   /// علامة داخلية تمنع تكرار إيميل الموظفين — تُكتب من `booking-notification-email`.
   STAFF_BOOKING_EMAIL_SENT: "STAFF_BOOKING_EMAIL_SENT",
   ADMIN_NOTES_UPDATED: "ADMIN_NOTES_UPDATED",
+  BOOKING_REJECTED: "BOOKING_REJECTED",
 } as const;
 
 export type BookingEvent = (typeof BOOKING_EVENTS)[keyof typeof BOOKING_EVENTS];
@@ -62,7 +63,9 @@ export const BOOKING_EVENT_LABELS: Record<BookingEvent, string> = {
   MIN_PRICE_FLOOR_BYPASSED: "تجاوز الحد الأدنى بتصريح",
   STAFF_BOOKING_EMAIL_SENT: "إشعار الموظفين بالحجز",
   ADMIN_NOTES_UPDATED: "تحديث ملاحظات الإدارة",
+  BOOKING_REJECTED: "رفض الطلب",
 };
+
 
 
 export async function logBookingEvent(input: BookingEventInput): Promise<void> {

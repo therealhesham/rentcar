@@ -5,6 +5,7 @@ import { Check, X, Key, CornerDownLeft, Loader2, AlertCircle } from "lucide-reac
 import { quickUpdateBookingStatus } from "@/app/admin/booking-request-actions";
 import { recordReturnToBranchAction } from "@/app/admin/booking-lifecycle-actions";
 import { VehiclePlateHandoverModal } from "@/components/admin/VehiclePlateHandoverModal";
+import { AdminRejectBookingModal } from "@/components/admin/AdminRejectBookingModal";
 
 type Props = {
   bookingId: number;
@@ -17,6 +18,8 @@ type Props = {
 export function BookingListQuickActions({ bookingId, status, kind, carModelId, currentPlateNumber }: Props) {
   const [isPending, startTransition] = useTransition();
   const [handoverModalOpen, setHandoverModalOpen] = useState(false);
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+
 
   const [modalConfig, setModalConfig] = useState<{
     open: boolean;
@@ -89,17 +92,14 @@ export function BookingListQuickActions({ bookingId, status, kind, carModelId, c
               ) : null}
               <button
                 type="button"
-                onClick={() =>
-                  confirmAction("هل أنت متأكد من رفض هذا الطلب؟ لا يمكن التراجع عن هذا الإجراء.", () =>
-                    handleAction("REJECTED"), "رفض الطلب"
-                  )
-                }
-                className="inline-flex items-center gap-1 rounded-lg bg-error-container/50 px-2 py-1.5 text-[11px] font-bold text-error transition-colors hover:bg-error-container"
+                onClick={() => setRejectModalOpen(true)}
+                className="inline-flex items-center gap-1 rounded-lg bg-error-container/50 px-2 py-1.5 text-[11px] font-bold text-error transition-colors hover:bg-error-container cursor-pointer"
                 title="رفض الطلب"
               >
                 <X className="size-3.5 shrink-0" aria-hidden />
                 رفض
               </button>
+
             </>
           )}
 
@@ -210,6 +210,15 @@ export function BookingListQuickActions({ bookingId, status, kind, carModelId, c
           </div>
         </div>
       )}
+
+      {/* ─── Reject Booking Modal Popup ─────────────────────────────────── */}
+      <AdminRejectBookingModal
+        isOpen={rejectModalOpen}
+        onClose={() => setRejectModalOpen(false)}
+        bookingRequestId={bookingId}
+      />
     </>
   );
 }
+
+

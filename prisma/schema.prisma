@@ -677,6 +677,9 @@ model BookingRequest {
   cancellationRefundExternalRef String?      @db.VarChar(128)
   /// سبب الإلغاء — إلزامي عند إلغاء الإدارة مع استرداد كامل يتجاوز سياسة الشرائح.
   cancellationReasonAr          String?      @db.VarChar(500)
+  /// سبب رفض الطلب من قبل الإدارة.
+  rejectionReasonAr             String?      @db.VarChar(500)
+
   /// مرجع خارجي لعملية الدفع (رقم عملية الشبكة/التحويل) — يُدخله الموظف عند تسجيل الدفع يدوياً.
   paymentExternalRef            String?      @db.VarChar(128)
   /// مرجع عملية الدفع الأصلية من بوابة جيديا (orderId) — لازم لتنفيذ الاسترداد الإلكتروني.

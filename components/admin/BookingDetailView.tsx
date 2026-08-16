@@ -674,9 +674,12 @@ export function BookingDetailView({
               cancellationRefundAmountSar={booking.cancellationRefundAmountSar}
               cancellationRefundExternalRef={booking.cancellationRefundExternalRef}
               paidAmountSar={booking.paidAmountSar}
+              cancellationReasonAr={booking.cancellationReasonAr}
+              rejectionReasonAr={booking.rejectionReasonAr}
               canOverrideCancelPolicy={canOverrideCancelPolicy}
               {...cancellation}
             />
+
           </BookingDetailSection>
         </div>
       </div>
