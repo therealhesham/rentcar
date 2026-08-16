@@ -1938,7 +1938,9 @@ export type AdminBookingUpdateInput = DirectBookingCommon & {
   inquiryCarTypeSlug: string | null;
   directCarModelId: number | null;
   vehiclePlateNumber?: string | null;
+  adminNotes?: string | null;
 };
+
 
 export async function updateBookingRequestByAdmin(
   bookingRequestId: number,
@@ -2206,7 +2208,9 @@ export async function updateBookingRequestByAdmin(
     termsAccepted: input.termsAccepted,
     status: statusTrim,
     ...(input.vehiclePlateNumber !== undefined ? { vehiclePlateNumber: input.vehiclePlateNumber?.trim() || null } : {}),
+    ...(input.adminNotes !== undefined ? { adminNotes: input.adminNotes?.trim() || null } : {}),
   };
+
 
   if (booking.kind === "INQUIRY") {
     const slug = input.inquiryCarTypeSlug?.trim();

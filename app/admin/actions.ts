@@ -82,7 +82,7 @@ export async function loginAdmin(
       branchName: employee.branch?.name ?? null,
       cityId: employee.city?.id ?? null,
       cityName: employee.city?.name ?? null,
-      displayName: employee.name?.trim() || employee.email,
+      displayName: employee.email,
       permissions,
     });
     const meta = await currentRequestMeta();
@@ -105,9 +105,10 @@ export async function loginAdmin(
       branchName: null,
       cityId: null,
       cityName: null,
-      displayName: "مدير النظام",
+      displayName: email,
       permissions: [],
     });
+
     const meta = await currentRequestMeta();
     await logActivity({
       kind: "ADMIN_LOGIN",

@@ -48,4 +48,6 @@ export type EditableBookingRow = {
   cancellationRefundExternalRef: string | null;
   balanceDueAtBranchSar?: number | null;
   vehiclePlateNumber?: string | null;
+  adminNotes?: string | null;
 };
+

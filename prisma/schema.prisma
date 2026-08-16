@@ -721,6 +721,9 @@ model BookingRequest {
   odometerAtPickupKm            Int?
   /// قراءة العداد لحظة إرجاع السيارة إلى الفرع. الفرق عن قراءة التسليم = المسافة المقطوعة.
   odometerAtReturnKm            Int?
+  /// ملاحظات إدارية خاصة بالطلب (تظهر في أعلى صفحة تفاصيل الحجز للإدارة).
+  adminNotes                    String?      @db.Text
+
 
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt

@@ -655,6 +655,21 @@ export function EditBookingModalInner({
                 </span>
               </label>
 
+              <label className="sm:col-span-2 block text-sm font-bold text-on-surface">
+                إضافة ملاحظة جديدة للإدارة (اختياري)
+                <textarea
+                  name="adminNotes"
+                  rows={2}
+                  placeholder="أكتب ملاحظة جديدة لتنسخ تلقائياً إلى سجل الحجز بتاريخك وبريدك..."
+                  className="mt-1 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface outline-none focus:ring-2 focus:ring-primary"
+                />
+                <span className="mt-1 block text-xs text-on-surface-variant">
+                  تُضاف الملاحظة الجديدة لقائمة ملاحظات الحجز مع توثيق بريد الموظف والتاريخ تلقائياً.
+                </span>
+              </label>
+
+
+
               {request.status.trim().toUpperCase() === "CANCELLED" &&
               (request.cancelledAt != null ||
                 (request.cancellationDeductedDays != null && request.cancellationDeductedDays > 0) ||

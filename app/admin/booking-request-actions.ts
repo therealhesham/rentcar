@@ -8,7 +8,9 @@ import {
   requireAdminForAction,
   requirePermissionForAction,
 } from "@/lib/admin-access";
+import { type AdminSession } from "@/lib/admin-auth";
 import { isCashPaymentMethod } from "@/lib/booking-cash-flow";
+
 import {
   DROPOFF_AFTER_PICKUP_ERROR_AR,
   computeBookingDays,
@@ -29,6 +31,29 @@ import { parseBookingPricingSnapshot, resolveBookingRentalPricePerDayExclTax } f
 import { logBookingEvent } from "@/lib/booking-audit";
 import { currentRequestMeta, logActivity } from "@/lib/activity-log";
 import { recordPaymentTransaction } from "@/lib/payment-transaction";
+import { appendAdminNote, deleteAdminNote } from "@/lib/booking-admin-notes";
+
+async function resolveAdminEmail(session: AdminSession): Promise<string> {
+  if (session.employeeId) {
+    const emp = await prisma.adminEmployee.findUnique({
+      where: { id: session.employeeId },
+      select: { email: true },
+    });
+    if (emp?.email?.trim()) {
+      return emp.email.trim();
+    }
+  }
+  if (session.displayName?.includes("@")) {
+    return session.displayName.trim();
+  }
+  if (process.env.ADMIN_EMAIL) {
+    return process.env.ADMIN_EMAIL.trim();
+  }
+  return "admin@rentcar.com";
+}
+
+
+
 
 export async function convertInquiryToDirect(
   _prev: { ok: boolean; error?: string } | null,
@@ -175,6 +200,7 @@ export async function updateBookingRequest(
       kind: true,
       branchId: true,
       returnBranchId: true,
+      adminNotes: true,
     },
   });
 
@@ -190,7 +216,16 @@ export async function updateBookingRequest(
   }
 
   const vehiclePlateNumberRaw = formData.get("vehiclePlateNumber");
+
   const vehiclePlateNumber = vehiclePlateNumberRaw !== null ? String(vehiclePlateNumberRaw).trim() : undefined;
+  const newNoteText = String(formData.get("adminNotes") ?? "").trim();
+  let adminNotesToSave: string | undefined = undefined;
+  if (newNoteText) {
+    const authorIdentifier = await resolveAdminEmail(auth.session);
+    adminNotesToSave = appendAdminNote(beforeUpdate?.adminNotes, newNoteText, authorIdentifier);
+  }
+
+
 
   const result = await updateBookingRequestByAdmin(bookingRequestId, {
     ...parsed.data,
@@ -199,7 +234,10 @@ export async function updateBookingRequest(
     directCarModelId:
       Number.isInteger(directModelId) && directModelId > 0 ? directModelId : null,
     vehiclePlateNumber,
+    adminNotes: adminNotesToSave,
   });
+
+
 
   if (!result.ok) {
     return { ok: false, error: result.error };
@@ -578,9 +616,106 @@ export async function processAdminBalancePayment(
   revalidatePath(`/admin/bookings/${bookingRequestId}`);
   // الصفحات الفرعية لا تُبطَّل تلقائياً مع الصفحة الأم — بدونها تبقى أرقام
   // المالية وكشف الحساب على النسخة المخزّنة قبل التعديل.
-  revalidatePath(`/admin/bookings/${bookingRequestId}/finance`);
   revalidatePath(`/admin/bookings/${bookingRequestId}/statement`);
   revalidatePath(`/admin/bookings/${bookingRequestId}/finance`);
   return { ok: true };
+}
+
+export async function addBookingAdminNoteAction(
+  bookingRequestId: number,
+  noteText: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const auth = await requireAdminForAction();
+  if (!auth.ok) return { ok: false, error: auth.error };
+
+  if (!Number.isInteger(bookingRequestId) || bookingRequestId < 1) {
+    return { ok: false, error: "معرّف الطلب غير صالح." };
+  }
+  if (!noteText || !noteText.trim()) {
+    return { ok: false, error: "يرجى كتابة نص الملاحظة." };
+  }
+
+  const scope = await assertBookingRequestInScope(auth.session, bookingRequestId);
+  if (!scope.ok) return { ok: false, error: scope.error };
+
+  try {
+    const booking = await prisma.bookingRequest.findUnique({
+      where: { id: bookingRequestId },
+      select: { adminNotes: true },
+    });
+    if (!booking) return { ok: false, error: "الحجز غير موجود." };
+
+    const authorIdentifier = await resolveAdminEmail(auth.session);
+    const updatedNotesJson = appendAdminNote(booking.adminNotes, noteText, authorIdentifier);
+
+
+
+    await prisma.bookingRequest.update({
+      where: { id: bookingRequestId },
+      data: { adminNotes: updatedNotesJson },
+    });
+
+    await logBookingEvent({
+      bookingId: bookingRequestId,
+      event: "ADMIN_NOTES_UPDATED",
+      actorKind: "ADMIN",
+      actorName: authorIdentifier,
+      notes: `إضافة ملاحظة: ${noteText.trim().slice(0, 100)}`,
+    });
+
+    revalidatePath("/admin");
+    revalidatePath("/admin/car-bookings");
+    revalidatePath(`/admin/bookings/${bookingRequestId}`);
+    return { ok: true };
+  } catch (e) {
+    console.error("addBookingAdminNoteAction error:", e);
+    return { ok: false, error: "تعذّر إضافة الملاحظة." };
+  }
+}
+
+export async function deleteBookingAdminNoteAction(
+  bookingRequestId: number,
+  noteId: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const auth = await requireAdminForAction();
+  if (!auth.ok) return { ok: false, error: auth.error };
+
+  if (!Number.isInteger(bookingRequestId) || bookingRequestId < 1) {
+    return { ok: false, error: "معرّف الطلب غير صالح." };
+  }
+
+  const scope = await assertBookingRequestInScope(auth.session, bookingRequestId);
+  if (!scope.ok) return { ok: false, error: scope.error };
+
+  try {
+    const booking = await prisma.bookingRequest.findUnique({
+      where: { id: bookingRequestId },
+      select: { adminNotes: true },
+    });
+    if (!booking) return { ok: false, error: "الحجز غير موجود." };
+
+    const updatedNotesJson = deleteAdminNote(booking.adminNotes, noteId);
+
+    await prisma.bookingRequest.update({
+      where: { id: bookingRequestId },
+      data: { adminNotes: updatedNotesJson.trim() === "[]" ? null : updatedNotesJson },
+    });
+
+    await logBookingEvent({
+      bookingId: bookingRequestId,
+      event: "ADMIN_NOTES_UPDATED",
+      actorKind: "ADMIN",
+      actorName: auth.session.displayName,
+      notes: "حذف ملاحظة إدارية",
+    });
+
+    revalidatePath("/admin");
+    revalidatePath("/admin/car-bookings");
+    revalidatePath(`/admin/bookings/${bookingRequestId}`);
+    return { ok: true };
+  } catch (e) {
+    console.error("deleteBookingAdminNoteAction error:", e);
+    return { ok: false, error: "تعذّر حذف الملاحظة." };
+  }
 }
 

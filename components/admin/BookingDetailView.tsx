@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeftRight,
@@ -21,8 +21,18 @@ import {
   Pencil,
   Key,
   CheckCircle2,
+  StickyNote,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import type { ReactNode } from "react";
+import {
+  addBookingAdminNoteAction,
+  deleteBookingAdminNoteAction,
+} from "@/app/admin/booking-request-actions";
+import { parseAdminNotes } from "@/lib/booking-admin-notes";
+
+
 import { AdminKindBadge, AdminStatusBadge } from "@/components/admin/AdminStatusBadge";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { SarAmountWithSymbol } from "@/components/ui/SarAmountWithSymbol";
@@ -132,7 +142,38 @@ export function BookingDetailView({
   canEditBooking,
 }: Props) {
   const [updatePlateModalOpen, setUpdatePlateModalOpen] = useState(false);
+  const [notesModalOpen, setNotesModalOpen] = useState(false);
+  const [newNoteText, setNewNoteText] = useState("");
+  const [isSavingNotes, setIsSavingNotes] = useState(false);
+  const [notesError, setNotesError] = useState<string | null>(null);
+
+  const notesList = useMemo(() => parseAdminNotes(booking.adminNotes), [booking.adminNotes]);
+
+  const handleAddNote = async () => {
+    if (!newNoteText.trim()) return;
+    setIsSavingNotes(true);
+    setNotesError(null);
+    const res = await addBookingAdminNoteAction(booking.id, newNoteText);
+    setIsSavingNotes(false);
+    if (res.ok) {
+      setNewNoteText("");
+      setNotesModalOpen(false);
+    } else {
+      setNotesError(res.error ?? "تعذّر إضافة الملاحظة.");
+    }
+  };
+
+  const handleDeleteNote = async (noteId: string) => {
+    if (!confirm("هل أنت تأكد من حذف هذه الملاحظة؟")) return;
+    const res = await deleteBookingAdminNoteAction(booking.id, noteId);
+    if (!res.ok) {
+      alert(res.error ?? "تعذّر حذف الملاحظة.");
+    }
+  };
+
+
   const kycAttachments = resolveBookingKycForDisplay(booking, booking.customer);
+
 
   const {
     addons,
@@ -328,7 +369,80 @@ export function BookingDetailView({
             ) : null}
           </div>
         ) : null}
+
+        {/* Admin Notes Card */}
+        <div className="mt-5 border-t border-amber-200/40 pt-4">
+          <div className="rounded-2xl border border-amber-200/90 bg-amber-50/80 p-4 sm:p-5 text-xs text-amber-950 shadow-2xs space-y-3">
+            <div className="flex items-center justify-between gap-2 font-bold pb-2 border-b border-amber-200/60">
+              <span className="flex items-center gap-2 text-amber-900 text-sm font-black">
+                <StickyNote className="size-4 text-amber-700" />
+                ملاحظات الإدارة والفرع
+                <span className="rounded-full bg-amber-200/80 px-2 py-0.5 text-[11px] font-bold text-amber-950">
+                  {notesList.length}
+                </span>
+              </span>
+              {canEditBooking ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNewNoteText("");
+                    setNotesError(null);
+                    setNotesModalOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1 rounded-xl bg-amber-700 px-3 py-1.5 text-xs font-black text-white hover:bg-amber-800 transition-colors shadow-2xs cursor-pointer"
+                >
+                  <Plus className="size-3.5" />
+                  إضافة ملاحظة جديدة
+                </button>
+              ) : null}
+            </div>
+
+            {notesList.length > 0 ? (
+              <div className="space-y-3 pt-1">
+                {notesList.map((note) => (
+                  <div
+                    key={note.id}
+                    className="rounded-xl border border-amber-200/60 bg-white/90 p-3.5 shadow-2xs space-y-2"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-bold text-amber-900/80 border-b border-amber-100 pb-1.5">
+                      <span className="flex items-center gap-1.5 text-amber-950 font-extrabold" dir="ltr">
+                        <Mail className="size-3.5 text-amber-700 shrink-0" />
+                        <span className="font-mono">{note.createdBy}</span>
+                      </span>
+
+                      <div className="flex items-center gap-3">
+                        <span className="flex items-center gap-1 dir-ltr text-amber-900/70 font-mono">
+                          <Clock className="size-3 text-amber-600" />
+                          {formatFullDateTimeAr(note.createdAt)}
+                        </span>
+                        {canEditBooking ? (
+                          <button
+                            type="button"
+                            title="حذف الملاحظة"
+                            onClick={() => handleDeleteNote(note.id)}
+                            className="text-red-600 hover:text-red-800 p-0.5 rounded hover:bg-red-50 transition-colors cursor-pointer"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                    <p className="whitespace-pre-wrap text-xs sm:text-sm font-semibold leading-relaxed text-amber-950">
+                      {note.text}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="py-2 text-xs font-semibold text-amber-900/70 italic">
+                لا توجد ملاحظات مسجلة لهذا الحجز بعد. اضغط على «إضافة ملاحظة جديدة» لتدوين ملاحظة.
+              </p>
+            )}
+          </div>
+        </div>
+
       </div>
+
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(17rem,22rem)] lg:items-start">
         {/* Main column */}
@@ -576,6 +690,64 @@ export function BookingDetailView({
         mode="UPDATE_ONLY"
         currentPlateNumber={booking.vehiclePlateNumber}
       />
+
+      {/* Admin Notes Quick Modal */}
+      {notesModalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl space-y-4">
+            <div className="flex items-center justify-between border-b border-outline-variant/30 pb-3">
+              <h3 className="flex items-center gap-2 text-base font-extrabold text-on-surface">
+                <StickyNote className="size-5 text-amber-600" />
+                إضافة ملاحظة جديدة لحجز #{booking.id}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setNotesModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 font-bold text-lg cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+            {notesError ? (
+              <p className="text-xs font-bold text-red-600" role="alert">{notesError}</p>
+            ) : null}
+            <div>
+              <label className="block text-xs font-bold text-on-surface mb-1.5">
+                نص الملاحظة الجديدة:
+              </label>
+              <textarea
+                rows={4}
+                value={newNoteText}
+                onChange={(e) => setNewNoteText(e.target.value)}
+                placeholder="أكتب ملاحظتك هنا (ستسجَّل بالتاريخ وبريدك كإدارة)..."
+                className="w-full rounded-xl border border-outline-variant bg-surface-container-lowest p-3 text-sm font-semibold text-on-surface outline-none focus:ring-2 focus:ring-primary"
+              />
+              <p className="mt-1.5 text-[11px] text-on-surface-variant font-semibold">
+                سيتم توثيق بريد الموظف والتاريخ والوقت تلقائياً مع الملاحظة.
+              </p>
+            </div>
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-outline-variant/20">
+              <button
+                type="button"
+                onClick={() => setNotesModalOpen(false)}
+                className="rounded-xl border border-outline-variant bg-white px-4 py-2 text-xs font-bold text-on-surface-variant hover:bg-surface-container cursor-pointer"
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                disabled={isSavingNotes || !newNoteText.trim()}
+                onClick={handleAddNote}
+                className="rounded-xl bg-amber-700 px-5 py-2 text-xs font-black text-white hover:bg-amber-800 disabled:opacity-50 cursor-pointer shadow-2xs"
+              >
+                {isSavingNotes ? "جاري الحفظ..." : "حفظ الملاحظة"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
+
+
