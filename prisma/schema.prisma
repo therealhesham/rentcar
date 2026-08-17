@@ -726,6 +726,10 @@ model BookingRequest {
   odometerAtReturnKm            Int?
   /// ملاحظات إدارية خاصة بالطلب (تظهر في أعلى صفحة تفاصيل الحجز للإدارة).
   adminNotes                    String?      @db.Text
+  /// رقم العقد في النظام القديم — يُملأ فقط عند الترحيل الجماعي من Excel، وnull لأي حجز
+  /// أنشأه الموقع أو الإدارة. `unique` هو مفتاح منع التكرار عند إعادة رفع نفس الملف
+  /// (MySQL يسمح بتعدد صفوف NULL في الفهرس الفريد، فالحجوزات العادية لا تتعارض).
+  legacyRef                     String?      @unique @db.VarChar(64)
 
 
   createdAt           DateTime             @default(now())

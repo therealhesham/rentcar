@@ -173,6 +173,12 @@ export default async function AdminCarBookingsPage({
             <div className="flex items-center gap-3">
               <CarBookingsSettingsModal initialSettings={initialSettings} />
               <Link
+                href="/admin/car-bookings/import"
+                className="rounded-xl border border-outline-variant px-4 py-2.5 text-xs font-bold text-primary transition-colors hover:bg-surface-container"
+              >
+                ترحيل من Excel
+              </Link>
+              <Link
                 href="/admin/direct-booking"
                 className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-on-primary shadow-sm transition-opacity hover:opacity-95"
               >

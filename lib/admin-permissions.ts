@@ -29,6 +29,13 @@ const EXTRA_PAGE_PERMISSIONS: AdminPagePermission[] = [
     label: "استيراد مركبات من Excel",
     groupLabel: "الأسطول والفروع",
   },
+  // نفس السبب: بدونها ترثها من `/admin/car-bookings` فيقدر أي موظف يشوف الحجوزات
+  // على ترحيل حجوزات جماعي يكتب في قاعدة البيانات مباشرة.
+  {
+    href: "/admin/car-bookings/import",
+    label: "ترحيل حجوزات من Excel",
+    groupLabel: "الحجوزات والعملاء",
+  },
 ];
 
 /** كل صفحات الأدمن القابلة لمنح صلاحية مستقلة لها — الـ href نفسه هو معرّف الصلاحية.
