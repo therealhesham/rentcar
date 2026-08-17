@@ -1085,3 +1085,28 @@ enum SystemGuideKind {
   IMAGE
   PDF
 }
+
+/// مشاهدة صفحة **داخل لوحة التحكم** — مصدر قسم «الموظفون الأكثر فتحاً» في
+/// `/admin/insights` وحده. بقية تلك الصفحة تقرأ `ActivityLog` (زوّار الموقع).
+///
+/// جدول مستقل عن `ActivityLog` عن قصد: سجل النشاط يقيس زوّار الموقع العام، وعدّة
+/// استعلامات في `/admin/logs` تقرأه بلا تصفية `kind` (خريطة الزوّار، إحصاء المتصفحات،
+/// أكثر المسارات). ضخّ حركة الموظفين هناك كان سيفسد تلك الأرقام بصمت.
+model AdminPageView {
+  id            Int      @id @default(autoincrement())
+  /// قد يكون null لجلسة قديمة أو توكن بلا معرّف موظف
+  employeeId    Int?
+  /// اسم الموظف أو بريده **وقت المشاهدة** — مخزَّن نصاً لأن الموظف قد يُحذف أو يتغيّر اسمه
+  /// لاحقاً، والتقرير التاريخي يجب أن يظل مقروءاً
+  employeeLabel String?  @db.VarChar(255)
+  isSuperAdmin  Boolean  @default(false)
+  /// مسار صفحة الأدمن **مع** الـ query string — الفلاتر والتبويبات كلها فيه
+  path          String   @db.VarChar(512)
+  ip            String?  @db.VarChar(64)
+  userAgent     String?  @db.VarChar(512)
+  createdAt     DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([employeeId, createdAt])
+  @@index([path, createdAt])
+}

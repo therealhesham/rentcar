@@ -42,11 +42,14 @@ const EXTRA_PAGE_PERMISSIONS: AdminPagePermission[] = [
  * صفحات `alwaysAllowed` مُستثناة عمداً لأنها متاحة لأي موظف مسجّل دخول: `/admin` (صفحة
  * الهبوط بعد الدخول وهدف إعادة التوجيه عند رفض الوصول — تخصيصها كصلاحية قابلة للمنع كان
  * سيُنتج حلقة إعادة توجيه لا نهائية)، و`/admin/system-guides` (شروحات النظام للجميع)،
- * و`/admin/profile` (كل موظف يغيّر كلمة مروره هو — الحماية بالجلسة نفسها). */
+ * و`/admin/profile` (كل موظف يغيّر كلمة مروره هو — الحماية بالجلسة نفسها).
+ * صفحات `superAdminOnly` مُستثناة للسبب المعاكس: عدم تسجيلها هنا هو ما يمنعها —
+ * `resolveAdminPagePermissionId` يعيد null فيرفضها middleware (fail-closed)، ولا
+ * تظهر في شاشة منح الصلاحيات فلا يمكن منحها لموظف بالخطأ. */
 export const ADMIN_PAGE_PERMISSIONS: AdminPagePermission[] = [
   ...ADMIN_NAV_GROUPS.flatMap((group) =>
     group.items
-      .filter((item) => !item.external && !item.alwaysAllowed)
+      .filter((item) => !item.external && !item.alwaysAllowed && !item.superAdminOnly)
       .map((item) => ({ href: item.href, label: item.label, groupLabel: group.label })),
   ),
   ...EXTRA_PAGE_PERMISSIONS,

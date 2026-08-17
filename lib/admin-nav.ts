@@ -44,6 +44,13 @@ export type AdminNavItem = {
    * ولا يفحصها middleware. لصفحات الهبوط والمساعدة فقط.
    */
   alwaysAllowed?: boolean;
+  /**
+   * صفحة لمدير النظام وحده. **لا** تُسجَّل في `ADMIN_PAGE_PERMISSIONS`، فيعيد
+   * `resolveAdminPagePermissionId` لها null ويعامله middleware كمنع افتراضي — أي أن
+   * غير السوبر أدمن ممنوع منها ولا توجد صلاحية أصلاً يمكن منحها له. وهي تختفي من
+   * قائمته الجانبية للسبب نفسه: `getAdminNavGroupsForSession` يُبقي ما يملك صلاحيته.
+   */
+  superAdminOnly?: boolean;
 };
 
 export type AdminNavGroup = {
@@ -61,6 +68,12 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     items: [
       { href: "/admin", label: "لوحة التحكم", icon: "layout-dashboard", alwaysAllowed: true },
       { href: "/admin/statistics", label: "الإحصائيات", icon: "bar-chart-2" },
+      {
+        href: "/admin/insights",
+        label: "إحصائيات (سوبر أدمن)",
+        icon: "activity",
+        superAdminOnly: true,
+      },
       { href: "/admin/logs", label: "سجل النشاط", icon: "activity" },
       { href: "/admin/financials", label: "الإدارة المالية", icon: "badge-dollar" },
       { href: "/admin/company-dues", label: "مستحقات للشركة", icon: "receipt" },
