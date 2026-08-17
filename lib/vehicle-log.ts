@@ -165,13 +165,36 @@ export async function getVehicleLog(
       .filter((d): d is Date => d !== null)
       .sort((a, b) => a.getTime() - b.getTime())[0] ?? null;
 
+  const hasOpenMaintenance = maintenance.some((m) => m.status === "IN_PROGRESS");
+  const hasActiveRental = bookings.some(
+    (b) => b.status === "PICKED_UP" || (b.vehiclePickedUpAt !== null && b.vehicleReturnedAt === null),
+  );
+
+  let realStatus = unit.status;
+  if (unit.status !== "INACTIVE") {
+    if (hasOpenMaintenance) {
+      realStatus = "MAINTENANCE";
+    } else if (hasActiveRental) {
+      realStatus = "RENTED";
+    } else {
+      realStatus = "AVAILABLE";
+    }
+  }
+
+  if (realStatus !== unit.status) {
+    prisma.vehicleUnit.update({
+      where: { id: unit.id },
+      data: { status: realStatus },
+    }).catch(() => null);
+  }
+
   return {
     unit: {
       id: unit.id,
       plateNumber: unit.plateNumber,
       chassisNumber: unit.chassisNumber,
       color: unit.color,
-      status: unit.status,
+      status: realStatus,
       notes: unit.notes,
       carModelId: unit.carModel.id,
       carModelName: unit.carModel.name,
@@ -181,6 +204,7 @@ export async function getVehicleLog(
       branchName: unit.branch?.name ?? null,
       createdAt: unit.createdAt,
     },
+
     bookings,
     maintenance,
     stats: {
