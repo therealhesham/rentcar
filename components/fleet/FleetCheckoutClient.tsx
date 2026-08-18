@@ -181,6 +181,7 @@ export function FleetCheckoutClient({
   const [branchHoursMessage, setBranchHoursMessage] = useState("");
   const [openAddonInfoId, setOpenAddonInfoId] = useState<number | null>(null);
   const [termsOpen, setTermsOpen] = useState(false);
+  const [changeCarOpen, setChangeCarOpen] = useState(false);
 
   const [couponInput, setCouponInput] = useState("");
   const [couponChecking, setCouponChecking] = useState(false);
@@ -1156,6 +1157,17 @@ export function FleetCheckoutClient({
   }
 
   /**
+   * الانتقال إلى سيارة بديلة اختارها الزائر من مودال «غير متاح» — نفس التواريخ
+   * ونفس الفرع، فلا يُعاد بناء البحث من الصفر. كل معاملات الرحلة تُنقل كما هي
+   * ولا يتغيّر إلا `modelId`.
+   */
+  function goToAlternativeCar(nextModelId: number) {
+    const params = new URLSearchParams(sp.toString());
+    params.set("modelId", String(nextModelId));
+    router.push(`/fleet/checkout?${params.toString()}`);
+  }
+
+  /**
    * سبب تعطّل زرّ التأكيد بالعربية. الزرّ يبهت فقط عند التعطيل، فبدون هذا السطر
    * يبدو «جافاً» بلا تفسير — وهو أكثر ما يوقف الزوّار بعد ملء النموذج كاملاً.
    */
@@ -1927,6 +1939,34 @@ export function FleetCheckoutClient({
                   </div>
                   {/* Subtle shimmer overlay */}
                   <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-white/20 to-transparent" />
+
+                  {/* Change Car Button – overlaid at bottom center */}
+                  <div className="absolute bottom-3 inset-x-0 flex justify-center">
+                    <button
+                      type="button"
+                      id="change-car-btn"
+                      onClick={() => setChangeCarOpen(true)}
+                      className="group flex items-center gap-1.5 rounded-full border border-[#dbb878]/40 bg-white/80 px-3.5 py-1.5 text-[11.5px] font-extrabold text-[#003749] shadow-[0_4px_16px_-6px_rgba(15,61,71,0.22)] backdrop-blur-sm transition-all duration-200 hover:border-[#dbb878]/80 hover:bg-white hover:shadow-[0_6px_22px_-6px_rgba(219,184,120,0.45)] hover:scale-105 active:scale-95"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="size-3.5 text-[#dbb878] transition-transform duration-300 group-hover:rotate-180"
+                        aria-hidden
+                      >
+                        <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                        <path d="M21 3v5h-5" />
+                        <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                        <path d="M8 16H3v5" />
+                      </svg>
+                      غيّر السيارة
+                    </button>
+                  </div>
                 </div>
 
                 {/* Content Area */}
@@ -2271,12 +2311,37 @@ export function FleetCheckoutClient({
 
       <CarUnavailableModal
         open={showCarUnavailableModal}
+        priceMode={rentalPriceDisplayMode}
         fleetUnits={availability && !availability.loading ? availability.fleetUnits : undefined}
         onClose={() => {
           setUnavailableDismissed(true);
           setPostCapacityModal(false);
         }}
         onChangeDates={openTripEditorToChangeDates}
+        modelId={car.modelId}
+        pickupIso={trip.pickupIso}
+        days={trip.days}
+        branchSlug={trip.branchSlug}
+        onPickAlternative={goToAlternativeCar}
+      />
+      {/* مودال «غيّر السيارة» — يُفتح بزر الصورة في السايدبار */}
+      <CarUnavailableModal
+        open={changeCarOpen}
+        browsing
+        priceMode={rentalPriceDisplayMode}
+        onClose={() => setChangeCarOpen(false)}
+        onChangeDates={() => {
+          setChangeCarOpen(false);
+          openTripEditorToChangeDates();
+        }}
+        modelId={car.modelId}
+        pickupIso={trip.pickupIso}
+        days={trip.days}
+        branchSlug={trip.branchSlug}
+        onPickAlternative={(nextModelId) => {
+          setChangeCarOpen(false);
+          goToAlternativeCar(nextModelId);
+        }}
       />
       <BranchOutsideHoursModal
         open={branchHoursOpen}

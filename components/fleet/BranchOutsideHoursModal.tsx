@@ -4,7 +4,7 @@ import { Clock3, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
-import { OVERLAY_BACKDROP_Z } from "@/lib/overlay-z-index";
+import { DIALOG_Z } from "@/lib/overlay-z-index";
 
 const GOLD = "#dbb878";
 const GOLD_DARK = "#c9a356";
@@ -40,7 +40,7 @@ export function BranchOutsideHoursModal({
   const modal = (
     <div
       className="fixed inset-0 flex items-center justify-center p-4 sm:p-6"
-      style={{ zIndex: OVERLAY_BACKDROP_Z }}
+      style={{ zIndex: DIALOG_Z }}
       role="dialog"
       aria-modal="true"
       aria-labelledby="branch-hours-title"

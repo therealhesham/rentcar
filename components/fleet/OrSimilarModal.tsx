@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import { X, Info, CheckCircle2 } from "lucide-react";
-import { OVERLAY_BACKDROP_Z } from "@/lib/overlay-z-index";
+import { DIALOG_Z } from "@/lib/overlay-z-index";
 
 const TEAL = "#003749";
 const GOLD = "#dbb878";
@@ -59,7 +59,7 @@ export function OrSimilarModal({ open, carName, onConfirm, onClose }: Props) {
   const modal = (
     <div
       className="fixed inset-0 flex items-center justify-center p-4 sm:p-6"
-      style={{ zIndex: OVERLAY_BACKDROP_Z }}
+      style={{ zIndex: DIALOG_Z }}
       role="dialog"
       aria-modal="true"
       aria-labelledby="or-similar-title"

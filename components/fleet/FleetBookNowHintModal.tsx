@@ -19,7 +19,7 @@ import {
   parseDdMmYyToYmd,
   resolveDropoffTimeHm,
 } from "@/lib/booking-search-shared";
-import { OVERLAY_BACKDROP_Z } from "@/lib/overlay-z-index";
+import { DIALOG_Z } from "@/lib/overlay-z-index";
 import {
   isBranchClosedOnDate,
   isDateTimeWithinBranchSchedule,
@@ -326,7 +326,7 @@ export function FleetBookNowHintModal({
   const modal = (
     <div
       className="fixed inset-0 flex items-center justify-center p-4 sm:p-6"
-      style={{ zIndex: OVERLAY_BACKDROP_Z }}
+      style={{ zIndex: DIALOG_Z }}
       role="dialog"
       aria-modal="true"
       aria-labelledby="fleet-book-hint-title"
