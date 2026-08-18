@@ -807,11 +807,9 @@ export function FleetCheckoutClient({
       return;
     }
     if (slotBlocked) {
-      trackEvent("CHECKOUT_ERROR", {
-        carModelId: car.modelId,
-        detail: "SLOT_BLOCKED",
-        context: failureContext(),
-      });
+      // كان يخرج صامتاً: الزائر يضغط فلا يحدث شيء ولا تظهر رسالة — وهو المسار
+      // الوحيد في هذا المعالج الذي كان يترك الزرّ يبدو معطّلاً بلا سبب.
+      failWith("SLOT_BLOCKED", "السيارة غير متاحة في الفترة المحددة. غيّر تواريخ الحجز للمتابعة.");
       return;
     }
 
@@ -1130,13 +1128,44 @@ export function FleetCheckoutClient({
    * «احجز الآن» يقرأها كأنه رُدَّ إلى بداية البحث. سجل النشاط أظهر تنقّلاً متكرراً
    * `/fleet/checkout → /fleet` بلا محاولة إرسال واحدة، فصار الويدجت مطوياً.
    *
-   * يُفتح وحده في الحالتين اللتين لا يُكمَل الحجز بدونه: غياب التواريخ (‏`handleSubmit`
-   * يرفض بـ `NO_DATES`، وهي حالة العودة من `CarUnavailableModal` لأنها تُسقط كل
-   * الـ params)، وإعادة حجز سابق حيث المطلوب صراحةً اختيار تواريخ جديدة.
+   * يُفتح وحده في الحالتين اللتين لا يُكمَل الحجز بدونه: غياب التواريخ، وإعادة حجز
+   * سابق حيث المطلوب صراحةً اختيار تواريخ جديدة.
    */
   const [tripEditorOpen, setTripEditorOpen] = useState(
     () => !trip.pickupIso || sp.get("rebook") === "1",
   );
+  const tripEditorRef = useRef<HTMLDivElement | null>(null);
+
+  /**
+   * «غيّر التواريخ» في مودالات عدم التوفّر ومواعيد الفرع.
+   *
+   * كانت تنفّذ `router.replace("/fleet/checkout?modelId=X")` فتمسح `pickup` و`dropoff`
+   * و`days` والفرع معاً — والنتيجة أن الزائر يعود إلى صفحة بلا تواريخ، فيصبح زرّ
+   * التأكيد معطّلاً بلا سبب ظاهر بعد أن يكون قد ملأ بياناته كلها. الصحيح إبقاء
+   * السياق كما هو وفتح محرّر التواريخ عنده مباشرة.
+   */
+  function openTripEditorToChangeDates() {
+    setUnavailableDismissed(true);
+    setPostCapacityModal(false);
+    setBranchHoursOpen(false);
+    setTripEditorOpen(true);
+    // بعد إغلاق المودال والرسم: المحرّر أعلى الصفحة والزائر غالباً عند الزرّ أسفلها.
+    window.setTimeout(() => {
+      tripEditorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 80);
+  }
+
+  /**
+   * سبب تعطّل زرّ التأكيد بالعربية. الزرّ يبهت فقط عند التعطيل، فبدون هذا السطر
+   * يبدو «جافاً» بلا تفسير — وهو أكثر ما يوقف الزوّار بعد ملء النموذج كاملاً.
+   */
+  const submitBlockedReason = !trip.pickupIso
+    ? "حدّد تواريخ الحجز أولاً."
+    : slotBlocked
+      ? "السيارة غير متاحة في الفترة المحددة."
+      : uploadingKyc !== null
+        ? "جارٍ رفع الصورة… انتظر حتى يكتمل الرفع."
+        : null;
 
   return (
     <div className="flex min-h-screen flex-col bg-[#fdfbf6] text-on-surface pb-[76px] lg:pb-0">
@@ -1166,7 +1195,11 @@ export function FleetCheckoutClient({
                 لتغيير التواريخ أو الفروع: عدّلوا الحقول أدناه ثم «تطبيق التواريخ على الحجز».
               </p>
             ) : null} */}
-            <div dir="rtl" className="rounded-2xl border border-[#ebe4d3] bg-white/70">
+            <div
+              ref={tripEditorRef}
+              dir="rtl"
+              className="rounded-2xl border border-[#ebe4d3] bg-white/70 scroll-mt-24"
+            >
               <button
                 type="button"
                 onClick={() => setTripEditorOpen((v) => !v)}
@@ -1851,6 +1884,28 @@ export function FleetCheckoutClient({
                       {pending ? "جاري المعالجة..." : "تأكيد البيانات والمتابعة"}
                     </span>
                   </button>
+
+                  {submitBlockedReason && !pending ? (
+                    <p
+                      dir="rtl"
+                      role="status"
+                      className="mt-3 text-center text-[12.5px] font-bold leading-relaxed text-[#8a7752]"
+                    >
+                      {submitBlockedReason}
+                      {uploadingKyc === null ? (
+                        <>
+                          {" "}
+                          <button
+                            type="button"
+                            onClick={openTripEditorToChangeDates}
+                            className="font-extrabold text-[#003749] underline decoration-[#dbb878] underline-offset-4 hover:text-[#dbb878]"
+                          >
+                            تعديل التواريخ
+                          </button>
+                        </>
+                      ) : null}
+                    </p>
+                  ) : null}
                 </form>
               </section>
             </div>
@@ -2221,17 +2276,13 @@ export function FleetCheckoutClient({
           setUnavailableDismissed(true);
           setPostCapacityModal(false);
         }}
-        onChangeDates={() => {
-          router.replace(`/fleet/checkout?modelId=${car.modelId}`);
-        }}
+        onChangeDates={openTripEditorToChangeDates}
       />
       <BranchOutsideHoursModal
         open={branchHoursOpen}
         message={branchHoursMessage}
         onClose={() => setBranchHoursOpen(false)}
-        onChangeTimes={() => {
-          router.replace(`/fleet/checkout?modelId=${car.modelId}`);
-        }}
+        onChangeTimes={openTripEditorToChangeDates}
       />
       <RentalTermsModal
         open={termsOpen}
