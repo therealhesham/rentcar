@@ -7,6 +7,7 @@ import {
   type ClientTrackableKind,
 } from "@/lib/activity-log";
 import { getCustomerSessionUserId } from "@/lib/customer-auth";
+import { isFormFailureAlertKind, notifyFormFailure } from "@/lib/form-failure-alert";
 
 export const dynamic = "force-dynamic";
 
@@ -19,12 +20,35 @@ const BOT_UA_PATTERN =
 
 const TRACKABLE = new Set<string>(CLIENT_TRACKABLE_KINDS);
 
+/**
+ * سياق الفشل قادم من المتصفح، أي غير موثوق: نحدّ عدد المفاتيح وأطوالها ونجرّد
+ * محارف التحكّم قبل أن يدخل نصّ رسالة الواتساب.
+ */
+const MAX_CONTEXT_KEYS = 24;
+
+function sanitizeContext(raw: unknown): Record<string, string> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (Object.keys(out).length >= MAX_CONTEXT_KEYS) break;
+    if (typeof value !== "string") continue;
+    const cleanKey = key.replace(/[^\w.-]/g, "").slice(0, 40);
+    // محارف التحكم (منها سطر جديد) تُستبدل بمسافة حتى لا يُلفّق أحد أقساماً
+    // إضافية داخل رسالة الواتساب.
+    const cleanValue = value.replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, 200);
+    if (!cleanKey || !cleanValue) continue;
+    out[cleanKey] = cleanValue;
+  }
+  return out;
+}
+
 export async function POST(request: Request) {
   let path = "";
   let carModelId: number | null = null;
   let kind: ClientTrackableKind | null = null;
   let referrerRaw: string | null = null;
   let detail: string | null = null;
+  let context: Record<string, string> = {};
 
   try {
     const body = (await request.json()) as {
@@ -33,7 +57,9 @@ export async function POST(request: Request) {
       kind?: unknown;
       referrer?: unknown;
       detail?: unknown;
+      context?: unknown;
     };
+    context = sanitizeContext(body.context);
     path = String(body.path ?? "").trim();
     const rawModelId = Number(body.carModelId);
     if (Number.isInteger(rawModelId) && rawModelId >= 1) carModelId = rawModelId;
@@ -75,5 +101,19 @@ export async function POST(request: Request) {
     referrer: normalizeReferrer(referrerRaw, new URL(request.url).hostname),
     ...meta,
   });
+
+  // تنبيه فوري للمطوّر عند كل فشل. مُنتظَر لا مُطلَق في الخلفية: الطلب وصل عبر
+  // `sendBeacon` فلا أحد ينتظر الرد، بينما الإطلاق في الخلفية قد يُقتل مع الطلب.
+  if (isFormFailureAlertKind(kind)) {
+    await notifyFormFailure({
+      kind,
+      detail,
+      path,
+      context,
+      siteOrigin: process.env.APP_PUBLIC_URL?.trim().replace(/\/+$/, "") || null,
+      ...meta,
+    });
+  }
+
   return NextResponse.json({ ok: true });
 }

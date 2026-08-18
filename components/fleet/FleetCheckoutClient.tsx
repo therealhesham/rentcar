@@ -95,6 +95,24 @@ function fmtWhen(iso: string | null | undefined): { date: string; time: string }
   };
 }
 
+/**
+ * تاريخ ميلادي مختصر لتنبيه فشل النموذج. `fmtWhen` يعرض بالتقويم الهجري لأنه
+ * موجَّه للزائر، أما التنبيه فيقرأه المطوّر ويقارنه بسجلّات الخادم الميلادية.
+ */
+function fmtWhenForAlert(iso: string | null | undefined): string | undefined {
+  if (!iso) return undefined;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return undefined;
+  return d.toLocaleString("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
 function cityArName(slug: string | undefined, cities: BookingCityBranchesOption[]) {
   if (!slug) return "";
   const c = cities.find((x) => x.slug.toLowerCase() === slug.toLowerCase());
@@ -638,6 +656,10 @@ export function FleetCheckoutClient({
       trackEvent("KYC_UPLOAD_FAIL", {
         carModelId: car.modelId,
         detail: `${slot}:${sizeMb}mb:${message}`.slice(0, 255),
+        context: failureContext({
+          uploadSlot: slot === "id" ? "صورة الهوية" : "صورة الرخصة",
+          uploadSize: `${sizeMb} ميجابايت`,
+        }),
       });
     } finally {
       uploadingRef.current = false;
@@ -730,11 +752,48 @@ export function FleetCheckoutClient({
   }
 
   /**
+   * لقطة ما كتبه الزائر لحظة الفشل — تُرفَق بحدث الخطأ لتغذية تنبيه الواتساب.
+   * عند فشل التحقق لا يُرسَل الطلب إلى الخادم إطلاقاً، فهذه هي الفرصة الوحيدة
+   * لمعرفة *من* تعثّر وبأي بيانات، لا مجرد *كم* عددهم.
+   */
+  function failureContext(extra?: Record<string, string | null | undefined>) {
+    const fd = formRef.current ? new FormData(formRef.current) : null;
+    const field = (key: string) => String(fd?.get(key) ?? "").trim() || undefined;
+    return {
+      name: field("name"),
+      phone: field("phone") ?? sessionCustomer?.phoneLocal,
+      email: field("email") ?? sessionCustomer?.email,
+      age: field("age"),
+      carTitle: car.fullTitle,
+      pickup: trip.pickupIso ? `${trip.pickupLabel} — ${fmtWhenForAlert(trip.pickupIso)}` : undefined,
+      dropoff: trip.dropoffIso
+        ? `${trip.returnLabel} — ${fmtWhenForAlert(trip.dropoffIso)}`
+        : undefined,
+      days: trip.pickupIso ? `${trip.days} يوم` : undefined,
+      rental: rentalTab,
+      idKind: idDocKind === "SAUDI_ID" ? "هوية/إقامة" : "جواز سفر",
+      idNumber: (idDocKind === "SAUDI_ID" ? nationalId : passportNumber).trim() || undefined,
+      licenseNo: licenseNumber.trim() || undefined,
+      licenseExpiry: licenseExpiryDdmmyy.trim() || undefined,
+      idImage: idCardUrl ? "مرفوعة" : "لم تُرفع",
+      licenseImage: licenseDocUrl ? "مرفوعة" : "لم تُرفع",
+      coupon: appliedCoupon?.code,
+      editingBooking:
+        excludeBookingRequestIdFromUrl != null ? String(excludeBookingRequestIdFromUrl) : undefined,
+      ...extra,
+    };
+  }
+
+  /**
    * يعرض الخطأ للزائر **ويسجّل سببه** في سجل النشاط. بدون التسجيل لا نعرف عند أي
    * حقل ينسحب الزوّار — وهو أهم ما نريد قياسه في نموذج الحجز.
    */
-  function failWith(code: string, message: string) {
-    trackEvent("CHECKOUT_ERROR", { carModelId: car.modelId, detail: code });
+  function failWith(code: string, message: string, extra?: Record<string, string | undefined>) {
+    trackEvent("CHECKOUT_ERROR", {
+      carModelId: car.modelId,
+      detail: code,
+      context: failureContext(extra),
+    });
     setError(message);
   }
 
@@ -748,7 +807,11 @@ export function FleetCheckoutClient({
       return;
     }
     if (slotBlocked) {
-      trackEvent("CHECKOUT_ERROR", { carModelId: car.modelId, detail: "SLOT_BLOCKED" });
+      trackEvent("CHECKOUT_ERROR", {
+        carModelId: car.modelId,
+        detail: "SLOT_BLOCKED",
+        context: failureContext(),
+      });
       return;
     }
 
@@ -832,7 +895,11 @@ export function FleetCheckoutClient({
     if (pickupMode === "BRANCH" && trip.pickupIso && !tabFlags?.allowHolidayBooking) {
       const sch = lookupBranchOpeningSchedule(bookingCities, trip.pickupBranchSlugForHours);
       if (!isDateTimeWithinBranchSchedule(new Date(trip.pickupIso), sch)) {
-        trackEvent("CHECKOUT_ERROR", { carModelId: car.modelId, detail: "BRANCH_HOURS_PICKUP" });
+        trackEvent("CHECKOUT_ERROR", {
+          carModelId: car.modelId,
+          detail: "BRANCH_HOURS_PICKUP",
+          context: failureContext(),
+        });
         setBranchHoursMessage(
           `${trip.pickupLabel}: الفرع غير متاح في الوقت المحدّد. اختر موعداً ضمن مواعيد العمل أو فرعاً آخر.`,
         );
@@ -843,7 +910,11 @@ export function FleetCheckoutClient({
     if (trip.dropoffIso && trip.branchSlug && !tabFlags?.allowHolidayBooking) {
       const schR = lookupBranchOpeningSchedule(bookingCities, trip.branchSlug);
       if (!isDateTimeWithinBranchSchedule(new Date(trip.dropoffIso), schR)) {
-        trackEvent("CHECKOUT_ERROR", { carModelId: car.modelId, detail: "BRANCH_HOURS_RETURN" });
+        trackEvent("CHECKOUT_ERROR", {
+          carModelId: car.modelId,
+          detail: "BRANCH_HOURS_RETURN",
+          context: failureContext(),
+        });
         setBranchHoursMessage(
           `${trip.returnLabel}: الفرع غير متاح في وقت التسليم المحدّد. عدّل الموعد أو الفرع.`,
         );
@@ -926,17 +997,27 @@ export function FleetCheckoutClient({
         return;
       }
       if (isDirectBookingCapacityMessage(data.error)) {
-        trackEvent("CHECKOUT_ERROR", { carModelId: car.modelId, detail: "CAPACITY_FULL" });
+        trackEvent("CHECKOUT_ERROR", {
+          carModelId: car.modelId,
+          detail: "CAPACITY_FULL",
+          context: failureContext({ serverError: data.error }),
+        });
         setPostCapacityModal(true);
         return;
       }
       if (isBranchOutsideHoursBookingError(data.error)) {
-        trackEvent("CHECKOUT_ERROR", { carModelId: car.modelId, detail: "BRANCH_HOURS_SERVER" });
+        trackEvent("CHECKOUT_ERROR", {
+          carModelId: car.modelId,
+          detail: "BRANCH_HOURS_SERVER",
+          context: failureContext({ serverError: data.error }),
+        });
         setBranchHoursMessage(stripBranchHoursErrorCodeForDisplay(data.error ?? ""));
         setBranchHoursOpen(true);
         return;
       }
-      failWith("SERVER_REJECTED", data.error ?? "تعذّر إرسال الطلب.");
+      failWith("SERVER_REJECTED", data.error ?? "تعذّر إرسال الطلب.", {
+        serverError: data.error,
+      });
     } catch {
       failWith("NETWORK", "تعذّر الاتصال بالخادم.");
     } finally {

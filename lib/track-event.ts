@@ -9,15 +9,31 @@ import type { ClientTrackableKind } from "@/lib/activity-log";
  */
 export function trackEvent(
   kind: ClientTrackableKind,
-  extra?: { carModelId?: number; detail?: string; path?: string },
+  extra?: {
+    carModelId?: number;
+    detail?: string;
+    path?: string;
+    /**
+     * سياق إضافي **لا يُخزَّن** في سجل النشاط — يُستعمل في تنبيه الفشل الفوري فقط
+     * (`lib/form-failure-alert.ts`). بيانات النموذج لا تصل الخادم عند فشل التحقق
+     * لأن الطلب لا يُرسَل أصلاً، فبدون هذا الحقل يبقى التنبيه بلا محتوى.
+     */
+    context?: Record<string, string | null | undefined>,
+  },
 ): void {
   if (typeof window === "undefined") return;
+  const context = extra?.context
+    ? Object.fromEntries(
+      Object.entries(extra.context).filter(([, v]) => typeof v === "string" && v.trim()),
+    )
+    : undefined;
   const payload = JSON.stringify({
     kind,
     path: extra?.path ?? window.location.pathname + window.location.search,
     referrer: document.referrer || undefined,
     carModelId: extra?.carModelId,
     detail: extra?.detail,
+    context: context && Object.keys(context).length ? context : undefined,
   });
   try {
     if (navigator.sendBeacon) {
