@@ -16,6 +16,7 @@ import { isTrustedSpacesImageUrl } from "@/lib/spaces-upload";
 import {
   parseBranchOpeningHoursJson,
   isDateTimeWithinBranchSchedule,
+  parseDateTimeInRiyadh,
 } from "@/lib/branch-opening-hours";
 import {
   DELIVERY_ADDRESS_MAX_CHARS,
@@ -622,7 +623,7 @@ export function parseCommonBookingFieldsFromFormData(
     return { ok: false, error: "معرّف الفرع غير صالح." };
   }
 
-  const pickupDate = new Date(pickupDateRaw);
+  const pickupDate = parseDateTimeInRiyadh(pickupDateRaw);
   if (!pickupDateRaw || Number.isNaN(pickupDate.getTime())) {
     return { ok: false, error: "يرجى اختيار تاريخ بداية الحجز." };
   }
@@ -693,7 +694,7 @@ export function parseCommonBookingFieldsFromJson(
     return { ok: false, error: "معرّف الفرع غير صالح." };
   }
 
-  const pickupDate = new Date(pickupDateRaw);
+  const pickupDate = parseDateTimeInRiyadh(pickupDateRaw);
   if (!pickupDateRaw || Number.isNaN(pickupDate.getTime())) {
     return { ok: false, error: "يرجى اختيار تاريخ بداية الحجز." };
   }

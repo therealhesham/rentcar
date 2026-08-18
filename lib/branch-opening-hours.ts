@@ -112,15 +112,33 @@ function dayRowAllows(
   return { ok: minutes >= openM && minutes <= closeM };
 }
 
+/**
+ * يحول التاريخ النصي (سواء كان YYYY-MM-DDTHH:mm أو ISO) إلى كائن Date بتوقيت السعودية (+03:00)
+ * إذا لم تكن الإزاحة موجودة، يمنع ذلك تزييح الساعات (Timezone Shift) عند الحساب في بيئة UTC.
+ */
+export function parseDateTimeInRiyadh(dateOrIso: Date | string | null | undefined): Date {
+  if (!dateOrIso) return new Date(NaN);
+  if (dateOrIso instanceof Date) return dateOrIso;
+  const t = dateOrIso.trim();
+  if (!t) return new Date(NaN);
+  // إذا كانت السلسلة بصيغة YYYY-MM-DDTHH:mm أو YYYY-MM-DDTHH:mm:ss بدون إزاحة توقيت (مثل Z أو +03:00)
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/.test(t)) {
+    return new Date(`${t}+03:00`);
+  }
+  return new Date(t);
+}
+
 /** هل اللحظة ضمن مواعيد الفرع؟ schedule = null → دائماً نعم. */
 export function isDateTimeWithinBranchSchedule(
-  at: Date,
+  at: Date | string,
   schedule: BranchOpeningHoursSchedule | null,
 ): boolean {
   if (!scheduleHasAnyRule(schedule)) return true;
-  const d = String(riyadhJsWeekday(at));
+  const dt = parseDateTimeInRiyadh(at);
+  if (Number.isNaN(dt.getTime())) return true;
+  const d = String(riyadhJsWeekday(dt));
   const row = schedule!.days[d];
-  const minutes = riyadhMinutesSinceMidnight(at);
+  const minutes = riyadhMinutesSinceMidnight(dt);
   return dayRowAllows(row, minutes).ok;
 }
 

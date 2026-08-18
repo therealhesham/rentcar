@@ -67,7 +67,10 @@ import {
 } from "@/lib/subscriptions/duration-options";
 import type { BookingBranchOption, BookingCityBranchesOption } from "@/lib/booking-location-options";
 import { lookupBranchOpeningSchedule } from "@/lib/booking-branch-schedule-lookup";
-import { isDateTimeWithinBranchSchedule } from "@/lib/branch-opening-hours";
+import {
+  isDateTimeWithinBranchSchedule,
+  parseDateTimeInRiyadh,
+} from "@/lib/branch-opening-hours";
 import type { FleetSearchUrlHydrate } from "@/lib/fleet-search-url-hydrate";
 import { citySlugForBranchSlug } from "@/lib/fleet-search-url-hydrate";
 import {
@@ -861,8 +864,8 @@ export function BookingSearchWidget({
       };
     }
 
-    const pickupDate = new Date(effPickupDt);
-    const dropoffDate = new Date(effDropoffDt);
+    const pickupDate = parseDateTimeInRiyadh(effPickupDt);
+    const dropoffDate = parseDateTimeInRiyadh(effDropoffDt);
     if (Number.isNaN(pickupDate.getTime()) || Number.isNaN(dropoffDate.getTime())) {
       return { ok: false, error: "صيغة التاريخ غير صالحة." };
     }

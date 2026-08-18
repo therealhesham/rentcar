@@ -35,7 +35,10 @@ import {
   isDirectBookingCapacityMessage,
   stripBranchHoursErrorCodeForDisplay,
 } from "@/lib/direct-booking-user-messages";
-import { isDateTimeWithinBranchSchedule } from "@/lib/branch-opening-hours";
+import {
+  isDateTimeWithinBranchSchedule,
+  parseDateTimeInRiyadh,
+} from "@/lib/branch-opening-hours";
 import { lookupBranchOpeningSchedule } from "@/lib/booking-branch-schedule-lookup";
 import { lastInclusiveBookingDayYmd } from "@/lib/booking-calendar-ymd";
 import {
@@ -305,7 +308,7 @@ export function FleetCheckoutClient({
 
     let dropoffIso = dropoffUrl;
     if (pickupIso && !dropoffIso) {
-      const p = new Date(pickupIso);
+      const p = parseDateTimeInRiyadh(pickupIso);
       if (!Number.isNaN(p.getTime())) {
         const end = new Date(p);
         end.setDate(end.getDate() + days);
@@ -315,8 +318,8 @@ export function FleetCheckoutClient({
 
     let computedDays = days;
     if (pickupIso && dropoffIso) {
-      const p = new Date(pickupIso);
-      const d = new Date(dropoffIso);
+      const p = parseDateTimeInRiyadh(pickupIso);
+      const d = parseDateTimeInRiyadh(dropoffIso);
       if (!Number.isNaN(p.getTime()) && !Number.isNaN(d.getTime()) && d >= p) {
         computedDays = computeBookingDays(p, d);
       }
@@ -893,7 +896,7 @@ export function FleetCheckoutClient({
 
     if (pickupMode === "BRANCH" && trip.pickupIso && !tabFlags?.allowHolidayBooking) {
       const sch = lookupBranchOpeningSchedule(bookingCities, trip.pickupBranchSlugForHours);
-      if (!isDateTimeWithinBranchSchedule(new Date(trip.pickupIso), sch)) {
+      if (!isDateTimeWithinBranchSchedule(parseDateTimeInRiyadh(trip.pickupIso), sch)) {
         trackEvent("CHECKOUT_ERROR", {
           carModelId: car.modelId,
           detail: "BRANCH_HOURS_PICKUP",
@@ -908,7 +911,7 @@ export function FleetCheckoutClient({
     }
     if (trip.dropoffIso && trip.branchSlug && !tabFlags?.allowHolidayBooking) {
       const schR = lookupBranchOpeningSchedule(bookingCities, trip.branchSlug);
-      if (!isDateTimeWithinBranchSchedule(new Date(trip.dropoffIso), schR)) {
+      if (!isDateTimeWithinBranchSchedule(parseDateTimeInRiyadh(trip.dropoffIso), schR)) {
         trackEvent("CHECKOUT_ERROR", {
           carModelId: car.modelId,
           detail: "BRANCH_HOURS_RETURN",
