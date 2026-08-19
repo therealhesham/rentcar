@@ -1,26 +1,10 @@
 import { NextResponse } from "next/server";
 import { sendBookingCheckoutOtpFromPublicRequest } from "@/lib/booking-checkout-otp";
-import { getBookingCheckoutDraftByToken } from "@/lib/booking-checkout-draft";
+import { getBookingCheckoutDraftByToken, parseBookingCheckoutDraftPayload } from "@/lib/booking-checkout-draft";
 import { parseCreateDirectBookingInputFromCheckoutJson } from "@/lib/booking-direct-checkout-parse";
 import { e164ToLocalNine } from "@/lib/normalize-saudi-phone";
 
 export const dynamic = "force-dynamic";
-
-type DraftPayloadV1 = { v: 1; body: Record<string, unknown> };
-
-function parseDraftPayload(json: string): DraftPayloadV1 | null {
-  try {
-    const raw = JSON.parse(json) as unknown;
-    if (!raw || typeof raw !== "object") return null;
-    const rec = raw as Record<string, unknown>;
-    if (rec.v !== 1) return null;
-    const b = rec.body;
-    if (!b || typeof b !== "object") return null;
-    return { v: 1, body: b as Record<string, unknown> };
-  } catch {
-    return null;
-  }
-}
 
 /** طلب إرسال رمز التحقق (SMS أو بريد حسب إعداد الإدارة). */
 export async function POST(request: Request) {
@@ -50,7 +34,7 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-    const payload = parseDraftPayload(draft.payloadJson);
+    const payload = parseBookingCheckoutDraftPayload(draft.payloadJson);
     if (!payload) {
       return NextResponse.json({ ok: false, error: "بيانات المسودة غير صالحة." }, { status: 400 });
     }

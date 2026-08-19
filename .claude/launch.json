@@ -7,6 +7,13 @@
       "runtimeArgs": ["run", "dev"],
       "port": 3000,
       "autoPort": true
+    },
+    {
+      "name": "funnel-report",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["--yes", "serve", "reports", "-l", "4173"],
+      "port": 4173,
+      "autoPort": true
     }
   ]
 }

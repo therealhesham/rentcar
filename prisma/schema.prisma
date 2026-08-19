@@ -861,12 +861,15 @@ model BookingCheckoutOtp {
 
 /// مسودة إتمام حجز مباشر قبل التحقق برمز OTP — تُحذف بعد التأكيد أو عند انتهاء الصلاحية.
 model BookingCheckoutDraft {
-  token       String   @id @db.VarChar(64)
-  payloadJson String   @db.LongText
+  token       String    @id @db.VarChar(64)
+  payloadJson String    @db.LongText
   expiresAt   DateTime
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
+  /// وقت إرسال تنبيه واتساب للمطوّر بأن العميل طلب OTP ولم يكمل خلال 5 دقائق. NULL = لم يُرسَل بعد.
+  alertSentAt DateTime?
 
   @@index([expiresAt])
+  @@index([createdAt, alertSentAt])
 }
 
 /// رمز تحقق لتسجيل دخول العميل (منفصل عن رمز إتمام الحجز لتجنب التعارض).

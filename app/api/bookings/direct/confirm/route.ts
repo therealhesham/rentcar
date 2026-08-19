@@ -7,27 +7,12 @@ import { e164ToLocalNine } from "@/lib/normalize-saudi-phone";
 import {
   deleteBookingCheckoutDraftByToken,
   getBookingCheckoutDraftByToken,
+  parseBookingCheckoutDraftPayload,
 } from "@/lib/booking-checkout-draft";
 import { revalidateAfterDirectBooking } from "@/lib/revalidate-after-direct-booking";
 import { isDirectBookingCapacityMessage } from "@/lib/direct-booking-user-messages";
 
 export const dynamic = "force-dynamic";
-
-type DraftPayloadV1 = { v: 1; body: Record<string, unknown> };
-
-function parseDraftPayload(json: string): DraftPayloadV1 | null {
-  try {
-    const raw = JSON.parse(json) as unknown;
-    if (!raw || typeof raw !== "object") return null;
-    const o = raw as Record<string, unknown>;
-    if (o.v !== 1) return null;
-    const b = o.body;
-    if (!b || typeof b !== "object") return null;
-    return { v: 1, body: b as Record<string, unknown> };
-  } catch {
-    return null;
-  }
-}
 
 /** بعد التحقق من OTP: إنشاء الحجز في قاعدة البيانات والانتقال للدفع. */
 export async function POST(request: Request) {
@@ -61,7 +46,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const payload = parseDraftPayload(draft.payloadJson);
+  const payload = parseBookingCheckoutDraftPayload(draft.payloadJson);
   if (!payload) {
     await deleteBookingCheckoutDraftByToken(token);
     return NextResponse.json({ ok: false, error: "بيانات المسودة تالفة. أعد المحاولة من صفحة الإتمام." }, { status: 400 });

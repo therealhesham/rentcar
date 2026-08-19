@@ -53,3 +53,4 @@ next-env.d.ts
 # قاعدة GeoLite2 (~60MB) — تُنزَّل بـ npm run geo:update ولا تُرفع للمستودع
 /data/GeoLite2-City.mmdb
 /data/.geolite-tmp/
+reports/checkout-funnel-report.html
