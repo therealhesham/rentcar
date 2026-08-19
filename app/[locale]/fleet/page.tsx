@@ -7,6 +7,7 @@ import { SiteFooter } from "@/components/home/SiteFooter";
 import { SiteNav } from "@/components/shared/SiteNav";
 import { getActiveBookingCitiesWithBranches } from "@/lib/branch-data";
 import { computeBookingDays, isDropoffAfterPickup } from "@/lib/booking-days";
+import { parseDateTimeInRiyadh } from "@/lib/branch-opening-hours";
 import { formatDailyBookingDurationFromIso } from "@/lib/booking-duration-display";
 import { listAvailableCarModelIds } from "@/lib/direct-booking";
 import {
@@ -82,8 +83,8 @@ export default async function FleetPage({
   };
 
   if (pickupRaw && dropoffRaw) {
-    const pickupDate = new Date(pickupRaw);
-    const dropoffDate = new Date(dropoffRaw);
+    const pickupDate = parseDateTimeInRiyadh(pickupRaw);
+    const dropoffDate = parseDateTimeInRiyadh(dropoffRaw);
     if (
       !Number.isNaN(pickupDate.getTime()) &&
       !Number.isNaN(dropoffDate.getTime()) &&
@@ -185,7 +186,7 @@ export default async function FleetPage({
 
   let fleetPickupDate: Date | null = null;
   if (pickupRaw) {
-    const d = new Date(pickupRaw);
+    const d = parseDateTimeInRiyadh(pickupRaw);
     if (!Number.isNaN(d.getTime())) fleetPickupDate = d;
   }
 
