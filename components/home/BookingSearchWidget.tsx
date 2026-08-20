@@ -271,6 +271,8 @@ export function BookingSearchWidget({
         if (el) {
           el.scrollIntoView({ behavior: "smooth", block: "start" });
         }
+        // إزالة الهاش بعد استهلاكه — وإلا كل تحديث للصفحة يقفز لأسفل من نفسه
+        window.history.replaceState(null, "", window.location.pathname + window.location.search);
       }, 150);
       return () => clearTimeout(timer);
     }
@@ -755,7 +757,13 @@ export function BookingSearchWidget({
   const corpDetailsId = `${uid}-corp-details`;
   const corpPhoneId = `${uid}-corp-phone`;
 
-  function persistAndNavigate(search: URLSearchParams, ctx: StoredFleetSearchContext) {
+  /** `auto` = ملاحة نابعة من البحث التلقائي (تعديل حقل) لا من ضغط الزر:
+   *  بلا هاش وبلا تمرير، وباستبدال حتى لا يمتلئ سجل التصفح بكل تعديل. */
+  function persistAndNavigate(
+    search: URLSearchParams,
+    ctx: StoredFleetSearchContext,
+    opts: { auto?: boolean } = {},
+  ) {
     try {
       sessionStorage.setItem(FLEET_SEARCH_STORAGE_KEY, JSON.stringify(ctx));
     } catch {
@@ -774,7 +782,12 @@ export function BookingSearchWidget({
       if (urlSp.get("rebook") === "1") {
         search.set("rebook", "1");
       }
-      router.replace(`/fleet/checkout?${search.toString()}`);
+      router.replace(`/fleet/checkout?${search.toString()}`, { scroll: !opts.auto });
+      return;
+    }
+    console.log("[NAVDBG]", opts.auto ? "auto" : "button", new Error().stack);
+    if (opts.auto) {
+      router.replace(`/fleet?${search.toString()}`, { scroll: false });
       return;
     }
     router.push(`/fleet?${search.toString()}#fleet-results`);
@@ -1001,7 +1014,7 @@ export function BookingSearchWidget({
       lastAutoSearchSigRef.current = sig;
       setError(null);
       setBranchHoursNotice(null);
-      persistAndNavigate(built.params, built.ctx);
+      persistAndNavigate(built.params, built.ctx, { auto: true });
     }, AUTO_SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
