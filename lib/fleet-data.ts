@@ -7,6 +7,7 @@ import { getRentalPriceDisplayMode } from "@/lib/site-settings";
 import {
   getActiveRentalDiscounts,
   resolveBestRentalDiscount,
+  resolveBestPeriodDiscount,
   customerDiscountLabelForActualSavings,
   type RentalDiscountRule,
 } from "@/lib/rental-discount";
@@ -130,6 +131,70 @@ function rowMonthlyPrice(row: FleetRowWithModel): number | null {
   return row.priceMonthlyExclTax ?? row.model.priceMonthlyExclTax;
 }
 
+/**
+ * عدد أيام افتراضي لحساب معاينة الخصم الشهري في بطاقات التصفح — قبل اختيار
+ * تواريخ فعلية. يؤثر فقط على خصم `FIXED_DAILY` (يُضرب × الأيام)؛ باقي الأنواع
+ * لا تعتمد على العدد. صفحة الإتمام تُعيد الحساب بعدد الأيام الحقيقي لاحقاً.
+ */
+const MONTHLY_PREVIEW_DAYS = 30;
+
+/**
+ * السعر الشهري المعروض للصف بعد الخصم والأرضية — نفس منطق `rowDiscountedPrice`
+ * لكن بمسار الفترة الشهرية (`resolveBestPeriodDiscount`) حتى تظهر الخصومات
+ * المُفعَّلة بنطاق `MONTHLY_ONLY`/`DAILY_AND_MONTHLY` في بطاقة الأسطول أيضاً، لا
+ * في صفحة الإتمام فقط. null = لا يوجد سعر شهري لهذا الصف.
+ */
+function rowMonthlyDiscountedPrice(
+  row: FleetRowWithModel,
+  discountRules: ReadonlyArray<RentalDiscountRule>,
+  referenceDate?: Date | null,
+): { basePrice: number; effectivePrice: number; displayLabelAr: string | null } | null {
+  const basePrice = rowMonthlyPrice(row);
+  if (basePrice == null) return null;
+  const priceFloor = rowPriceFloor(row);
+  const resolved = resolveBestPeriodDiscount(
+    discountRules,
+    {
+      brandId: row.model.brandId,
+      carModelId: row.model.id,
+      branchId: row.branchId,
+      referenceDate,
+      periodKind: "MONTHLY",
+      days: MONTHLY_PREVIEW_DAYS,
+      priceFloor,
+    },
+    basePrice,
+  );
+  // applyPriceFloorPerDay تتعامل مع مبالغ «لكل يوم» حتى في السياق الشهري
+  // (تقسم الأرضية داخلياً على الأيام) — فنحوّل الإجمالي الشهري لمكافئ يومي هنا.
+  const basePricePerDay = basePrice / MONTHLY_PREVIEW_DAYS;
+  const discountedPricePerDay =
+    (resolved?.discountedAmountExclTax ?? basePrice) / MONTHLY_PREVIEW_DAYS;
+  const floorOutcome = applyPriceFloorPerDay(
+    discountedPricePerDay,
+    basePricePerDay,
+    priceFloor,
+    "MONTHLY",
+    MONTHLY_PREVIEW_DAYS,
+  );
+  const effectivePrice = floorOutcome.finalPricePerDayExclTax * MONTHLY_PREVIEW_DAYS;
+  return {
+    basePrice,
+    effectivePrice,
+    displayLabelAr: customerDiscountLabelForActualSavings(
+      resolved
+        ? {
+            originalPricePerDayExclTax: basePrice,
+            discountedPricePerDayExclTax: resolved.discountedAmountExclTax,
+            discountPerDayExclTax: resolved.savingsExclTax,
+            displayLabelAr: resolved.displayLabelAr,
+          }
+        : null,
+      basePrice - effectivePrice,
+    ),
+  };
+}
+
 function mapFleetRowToFleetCar(
   row: FleetRowWithModel,
   priceMode: RentalPriceDisplayMode,
@@ -137,7 +202,12 @@ function mapFleetRowToFleetCar(
   referenceDate?: Date | null,
   locale: string = "ar",
   startingFrom: boolean = false,
-  monthlyOverride?: { price: number; varies: boolean } | null,
+  monthlyOverride?: {
+    price: number;
+    varies: boolean;
+    originalPrice: number;
+    displayLabelAr: string | null;
+  } | null,
   availableBranchSlugs?: string[],
   period?: PeriodPricing | null,
 ): FleetCar {
@@ -151,8 +221,12 @@ function mapFleetRowToFleetCar(
 
   let priceUi;
   if (monthlyOverride) {
-    // السعر الشهري رقم مستقل ومسعّر مسبقاً — لا يمر بنظام خصومات السعر اليومي
+    // السعر الشهري رقم مستقل عن السعر اليومي، لكنه يمرّ بنظام الخصومات الخاص به
+    // (خصومات بنطاق MONTHLY_ONLY أو DAILY_AND_MONTHLY) — راجع rowMonthlyDiscountedPrice.
     priceUi = buildFleetCardPriceParts(monthlyOverride.price, m.vatRatePercent, priceMode, {
+      originalPriceExclTaxSar: monthlyOverride.originalPrice,
+      discountLabelAr: monthlyOverride.displayLabelAr,
+      discountLabelEn: monthlyOverride.displayLabelAr,
       startingFrom: monthlyOverride.varies,
       periodLabelAr: "شهرياً",
       periodLabelEn: "Monthly",
@@ -208,11 +282,20 @@ function mapFleetRowToFleetCar(
 function resolveRentalTabPricing(
   rentalTab: string | null | undefined,
   rows: FleetRowWithModel[],
-): { period: PeriodPricing | null; monthlyPrices: Map<number, { price: number; varies: boolean }> | null } {
+  discountRules: ReadonlyArray<RentalDiscountRule>,
+  referenceDate?: Date | null,
+): {
+  period: PeriodPricing | null;
+  monthlyPrices: Map<
+    number,
+    { price: number; originalPrice: number; varies: boolean; displayLabelAr: string | null }
+  > | null;
+} {
   const tab = rentalTab?.trim().toLowerCase();
   return {
     period: tab === "weekly" ? WEEKLY_PERIOD : null,
-    monthlyPrices: tab === "monthly" ? buildMonthlyPriceMap(rows) : null,
+    monthlyPrices:
+      tab === "monthly" ? buildMonthlyPriceMap(rows, discountRules, referenceDate) : null,
   };
 }
 
@@ -257,7 +340,12 @@ export async function getFleetCarMapByModelIds(
     }
   }
 
-  const { period, monthlyPrices } = resolveRentalTabPricing(opts?.rentalTab, rows);
+  const { period, monthlyPrices } = resolveRentalTabPricing(
+    opts?.rentalTab,
+    rows,
+    discountRules,
+    opts?.referenceDate,
+  );
 
   for (const [modelId, pick] of pickCheapestRowPerModel(
     rows,
@@ -278,7 +366,12 @@ export async function getFleetCarMapByModelIds(
         opts?.locale,
         opts?.branchId == null && pick.pricesVary,
         monthly
-          ? { price: monthly.price, varies: opts?.branchId == null && monthly.varies }
+          ? {
+              price: monthly.price,
+              varies: opts?.branchId == null && monthly.varies,
+              originalPrice: monthly.originalPrice,
+              displayLabelAr: monthly.displayLabelAr,
+            }
           : null,
         availableSlugsMap.get(modelId),
         period,
@@ -330,23 +423,48 @@ function pickCheapestRowPerModel(
  */
 function buildMonthlyPriceMap(
   rows: FleetRowWithModel[],
-): Map<number, { price: number; varies: boolean }> {
-  const byModel = new Map<number, { price: number; prices: Set<number> }>();
+  discountRules: ReadonlyArray<RentalDiscountRule>,
+  referenceDate?: Date | null,
+): Map<
+  number,
+  { price: number; originalPrice: number; varies: boolean; displayLabelAr: string | null }
+> {
+  const byModel = new Map<
+    number,
+    { price: number; originalPrice: number; displayLabelAr: string | null; prices: Set<number> }
+  >();
   for (const row of rows) {
-    const monthly = rowMonthlyPrice(row);
-    if (monthly == null) continue;
-    const displayPrice = Math.round(monthly);
+    const resolved = rowMonthlyDiscountedPrice(row, discountRules, referenceDate);
+    if (resolved == null) continue;
+    const displayPrice = Math.round(resolved.effectivePrice);
     const cur = byModel.get(row.modelId);
     if (!cur) {
-      byModel.set(row.modelId, { price: displayPrice, prices: new Set([displayPrice]) });
+      byModel.set(row.modelId, {
+        price: displayPrice,
+        originalPrice: Math.round(resolved.basePrice),
+        displayLabelAr: resolved.displayLabelAr,
+        prices: new Set([displayPrice]),
+      });
     } else {
       cur.prices.add(displayPrice);
-      if (displayPrice < cur.price) cur.price = displayPrice;
+      if (displayPrice < cur.price) {
+        cur.price = displayPrice;
+        cur.originalPrice = Math.round(resolved.basePrice);
+        cur.displayLabelAr = resolved.displayLabelAr;
+      }
     }
   }
-  const out = new Map<number, { price: number; varies: boolean }>();
+  const out = new Map<
+    number,
+    { price: number; originalPrice: number; varies: boolean; displayLabelAr: string | null }
+  >();
   for (const [modelId, v] of byModel) {
-    out.set(modelId, { price: v.price, varies: v.prices.size > 1 });
+    out.set(modelId, {
+      price: v.price,
+      originalPrice: v.originalPrice,
+      varies: v.prices.size > 1,
+      displayLabelAr: v.displayLabelAr,
+    });
   }
   return out;
 }
@@ -447,7 +565,12 @@ export async function getFleetCarsForDisplay(
   });
 
   const hasBranchFilter = Boolean(branchSlug?.trim());
-  const { period, monthlyPrices } = resolveRentalTabPricing(rentalTab, rows);
+  const { period, monthlyPrices } = resolveRentalTabPricing(
+    rentalTab,
+    rows,
+    discountRules,
+    pickupDate,
+  );
   const cars: FleetCar[] = [];
   const orderSeen: number[] = [];
   const picks = pickCheapestRowPerModel(rows, discountRules, pickupDate);
@@ -491,7 +614,14 @@ export async function getFleetCarsForDisplay(
         pickupDate,
         locale,
         !hasBranchFilter && pick.pricesVary,
-        monthly ? { price: monthly.price, varies: !hasBranchFilter && monthly.varies } : null,
+        monthly
+          ? {
+              price: monthly.price,
+              varies: !hasBranchFilter && monthly.varies,
+              originalPrice: monthly.originalPrice,
+              displayLabelAr: monthly.displayLabelAr,
+            }
+          : null,
         availableSlugsMap.get(modelId),
         period,
       ),

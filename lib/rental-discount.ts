@@ -260,12 +260,18 @@ function computeMonthlySavings(
  *
  * الخصومات المقيَّدة بـ `DAILY_ONLY` مستبعَدة تلقائياً في السياق الشهري.
  */
-export async function resolveRentalDiscountForPeriod(
-  baseAmountExclTax: number,
+/**
+ * نسخة متزامنة من `resolveRentalDiscountForPeriod` تاخد قواعد الخصم جاهزة —
+ * لمن يستدعيها لعدد كبير من الصفوف دفعة واحدة (بطاقات الأسطول) بدل إعادة
+ * جلب `getActiveRentalDiscounts()` لكل صف.
+ */
+export function resolveBestPeriodDiscount(
+  rules: ReadonlyArray<RentalDiscountRule>,
   ctx: RentalDiscountContext & { periodKind: RentalPeriodKind; days: number },
-): Promise<ResolvedPeriodDiscount | null> {
+  baseAmountExclTax: number,
+): ResolvedPeriodDiscount | null {
   if (ctx.periodKind !== "MONTHLY") {
-    const resolved = await resolveRentalDiscountForModel(baseAmountExclTax, ctx);
+    const resolved = resolveBestRentalDiscount(rules, ctx, baseAmountExclTax);
     if (!resolved) return null;
     return {
       discountedAmountExclTax: resolved.discountedPricePerDayExclTax,
@@ -278,7 +284,6 @@ export async function resolveRentalDiscountForPeriod(
   const base = Math.max(0, baseAmountExclTax);
   if (base <= 0) return null;
 
-  const rules = await getActiveRentalDiscounts();
   let best: { resolved: ResolvedPeriodDiscount; sortOrder: number } | null = null;
 
   for (const rule of rules) {
@@ -310,6 +315,14 @@ export async function resolveRentalDiscountForPeriod(
   }
 
   return best?.resolved ?? null;
+}
+
+export async function resolveRentalDiscountForPeriod(
+  baseAmountExclTax: number,
+  ctx: RentalDiscountContext & { periodKind: RentalPeriodKind; days: number },
+): Promise<ResolvedPeriodDiscount | null> {
+  const rules = await getActiveRentalDiscounts();
+  return resolveBestPeriodDiscount(rules, ctx, baseAmountExclTax);
 }
 
 export type RentalDiscountPriceSnap = {
