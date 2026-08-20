@@ -564,12 +564,16 @@ export function FleetCheckoutClient({
 
   // تبويب «شهري»: سعر شهري ثابت — يُحوَّل لسعر يومي مكافئ (السعر الشهري ÷ الأيام)
   // بحيث يطابق الإجمالي المعروض هنا ما سيُحتسب فعلياً عند إنشاء الحجز.
-  const effectiveRentalPricePerDay =
+  // كوبون RENTAL_ONLY له الأولوية دائماً — قيمة discountedPricePerDayExclTax القادمة
+  // من /coupon/validate محسوبة أصلاً كسعر يومي مكافئ صحيح لليومي والشهري معاً.
+  const baseRentalPricePerDay =
     rentalTab === "monthly" && car.pricePerMonthExclTax != null
       ? car.pricePerMonthExclTax / trip.days
-      : appliedCoupon?.scope === "RENTAL_ONLY"
-        ? appliedCoupon.discountedPricePerDayExclTax
-        : car.pricePerDayExclTax;
+      : car.pricePerDayExclTax;
+  const effectiveRentalPricePerDay =
+    appliedCoupon?.scope === "RENTAL_ONLY"
+      ? appliedCoupon.discountedPricePerDayExclTax
+      : baseRentalPricePerDay;
 
   const totals = computeCheckoutTotals(
     effectiveRentalPricePerDay,
