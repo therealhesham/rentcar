@@ -208,6 +208,21 @@ export function FleetCheckoutClient({
       }
   >(null);
 
+  /**
+   * السعر الشهري الفعلي بعد الخصم التلقائي — `car.pricePerMonthExclTax` سعر خام
+   * (لا يحل الخصم server-side) لأن عدد أيام الشهري يتغيّر client-side وبعض
+   * أنواع الخصم تعتمد عليه. يُعاد جلبه من `/rental-price` عند كل تغيّر في الأيام.
+   */
+  const [monthlyPriceResolved, setMonthlyPriceResolved] = useState<
+    | null
+    | {
+        days: number;
+        pricePerDayExclTax: number;
+        originalPricePerDayExclTax: number;
+        discountLabelAr: string | null;
+      }
+  >(null);
+
   /** واجهة: زرّان فقط (مواطن/مقيم معاً) + زائر؛ القيم المُرسَلة للخادم CITIZEN | RESIDENT تُشتق من أول رقم. */
   type IdDocUiKind = "SAUDI_ID" | "VISITOR";
   const sessionIdDocKind =
@@ -564,11 +579,15 @@ export function FleetCheckoutClient({
 
   // تبويب «شهري»: سعر شهري ثابت — يُحوَّل لسعر يومي مكافئ (السعر الشهري ÷ الأيام)
   // بحيث يطابق الإجمالي المعروض هنا ما سيُحتسب فعلياً عند إنشاء الحجز.
+  // `monthlyPriceResolved` (من /rental-price) بيحتوي الخصم التلقائي المُطابِق
+  // لعدد الأيام الحالي — بدونه (لسه بيتحمّل أو الأيام تغيّرت) نرجع للسعر الخام.
   // كوبون RENTAL_ONLY له الأولوية دائماً — قيمة discountedPricePerDayExclTax القادمة
   // من /coupon/validate محسوبة أصلاً كسعر يومي مكافئ صحيح لليومي والشهري معاً.
   const baseRentalPricePerDay =
     rentalTab === "monthly" && car.pricePerMonthExclTax != null
-      ? car.pricePerMonthExclTax / trip.days
+      ? monthlyPriceResolved && monthlyPriceResolved.days === trip.days
+        ? monthlyPriceResolved.pricePerDayExclTax
+        : car.pricePerMonthExclTax / trip.days
       : car.pricePerDayExclTax;
   const effectiveRentalPricePerDay =
     appliedCoupon?.scope === "RENTAL_ONLY"
@@ -632,6 +651,48 @@ export function FleetCheckoutClient({
     })();
     return () => ctrl.abort();
   }, [car.modelId, trip.pickupIso, trip.days, trip.branchSlug, excludeBookingRequestIdFromUrl]);
+
+  useEffect(() => {
+    if (rentalTab !== "monthly" || car.pricePerMonthExclTax == null) {
+      setMonthlyPriceResolved(null);
+      return;
+    }
+    const ctrl = new AbortController();
+    void (async () => {
+      try {
+        const params = new URLSearchParams({
+          carModelId: String(car.modelId),
+          numberOfDays: String(trip.days),
+          branchSlug: trip.branchSlug,
+          rentalTab: "monthly",
+        });
+        const res = await fetch(`/api/bookings/direct/rental-price?${params}`, {
+          signal: ctrl.signal,
+        });
+        const data = (await res.json()) as
+          | {
+              ok: true;
+              pricePerDayExclTax: number;
+              originalPricePerDayExclTax: number;
+              discountLabelAr: string | null;
+            }
+          | { ok: false; error: string };
+        if (!data.ok) {
+          setMonthlyPriceResolved(null);
+          return;
+        }
+        setMonthlyPriceResolved({
+          days: trip.days,
+          pricePerDayExclTax: data.pricePerDayExclTax,
+          originalPricePerDayExclTax: data.originalPricePerDayExclTax,
+          discountLabelAr: data.discountLabelAr,
+        });
+      } catch {
+        if (!ctrl.signal.aborted) setMonthlyPriceResolved(null);
+      }
+    })();
+    return () => ctrl.abort();
+  }, [rentalTab, car.modelId, car.pricePerMonthExclTax, trip.days, trip.branchSlug]);
 
   function toggleAddon(id: number) {
     const addon = addons.find((a) => a.id === id);
@@ -2135,16 +2196,40 @@ export function FleetCheckoutClient({
                       </p>
                     ) : null}
                     {rentalTab === "monthly" && car.pricePerMonthExclTax != null ? (
-                      <p dir="ltr" className="mt-2 border-t border-[#ebe4d3] pt-2 text-end">
-                        السعر الشهري:{" "}
-                        <span className="font-extrabold text-[#003749]">
-                          {formatSarAmount(
-                            dailyRentalInclTaxSar(car.pricePerMonthExclTax, car.vatRatePercent),
-                          )}{" "}
-                          <SarCurrencyGlyph />
-                        </span>{" "}
-                        <span className="text-[#8a7752]">(شامل الضريبة {car.vatRatePercent}%)</span>
-                      </p>
+                      <>
+                        {monthlyPriceResolved?.days === trip.days && monthlyPriceResolved.discountLabelAr ? (
+                          <p className="mb-1 mt-2 text-end">
+                            <span className="rounded-md bg-[#c2410c]/10 px-2 py-0.5 text-[10px] font-extrabold text-[#c2410c]">
+                              {monthlyPriceResolved.discountLabelAr}
+                            </span>
+                          </p>
+                        ) : null}
+                        <p dir="ltr" className="mt-2 border-t border-[#ebe4d3] pt-2 text-end">
+                          السعر الشهري:{" "}
+                          {monthlyPriceResolved?.days === trip.days &&
+                          monthlyPriceResolved.pricePerDayExclTax <
+                            monthlyPriceResolved.originalPricePerDayExclTax ? (
+                            <span className="me-2 font-bold text-gray-400 line-through decoration-red-500 decoration-[1.5px] opacity-80">
+                              {formatSarAmount(
+                                dailyRentalInclTaxSar(car.pricePerMonthExclTax, car.vatRatePercent),
+                              )}{" "}
+                              <SarCurrencyGlyph />
+                            </span>
+                          ) : null}
+                          <span className="font-extrabold text-[#003749]">
+                            {formatSarAmount(
+                              dailyRentalInclTaxSar(
+                                monthlyPriceResolved?.days === trip.days
+                                  ? monthlyPriceResolved.pricePerDayExclTax * trip.days
+                                  : car.pricePerMonthExclTax,
+                                car.vatRatePercent,
+                              ),
+                            )}{" "}
+                            <SarCurrencyGlyph />
+                          </span>{" "}
+                          <span className="text-[#8a7752]">(شامل الضريبة {car.vatRatePercent}%)</span>
+                        </p>
+                      </>
                     ) : null}
                   </div>
 
