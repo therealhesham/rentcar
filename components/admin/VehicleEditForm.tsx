@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useState, useId, type DragEvent } from "react";
+import { useActionState, useEffect, useRef, useState, useId, type DragEvent } from "react";
 import {
   Car,
   Fuel,
@@ -352,6 +352,14 @@ function BranchFleetTable({
 // ─── Main Form ────────────────────────────────────────────────────────────────
 export function VehicleEditForm({ vehicle }: Props) {
   const [state, formAction, pending] = useActionState(updateFleetVehicle, null);
+  const bannerRef = useRef<HTMLDivElement | null>(null);
+
+  // زرّ الحفظ ثابت (sticky) في العمود الجانبي وبعيد غالباً عن أعلى الفورم حيث
+  // تظهر رسالة النجاح/الخطأ — بدون هذا التمرير يضغط الأدمن حفظ ولا يرى أي رد
+  // فعل، فيظن أن الحفظ لا يعمل رغم أنه تم فعلياً (أو فشل بسبب صالح).
+  useEffect(() => {
+    if (state) bannerRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [state]);
 
   return (
     <form action={formAction} noValidate>
@@ -360,6 +368,7 @@ export function VehicleEditForm({ vehicle }: Props) {
       {/* ── Status banner ── */}
       {state?.ok && (
         <div
+          ref={bannerRef}
           role="status"
           className="mb-6 flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4"
         >
@@ -371,6 +380,7 @@ export function VehicleEditForm({ vehicle }: Props) {
       )}
       {state && !state.ok && state.error && (
         <div
+          ref={bannerRef}
           role="alert"
           className="mb-6 flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50 px-5 py-4"
         >
