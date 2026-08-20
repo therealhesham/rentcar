@@ -785,7 +785,6 @@ export function BookingSearchWidget({
       router.replace(`/fleet/checkout?${search.toString()}`, { scroll: !opts.auto });
       return;
     }
-    console.log("[NAVDBG]", opts.auto ? "auto" : "button", new Error().stack);
     if (opts.auto) {
       router.replace(`/fleet?${search.toString()}`, { scroll: false });
       return;
