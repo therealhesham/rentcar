@@ -210,7 +210,16 @@ export function AdminDashboardBookingsSection({ rows, categories, models }: Prop
                     {request.carModelLabel ?? "—"}
                   </dd>
                   <dd className="text-xs text-on-surface-variant">
-                    {request.pickupDateLabel} · {request.numberOfDays} يوم
+                    {request.pickupDateLabel} · {request.numberOfDays} يوم{" "}
+                    <span
+                      className={`ms-1 inline-block rounded-md px-1.5 py-0.5 text-[10px] font-bold ${
+                        request.fixedDuration
+                          ? "bg-primary/10 text-primary"
+                          : "bg-surface-container-low text-on-surface-variant"
+                      }`}
+                    >
+                      {request.fixedDuration ? "شهري" : "يومي"}
+                    </span>
                   </dd>
                 </div>
               </div>
@@ -297,7 +306,18 @@ export function AdminDashboardBookingsSection({ rows, categories, models }: Prop
                           {request.pickupBranchName ?? "—"}
                         </span>
                       </td>
-                      <td className="px-4 py-3 align-top tabular-nums">{request.numberOfDays}</td>
+                      <td className="px-4 py-3 align-top">
+                        <span className="block tabular-nums">{request.numberOfDays}</span>
+                        <span
+                          className={`mt-1 inline-block rounded-md px-1.5 py-0.5 text-[10px] font-bold ${
+                            request.fixedDuration
+                              ? "bg-primary/10 text-primary"
+                              : "bg-surface-container-low text-on-surface-variant"
+                          }`}
+                        >
+                          {request.fixedDuration ? "شهري" : "يومي"}
+                        </span>
+                      </td>
                       <td className="px-4 py-3 align-top">
                         <div className="flex flex-col items-start gap-1.5">
                           <AdminStatusBadge status={request.status} />

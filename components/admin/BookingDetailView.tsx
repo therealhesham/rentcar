@@ -282,6 +282,15 @@ export function BookingDetailView({
             <div className="flex flex-wrap items-center gap-2">
               <AdminKindBadge kind={booking.kind} />
               <AdminStatusBadge status={booking.status} />
+              <span
+                className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold ring-1 ring-inset ${
+                  booking.rentalPeriodKind?.trim().toUpperCase() === "MONTHLY"
+                    ? "bg-primary/10 text-primary ring-primary/20"
+                    : "bg-surface-container-low text-on-surface-variant ring-outline-variant/30"
+                }`}
+              >
+                {booking.rentalPeriodKind?.trim().toUpperCase() === "MONTHLY" ? "حجز شهري" : "حجز يومي"}
+              </span>
               {booking.kind === "DIRECT" ? (
                 <span
                   className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold ring-1 ring-inset ${paymentStatusStyles(booking.paymentStatus, balanceDueAtBranch)}`}
