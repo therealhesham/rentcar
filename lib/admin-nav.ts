@@ -110,6 +110,12 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/admin/rental-pricing-display", label: "عرض أسعار التأجير", icon: "badge-dollar" },
       { href: "/admin/booking-otp-delivery", label: "رمز التحقق", icon: "shield-check" },
       { href: "/admin/booking-widget-tabs", label: "تبويبات ويدجت الحجز", icon: "sliders" },
+      {
+        href: "/admin/kyc-doc-requirements",
+        label: "مستندات الهوية والرخصة",
+        icon: "shield-check",
+        superAdminOnly: true,
+      },
       { href: "/admin/payment-methods", label: "طرق دفع العميل", icon: "credit-card" },
       { href: "/admin/payment-icons", label: "أيقونات وسائل الدفع", icon: "image" },
       { href: "/admin/whatsapp-templates", label: "قوالب الواتساب", icon: "megaphone" },

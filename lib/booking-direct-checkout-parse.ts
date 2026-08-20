@@ -19,10 +19,10 @@ import {
 /**
  * تحليل جسم طلب إتمام الحجز من الموقع (نفس سلسلة التحقق في واجهات API الإتمام).
  */
-export function parseCreateDirectBookingInputFromCheckoutJson(
+export async function parseCreateDirectBookingInputFromCheckoutJson(
   obj: Record<string, unknown>,
   sessionUserId: number | null | undefined,
-): { ok: true; input: CreateDirectBookingInput } | { ok: false; error: string } {
+): Promise<{ ok: true; input: CreateDirectBookingInput } | { ok: false; error: string }> {
   const carModelId = Number(obj.carModelId);
   if (!Number.isInteger(carModelId) || carModelId < 1) {
     return { ok: false, error: "معرّف السيارة غير صالح." };
@@ -75,7 +75,7 @@ export function parseCreateDirectBookingInputFromCheckoutJson(
     return emailParsed;
   }
 
-  const kycParsed = parseDirectBookingKycFromJson(obj);
+  const kycParsed = await parseDirectBookingKycFromJson(obj);
   if (!kycParsed.ok) {
     return kycParsed;
   }

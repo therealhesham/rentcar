@@ -79,7 +79,7 @@ export async function alertAbandonedOtpCheckoutDrafts(): Promise<{ scanned: numb
     let localPhone: string | null = null;
     let email: string | null = null;
     if (payload) {
-      const parsed = parseCreateDirectBookingInputFromCheckoutJson(payload.body, null);
+      const parsed = await parseCreateDirectBookingInputFromCheckoutJson(payload.body, null);
       if (parsed.ok) {
         fullName = parsed.input.fullName;
         localPhone = e164ToLocalNine(parsed.input.phone);

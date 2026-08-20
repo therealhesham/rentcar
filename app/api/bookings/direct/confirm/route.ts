@@ -53,7 +53,7 @@ export async function POST(request: Request) {
   }
 
   const sessionUserId = await getCustomerSessionUserId();
-  const parsed = parseCreateDirectBookingInputFromCheckoutJson(payload.body, sessionUserId);
+  const parsed = await parseCreateDirectBookingInputFromCheckoutJson(payload.body, sessionUserId);
   if (!parsed.ok) {
     await deleteBookingCheckoutDraftByToken(token);
     return NextResponse.json({ ok: false, error: parsed.error }, { status: 400 });

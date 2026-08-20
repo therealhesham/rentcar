@@ -41,7 +41,7 @@ export async function POST(request: Request) {
 
   const obj = body as Record<string, unknown>;
   const sessionUserId = await getCustomerSessionUserId();
-  const parsed = parseCreateDirectBookingInputFromCheckoutJson(obj, sessionUserId);
+  const parsed = await parseCreateDirectBookingInputFromCheckoutJson(obj, sessionUserId);
   if (!parsed.ok) {
     return NextResponse.json({ ok: false, error: parsed.error }, { status: 400 });
   }

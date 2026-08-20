@@ -44,6 +44,7 @@ import {
   type DelayPenaltySnap,
 } from "@/lib/booking-delay-penalty";
 import { formatDailyBookingDurationFromIso } from "@/lib/booking-duration-display";
+import { getKycDocRequirements } from "@/lib/site-settings";
 import {
   rentalDiscountSnapFromResolved,
   resolveRentalDiscountForPeriod,
@@ -828,15 +829,18 @@ export type DirectBookingKycInput = {
   licenseNumber: string;
   licenseExpiryDate: Date;
   idCardImageUrl: string | null;
-  driverLicenseImageUrl: string;
+  driverLicenseImageUrl: string | null;
 };
 
 /**
  * تحقق من بيانات الهوية/الجواز والرخصة وروابط الصور (روابط Spaces موثوقة فقط).
+ * حالة إلزام الصورتين (هوية/جواز، رخصة) يضبطها السوبر أدمن عبر `getKycDocRequirements` —
+ * حقل مخفي في الواجهة يُتجاهَل هنا مهما أرسل الطلب، وحقل إلزامي يُرفض بدونه.
  */
-export function parseDirectBookingKycFromJson(
+export async function parseDirectBookingKycFromJson(
   body: JsonBody,
-): { ok: true; data: DirectBookingKycInput } | { ok: false; error: string } {
+): Promise<{ ok: true; data: DirectBookingKycInput } | { ok: false; error: string }> {
+  const docReqs = await getKycDocRequirements();
   const kindRaw = String(body.idDocumentKind ?? "")
     .trim()
     .toUpperCase();
@@ -897,20 +901,35 @@ export function parseDirectBookingKycFromJson(
   }
 
   let idCardImageUrl: string | null = null;
-  if (idCardRaw) {
+  if (docReqs.idImage === "HIDDEN") {
+    // حقل مخفي عن العميل — يُتجاهل أي رابط أُرسل معه دفاعياً بدل الثقة بالعميل.
+    idCardImageUrl = null;
+  } else if (idCardRaw) {
     if (!isTrustedSpacesImageUrl(idCardRaw)) {
       return { ok: false, error: "رابط صورة الهوية أو الجواز غير موثوق." };
     }
     idCardImageUrl = idCardRaw;
+  } else if (docReqs.idImage === "REQUIRED") {
+    return { ok: false, error: "يرجى رفع صورة الهوية أو الجواز (إلزامي)." };
   }
 
-  if (!licenseImgRaw || !isTrustedSpacesImageUrl(licenseImgRaw)) {
+  let driverLicenseImageUrl: string | null = null;
+  if (docReqs.licenseImage === "HIDDEN") {
+    driverLicenseImageUrl = null;
+  } else if (licenseImgRaw) {
+    if (!isTrustedSpacesImageUrl(licenseImgRaw)) {
+      return {
+        ok: false,
+        error: "صورة الرخصة يجب رفعها من النظام (رابط غير موثوق).",
+      };
+    }
+    driverLicenseImageUrl = licenseImgRaw;
+  } else if (docReqs.licenseImage === "REQUIRED") {
     return {
       ok: false,
-      error: "صورة الرخصة مطلوبة ويجب رفعها من النظام (رابط غير موثوق).",
+      error: "صورة الرخصة مطلوبة ويجب رفعها من النظام.",
     };
   }
-  const driverLicenseImageUrl = licenseImgRaw;
 
   if (idDocumentKind === DIRECT_BOOKING_ID_KIND_CITIZEN) {
     if (!nationalIdNumber || !/^\d{10}$/.test(nationalIdNumber)) {

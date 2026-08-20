@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     if (!payload) {
       return NextResponse.json({ ok: false, error: "بيانات المسودة غير صالحة." }, { status: 400 });
     }
-    const parsed = parseCreateDirectBookingInputFromCheckoutJson(payload.body, null);
+    const parsed = await parseCreateDirectBookingInputFromCheckoutJson(payload.body, null);
     if (!parsed.ok) {
       return NextResponse.json({ ok: false, error: "بيانات المسودة غير صالحة." }, { status: 400 });
     }

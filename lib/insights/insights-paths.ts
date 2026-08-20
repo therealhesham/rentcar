@@ -118,6 +118,7 @@ const ADMIN_PAGE_LABELS: Array<[RegExp, string]> = [
   [/^\/admin\/rental-pricing-display/, "عرض أسعار التأجير"],
   [/^\/admin\/booking-otp-delivery/, "رمز التحقق"],
   [/^\/admin\/booking-widget-tabs/, "تبويبات ويدجت الحجز"],
+  [/^\/admin\/kyc-doc-requirements/, "مستندات الهوية والرخصة"],
   [/^\/admin\/payment-methods/, "طرق دفع العميل"],
   [/^\/admin\/payment-icons/, "أيقونات وسائل الدفع"],
   [/^\/admin\/whatsapp-templates/, "قوالب الواتساب"],

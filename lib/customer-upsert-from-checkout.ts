@@ -16,7 +16,7 @@ export async function upsertCustomerFromFleetBooking(opts: {
     licenseNumber: string;
     licenseExpiryDate: Date;
     idCardImageUrl: string | null;
-    driverLicenseImageUrl: string;
+    driverLicenseImageUrl: string | null;
   } | null;
 }): Promise<{ ok: true; userId: number } | { ok: false; error: string }> {
   const email = opts.email.trim().toLowerCase();

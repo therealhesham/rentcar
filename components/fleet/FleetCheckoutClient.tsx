@@ -25,6 +25,10 @@ import { SiteNav } from "@/components/shared/SiteNav";
 import { BookingWidget } from "@/components/home/BookingWidget";
 import type { FleetSearchUrlHydrate } from "@/lib/fleet-search-url-hydrate";
 import type { BookingWidgetTabFlags } from "@/lib/booking-widget-tabs";
+import {
+  DEFAULT_KYC_DOC_REQUIREMENTS,
+  type KycDocRequirements,
+} from "@/lib/kyc-doc-requirements";
 import { SarCurrencyGlyph } from "@/components/ui/SarCurrencyGlyph";
 import { CarUnavailableModal } from "@/components/fleet/CarUnavailableModal";
 import { BranchOutsideHoursModal } from "@/components/fleet/BranchOutsideHoursModal";
@@ -150,6 +154,8 @@ type Props = {
   fleetUrlHydrate?: FleetSearchUrlHydrate | null;
   /** الشروط والأحكام من قاعدة البيانات — تُعرض داخل نافذة منبثقة عند الضغط على الرابط */
   rentalTerms?: RentalTermDTO[];
+  /** إلزامي/اختياري/مخفي لحقلَي صورة الهوية وصورة الرخصة — يضبطها السوبر أدمن */
+  kycDocFlags?: KycDocRequirements | null;
 };
 
 export function FleetCheckoutClient({
@@ -165,7 +171,9 @@ export function FleetCheckoutClient({
   tabFlags,
   fleetUrlHydrate,
   rentalTerms = [],
+  kycDocFlags,
 }: Props) {
+  const kycDocReq = kycDocFlags ?? DEFAULT_KYC_DOC_REQUIREMENTS;
   const sp = useSearchParams();
   const router = useRouter();
   const [ctxStore, setCtxStore] = useState<StoredFleetSearchContext | null>(null);
@@ -423,6 +431,17 @@ export function FleetCheckoutClient({
     const validAddonIds = editPrefill.addonIds.filter((id) => addons.some((a) => a.id === id));
     if (validAddonIds.length > 0) setSelected(new Set(validAddonIds));
   }, [editPrefill, addons]);
+
+  /**
+   * رخصة المواطن/المقيم في السعودية تحمل نفس رقم الهوية الوطنية أو الإقامة —
+   * فحقل رقم الرخصة يُشتق منه تلقائياً ولا يُكتب يدوياً. الزائر لا يخضع لهذا
+   * (رقم الرخصة الدولية مستقل عن رقم الجواز).
+   */
+  useEffect(() => {
+    if (idDocKind === "SAUDI_ID") {
+      setLicenseNumber(nationalId);
+    }
+  }, [idDocKind, nationalId]);
 
   const excludeBookingRequestIdFromUrl = useMemo(() => {
     const raw = sp.get("excludeBookingRequestId")?.trim();
@@ -838,7 +857,11 @@ export function FleetCheckoutClient({
     }
 
     setKycFieldError(null);
-    if (!licenseDocUrl) {
+    if (kycDocReq.idImage === "REQUIRED" && !idCardUrl) {
+      failWith("ID_IMAGE_MISSING", "يرجى رفع صورة الهوية أو الجواز (إلزامي).");
+      return;
+    }
+    if (kycDocReq.licenseImage === "REQUIRED" && !licenseDocUrl) {
       failWith("LICENSE_IMAGE_MISSING", "يرجى رفع صورة الرخصة (إلزامي).");
       return;
     }
@@ -946,7 +969,7 @@ export function FleetCheckoutClient({
       licenseNumber: lic,
       licenseExpiryDate: expYmd,
       ...(idCardUrl ? { idCardImageUrl: idCardUrl } : {}),
-      driverLicenseImageUrl: licenseDocUrl,
+      ...(licenseDocUrl ? { driverLicenseImageUrl: licenseDocUrl } : {}),
     };
     if (excludeBookingRequestIdFromUrl != null) {
       body.excludeBookingRequestId = excludeBookingRequestIdFromUrl;
@@ -1281,9 +1304,27 @@ export function FleetCheckoutClient({
                   </span>
                   <h2 className="text-xl font-extrabold text-[#003749]">الهوية والرخصة</h2>
                 </div>
-                <p className="text-[13px] font-semibold leading-relaxed text-[#6b5a3b]">
-                  صورة الرخصة <span className="font-extrabold text-red-600">إلزامية</span> — صورة الهوية أو الجواز اختيارية.
-                </p>
+                {kycDocReq.licenseImage !== "HIDDEN" || kycDocReq.idImage !== "HIDDEN" ? (
+                  <p className="text-[13px] font-semibold leading-relaxed text-[#6b5a3b]">
+                    {kycDocReq.licenseImage !== "HIDDEN" ? (
+                      <>
+                        صورة الرخصة{" "}
+                        <span className={kycDocReq.licenseImage === "REQUIRED" ? "font-extrabold text-red-600" : "font-extrabold"}>
+                          {kycDocReq.licenseImage === "REQUIRED" ? "إلزامية" : "اختيارية"}
+                        </span>
+                      </>
+                    ) : null}
+                    {kycDocReq.licenseImage !== "HIDDEN" && kycDocReq.idImage !== "HIDDEN" ? " — " : null}
+                    {kycDocReq.idImage !== "HIDDEN" ? (
+                      <>
+                        صورة الهوية أو الجواز{" "}
+                        <span className={kycDocReq.idImage === "REQUIRED" ? "font-extrabold text-red-600" : "font-extrabold"}>
+                          {kycDocReq.idImage === "REQUIRED" ? "إلزامية" : "اختيارية"}
+                        </span>
+                      </>
+                    ) : null}
+                  </p>
+                ) : null}
 
                 <div className="rounded-3xl border border-[#ebe4d3] bg-white p-6 shadow-sm sm:p-8">
                   <div className="mb-6 flex flex-wrap gap-2">
@@ -1306,6 +1347,7 @@ export function FleetCheckoutClient({
                       onClick={() => {
                         setIdDocKind("VISITOR");
                         setNationalId("");
+                        setLicenseNumber("");
                         setKycFieldError(null);
                       }}
                       className={`rounded-xl px-4 py-2.5 text-[13px] font-extrabold transition-colors ${idDocKind === "VISITOR"
@@ -1387,7 +1429,9 @@ export function FleetCheckoutClient({
                         pattern="\d{10}"
                         maxLength={10}
                         value={licenseNumber}
+                        readOnly={idDocKind === "SAUDI_ID"}
                         onChange={(e) => {
+                          if (idDocKind === "SAUDI_ID") return;
                           const val = e.target.value.replace(/\D/g, "").slice(0, 10);
                           setLicenseNumber(val);
                           if (val.length === 10) {
@@ -1403,7 +1447,9 @@ export function FleetCheckoutClient({
                           }
                         }}
                         id="checkout-license-no"
-                        className="peer w-full rounded-xl border border-[#ebe4d3] bg-transparent px-4 pb-3 pt-6 text-[14px] font-semibold text-[#003749] outline-none transition-all focus:border-[#dbb878] focus:ring-1 focus:ring-[#dbb878]"
+                        className={`peer w-full rounded-xl border border-[#ebe4d3] px-4 pb-3 pt-6 text-[14px] font-semibold text-[#003749] outline-none transition-all focus:border-[#dbb878] focus:ring-1 focus:ring-[#dbb878] ${
+                          idDocKind === "SAUDI_ID" ? "cursor-not-allowed bg-[#f4f0ea]" : "bg-transparent"
+                        }`}
                         placeholder=" "
                         dir="ltr"
                       />
@@ -1413,6 +1459,11 @@ export function FleetCheckoutClient({
                       >
                         {idDocKind === "VISITOR" ? "رقم الرخصة الدولية" : "رقم رخصة القيادة"}
                       </label>
+                      {idDocKind === "SAUDI_ID" ? (
+                        <p className="mt-1.5 text-[11px] font-semibold text-[#aaa08e]">
+                          يُملأ تلقائياً من رقم الهوية الوطنية أو الإقامة
+                        </p>
+                      ) : null}
                     </div>
 
                     <div className="sm:col-span-2">
@@ -1458,8 +1509,15 @@ export function FleetCheckoutClient({
                     </div>
                   </div>
 
-                  <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                  <div
+                    className={`mt-6 grid gap-4 ${
+                      kycDocReq.idImage !== "HIDDEN" && kycDocReq.licenseImage !== "HIDDEN"
+                        ? "sm:grid-cols-2"
+                        : ""
+                    }`}
+                  >
                     {/* ID Card Upload */}
+                    {kycDocReq.idImage === "HIDDEN" ? null : (
                     <div className="group relative overflow-hidden rounded-2xl border-2 border-dashed border-[#dbb878]/40 bg-gradient-to-br from-[#fffef9] to-[#fdf9f0] p-5 transition-all hover:border-[#dbb878]/70 hover:shadow-[0_4px_16px_-6px_rgba(219,184,120,0.25)]">
                       <div className="mb-3 flex items-center gap-2">
                         <div className="flex size-8 items-center justify-center rounded-lg bg-[#f4f0ea] text-[#dbb878]">
@@ -1467,7 +1525,9 @@ export function FleetCheckoutClient({
                         </div>
                         <div>
                           <p className="text-[13px] font-extrabold text-[#003749]">صورة الهوية أو الجواز</p>
-                          <p className="text-[11px] font-semibold text-[#aaa08e]">اختياري</p>
+                          <p className="text-[11px] font-semibold text-[#aaa08e]">
+                            {kycDocReq.idImage === "REQUIRED" ? "إلزامي" : "اختياري"}
+                          </p>
                         </div>
                       </div>
                       {idCardUrl ? (
@@ -1505,8 +1565,10 @@ export function FleetCheckoutClient({
                         />
                       </label>
                     </div>
+                    )}
 
                     {/* License Upload */}
+                    {kycDocReq.licenseImage === "HIDDEN" ? null : (
                     <div className="group relative overflow-hidden rounded-2xl border-2 border-[#dbb878]/60 bg-gradient-to-br from-[#fffef9] to-[#fdf9f0] p-5 shadow-[0_0_0_1px_rgba(219,184,120,0.15)] transition-all hover:border-[#dbb878] hover:shadow-[0_4px_16px_-6px_rgba(219,184,120,0.35)]">
                       <div className="mb-3 flex items-center gap-2">
                         <div className="flex size-8 items-center justify-center rounded-lg bg-[#dbb878]/20 text-[#c9a356]">
@@ -1514,7 +1576,13 @@ export function FleetCheckoutClient({
                         </div>
                         <div>
                           <p className="text-[13px] font-extrabold text-[#003749]">صورة رخصة القيادة</p>
-                          <p className="text-[11px] font-extrabold text-red-600"></p>
+                          <p
+                            className={`text-[11px] font-extrabold ${
+                              kycDocReq.licenseImage === "REQUIRED" ? "text-red-600" : "text-[#aaa08e]"
+                            }`}
+                          >
+                            {kycDocReq.licenseImage === "REQUIRED" ? "إلزامي" : "اختياري"}
+                          </p>
                         </div>
                       </div>
                       {licenseDocUrl ? (
@@ -1553,6 +1621,7 @@ export function FleetCheckoutClient({
                         />
                       </label>
                     </div>
+                    )}
                   </div>
 
                   {kycFieldError ? (

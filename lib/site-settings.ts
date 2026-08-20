@@ -29,6 +29,11 @@ import {
   type SocialLinkItem,
 } from "@/lib/social-links";
 import { isTrustedSpacesImageUrl } from "@/lib/spaces-upload";
+import {
+  DEFAULT_KYC_DOC_REQUIREMENTS,
+  normalizeKycDocRequirements,
+  type KycDocRequirements,
+} from "@/lib/kyc-doc-requirements";
 
 /* ─── Promo Banner (Carousel) ──────────────────────────────── */
 export const SITE_KEY_PROMO_BANNER_SLIDES = "promo_banner_slides";
@@ -475,5 +480,29 @@ export async function getFleetTurnaroundMinutes(): Promise<number> {
     return Math.min(1440, Math.round(raw));
   } catch {
     return DEFAULT_FLEET_TURNAROUND_MINUTES;
+  }
+}
+
+/** حالة حقلَي صورة الهوية/الجواز وصورة الرخصة في نموذج الإتمام: إلزامي/اختياري/مخفي. */
+export const SITE_KEY_KYC_DOC_REQUIREMENTS = "kyc_doc_requirements_v1";
+
+export async function getKycDocRequirements(): Promise<KycDocRequirements> {
+  try {
+    const row = await prisma.siteSetting.findUnique({
+      where: { key: SITE_KEY_KYC_DOC_REQUIREMENTS },
+      select: { value: true },
+    });
+    if (!row?.value?.trim()) {
+      return DEFAULT_KYC_DOC_REQUIREMENTS;
+    }
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(row.value) as unknown;
+    } catch {
+      return DEFAULT_KYC_DOC_REQUIREMENTS;
+    }
+    return normalizeKycDocRequirements(parsed);
+  } catch {
+    return DEFAULT_KYC_DOC_REQUIREMENTS;
   }
 }
