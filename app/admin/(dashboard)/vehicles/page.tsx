@@ -31,6 +31,8 @@ export default async function AdminVehiclesPage() {
       chairs: v.chairs,
       price: v.price,
       priceMonthlyExclTax: v.priceMonthlyExclTax,
+      minPricePerDayExclTax: v.minPricePerDayExclTax,
+      minPriceMonthlyExclTax: v.minPriceMonthlyExclTax,
       fuel: v.fuel,
       transmission: v.transmission,
       image: v.image,
@@ -136,12 +138,16 @@ export default async function AdminVehiclesPage() {
     chairs: v.chairs,
     price: v.price,
     priceMonthlyExclTax: v.priceMonthlyExclTax,
+    minPricePerDayExclTax: v.minPricePerDayExclTax,
+    minPriceMonthlyExclTax: v.minPriceMonthlyExclTax,
     fuel: v.fuel,
     transmission: v.transmission,
     image: v.image,
     quantity: v.quantity, // Branch quantity
     branchPricePerDayExclTax: v.branchPricePerDayExclTax ?? null,
     branchPriceMonthlyExclTax: v.branchPriceMonthlyExclTax ?? null,
+    branchMinPricePerDayExclTax: v.branchMinPricePerDayExclTax ?? null,
+    branchMinPriceMonthlyExclTax: v.branchMinPriceMonthlyExclTax ?? null,
     bookingCount: bookingsByModel.get(v.id) ?? 0,
   }));
 

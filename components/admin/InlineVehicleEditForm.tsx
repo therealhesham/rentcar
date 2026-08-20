@@ -5,7 +5,13 @@ import { updateVehicleField } from "@/app/admin/actions";
 
 type Props = {
   modelId: number;
-  field: "year" | "chairs" | "price";
+  field:
+    | "year"
+    | "chairs"
+    | "price"
+    | "priceMonthlyExclTax"
+    | "minPricePerDayExclTax"
+    | "minPriceMonthlyExclTax";
   defaultValue: number;
 };
 

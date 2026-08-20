@@ -383,6 +383,19 @@ export async function updateFleetVehicle(
   if (minDailyFloor.value != null && minDailyFloor.value > price) {
     return { ok: false, error: "الحد الأدنى للسعر اليومي أعلى من السعر اليومي نفسه." };
   }
+  const monthlyPrice = parseOptionalPriceFloor(
+    formData.get("priceMonthlyExclTax"),
+    "السعر الشهري",
+    1000000,
+  );
+  if (!monthlyPrice.ok) return monthlyPrice;
+  if (
+    minMonthlyFloor.value != null &&
+    monthlyPrice.value != null &&
+    minMonthlyFloor.value > monthlyPrice.value
+  ) {
+    return { ok: false, error: "الحد الأدنى للسعر الشهري أعلى من السعر الشهري نفسه." };
+  }
   if (!Number.isFinite(quantity) || quantity < 0) {
     return { ok: false, error: "الكمية غير صالحة." };
   }
@@ -424,6 +437,7 @@ export async function updateFleetVehicle(
           price: Math.round(price),
           vatRatePercent,
           // غياب الحقل من الفورم = لا تغيير، حتى لا يمسح فورمٌ آخر الحدود المضبوطة.
+          ...(monthlyPrice.value === undefined ? {} : { priceMonthlyExclTax: monthlyPrice.value }),
           ...(minDailyFloor.value === undefined
             ? {}
             : { minPricePerDayExclTax: minDailyFloor.value }),
@@ -485,18 +499,31 @@ export async function updateVehicleField(
   const value = formData.get("value") as string;
 
   if (!Number.isFinite(modelId) || modelId < 1 || !field || !value) {
-    return { ok: false, error: "?????? ??? ?????." };
+    return { ok: false, error: "بيانات غير مكتملة." };
   }
 
   let data: any = {};
-  if (field === "chairs" || field === "year" || field === "price" || field === "categoryId") {
+  if (field === "minPricePerDayExclTax" || field === "minPriceMonthlyExclTax") {
+    // حد أدنى للسعر: صفر يعادل "بلا حد" فعلياً، فنسمح به بعكس باقي الحقول.
+    const num = Number(value);
+    if (!Number.isFinite(num) || num < 0) {
+      return { ok: false, error: "قيمة غير صالحة." };
+    }
+    data[field] = num;
+  } else if (
+    field === "chairs" ||
+    field === "year" ||
+    field === "price" ||
+    field === "priceMonthlyExclTax" ||
+    field === "categoryId"
+  ) {
     const num = Number(value);
     if (!Number.isFinite(num) || num < 1) {
       return { ok: false, error: "قيمة غير صالحة." };
     }
     data[field] = num;
   } else {
-    return { ok: false, error: "????? ??? ?????." };
+    return { ok: false, error: "حقل غير مدعوم." };
   }
 
   try {
@@ -506,7 +533,7 @@ export async function updateVehicleField(
     });
   } catch (e) {
     console.error(e);
-    return { ok: false, error: "????? ?????." };
+    return { ok: false, error: "تعذّر الحفظ." };
   }
 
   revalidatePath("/fleet");

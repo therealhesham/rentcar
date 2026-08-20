@@ -513,6 +513,21 @@ export function VehicleEditForm({ vehicle }: Props) {
                 />
               </Field>
               <Field
+                label="السعر / شهر (ر.س)"
+                help="السعر قبل الضريبة. فارغ = لا يوجد عرض شهري لهذه السيارة."
+              >
+                <input
+                  name="priceMonthlyExclTax"
+                  type="number"
+                  min={1}
+                  step="0.01"
+                  defaultValue={vehicle.priceMonthlyExclTax ?? ""}
+                  placeholder="لا يوجد عرض شهري"
+                  className={inputCls}
+                  dir="ltr"
+                />
+              </Field>
+              <Field
                 label="نسبة ضريبة القيمة المضافة %"
                 help="تُستخدم للفوترة الداخلية"
               >

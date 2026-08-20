@@ -66,6 +66,10 @@ export type AdminVehicleRow = {
   price: number;
   /** السعر الشهري الأساسي للموديل — null = لا يوجد عرض شهري */
   priceMonthlyExclTax?: number | null;
+  /** الحد الأدنى للسعر اليومي دون ضريبة — null = بلا حد. */
+  minPricePerDayExclTax?: number | null;
+  /** الحد الأدنى للسعر الشهري دون ضريبة — null = بلا حد. */
+  minPriceMonthlyExclTax?: number | null;
   fuel: FuelType;
   transmission: Transmission;
   image: string | null;
@@ -77,11 +81,17 @@ export type AdminVehicleRow = {
     quantity: number;
     pricePerDayExclTax?: number | null;
     priceMonthlyExclTax?: number | null;
+    minPricePerDayExclTax?: number | null;
+    minPriceMonthlyExclTax?: number | null;
   }[];
   /** سعر خاص بفرع الموظف (Branch admin only) — null = سعر الموديل الأساسي */
   branchPricePerDayExclTax?: number | null;
   /** سعر شهري خاص بفرع الموظف (Branch admin only) — null = السعر الشهري الأساسي */
   branchPriceMonthlyExclTax?: number | null;
+  /** حد أدنى يومي خاص بفرع الموظف (Branch admin only) — null = حد الموديل */
+  branchMinPricePerDayExclTax?: number | null;
+  /** حد أدنى شهري خاص بفرع الموظف (Branch admin only) — null = حد الموديل */
+  branchMinPriceMonthlyExclTax?: number | null;
   /** Booking count in this branch (Branch admin only) */
   bookingCount?: number;
 };
@@ -401,6 +411,24 @@ export function AdminVehiclesTable({
                                                         : "لا يوجد")}
                                                   </strong>
                                                 </span>
+                                                <span className="text-[10px] font-semibold text-on-surface-variant">
+                                                  أدنى سعر يومي:{" "}
+                                                  <strong className="text-primary font-black tabular-nums">
+                                                    {bq.minPricePerDayExclTax ??
+                                                      (v.minPricePerDayExclTax != null
+                                                        ? `${v.minPricePerDayExclTax} (الأساسي)`
+                                                        : "بلا حد")}
+                                                  </strong>
+                                                </span>
+                                                <span className="text-[10px] font-semibold text-on-surface-variant">
+                                                  أدنى سعر شهري:{" "}
+                                                  <strong className="text-primary font-black tabular-nums">
+                                                    {bq.minPriceMonthlyExclTax ??
+                                                      (v.minPriceMonthlyExclTax != null
+                                                        ? `${v.minPriceMonthlyExclTax} (الأساسي)`
+                                                        : "بلا حد")}
+                                                  </strong>
+                                                </span>
                                               </div>
                                               <BranchFleetQuantityForm
                                                 modelId={v.id}
@@ -410,6 +438,10 @@ export function AdminVehiclesTable({
                                                 basePrice={v.price}
                                                 defaultMonthlyPrice={bq.priceMonthlyExclTax ?? null}
                                                 baseMonthlyPrice={v.priceMonthlyExclTax ?? null}
+                                                defaultMinPrice={bq.minPricePerDayExclTax ?? null}
+                                                baseMinPrice={v.minPricePerDayExclTax ?? null}
+                                                defaultMinMonthlyPrice={bq.minPriceMonthlyExclTax ?? null}
+                                                baseMinMonthlyPrice={v.minPriceMonthlyExclTax ?? null}
                                                 compact
                                               />
                                             </div>
@@ -444,6 +476,10 @@ export function AdminVehiclesTable({
                                           basePrice={v.price}
                                           defaultMonthlyPrice={v.branchPriceMonthlyExclTax ?? null}
                                           baseMonthlyPrice={v.priceMonthlyExclTax ?? null}
+                                          defaultMinPrice={v.branchMinPricePerDayExclTax ?? null}
+                                          baseMinPrice={v.minPricePerDayExclTax ?? null}
+                                          defaultMinMonthlyPrice={v.branchMinPriceMonthlyExclTax ?? null}
+                                          baseMinMonthlyPrice={v.minPriceMonthlyExclTax ?? null}
                                         />
                                       )}
                                     </div>
@@ -480,12 +516,36 @@ export function AdminVehiclesTable({
                                         defaultValue={v.chairs}
                                       />
                                     </div>
-                                    <div className="flex items-center justify-between pb-1">
+                                    <div className="flex items-center justify-between border-b border-outline-variant/10 pb-2">
                                       <span className="font-bold text-on-surface-variant">السعر اليومي (ر.س):</span>
                                       <InlineVehicleEditForm
                                         modelId={v.id}
                                         field="price"
                                         defaultValue={v.price}
+                                      />
+                                    </div>
+                                    <div className="flex items-center justify-between border-b border-outline-variant/10 pb-2">
+                                      <span className="font-bold text-on-surface-variant">السعر الشهري (ر.س):</span>
+                                      <InlineVehicleEditForm
+                                        modelId={v.id}
+                                        field="priceMonthlyExclTax"
+                                        defaultValue={v.priceMonthlyExclTax ?? 0}
+                                      />
+                                    </div>
+                                    <div className="flex items-center justify-between border-b border-outline-variant/10 pb-2">
+                                      <span className="font-bold text-on-surface-variant">أدنى سعر يومي (ر.س):</span>
+                                      <InlineVehicleEditForm
+                                        modelId={v.id}
+                                        field="minPricePerDayExclTax"
+                                        defaultValue={v.minPricePerDayExclTax ?? 0}
+                                      />
+                                    </div>
+                                    <div className="flex items-center justify-between pb-1">
+                                      <span className="font-bold text-on-surface-variant">أدنى سعر شهري (ر.س):</span>
+                                      <InlineVehicleEditForm
+                                        modelId={v.id}
+                                        field="minPriceMonthlyExclTax"
+                                        defaultValue={v.minPriceMonthlyExclTax ?? 0}
                                       />
                                     </div>
                                   </div>

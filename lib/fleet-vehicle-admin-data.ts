@@ -19,6 +19,10 @@ export type AdminFleetVehicleListRow = {
   price: number;
   /** السعر الشهري الأساسي للموديل — null = لا يوجد عرض شهري */
   priceMonthlyExclTax: number | null;
+  /** الحد الأدنى للسعر اليومي دون ضريبة — null = بلا حد. */
+  minPricePerDayExclTax: number | null;
+  /** الحد الأدنى للسعر الشهري دون ضريبة — null = بلا حد. */
+  minPriceMonthlyExclTax: number | null;
   fuel: FuelType;
   transmission: Transmission;
   /** كمية فرع واحد أو المجموع */
@@ -27,6 +31,10 @@ export type AdminFleetVehicleListRow = {
   branchPricePerDayExclTax?: number | null;
   /** سعر شهري خاص بفرع الموظف (null = السعر الشهري الأساسي) — لعرض موظف الفرع فقط */
   branchPriceMonthlyExclTax?: number | null;
+  /** حد أدنى يومي خاص بفرع الموظف (null = حد الموديل) — لعرض موظف الفرع فقط */
+  branchMinPricePerDayExclTax?: number | null;
+  /** حد أدنى شهري خاص بفرع الموظف (null = حد الموديل) — لعرض موظف الفرع فقط */
+  branchMinPriceMonthlyExclTax?: number | null;
   image: string | null;
 };
 
@@ -38,6 +46,8 @@ export type AdminFleetVehicleSuperRow = AdminFleetVehicleListRow & {
     quantity: number;
     pricePerDayExclTax: number | null;
     priceMonthlyExclTax: number | null;
+    minPricePerDayExclTax: number | null;
+    minPriceMonthlyExclTax: number | null;
   }[];
 };
 
@@ -66,9 +76,17 @@ export async function listFleetVehiclesForAdmin(
     const branchPriceMonthlyExclTax = branchId
       ? (r.fleetItems[0]?.priceMonthlyExclTax ?? null)
       : null;
+    const branchMinPricePerDayExclTax = branchId
+      ? (r.fleetItems[0]?.minPricePerDayExclTax ?? null)
+      : null;
+    const branchMinPriceMonthlyExclTax = branchId
+      ? (r.fleetItems[0]?.minPriceMonthlyExclTax ?? null)
+      : null;
     return {
       branchPricePerDayExclTax,
       branchPriceMonthlyExclTax,
+      branchMinPricePerDayExclTax,
+      branchMinPriceMonthlyExclTax,
       id: r.id,
       brandName: r.brand.name.trim(),
       modelName: r.name.trim(),
@@ -78,6 +96,8 @@ export async function listFleetVehiclesForAdmin(
       chairs: r.chairs,
       price: r.price,
       priceMonthlyExclTax: r.priceMonthlyExclTax,
+      minPricePerDayExclTax: r.minPricePerDayExclTax,
+      minPriceMonthlyExclTax: r.minPriceMonthlyExclTax,
       fuel: r.fuel,
       transmission: r.transmission,
       quantity: qty,
@@ -118,6 +138,8 @@ export async function listFleetVehiclesAcrossBranches(
           quantity: true,
           pricePerDayExclTax: true,
           priceMonthlyExclTax: true,
+          minPricePerDayExclTax: true,
+          minPriceMonthlyExclTax: true,
         },
       },
     },
@@ -131,6 +153,8 @@ export async function listFleetVehiclesAcrossBranches(
         quantity: item?.quantity ?? 0,
         pricePerDayExclTax: item?.pricePerDayExclTax ?? null,
         priceMonthlyExclTax: item?.priceMonthlyExclTax ?? null,
+        minPricePerDayExclTax: item?.minPricePerDayExclTax ?? null,
+        minPriceMonthlyExclTax: item?.minPriceMonthlyExclTax ?? null,
       };
     });
     const totalQuantity = branchQuantities.reduce((s, x) => s + x.quantity, 0);
@@ -144,6 +168,8 @@ export async function listFleetVehiclesAcrossBranches(
       chairs: r.chairs,
       price: r.price,
       priceMonthlyExclTax: r.priceMonthlyExclTax,
+      minPricePerDayExclTax: r.minPricePerDayExclTax,
+      minPriceMonthlyExclTax: r.minPriceMonthlyExclTax,
       fuel: r.fuel,
       transmission: r.transmission,
       quantity: totalQuantity,
@@ -175,6 +201,8 @@ export type AdminFleetVehicleEditPayload = {
   transmission: Transmission;
   fuel: FuelType;
   price: number;
+  /** السعر الشهري الأساسي دون ضريبة — null = لا يوجد عرض شهري لهذا الموديل. */
+  priceMonthlyExclTax: number | null;
   vatRatePercent: number;
   /** الحد الأدنى للسعر اليومي دون ضريبة — null = بلا حد. */
   minPricePerDayExclTax: number | null;
@@ -222,6 +250,7 @@ export async function getFleetVehicleForAdminEdit(
     transmission: row.transmission,
     fuel: row.fuel,
     price: row.price,
+    priceMonthlyExclTax: row.priceMonthlyExclTax,
     vatRatePercent: row.vatRatePercent,
     minPricePerDayExclTax: row.minPricePerDayExclTax,
     minPriceMonthlyExclTax: row.minPriceMonthlyExclTax,
