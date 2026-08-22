@@ -53,6 +53,8 @@ type Props = {
   geideaScriptUrl?: string | null;
   /** شعارات وسائل الدفع (تابي/تمارا/البطاقة/مدى/إمكان) — قابلة للتعديل من لوحة الإدارة. */
   paymentIconUrls: PaymentIconUrls;
+  /** سقوف مبلغ إمكان الفعلية — null يعني عدم الفلترة (بوابة غير مهيّأة أو تعذّر الجلب). */
+  amkanLimits?: { orderLowerLimit: number; orderUpperLimit: number } | null;
 };
 
 export type CheckoutPaymentMethod = CustomerCheckoutPaymentMethod;
@@ -199,6 +201,7 @@ export function PaymentClient({
   hostedCheckout,
   geideaScriptUrl,
   paymentIconUrls,
+  amkanLimits,
 }: Props) {
   const enabledMethods = useMemo(
     () => listEnabledCheckoutPaymentMethods(paymentMethodFlags),
@@ -221,15 +224,23 @@ export function PaymentClient({
   const balancePaymentMode = ps === "PAID" && balanceDueSar > 0;
   const paymentFinalized = ps !== "PENDING" && !balancePaymentMode;
 
+  // المبلغ المطلوب سداده الآن (للفلترة قبل تعريف payableAmountSar أدناه) — نفس القيمة.
+  const amountDueNowSar = balancePaymentMode ? balanceDueSar : booking.totals.totalInclTax;
+  const amkanOutOfRange =
+    !!amkanLimits &&
+    (amountDueNowSar < amkanLimits.orderLowerLimit || amountDueNowSar > amkanLimits.orderUpperLimit);
+
   const visibleMethodOptions = useMemo(
     () =>
       methodOptions.filter(
         (opt) =>
           enabledMethods.includes(opt.id) &&
           // في وضع دفع فرق التمديد لا يُعرض «عند الفرع» — الرصيد يُسدَّد أونلاين.
-          !(balancePaymentMode && opt.id === "CASH"),
+          !(balancePaymentMode && opt.id === "CASH") &&
+          // مبلغ خارج سقوف إمكان يعني رفضاً مؤكَّداً — لا تُعرض الوسيلة أصلاً.
+          !(opt.id === "AMKAN" && amkanOutOfRange),
       ),
-    [methodOptions, enabledMethods, balancePaymentMode],
+    [methodOptions, enabledMethods, balancePaymentMode, amkanOutOfRange],
   );
 
   const [state, formAction, pending] = useActionState<ConfirmPaymentResult | null, FormData>(
@@ -361,7 +372,7 @@ export function PaymentClient({
       : method === "TAMARA"
         ? "المتابعة عبر تمارا (تجريبي)"
         : method === "AMKAN"
-          ? "المتابعة عبر إمكان (تجريبي)"
+          ? "المتابعة عبر إمكان"
           : method === "POINTS"
             ? "تأكيد استبدال النقاط (تجريبي)"
             : method === "CASH"
