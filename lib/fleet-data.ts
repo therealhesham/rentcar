@@ -88,6 +88,8 @@ function rowDiscountedPrice(
   row: FleetRowWithModel,
   discountRules: ReadonlyArray<RentalDiscountRule>,
   referenceDate?: Date | null,
+  /** عدد أيام الفترة المعروضة (تبويب «أسبوعي» = 7) — الشارة تُضرب فيه مثل السعر. */
+  periodDays: number = 1,
 ): { basePrice: number; effectivePrice: number; displayLabelAr: string | null } {
   const basePrice = rowBasePrice(row);
   const priceFloor = rowPriceFloor(row);
@@ -113,7 +115,11 @@ function rowDiscountedPrice(
     basePrice,
     effectivePrice,
     // الشارة تعكس التوفير الفعلي بعد الأرضية — مش الخصم النظري قبلها.
-    displayLabelAr: customerDiscountLabelForActualSavings(resolved, basePrice - effectivePrice),
+    displayLabelAr: customerDiscountLabelForActualSavings(
+      resolved,
+      basePrice - effectivePrice,
+      periodDays,
+    ),
   };
 }
 
@@ -188,6 +194,7 @@ function rowMonthlyDiscountedPrice(
             discountedPricePerDayExclTax: resolved.discountedAmountExclTax,
             discountPerDayExclTax: resolved.savingsExclTax,
             displayLabelAr: resolved.displayLabelAr,
+            kind: resolved.kind,
           }
         : null,
       basePrice - effectivePrice,
@@ -233,13 +240,14 @@ function mapFleetRowToFleetCar(
       locale,
     });
   } else {
+    // تبويب «أسبوعي» لا يملك سعراً مستقلاً — يُعرض إجمالي الفترة من السعر اليومي بعد الخصم
+    const periodDays = period?.days ?? 1;
     const { basePrice, effectivePrice, displayLabelAr } = rowDiscountedPrice(
       row,
       discountRules,
       referenceDate,
+      periodDays,
     );
-    // تبويب «أسبوعي» لا يملك سعراً مستقلاً — يُعرض إجمالي الفترة من السعر اليومي بعد الخصم
-    const periodDays = period?.days ?? 1;
     priceUi = buildFleetCardPriceParts(effectivePrice * periodDays, m.vatRatePercent, priceMode, {
       originalPriceExclTaxSar: basePrice * periodDays,
       discountLabelAr: displayLabelAr,
@@ -522,7 +530,15 @@ export async function getFleetCarsForDisplay(
   // فلتر الحد الأقصى للسعر: سعر الفرع إن وُجد وإلا سعر الموديل (COALESCE).
   // في التبويب الشهري تُعرض الأسعار الشهرية، فيجب أن يقارَن الفلتر بعمود الشهري —
   // مقارنته بالسعر اليومي كانت تعني أن شريط السعر يصفّي بمقياس غير الذي يراه الزائر.
-  const isMonthlyTab = rentalTab?.trim().toLowerCase() === "monthly";
+  // الأسبوعي بلا عمود مستقل: bounds.getFleetPriceBounds تُعيده مضروباً في 7،
+  // فنقسمه هنا على 7 قبل مقارنته بعمود السعر اليومي.
+  const tabNormalized = rentalTab?.trim().toLowerCase();
+  const isMonthlyTab = tabNormalized === "monthly";
+  const isWeeklyTab = tabNormalized === "weekly";
+  let dailyMaxPriceExclTax: number | undefined;
+  if (maxPriceExclTax != null) {
+    dailyMaxPriceExclTax = isWeeklyTab ? maxPriceExclTax / WEEKLY_TAB_DAYS : maxPriceExclTax;
+  }
   const maxPriceWhere =
     maxPriceExclTax != null
       ? isMonthlyTab
@@ -537,10 +553,10 @@ export async function getFleetCarsForDisplay(
           }
         : {
             OR: [
-              { pricePerDayExclTax: { lte: maxPriceExclTax } },
+              { pricePerDayExclTax: { lte: dailyMaxPriceExclTax } },
               {
                 pricePerDayExclTax: null,
-                model: { price: { lte: maxPriceExclTax } },
+                model: { price: { lte: dailyMaxPriceExclTax } },
               },
             ],
           }
@@ -667,12 +683,15 @@ export async function getFleetBrandsForFilter(locale: string = "ar"): Promise<Fl
 /** أدنى وأعلى سعر يومي (دون ضريبة) للمركبات المعروضة — يراعي تجاوزات أسعار الفروع. */
 /**
  * حدود شريط فلتر السعر. يجب أن تكون بنفس مقياس الأسعار المعروضة في التبويب،
- * وإلا صار الشريط يتحرك في نطاق يومي بينما البطاقات تعرض أسعاراً شهرية.
+ * وإلا صار الشريط يتحرك في نطاق يومي بينما البطاقات تعرض أسعاراً شهرية أو أسبوعية.
+ * الأسبوعي بلا عمود سعر مستقل، فحدوده = الحدود اليومية × WEEKLY_TAB_DAYS.
  */
 export async function getFleetPriceBounds(
   rentalTab?: string | null,
 ): Promise<FleetPriceBounds> {
-  const isMonthly = rentalTab?.trim().toLowerCase() === "monthly";
+  const tab = rentalTab?.trim().toLowerCase();
+  const isMonthly = tab === "monthly";
+  const isWeekly = tab === "weekly";
 
   // COALESCE(سعر الفرع, سعر الموديل) على صفوف الأسطول المتاحة في فروع نشطة.
   // في الشهري نستبعد الصفوف بلا سعر شهري — وهي المستبعدة أصلاً من النتائج.
@@ -696,8 +715,9 @@ export async function getFleetPriceBounds(
         JOIN Branch b ON b.id = f.branchId
         WHERE f.quantity > 0 AND b.isActive = true
       `;
-  const min = Number(rows[0]?.minPrice ?? 0);
-  const max = Number(rows[0]?.maxPrice ?? (isMonthly ? 20000 : 5000));
+  const scale = isWeekly ? WEEKLY_TAB_DAYS : 1;
+  const min = Number(rows[0]?.minPrice ?? 0) * scale;
+  const max = Number(rows[0]?.maxPrice ?? (isMonthly ? 20000 : 5000)) * scale;
   return {
     min: Math.max(0, Math.floor(min)),
     max: Math.max(min, Math.ceil(max)),

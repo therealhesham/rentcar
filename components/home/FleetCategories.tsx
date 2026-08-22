@@ -60,7 +60,12 @@ export async function FleetCategories({ rentalTab }: { rentalTab?: string | null
       <div className="pointer-events-none absolute -end-[16rem] bottom-0 h-[32rem] w-[32rem] rounded-full bg-gradient-to-bl from-[#003749]/10 to-transparent blur-3xl" />
 
       <Reveal className="relative z-[1]">
-        <FleetCategoriesShowcase tabs={tabs} cities={cities} allowHolidayBooking={tabFlags.allowHolidayBooking ?? false} />
+        <FleetCategoriesShowcase
+          tabs={tabs}
+          cities={cities}
+          allowHolidayBooking={tabFlags.allowHolidayBooking ?? false}
+          rentalTab={rentalTab}
+        />
       </Reveal>
     </section>
   );

@@ -14,9 +14,14 @@ export type FleetCategoryTab = {
   cars: FleetCar[];
 };
 
-type Props = { tabs: FleetCategoryTab[]; cities?: BookingCityBranchesOption[]; allowHolidayBooking?: boolean };
+type Props = {
+  tabs: FleetCategoryTab[];
+  cities?: BookingCityBranchesOption[];
+  allowHolidayBooking?: boolean;
+  rentalTab?: string | null;
+};
 
-export function FleetCategoriesShowcase({ tabs, cities, allowHolidayBooking = false }: Props) {
+export function FleetCategoriesShowcase({ tabs, cities, allowHolidayBooking = false, rentalTab }: Props) {
   const t = useTranslations("FleetShowcase");
   /* الاتجاه من اللغة لا من `rtl:` — متغيّر Tailwind لا يُولَّد في هذا الإعداد. */
   const isRtl = useLocale() === "ar";
@@ -201,9 +206,12 @@ export function FleetCategoriesShowcase({ tabs, cities, allowHolidayBooking = fa
       )}
 
       <div className="mt-14 flex justify-center sm:mt-16">
-        {/* يحمل الفئة المختارة إلى صفحة الأسطول (`?category=`) فتُفتح مُفلترة عليها. */}
+        {/* يحمل الفئة المختارة وتبويب الإيجار الحالي إلى صفحة الأسطول فتُفتح
+            مُفلترة عليهما — وإلا يفقد الزائر اختيار «شهري» عند الانتقال. */}
         <Link
-          href={`/fleet?category=${encodeURIComponent(current.slug)}`}
+          href={`/fleet?category=${encodeURIComponent(current.slug)}${
+            rentalTab ? `&rental=${encodeURIComponent(rentalTab)}` : ""
+          }`}
           className="inline-flex items-center gap-2 rounded-full border-2 border-[#003749]/18 bg-white px-8 py-3 text-sm font-extrabold text-[#003749] shadow-sm transition-colors hover:border-[#dbb878]/45 hover:bg-[#fdfbf6]"
         >
           {t("viewAll")}

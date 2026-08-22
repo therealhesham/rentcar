@@ -38,6 +38,8 @@ export type ResolvedRentalDiscount = {
   discountPerDayExclTax: number;
   /** نص مختصر للعرض: «خصم ١٠٪» أو «وفّرت ٥٠ ر.س» */
   displayLabelAr: string;
+  /** لتمييز خصم النسبة (لا يُضرب في عدد أيام الفترة) عن المبلغ الثابت. */
+  kind: RentalDiscountKind;
 };
 
 let cachedActiveDiscounts: RentalDiscountRule[] | null = null;
@@ -163,12 +165,16 @@ export function buildCustomerDiscountLabelAr(
 export function customerDiscountLabelForActualSavings(
   resolved: ResolvedRentalDiscount | null,
   actualSavingsPerDay: number,
+  /** عدد أيام الفترة المعروضة (تبويب «أسبوعي» = 7) — المبلغ الثابت يُضرب فيه، أما النسبة فلا. */
+  periodDays: number = 1,
 ): string | null {
   if (!resolved || actualSavingsPerDay <= 0) return null;
   const planned = Math.round(resolved.discountPerDayExclTax * 100) / 100;
   const actual = Math.round(actualSavingsPerDay * 100) / 100;
-  if (actual >= planned) return resolved.displayLabelAr;
-  return `وفّرت ${actual.toLocaleString("en-US")} ر.س`;
+  if (actual >= planned && (resolved.kind === "PERCENT" || periodDays <= 1)) {
+    return resolved.displayLabelAr;
+  }
+  return `وفّرت ${(actual * periodDays).toLocaleString("en-US")} ر.س`;
 }
 
 export function resolveBestRentalDiscount(
@@ -196,6 +202,7 @@ export function resolveBestRentalDiscount(
       discountedPricePerDayExclTax: discounted,
       discountPerDayExclTax: savingsPerDay,
       displayLabelAr: buildCustomerDiscountLabelAr(rule.kind, rule.value, savingsPerDay),
+      kind: rule.kind,
     };
 
     if (
@@ -226,6 +233,7 @@ export type ResolvedPeriodDiscount = {
   originalAmountExclTax: number;
   savingsExclTax: number;
   displayLabelAr: string;
+  kind: RentalDiscountKind;
 };
 
 function computeMonthlySavings(
@@ -278,6 +286,7 @@ export function resolveBestPeriodDiscount(
       originalAmountExclTax: resolved.originalPricePerDayExclTax,
       savingsExclTax: resolved.discountPerDayExclTax,
       displayLabelAr: resolved.displayLabelAr,
+      kind: resolved.kind,
     };
   }
 
@@ -302,6 +311,7 @@ export function resolveBestPeriodDiscount(
       originalAmountExclTax: base,
       savingsExclTax: savings,
       displayLabelAr: buildCustomerDiscountLabelAr(rule.kind, rule.value, savings),
+      kind: rule.kind,
     };
 
     if (

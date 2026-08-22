@@ -102,6 +102,7 @@ export async function GET(request: Request) {
         discountedPricePerDayExclTax: afterDiscountPerDay,
         discountPerDayExclTax: toPerDay(rentalDiscountResolved.savingsExclTax),
         displayLabelAr: rentalDiscountResolved.displayLabelAr,
+        kind: rentalDiscountResolved.kind,
       }
     : null;
 

@@ -1038,10 +1038,13 @@ export function BookingSearchWidget({
     urlSp,
   ]);
 
-  /* الصفحة الرئيسية: لا بحث تلقائي، لكن تبويب الإيجار يُكتب في الرابط حتى
-     تتحدّث أسعار بطاقات الأسطول أسفل الويدجت (يومي/أسبوعي/شهري). */
+  /* تبويب الإيجار يُكتب في الرابط فوراً حتى تتحدّث أسعار بطاقات الأسطول
+     (يومي/أسبوعي/شهري) — على الصفحة الرئيسية حيث لا بحث تلقائي أصلاً، وعلى
+     صفحة `/fleet` حين لا يزال البحث الكامل ناقصاً (بلا تاريخ/فرع بعد)، فلا
+     يبقى المستخدم يبدّل التبويب دون أن يتغيّر شيء إلى أن يكمل بيانات البحث. */
   useEffect(() => {
-    if (autoSearchEnabled || !mounted) return;
+    if (!mounted) return;
+    if (autoSearchEnabled && buildFleetSearch().ok) return;
     const current = urlSp.get("rental") ?? "";
     const next = rental === "weekly" || rental === "monthly" ? rental : "";
     if (current === next) return;
@@ -1053,7 +1056,28 @@ export function BookingSearchWidget({
     }
     const qs = sp.toString();
     router.replace(`${window.location.pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
-  }, [autoSearchEnabled, mounted, rental, urlSp, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    autoSearchEnabled,
+    mounted,
+    rental,
+    mode,
+    pickupDt,
+    dropoffDt,
+    subPackMonths,
+    subPackStartYmd,
+    pickupBranchEffective,
+    returnBranchEffective,
+    returnLocationDifferent,
+    deliveryLat,
+    deliveryLng,
+    deliveryAddressText,
+    deliveryOriginCitySlug,
+    pickupCityEff,
+    returnCityEff,
+    urlSp,
+    router,
+  ]);
 
   // Resolve label for a branch slug
   function branchLabel(slug: string): string {
