@@ -7,6 +7,8 @@ import { getBookingForPayment } from "@/lib/booking-payment-data";
 import { geideaCheckoutScriptUrl, isGeideaConfigured } from "@/lib/geidea/client";
 import { reconcilePendingGeideaPaymentById } from "@/lib/geidea/mark-paid";
 import { reconcilePendingTabbyPaymentById } from "@/lib/tabby/mark-paid";
+import { amkanAmountLimitsOrNull } from "@/lib/amkan/client";
+import { reconcilePendingAmkanPaymentById } from "@/lib/amkan/mark-paid";
 import {
   getApplePayExpressEnabled,
   getCheckoutPaymentMethodFlags,
@@ -33,18 +35,20 @@ export default async function FleetPaymentPage({
 
   await requireCustomerPaymentPageAccess(id);
 
-  // مصالحة: لو العميل عاد من البوابة (جيديا أو تابي) قبل وصول الـ webhook، تُجلب حالة الدفع
-  // مباشرةً من البوابة ويُعلَّم الحجز مدفوعاً قبل عرض الصفحة.
+  // مصالحة: لو العميل عاد من البوابة (جيديا أو تابي أو إمكان) قبل وصول الـ webhook،
+  // تُجلب حالة الدفع مباشرةً من البوابة ويُعلَّم الحجز مدفوعاً قبل عرض الصفحة.
   await Promise.all([
     reconcilePendingGeideaPaymentById(id),
     reconcilePendingTabbyPaymentById(id),
+    reconcilePendingAmkanPaymentById(id),
   ]);
 
-  const [booking, paymentMethodFlags, applePayExpress, paymentIconUrls] = await Promise.all([
+  const [booking, paymentMethodFlags, applePayExpress, paymentIconUrls, amkanLimits] = await Promise.all([
     getBookingForPayment(id),
     getCheckoutPaymentMethodFlags(),
     getApplePayExpressEnabled(),
     getPaymentIconUrls(),
+    amkanAmountLimitsOrNull(),
   ]);
   if (!booking) notFound();
 
@@ -59,6 +63,7 @@ export default async function FleetPaymentPage({
           // معطّلاً يبقى null فيسقط Apple Pay تلقائياً إلى التحويل لصفحة جيديا.
           geideaScriptUrl={applePayExpress ? geideaCheckoutScriptUrl() : null}
           paymentIconUrls={paymentIconUrls}
+          amkanLimits={amkanLimits}
         />
       </div>
       <SiteFooter />
