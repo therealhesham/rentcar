@@ -610,7 +610,7 @@ export function parseCommonBookingFieldsFromFormData(
   const days = Number(formData.get("days"));
   const termsAccepted = formData.get("terms") === "on";
 
-  if (fullName.length < 3) {
+  if (fullName.split(/\s+/).filter(Boolean).length < 2) {
     return { ok: false, error: "يرجى إدخال الاسم الكامل بشكل صحيح." };
   }
   if (!/^5\d{8}$/.test(localPhone)) {
@@ -681,7 +681,7 @@ export function parseCommonBookingFieldsFromJson(
   const days = Number(body.days);
   const termsAccepted = body.terms === true || body.terms === "true" || body.terms === "on";
 
-  if (fullName.length < 3) {
+  if (fullName.split(/\s+/).filter(Boolean).length < 2) {
     return { ok: false, error: "يرجى إدخال الاسم الكامل بشكل صحيح." };
   }
   if (!/^5\d{8}$/.test(localPhone)) {

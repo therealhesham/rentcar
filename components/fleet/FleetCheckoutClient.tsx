@@ -911,7 +911,7 @@ export function FleetCheckoutClient({
     const email = String(fd.get("email") ?? "").trim();
     const terms = fd.get("terms") === "on";
 
-    if (name.trim().split(/\s+/).filter(Boolean).length < 3) {
+    if (name.trim().split(/\s+/).filter(Boolean).length < 2) {
       failWith("NAME_INCOMPLETE", "رجاء كتابة الاسم بالكامل");
       return;
     }
