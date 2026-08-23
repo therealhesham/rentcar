@@ -4,7 +4,6 @@ import {
   parseAdminSessionToken,
   type AdminSession,
 } from "@/lib/admin-session-token";
-import { isCookieSecure } from "@/lib/cookie-config";
 
 export type { AdminSession };
 
@@ -32,7 +31,7 @@ export async function setAdminSessionCookie(session: Omit<AdminSession, "exp" | 
   const jar = await cookies();
   jar.set(COOKIE_NAME, token, {
     httpOnly: true,
-    secure: isCookieSecure(),
+    secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
     maxAge: 7 * 24 * 60 * 60,
