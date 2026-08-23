@@ -3,6 +3,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { requirePermissionForAction } from "@/lib/admin-access";
+import { isCookieSecure } from "@/lib/cookie-config";
 import { createGeideaCheckoutSession, refundGeideaPayment } from "@/lib/geidea/client";
 import { TEST_GEIDEA_REF_COOKIE } from "@/lib/test-geidea-constants";
 
@@ -47,7 +48,7 @@ export async function startGeideaTestPaymentAction(): Promise<void> {
   const jar = await cookies();
   jar.set(TEST_GEIDEA_REF_COOKIE, merchantReferenceId, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: isCookieSecure(),
     sameSite: "lax",
     path: "/admin/test-geidea",
     maxAge: 15 * 60,
@@ -83,7 +84,7 @@ export async function startGeideaApplePayTestSessionAction(): Promise<ApplePayTe
     const jar = await cookies();
     jar.set(TEST_GEIDEA_REF_COOKIE, session.merchantReferenceId, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: isCookieSecure(),
       sameSite: "lax",
       path: "/admin/test-geidea",
       maxAge: 15 * 60,
