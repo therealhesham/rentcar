@@ -140,8 +140,8 @@ export function BookingCancelPanel({
       ) : null}
 
       {statusKey === "CANCELLED" &&
-      cancellationDeductedDays != null &&
-      cancellationDeductedDays > 0 ? (
+        cancellationDeductedDays != null &&
+        cancellationDeductedDays > 0 ? (
         <p className="text-xs font-semibold leading-relaxed text-on-surface-variant">
           عند الإلغاء سُجِّل خصم مدة:{" "}
           <span className="font-bold tabular-nums text-on-surface">
@@ -152,11 +152,11 @@ export function BookingCancelPanel({
       ) : null}
 
       {statusKey === "CANCELLED" &&
-      paymentMethod &&
-      (cancellationRefundAmountSar != null ||
-        paymentKey === "REFUNDED" ||
-        paymentKey === "PARTIAL_REFUND" ||
-        paymentKey === "NO_REFUND") ? (
+        paymentMethod &&
+        (cancellationRefundAmountSar != null ||
+          paymentKey === "REFUNDED" ||
+          paymentKey === "PARTIAL_REFUND" ||
+          paymentKey === "NO_REFUND") ? (
         <p className="text-xs font-semibold leading-relaxed text-on-surface-variant">
           الاسترداد عبر{" "}
           <span className="font-bold text-on-surface">
@@ -234,7 +234,7 @@ export function BookingCancelPanel({
                 <SarAmountInline amount={cancellationFinancePreview.refundInclTax} />
               </p>
               <p className="text-[11px] font-semibold text-emerald-900/90">
-                يُنفَّذ الاسترداد آلياً عبر نفس وسيلة الدفع عند التأكيد (محاكاة حتى ربط البوابة).
+                يُنفَّذ الاسترداد آلياً عبر نفس وسيلة الدفع عند التأكيد .
               </p>
             </div>
           ) : null}
@@ -306,9 +306,8 @@ export function BookingCancelPanel({
                 setCancelError(null);
                 setCancelOpen(true);
               }}
-              className={`inline-flex flex-1 items-center justify-center border border-red-300 bg-white px-4 py-2.5 text-sm font-bold text-red-800 transition-colors hover:bg-red-50 ${
-                canFullRefund ? "rounded-s-xl" : "rounded-xl"
-              }`}
+              className={`inline-flex flex-1 items-center justify-center border border-red-300 bg-white px-4 py-2.5 text-sm font-bold text-red-800 transition-colors hover:bg-red-50 ${canFullRefund ? "rounded-s-xl" : "rounded-xl"
+                }`}
             >
               إلغاء الحجز
             </button>
@@ -428,11 +427,10 @@ export function BookingCancelPanel({
               <fieldset className="mb-4 space-y-2">
                 <legend className="mb-1 text-sm font-bold text-on-surface">قناة الاسترداد</legend>
                 <label
-                  className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-sm transition-colors ${
-                    fullRefundChannel === "ORIGINAL"
+                  className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-sm transition-colors ${fullRefundChannel === "ORIGINAL"
                       ? "border-[#003749] bg-[#003749]/[0.04] ring-1 ring-[#003749]/30"
                       : "border-outline-variant/40 hover:bg-surface-container-low"
-                  }`}
+                    }`}
                 >
                   <input
                     type="radio"
@@ -451,11 +449,10 @@ export function BookingCancelPanel({
                   </span>
                 </label>
                 <label
-                  className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-sm transition-colors ${
-                    fullRefundChannel === "CASH"
+                  className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-sm transition-colors ${fullRefundChannel === "CASH"
                       ? "border-[#003749] bg-[#003749]/[0.04] ring-1 ring-[#003749]/30"
                       : "border-outline-variant/40 hover:bg-surface-container-low"
-                  }`}
+                    }`}
                 >
                   <input
                     type="radio"

@@ -158,8 +158,8 @@ export function AccountBookingCardActions({
       ) : null}
 
       {statusKey === "CANCELLED" &&
-      b.cancellationDeductedDays != null &&
-      b.cancellationDeductedDays > 0 ? (
+        b.cancellationDeductedDays != null &&
+        b.cancellationDeductedDays > 0 ? (
         <p className="text-[12px] font-bold leading-relaxed text-on-surface-variant">
           عند الإلغاء سُجِّل خصم مدة:{" "}
           <span className="tabular-nums text-on-surface">
@@ -170,11 +170,11 @@ export function AccountBookingCardActions({
       ) : null}
 
       {statusKey === "CANCELLED" &&
-      b.paymentMethod &&
-      (b.cancellationRefundAmountSar != null ||
-        paymentKey === "REFUNDED" ||
-        paymentKey === "PARTIAL_REFUND" ||
-        paymentKey === "NO_REFUND") ? (
+        b.paymentMethod &&
+        (b.cancellationRefundAmountSar != null ||
+          paymentKey === "REFUNDED" ||
+          paymentKey === "PARTIAL_REFUND" ||
+          paymentKey === "NO_REFUND") ? (
         <p className="text-[12px] font-bold leading-relaxed text-on-surface-variant">
           الاسترداد عبر{" "}
           <span className="text-on-surface">{bookingPaymentMethodLabelAr(b.paymentMethod)}</span>
@@ -229,8 +229,7 @@ export function AccountBookingCardActions({
                 <SarAmountInline amount={cancellationFinancePreview.refundInclTax} />
               </p>
               <p className="text-[11px] font-semibold text-emerald-900/90">
-                يُنفَّذ الاسترداد آلياً عبر نفس وسيلة الدفع عند التأكيد (الربط الفعلي بالبوابة يُكمَّل
-                لاحقاً؛ حالياً تُسجَّل العملية كمحاكاة ناجحة).
+                يُنفَّذ الاسترداد آلياً عبر نفس وسيلة الدفع عند التأكيد
               </p>
             </div>
           ) : null}
