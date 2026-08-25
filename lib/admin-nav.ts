@@ -79,6 +79,13 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/admin/company-dues", label: "مستحقات للشركة", icon: "receipt" },
       { href: "/admin/customer-dues", label: "مستحقات للعميل", icon: "receipt" },
       { href: "/admin/ledger", label: "دفتر الحركات المالية", icon: "credit-card" },
+      {
+        // الصفحة نفسها تقصر الدخول على GEIDEA_REPORT_EMAIL فوق فحص السوبر أدمن هذا.
+        href: "/admin/geidea-payments",
+        label: "مدفوعات جيديا",
+        icon: "credit-card",
+        superAdminOnly: true,
+      },
     ],
   },
   {
