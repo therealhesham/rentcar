@@ -237,6 +237,13 @@ export async function confirmMockPayment(
       redirect(redirectUrl);
     }
 
+    // إمكان مختارة والبوابة غير مهيّأة: رفض صريح. بدونه يسقط الطلب إلى مسار
+    // المحاكاة أدناه فيُسجَّل الرصيد مسدَّداً دون تحصيل ريال واحد — و`getAmkanConfig`
+    // يشترط ستة متغيّرات بيئة، نقصان أيٍّ منها يجعل البوابة «غير مهيّأة» بصمت.
+    if (paymentMethod === "AMKAN" && !isAmkanConfigured()) {
+      return { ok: false, error: "التمويل عبر إمكان غير متاح حالياً. اختر وسيلة دفع أخرى." };
+    }
+
     const amkanBalanceHosted = isAmkanConfigured() && paymentMethod === "AMKAN";
     if (amkanBalanceHosted) {
       const appUrl = (process.env.APP_PUBLIC_URL ?? "").trim().replace(/\/$/, "");
@@ -401,6 +408,12 @@ export async function confirmMockPayment(
       return { ok: false, error: "تعذّر فتح صفحة الدفع الآمنة. حاول مجدداً." };
     }
     redirect(redirectUrl);
+  }
+
+  // إمكان مختارة والبوابة غير مهيّأة: رفض صريح بدل السقوط إلى مسار المحاكاة أدناه
+  // الذي يعلّم الحجز مدفوعاً دون تحصيل (انظر التعليق في فرع الرصيد أعلاه).
+  if (!isCash && paymentMethod === "AMKAN" && !isAmkanConfigured()) {
+    return { ok: false, error: "التمويل عبر إمكان غير متاح حالياً. اختر وسيلة دفع أخرى." };
   }
 
   // إمكان (BNPL): تحويل العميل لصفحة اكتتاب إمكان — التأكيد الفعلي يصل عبر الإشعار

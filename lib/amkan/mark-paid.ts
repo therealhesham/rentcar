@@ -55,6 +55,41 @@ async function amkanBookingTotalInclTaxSar(bookingId: number): Promise<number | 
 }
 
 /**
+ * يُستدعى حين يُرفض إشعار مكتمل بسبب عدم تطابق المراجع. سببان مختلفان جذرياً:
+ * إمّا محاولة تزوير (مرجع إمكان حقيقي مقرون برقم حجز آخر)، وإمّا حالة مشروعة —
+ * العميل بدأ بإمكان ثم عاد واختار وسيلة أخرى فدهست `paymentSessionRef` (عمود
+ * مشترك بين البوابات)، ثم أكمل تمويل إمكان بعدها. لا يمكن التمييز بينهما من هنا،
+ * فيُسجَّل الحدث بوضوح للمراجعة اليدوية بدل تجاهله صامتاً — تجاهله يعني احتمال
+ * ضياع دفعة حقيقية بلا أي أثر.
+ */
+async function warnIfAmkanReferenceMismatch(
+  bookingId: number,
+  gatewayOrderId: string,
+  ourOrderId: string,
+  source: "webhook" | "reconcile",
+): Promise<void> {
+  const row = await prisma.bookingRequest.findUnique({
+    where: { id: bookingId },
+    select: { paymentStatus: true, paymentSessionRef: true, paymentGatewayRef: true },
+  });
+  // غير موجود أو مدفوع أصلاً = تكرار طبيعي للإشعار، لا شيء يُبلَّغ عنه.
+  if (!row || row.paymentStatus.trim().toUpperCase() === "PAID") return;
+  if (row.paymentSessionRef === ourOrderId && row.paymentGatewayRef === gatewayOrderId) return;
+
+  const detail =
+    `إشعار إمكان مكتمل لم يُطبَّق — عدم تطابق المراجع. ` +
+    `الوارد: session=${ourOrderId} gateway=${gatewayOrderId} — ` +
+    `المسجَّل على الحجز: session=${row.paymentSessionRef ?? "—"} gateway=${row.paymentGatewayRef ?? "—"}`;
+  console.error(`[amkan-${source}] booking=${bookingId} ${detail}`);
+  await logActivity({
+    kind: "BOOKING_PAYMENT",
+    path: `/fleet/payment/${bookingId}`,
+    actorLabel: `بوابة إمكان — إشعار مرفوض (عدم تطابق المراجع)`,
+    detail,
+  });
+}
+
+/**
  * يعلّم الحجز مدفوعاً من طلب إمكان مؤكَّد (COMPLETED عبر استعلام خادم‑لخادم).
  * التحديث idempotent (compare-and-swap): تكرار الإشعار أو تزامنه مع المصالحة لن
  * يحدّث السجل مرتين ولن يكرر الإشعارات.
@@ -62,6 +97,7 @@ async function amkanBookingTotalInclTaxSar(bookingId: number): Promise<number | 
 async function markBookingPaidFromAmkanOrder(
   bookingId: number,
   gatewayOrderId: string,
+  ourOrderId: string,
   source: "webhook" | "reconcile",
 ): Promise<{ updated: boolean }> {
   const amountSar = await amkanBookingTotalInclTaxSar(bookingId);
@@ -69,7 +105,19 @@ async function markBookingPaidFromAmkanOrder(
 
   const applied = await prisma.$transaction(async (tx) => {
     const updated = await tx.bookingRequest.updateMany({
-      where: { id: bookingId, kind: "DIRECT", paymentStatus: { not: "PAID" } },
+      where: {
+        id: bookingId,
+        kind: "DIRECT",
+        paymentStatus: { not: "PAID" },
+        // رقم الحجز يصل من جسم الإشعار (`merchantOrderCode`)، و«حالة الطلب» عند
+        // إمكان لا ترجع أي حقل يربط الطلب بالحجز — فلا شيء في رد البوابة يؤكّد
+        // الاقتران. الربط الموثوق الوحيد هو ما سجّلناه نحن قبل التحويل، لذلك
+        // يُطابَق المرجعان هنا: بدونهما يكفي إرسال orderCode مكتمل حقيقي مقروناً
+        // برقم حجز آخر ليُعلَّم ذلك الحجز مدفوعاً. (جيديا محصَّنة تلقائياً لأنها
+        // تُستعلَم بمرجعنا نحن فيعود رقم الحجز من ردٍّ متحقَّق منه.)
+        paymentSessionRef: ourOrderId,
+        paymentGatewayRef: gatewayOrderId,
+      },
       data: {
         paymentStatus: "PAID",
         paidAt: new Date(),
@@ -89,13 +137,17 @@ async function markBookingPaidFromAmkanOrder(
         actorKind: "GATEWAY",
         actorName: `إمكان (${source === "webhook" ? "إشعار" : "مصالحة"})`,
         gatewayRef: gatewayOrderId,
+        sessionRef: ourOrderId,
       },
       tx,
     );
     return true;
   });
 
-  if (!applied) return { updated: false };
+  if (!applied) {
+    await warnIfAmkanReferenceMismatch(bookingId, gatewayOrderId, ourOrderId, source);
+    return { updated: false };
+  }
 
   await logActivity({
     kind: "BOOKING_PAYMENT",
@@ -212,7 +264,7 @@ export async function applyCompletedAmkanOrderToBooking(
   if (row.paymentStatus.trim().toUpperCase() === "PAID") {
     return markBookingBalancePaidFromAmkanOrder(bookingId, gatewayOrderId, ourOrderId, source);
   }
-  return markBookingPaidFromAmkanOrder(bookingId, gatewayOrderId, source);
+  return markBookingPaidFromAmkanOrder(bookingId, gatewayOrderId, ourOrderId, source);
 }
 
 /**
@@ -229,9 +281,18 @@ export async function reconcilePendingAmkanPaymentById(bookingRequestId: number)
 
     const booking = await prisma.bookingRequest.findUnique({
       where: { id: bookingRequestId },
-      select: { paymentStatus: true, paymentSessionRef: true, paymentGatewayRef: true, balanceDueAtBranchSar: true },
+      select: {
+        paymentStatus: true,
+        paymentMethod: true,
+        paymentSessionRef: true,
+        paymentGatewayRef: true,
+        balanceDueAtBranchSar: true,
+      },
     });
     if (!booking) return false;
+    // `paymentGatewayRef` عمود مشترك بين البوابات: بدون هذا الحارس تُسأل إمكان عن
+    // معرّف جيديا/تابي عند كل عرض لصفحة الدفع — نداء فاشل ومكلّف بلا فائدة.
+    if ((booking.paymentMethod ?? "").trim().toUpperCase() !== "AMKAN") return false;
     if (!booking.paymentSessionRef || !booking.paymentGatewayRef) return false;
     const ps = booking.paymentStatus.trim().toUpperCase();
     const awaitingFirstPayment = ps === "PENDING";

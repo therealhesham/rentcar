@@ -1,4 +1,5 @@
 import "server-only";
+import { unstable_cache } from "next/cache";
 
 /**
  * عميل بوابة إمكان (BNPL). التوثيق: BNPL Ecommerce Integration Specification V1.7
@@ -115,6 +116,16 @@ export async function amkanAmountLimitsOrNull(): Promise<AmkanMerchantLimits | n
   if (!isAmkanConfigured()) return null;
   return fetchAmkanMerchantConfig();
 }
+
+/**
+ * السقوف مع كاش ساعة. تتغيّر نادراً جداً، وبدون الكاش ينتظر **كل** عرض لصفحة الدفع
+ * نداءً شبكياً لإمكان — أي أن زمن عرض أهم صفحة عندنا يصير مرهوناً بتوفّر البوابة.
+ */
+export const cachedAmkanAmountLimits = unstable_cache(
+  async () => amkanAmountLimitsOrNull(),
+  ["amkan-merchant-limits"],
+  { revalidate: 3600 },
+);
 
 export type AmkanOrderSession = {
   /** مرجعنا الداخلي (booking-{id}-{ts}) — يُخزَّن في paymentSessionRef. */

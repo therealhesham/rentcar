@@ -82,11 +82,21 @@ export async function executeCancellationRefundByPaymentMethod(args: {
         externalRef: `MOCK-AMKAN-${args.bookingRequestId}-${Date.now()}`,
       };
     }
-    const booking = await prisma.bookingRequest.findUnique({
-      where: { id: args.bookingRequestId },
-      select: { paymentGatewayRef: true },
+    // المرجع يُقرأ من دفتر الأستاذ لا من `paymentGatewayRef` على الحجز: العمود ذاك
+    // يحمل **آخر** طلب إمكان، وطلب سداد فرق التمديد يدهس طلب الدفعة الأولى. الاسترداد
+    // يجب أن يستهدف الطلب الأصلي، وسطر INITIAL_PAYMENT يحتفظ بمرجعه دائماً.
+    const initialPayment = await prisma.paymentTransaction.findFirst({
+      where: {
+        bookingId: args.bookingRequestId,
+        kind: "INITIAL_PAYMENT",
+        method: "AMKAN",
+        gatewayRef: { not: null },
+      },
+      orderBy: { id: "asc" },
+      select: { gatewayRef: true },
     });
-    if (!booking?.paymentGatewayRef) {
+    const orderCode = initialPayment?.gatewayRef;
+    if (!orderCode) {
       return {
         ok: false,
         error:
@@ -95,10 +105,10 @@ export async function executeCancellationRefundByPaymentMethod(args: {
     }
     try {
       await submitAmkanRefund({
-        orderCode: booking.paymentGatewayRef,
+        orderCode,
         refundAmountSar: amount,
       });
-      return { ok: true, externalRef: `AMKAN-PENDING-${booking.paymentGatewayRef}-${Date.now()}` };
+      return { ok: true, externalRef: `AMKAN-PENDING-${orderCode}-${Date.now()}` };
     } catch (e) {
       console.error(
         `[booking-refund] Amkan refund failed booking=${args.bookingRequestId}:`,

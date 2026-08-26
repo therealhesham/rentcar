@@ -7,7 +7,7 @@ import { getBookingForPayment } from "@/lib/booking-payment-data";
 import { geideaCheckoutScriptUrl, isGeideaConfigured } from "@/lib/geidea/client";
 import { reconcilePendingGeideaPaymentById } from "@/lib/geidea/mark-paid";
 import { reconcilePendingTabbyPaymentById } from "@/lib/tabby/mark-paid";
-import { amkanAmountLimitsOrNull } from "@/lib/amkan/client";
+import { cachedAmkanAmountLimits } from "@/lib/amkan/client";
 import { reconcilePendingAmkanPaymentById } from "@/lib/amkan/mark-paid";
 import {
   getApplePayExpressEnabled,
@@ -43,14 +43,17 @@ export default async function FleetPaymentPage({
     reconcilePendingAmkanPaymentById(id),
   ]);
 
-  const [booking, paymentMethodFlags, applePayExpress, paymentIconUrls, amkanLimits] = await Promise.all([
+  const [booking, paymentMethodFlags, applePayExpress, paymentIconUrls] = await Promise.all([
     getBookingForPayment(id),
     getCheckoutPaymentMethodFlags(),
     getApplePayExpressEnabled(),
     getPaymentIconUrls(),
-    amkanAmountLimitsOrNull(),
   ]);
   if (!booking) notFound();
+
+  // تُجلب السقوف فقط حين تكون إمكان مفعّلة — لا معنى لأن ينتظر عميلٌ يدفع بالبطاقة
+  // رداً من بوابة لن تُعرض له أصلاً.
+  const amkanLimits = paymentMethodFlags.AMKAN ? await cachedAmkanAmountLimits() : null;
 
   return (
     <div className="flex min-h-screen flex-col bg-[#fdfbf6] text-on-surface">
