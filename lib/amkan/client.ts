@@ -45,15 +45,28 @@ export function isAmkanConfigured(): boolean {
   return getAmkanConfig() != null;
 }
 
-/** المبلغ بصيغة إمكان: رقم بعلامتين عشريتين (نص). */
-function formatAmount(amountSar: number): string {
-  return (Math.round(amountSar * 100) / 100).toFixed(2);
+/**
+ * المبلغ بصيغة إمكان: **رقم** بعلامتين عشريتين لا نص — المواصفة V1.7 تنصّ على
+ * `billAmount: Number` (مثالها `250.75`) و`refundAmount: Decimal`.
+ */
+function formatAmount(amountSar: number): number {
+  return Math.round(amountSar * 100) / 100;
 }
 
 async function amkanFetch<T>(
   cfg: AmkanConfig,
   path: string,
-  init: { method: "GET" | "POST"; body?: unknown; headers?: Record<string, string> },
+  init: {
+    method: "GET" | "POST";
+    body?: unknown;
+    headers?: Record<string, string>;
+    /**
+     * `caller-reference-number`: إلزامي في Create Order (جدول 8)، ويعمل مفتاحَ
+     * idempotency — «Using a used caller-reference-number will result in the same
+     * response». يُمرَّر ثابتاً حيث تُهمّ عدم التكرار، وإلا يُولَّد عشوائياً.
+     */
+    callerReferenceNumber?: string;
+  },
 ): Promise<T> {
   const url = `${cfg.apiBase}${path}`;
   let res: Response;
@@ -64,6 +77,7 @@ async function amkanFetch<T>(
         "Content-Type": "application/json",
         Authorization: `Basic ${Buffer.from(`${cfg.username}:${cfg.password}`).toString("base64")}`,
         channel: "BNPL",
+        "caller-reference-number": init.callerReferenceNumber ?? crypto.randomUUID(),
         ...init.headers,
       },
       body: init.body != null ? JSON.stringify(init.body) : undefined,
@@ -160,6 +174,9 @@ export async function createAmkanOrder(args: {
     paymentURL?: string;
   }>(cfg, "/retail/bnpl/bff/v1/order-create", {
     method: "POST",
+    // مرجعنا نفسه يعمل مفتاح idempotency: إعادة المحاولة بنفس `orderId` تُرجع نفس
+    // الرد بدل إنشاء طلب تمويل ثانٍ على العميل.
+    callerReferenceNumber: orderId,
     headers: {
       "origin-source-channel": cfg.originSourceChannel,
       MERCHANT_CODE: cfg.merchantCode,
@@ -302,6 +319,8 @@ export async function cancelAmkanOrder(orderCode: string): Promise<void> {
     "/retail/bnpl/bnpl-bff/order/v1/cancelOrder",
     {
       method: "POST",
+      // MERCHANT_CODE إلزامي هنا أيضاً (جدول 26) — كان ناقصاً.
+      headers: { MERCHANT_CODE: cfg.merchantCode },
       body: { orderCode, merchantId: cfg.merchantId },
     },
   );

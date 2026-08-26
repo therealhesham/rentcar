@@ -28,6 +28,26 @@ export function bookingIdFromAmkanReference(ref: string | null): number | null {
   return Number.isInteger(id) && id >= 1 ? id : null;
 }
 
+/**
+ * يعثر على الحجز من **معرّف إمكان** (`orderCode`) عبر ما خزّناه نحن قبل التحويل.
+ *
+ * هذا هو مصدر الاقتران الوحيد الموثوق: `merchantOrderCode` في الإشعار حقلٌ اختياري
+ * (جدول 30 من المواصفة V1.7 يعرّفه `Nullable: Yes`)، وردّ «حالة الطلب» لا يحمل أي
+ * حقل يربط الطلب بالحجز — فاشتقاق رقم الحجز من جسم الإشعار يعني الوثوق بما يرسله
+ * الطرف الآخر. البحث بـ `paymentGatewayRef` يقلب المعادلة: نحن من كتب هذه القيمة،
+ * ولا يستطيع أحد اختلاق اقتران لم يحدث. (وهو ما يجعل مسار جيديا محصَّناً أصلاً.)
+ */
+export async function findAmkanBookingByGatewayRef(gatewayOrderId: string): Promise<{
+  id: number;
+  paymentSessionRef: string | null;
+} | null> {
+  if (!gatewayOrderId) return null;
+  return prisma.bookingRequest.findFirst({
+    where: { paymentGatewayRef: gatewayOrderId, paymentMethod: "AMKAN" },
+    select: { id: true, paymentSessionRef: true },
+  });
+}
+
 /** إجمالي الحجز (شامل الضريبة) من لقطة الأسعار المخزّنة — مصدر المبلغ بدل رقم من إمكان. */
 async function amkanBookingTotalInclTaxSar(bookingId: number): Promise<number | null> {
   const row = await prisma.bookingRequest.findFirst({
