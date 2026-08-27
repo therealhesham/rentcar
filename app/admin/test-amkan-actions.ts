@@ -100,18 +100,27 @@ export async function probeAmkanMerchantConfigAction(
 }
 
 /**
- * رسالة إمكان عند رفض المصادقة عامة تماماً («General Integration Error») ولا تميّز
- * بين مفتاح خاطئ ومفتاح من بيئة أخرى. هذه أكثر أسباب 401 ترجيحاً مرتّبة، حتى لا
- * يُقرأ رفض المصادقة على أنه عطل في البوابة.
+ * تشخيص 401/403 مبنيّ على مقارنة صريحة مع مواصفة V1.7: كل رسائل 401 الموثّقة فيها
+ * محدَّدة («Credentials are invalid», «Merchant Id is not related to Merchant Code»…)
+ * — أما «General Integration Error» فلا تظهر في أي جدول أخطاء بالمستند، وهذا يرجّح
+ * أن الرفض يحدث في طبقة بوابة (Gateway/WAF) قبل بلوغ منطق BNPL نفسه، لا في التحقّق من
+ * اليوزر/الباسورد. المستند ينصّ صراحةً (قسم Network Connectivity): «IP whitelisting
+ * will be implemented» — وهو ما يفسّر رفض نفس الطلب على بيئتي الساندبوكس والإنتاج
+ * معاً بنفس الشكل، بصرف النظر عن صحة المفاتيح.
  */
 function authFailureHint(message: string, creds: AmkanCredentials): string | undefined {
   if (!message.includes("HTTP 401") && !message.includes("HTTP 403")) return undefined;
-  const onSandbox = creds.apiBase.includes("sit-");
+  const isGenericGatewayError =
+    message.includes("General Integration Error") || !/[A-Za-z]+-\d{4}/.test(message);
   return [
     "رُفضت المصادقة — الطلب وصل إلى إمكان وعُولج، فالعنوان والمسار سليمان.",
-    onSandbox
-      ? "١) الأرجح: المفاتيح من بورتال الإنتاج بينما النداء على الساندبوكس. جرّب apiBase = https://gw-pub.emkanfinance.com.sa"
-      : "١) الأرجح: المفاتيح من الساندبوكس بينما النداء على الإنتاج. جرّب apiBase = https://sit-gw-pub.emkanfinance.com.sa",
+    isGenericGatewayError
+      ? "١) الأرجح: تقييد IP (المواصفة تنصّ صراحة: «IP whitelisting will be implemented»). " +
+        "رسالة الخطأ عامة ولا تطابق أياً من رسائل 401 الموثّقة لمنطق BNPL نفسه " +
+        "(Credentials are invalid / Merchant Id is not related to Merchant Code) — " +
+        "ما يرجّح رفضاً في طبقة البوابة قبل التحقّق من اليوزر/الباسورد أصلاً. " +
+        "اطلب من إمكان تسجيل IP سيرفرك الصادر في القائمة البيضاء."
+      : "١) الرسالة تطابق نمط أخطاء BNPL الموثّقة — الأرجح مفتاح خاطئ أو تسجيل ناقص.",
     "٢) حرف ملتبس عند النسخ: قارن l (لام صغيرة) بـ I (آي كبيرة) في AMKAN_USERNAME و AMKAN_PASSWORD — انسخهما من البورتال بالتحديد لا بإعادة الكتابة.",
     "٣) مسافة أو سطر زائد داخل علامتَي الاقتباس في .env.",
     `للتحقّق: طول المستخدم الحالي ${creds.username.length} حرفاً وكلمة المرور ${creds.password.length} حرفاً (المتوقّع 28 لكليهما).`,
