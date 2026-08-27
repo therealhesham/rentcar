@@ -1052,6 +1052,11 @@ export function formatSar(n: number): string {
   return new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 0 }).format(n);
 }
 
+/** عدد صحيح بنفس تنسيق أرقام المبالغ — كي لا تختلط الأرقام العربية باللاتينية في البطاقة الواحدة. */
+export function formatCount(n: number): string {
+  return new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 0 }).format(n);
+}
+
 export function trendDeltaPct(current: number, previous: number): number | null {
   if (previous === 0) return current > 0 ? 100 : null;
   return Math.round(((current - previous) / previous) * 100);

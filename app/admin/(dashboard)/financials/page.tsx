@@ -5,7 +5,8 @@ import { ReportExportButtons } from "@/components/admin/ReportExportButtons";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminCard } from "@/components/admin/AdminCard";
 import { AdminStatCard } from "@/components/admin/AdminStatCard";
-import { getAdminRevenueStats, formatSar } from "@/lib/admin-statistics";
+import { formatSar, formatCount } from "@/lib/admin-statistics";
+import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
 import { getCompanyDuesPosition } from "@/lib/company-dues";
 import { prisma } from "@/lib/prisma";
 import { RegisterBookingPaymentModal } from "./RegisterBookingPaymentModal";
@@ -24,9 +25,6 @@ export default async function FinancialsPage(props: {
   const searchParams = await props.searchParams;
 
   const scope = adminScope(session);
-
-  // We'll use 30 days for the overview stats on this page
-  const stats = await getAdminRevenueStats(30, scope);
 
   const q = typeof searchParams?.q === "string" ? searchParams.q.trim() : "";
   const date = typeof searchParams?.date === "string" ? searchParams.date : "";
@@ -66,47 +64,71 @@ export default async function FinancialsPage(props: {
   startOfMonth.setDate(1);
   startOfMonth.setHours(0, 0, 0, 0);
 
-  const paidBookingsThisMonthWhere: any = {
-    paymentStatus: "PAID",
-    paidAt: { gte: startOfMonth },
-  };
-  if (combinedAnd.length > 0) {
-    paidBookingsThisMonthWhere.AND = combinedAnd;
-  }
+  // بطاقات الملخّص تتبع نطاق الموظف فقط — بحث الجدول بالأسفل لا يغيّرها.
+  const scopeAnd = Object.keys(baseWhere).length > 0 ? [baseWhere] : [];
 
-  const paidBookingsThisMonth = await prisma.bookingRequest.findMany({
-    where: paidBookingsThisMonthWhere,
-    include: {
-      carModel: { select: { price: true, vatRatePercent: true } }
-    }
+  // استعلامات الشهر: المبالغ من دفتر PaymentTransaction (المحصَّل فعلاً)،
+  // والأعداد من BookingRequest حسب تاريخ الإنشاء.
+  const monthCreatedWhere = (extra: Prisma.BookingRequestWhereInput) => ({
+    createdAt: { gte: startOfMonth },
+    ...extra,
+    ...(scopeAnd.length > 0 ? { AND: scopeAnd } : {}),
   });
 
-  let bookingsPaidThisMonthTotalSar = 0;
-  let cashBookingsThisMonthTotalSar = 0;
-  for (const row of paidBookingsThisMonth) {
-    if (!row.carModel) continue;
-    const { addons, interCityShipping, checkoutOneTimeFees, delayPenalty, couponCode } =
-      parseBookingPricingSnapshot(row.addonsJson);
+  const [monthTxns, monthPaidCount, monthPendingCount] = await Promise.all([
+    prisma.paymentTransaction.findMany({
+      where: {
+        status: "COMPLETED",
+        createdAt: { gte: startOfMonth },
+        booking: baseWhere,
+      },
+      select: { direction: true, amountSar: true, method: true, actorKind: true },
+    }),
+    prisma.bookingRequest.count({ where: monthCreatedWhere({ paymentStatus: "PAID" }) }),
+    prisma.bookingRequest.count({ where: monthCreatedWhere({ paymentStatus: "PENDING" }) }),
+  ]);
 
-    const effectiveRentalPrice = resolveBookingRentalPricePerDayExclTax(row.carModel.price, row.addonsJson);
-    const shipFee = interCityShipping?.feeExclVatSar ?? 0;
-    const checkoutFeesSum = checkoutOneTimeFees.reduce((s, x) => s + x.feeExclVatSar, 0);
-    const delayFee = delayPenalty?.feeExclVatSar ?? 0;
-    const discountExclTax = couponCode?.scope === "FULL_TOTAL" ? couponCode.discountExclTax : 0;
+  /**
+   * تقسيم المحصَّل حسب **من نفّذ العملية** لا حسب اسم الوسيلة:
+   * - GATEWAY (تأكيد webhook جيديا/تابي) و CUSTOMER (دفع العميل من الموقع) → أونلاين.
+   * - ADMIN (موظف سجّل التحصيل) → تحصيل في الفرع، حتى لو كانت الوسيلة «مدى»
+   *   عبر جهاز نقاط البيع — وهي الحالة التي كان التقسيم باسم الوسيلة يخطئ فيها.
+   */
+  type Bucket = { totalSar: number; count: number; byMethod: Map<string, number> };
+  const newBucket = (): Bucket => ({ totalSar: 0, count: 0, byMethod: new Map() });
+  const collected = newBucket();
+  const collectedOnline = newBucket();
+  const collectedBranch = newBucket();
+  const refunded = newBucket();
 
-    const totals = computeCheckoutTotals(
-      effectiveRentalPrice,
-      row.numberOfDays,
-      row.carModel.vatRatePercent,
-      addons.map((a) => ({ pricePerDay: a.pricePerDayExclTax })),
-      { oneTimeFeesExclTax: shipFee + checkoutFeesSum + delayFee, discountExclTax },
-    );
-    
-    bookingsPaidThisMonthTotalSar += totals.totalInclTax;
-    if (row.paymentMethod === "CASH") {
-      cashBookingsThisMonthTotalSar += totals.totalInclTax;
+  const addToBucket = (b: Bucket, amountSar: number, method: string | null) => {
+    b.totalSar += amountSar;
+    b.count += 1;
+    const label = bookingPaymentMethodLabelAr(method);
+    b.byMethod.set(label, (b.byMethod.get(label) ?? 0) + 1);
+  };
+
+  for (const t of monthTxns) {
+    if (t.direction === "DEBIT") {
+      addToBucket(refunded, t.amountSar, t.method);
+      continue;
     }
+    addToBucket(collected, t.amountSar, t.method);
+    addToBucket(
+      t.actorKind === "ADMIN" ? collectedBranch : collectedOnline,
+      t.amountSar,
+      t.method,
+    );
   }
+
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  const methodsHint = (b: Bucket) =>
+    [...b.byMethod.entries()]
+      .sort((a, c) => c[1] - a[1])
+      .map(([label, count]) => `${label} ${formatCount(count)}`)
+      .join(" · ");
+
+  const netMovementSar = round2(collected.totalSar - refunded.totalSar);
 
   const currentMonthName = new Intl.DateTimeFormat('ar-SA', { month: 'long' }).format(new Date());
 
@@ -261,7 +283,7 @@ export default async function FinancialsPage(props: {
           className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-sky-300/70 bg-sky-50 px-5 py-4 text-sm font-bold text-sky-950 transition-colors hover:bg-sky-100"
         >
           <span>
-            ⚠️ يوجد {customerDuesCount} حجز عليه مستحقات قائمة للعملاء بإجمالي{" "}
+            ⚠️ يوجد {formatCount(customerDuesCount)} حجز عليه مستحقات قائمة للعملاء بإجمالي{" "}
             <span className="tabular-nums" dir="ltr">{formatSar(customerDuesTotalSar)} ر.س</span>
             {" "}— بانتظار التسوية.
           </span>
@@ -272,21 +294,26 @@ export default async function FinancialsPage(props: {
       ) : null}
 
       <div className="space-y-3">
-        <h2 className="text-sm font-black text-on-surface-variant">المركز المالي للمستحقات</h2>
+        <div>
+          <h2 className="text-sm font-black text-on-surface-variant">المركز المالي للمستحقات</h2>
+          <p className="mt-1 text-xs font-medium text-on-surface-variant/80">
+            أرصدة قائمة غير مرتبطة بفترة زمنية — تشمل كل الحجوزات المفتوحة مهما كان تاريخها.
+          </p>
+        </div>
         <div className="grid gap-4 sm:grid-cols-3">
           <AdminStatCard
             label="مستحقات للشركة"
             value={`${formatSar(duesPosition.receivables.totalSar)} ر.س`}
             href="/admin/company-dues"
             highlight={duesPosition.receivables.totalSar > 0}
-            hint={`${duesPosition.receivables.count} حجز — رصيد يُحصَّل عند الفرع`}
+            hint={`${formatCount(duesPosition.receivables.count)} حجز — رصيد يُحصَّل عند الفرع`}
           />
           <AdminStatCard
             label="مستحقات على الشركة"
             value={`${formatSar(duesPosition.payables.totalSar)} ر.س`}
             href="/admin/customer-dues"
             highlight={duesPosition.payables.totalSar > 0}
-            hint={`${duesPosition.payables.count} حجز — استرداد للعملاء بانتظار التسوية`}
+            hint={`${formatCount(duesPosition.payables.count)} حجز — استرداد للعملاء بانتظار التسوية`}
           />
           <AdminStatCard
             label="صافي المستحقات"
@@ -300,33 +327,77 @@ export default async function FinancialsPage(props: {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <AdminStatCard
-          label={`إجمالي مدفوعات (${currentMonthName})`}
-          value={`${formatSar(bookingsPaidThisMonthTotalSar)} ر.س`}
-          highlight
-          hint={`${paidBookingsThisMonth.length} حجز مدفوع`}
-        />
-        <AdminStatCard
-          label={`مدفوعات الكاش (${currentMonthName})`}
-          value={`${formatSar(cashBookingsThisMonthTotalSar)} ر.س`}
-          highlight
-          hint="إجمالي الدفع النقدي"
-        />
-        <AdminStatCard
-          label="استردادات إلغاء (30 يوماً)"
-          value={`${formatSar(stats.refundsTotalSar)} ر.س`}
-          hint={`${stats.refundsCount} حالة`}
-        />
-        <AdminStatCard
-          label="حجوزات مدفوعة (30 يوماً)"
-          value={stats.bookingPaidCount}
-          hint="إيراد الحجز التفصيلي غير مخزّن"
-        />
-        <AdminStatCard
-          label="حجوزات قيد الدفع (30 يوماً)"
-          value={stats.bookingPendingCount}
-        />
+      <div className="space-y-3">
+        <div>
+          <h2 className="text-sm font-black text-on-surface-variant">
+            حركة الأموال خلال {currentMonthName}
+          </h2>
+          <p className="mt-1 text-xs font-medium text-on-surface-variant/80">
+            مبالغ فعلية من دفتر العمليات، من أول {currentMonthName} حتى اليوم حسب تاريخ العملية.
+            «البوابة» و«الفرع» جزءان من المحصَّل وليسا إضافة عليه. صافي الحركة:{" "}
+            <span className="font-black text-on-surface" dir="ltr">
+              {formatSar(netMovementSar)} ر.س
+            </span>
+          </p>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <AdminStatCard
+            label="إجمالي المحصَّل"
+            value={`${formatSar(round2(collected.totalSar))} ر.س`}
+            highlight
+            hint={`${formatCount(collected.count)} عملية = البوابة + الفرع`}
+          />
+          <AdminStatCard
+            label="منه: عبر البوابة (أونلاين)"
+            value={`${formatSar(round2(collectedOnline.totalSar))} ر.س`}
+            hint={
+              collectedOnline.count > 0
+                ? `${formatCount(collectedOnline.count)} عملية — ${methodsHint(collectedOnline)}`
+                : "لا توجد مدفوعات عبر البوابة هذا الشهر"
+            }
+          />
+          <AdminStatCard
+            label="منه: تحصيل في الفرع"
+            value={`${formatSar(round2(collectedBranch.totalSar))} ر.س`}
+            hint={
+              collectedBranch.count > 0
+                ? `${formatCount(collectedBranch.count)} عملية — ${methodsHint(collectedBranch)}`
+                : "لا توجد تحصيلات في الفرع هذا الشهر"
+            }
+          />
+          <AdminStatCard
+            label="مبالغ خرجت للعملاء"
+            value={`${formatSar(round2(refunded.totalSar))} ر.س`}
+            hint={
+              refunded.count > 0
+                ? `${formatCount(refunded.count)} عملية — استرداد أو تسوية نُفِّذت هذا الشهر`
+                : "لا توجد استردادات هذا الشهر"
+            }
+          />
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <div>
+          <h2 className="text-sm font-black text-on-surface-variant">
+            حجوزات أُنشئت خلال {currentMonthName}
+          </h2>
+          <p className="mt-1 text-xs font-medium text-on-surface-variant/80">
+            عدد الحجوزات حسب تاريخ إنشائها — لا حسب تاريخ الدفع، لذلك قد تختلف عن العدد أعلاه.
+          </p>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <AdminStatCard
+            label="حجوزات مدفوعة"
+            value={formatCount(monthPaidCount)}
+            hint="اكتمل دفع إجماليها"
+          />
+          <AdminStatCard
+            label="حجوزات قيد الدفع"
+            value={formatCount(monthPendingCount)}
+            hint="لم يكتمل دفعها بعد — منها فقط الحجوزات المباشرة تُحتسب ضمن «مستحقات للشركة»"
+          />
+        </div>
       </div>
 
       <div className="grid gap-8">
