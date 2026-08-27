@@ -11,15 +11,33 @@ import { unstable_cache } from "next/cache";
  * باقي الخدمات (حالة/استرداد/إلغاء).
  */
 
-type AmkanConfig = {
+/**
+ * أقل ما يلزم لأي نداء: العنوان والمصادقة ومعرّف التاجر. خدمة `merchantConfig`
+ * تكتفي بهذا القدر — وهي التي تكشف `merchantCode` والحدود، فلا يصحّ أن تشترط
+ * معرفتهما مسبقاً.
+ */
+export type AmkanCredentials = {
   merchantId: string;
   username: string;
   password: string;
   apiBase: string;
+};
+
+export type AmkanConfig = AmkanCredentials & {
   merchantCode: string;
   /** هيدر origin-source-channel — إلزامي عند إنشاء الطلب، لا قيمة افتراضية مضمَّنة عمداً. */
   originSourceChannel: string;
 };
+
+/** المصادقة وحدها من البيئة — دون اشتراط `merchantCode`/`originSourceChannel`. */
+export function getAmkanCredentials(): AmkanCredentials | null {
+  const merchantId = process.env.AMKAN_MERCHANT_ID?.trim();
+  const username = process.env.AMKAN_USERNAME?.trim();
+  const password = process.env.AMKAN_PASSWORD?.trim();
+  const apiBase = process.env.AMKAN_API_BASE?.trim();
+  if (!merchantId || !username || !password || !apiBase) return null;
+  return { merchantId, username, password, apiBase: apiBase.replace(/\/$/, "") };
+}
 
 export function getAmkanConfig(): AmkanConfig | null {
   const merchantId = process.env.AMKAN_MERCHANT_ID?.trim();
@@ -54,7 +72,7 @@ function formatAmount(amountSar: number): number {
 }
 
 async function amkanFetch<T>(
-  cfg: AmkanConfig,
+  cfg: AmkanCredentials,
   path: string,
   init: {
     method: "GET" | "POST";
@@ -132,6 +150,22 @@ export async function amkanAmountLimitsOrNull(): Promise<AmkanMerchantLimits | n
 }
 
 /**
+ * نسخة تشخيصية من `merchantConfig` لأداة الاختبار الإدارية: تقبل بيانات اعتماد
+ * صريحة (فـ`merchantCode` يُكتشف من هنا لا يُشترط قبلها) وتُرجع الرد **كاملاً**
+ * دون تصفية — بما فيه زوجا الحدود `order*` و`bnpl*` معاً، وهما موضع السؤال المفتوح
+ * لدى إمكان: أيّهما الملزم لطلبات BNPL. لا تُستخدم في مسار العميل.
+ */
+export async function fetchAmkanMerchantConfigRaw(
+  creds: AmkanCredentials,
+): Promise<Record<string, unknown>> {
+  return amkanFetch<Record<string, unknown>>(
+    creds,
+    `/retail/bnpl/partner-management/v1/${encodeURIComponent(creds.merchantId)}/merchantConfig`,
+    { method: "GET" },
+  );
+}
+
+/**
  * السقوف مع كاش ساعة. تتغيّر نادراً جداً، وبدون الكاش ينتظر **كل** عرض لصفحة الدفع
  * نداءً شبكياً لإمكان — أي أن زمن عرض أهم صفحة عندنا يصير مرهوناً بتوفّر البوابة.
  */
@@ -161,8 +195,10 @@ export async function createAmkanOrder(args: {
   callbackUrl?: string;
   returnUrl?: string;
   expiresInMinutes?: number;
-}): Promise<AmkanOrderSession> {
-  const cfg = getAmkanConfig();
+}, cfgOverride?: AmkanConfig): Promise<AmkanOrderSession> {
+  // التجاوز لأداة الاختبار الإدارية فقط، حيث تُجرَّب قيم `merchantCode` و
+  // `origin-source-channel` قبل تثبيتها في البيئة. مسار العميل يمرّ دائماً بالبيئة.
+  const cfg = cfgOverride ?? getAmkanConfig();
   if (!cfg) throw new Error("إمكان غير مهيّأة — أضف مفاتيح البيئة.");
 
   const orderId = `booking-${args.bookingRequestId}-${Date.now()}`;
@@ -212,8 +248,11 @@ export type AmkanOrderStatus = {
  * لا نثق بجسم الإشعار وحده.
  * GET /retail/bnpl/bff/v1/order-status/{orderId}?merchantId={merchantId}
  */
-export async function fetchAmkanOrderStatus(gatewayOrderId: string): Promise<AmkanOrderStatus> {
-  const cfg = getAmkanConfig();
+export async function fetchAmkanOrderStatus(
+  gatewayOrderId: string,
+  credsOverride?: AmkanCredentials,
+): Promise<AmkanOrderStatus> {
+  const cfg = credsOverride ?? getAmkanConfig();
   if (!cfg) throw new Error("إمكان غير مهيّأة — أضف مفاتيح البيئة.");
 
   const data = await amkanFetch<{

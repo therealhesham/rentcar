@@ -22,6 +22,11 @@ const EXTRA_PAGE_PERMISSIONS: AdminPagePermission[] = [
     label: "أداة اختبار بوابة جيديا",
     groupLabel: "الإدارة المالية",
   },
+  {
+    href: "/admin/test-amkan",
+    label: "أداة اختبار بوابة إمكان",
+    groupLabel: "الإدارة المالية",
+  },
   // لازم تتسجّل مستقلة: بدونها يطابقها resolveAdminPagePermissionId بـ `/admin/vehicles`
   // فتاخد صلاحية عرض المركبات حق الاستيراد الجماعي بالغلط.
   {
