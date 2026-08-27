@@ -30,9 +30,22 @@ function Result({ state }: { state: AmkanProbeState | null }) {
   if (!state) return null;
   if (!state.ok) {
     return (
-      <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-800" dir="auto">
-        {state.error}
-      </p>
+      <div className="mt-4 space-y-3">
+        <p
+          className="whitespace-pre-wrap break-words rounded-xl bg-red-50 px-4 py-3 text-left text-xs leading-relaxed text-red-900"
+          dir="ltr"
+        >
+          {state.error}
+        </p>
+        {state.hint ? (
+          <p
+            className="whitespace-pre-line rounded-xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900"
+            dir="auto"
+          >
+            {state.hint}
+          </p>
+        ) : null}
+      </div>
     );
   }
   return (

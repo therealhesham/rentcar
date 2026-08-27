@@ -94,8 +94,28 @@ export async function probeAmkanMerchantConfigAction(
 
     return { ok: true, raw: JSON.stringify(data, null, 2), hint: hints.join("\n") || undefined };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+    const msg = e instanceof Error ? e.message : String(e);
+    return { ok: false, error: msg, hint: authFailureHint(msg, creds) };
   }
+}
+
+/**
+ * رسالة إمكان عند رفض المصادقة عامة تماماً («General Integration Error») ولا تميّز
+ * بين مفتاح خاطئ ومفتاح من بيئة أخرى. هذه أكثر أسباب 401 ترجيحاً مرتّبة، حتى لا
+ * يُقرأ رفض المصادقة على أنه عطل في البوابة.
+ */
+function authFailureHint(message: string, creds: AmkanCredentials): string | undefined {
+  if (!message.includes("HTTP 401") && !message.includes("HTTP 403")) return undefined;
+  const onSandbox = creds.apiBase.includes("sit-");
+  return [
+    "رُفضت المصادقة — الطلب وصل إلى إمكان وعُولج، فالعنوان والمسار سليمان.",
+    onSandbox
+      ? "١) الأرجح: المفاتيح من بورتال الإنتاج بينما النداء على الساندبوكس. جرّب apiBase = https://gw-pub.emkanfinance.com.sa"
+      : "١) الأرجح: المفاتيح من الساندبوكس بينما النداء على الإنتاج. جرّب apiBase = https://sit-gw-pub.emkanfinance.com.sa",
+    "٢) حرف ملتبس عند النسخ: قارن l (لام صغيرة) بـ I (آي كبيرة) في AMKAN_USERNAME و AMKAN_PASSWORD — انسخهما من البورتال بالتحديد لا بإعادة الكتابة.",
+    "٣) مسافة أو سطر زائد داخل علامتَي الاقتباس في .env.",
+    `للتحقّق: طول المستخدم الحالي ${creds.username.length} حرفاً وكلمة المرور ${creds.password.length} حرفاً (المتوقّع 28 لكليهما).`,
+  ].join("\n");
 }
 
 /**
