@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import Link from "next/link";
 import {
   BarChart3,
@@ -16,6 +17,7 @@ import {
   CalendarCheck,
   CheckCircle,
   XCircle,
+  Archive,
   Search,
   Banknote,
   CalendarX2,
@@ -27,9 +29,10 @@ import {
 } from "@/components/admin/AdminDashboardBookingsSection";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminStatCard } from "@/components/admin/AdminStatCard";
-import { bookingBranchWhere } from "@/lib/admin-access";
+import { ARCHIVED_BOOKINGS_WHERE, VISIBLE_BOOKINGS_WHERE } from "@/lib/booking-visibility";
 import {
   adminScope,
+  bookingWhereForScope,
   fleetWhereForScope,
   scopeLabel,
 } from "@/lib/admin-scope";
@@ -46,15 +49,34 @@ export default async function AdminDashboardPage(props: {
 }) {
   const session = await requireAdminPage();
   const scope = adminScope(session);
-  const branchScope = (extra?: Parameters<typeof bookingBranchWhere>[1]) =>
-    bookingBranchWhere(session, extra);
+  // فلتر الفرع الخام بلا شرط رؤية: الرؤية تُضاف صراحةً أدناه حتى يقلبها تبويب
+  // «مؤرشفة» دون أن تتناقض مع شرط مدفون داخل مساعد مشترك.
+  const rawBranchWhere = bookingWhereForScope(scope);
+
+  /**
+   * يجمع الشروط بـ AND لا بالنشر. فلتر الفرع وفلتر الحالة («مبالغ مستحقة») وفلتر
+   * البحث ثلاثتها قد تحمل مفتاح `OR` في المستوى الأعلى، والنشر يجعل آخرها يدهس ما
+   * قبله — فيسقط قيد الفرع عند البحث ويرى موظف الفرع حجوزات الفروع الأخرى.
+   */
+  const composeWhere = (
+    ...parts: (Prisma.BookingRequestWhereInput | undefined)[]
+  ): Prisma.BookingRequestWhereInput => {
+    const used = parts.filter(
+      (p): p is Prisma.BookingRequestWhereInput => p != null && Object.keys(p).length > 0,
+    );
+    if (used.length === 0) return {};
+    if (used.length === 1) return used[0];
+    return { AND: used };
+  };
 
   const sp = props.searchParams ? await props.searchParams : {};
   const statusParam = sp.status || (sp.filter === "new" ? "new" : "");
+  // الأرشيف لمدير النظام وحده — الموظف لا يرى التبويب ولا يصل إليه بالرابط.
+  const isArchivedTab = statusParam === "archived" && session.isSuperAdmin;
 
   const qParam = typeof sp.q === "string" ? sp.q.trim() : "";
 
-  let statusWhere: any = {};
+  let statusWhere: Prisma.BookingRequestWhereInput = {};
   if (statusParam === "new") {
     statusWhere = { status: { in: ["NEW", "UNDER_REVIEW"] } };
   } else if (statusParam === "contacted") {
@@ -83,7 +105,7 @@ export default async function AdminDashboardPage(props: {
     };
   }
 
-  const qFilter: any = qParam
+  const qFilter: Prisma.BookingRequestWhereInput = qParam
     ? {
         OR: [
           { fullName: { contains: qParam } },
@@ -93,11 +115,17 @@ export default async function AdminDashboardPage(props: {
       }
     : {};
 
-  const bookingsWhere = {
-    ...branchScope(),
-    ...statusWhere,
-    ...qFilter,
-  };
+  /** نطاق الموظف + استبعاد المؤرشف + البحث — أساس كل عدادات التبويبات. */
+  const visibleScope = (extra?: Prisma.BookingRequestWhereInput) =>
+    composeWhere(rawBranchWhere, VISIBLE_BOOKINGS_WHERE, qFilter, extra);
+
+  // تبويب «مؤرشفة» يقلب شرط الرؤية وحده ولا يقيّد الحالة.
+  const bookingsWhere = composeWhere(
+    rawBranchWhere,
+    isArchivedTab ? ARCHIVED_BOOKINGS_WHERE : VISIBLE_BOOKINGS_WHERE,
+    qFilter,
+    statusWhere,
+  );
 
   const [
     categoriesCount,
@@ -115,6 +143,7 @@ export default async function AdminDashboardPage(props: {
     countCancelledRejected,
     countUnpaid,
     countMissed,
+    countArchived,
 
     bookingRequests,
     bookableModelsRaw,
@@ -127,69 +156,40 @@ export default async function AdminDashboardPage(props: {
       where: fleetWhereForScope(scope),
       select: { quantity: true },
     }),
-    prisma.bookingRequest.count({ where: { ...branchScope(), ...qFilter } }),
+    prisma.bookingRequest.count({ where: visibleScope() }),
     prisma.bookingRequest.count({
-      where: {
-        ...branchScope(),
-        status: { in: ["NEW", "UNDER_REVIEW"] },
-        ...qFilter,
-      },
+      where: visibleScope({ status: { in: ["NEW", "UNDER_REVIEW"] } }),
+    }),
+    prisma.bookingRequest.count({ where: visibleScope({ status: "CONTACTED" }) }),
+    prisma.bookingRequest.count({ where: visibleScope({ status: "CONFIRMED" }) }),
+    prisma.bookingRequest.count({ where: visibleScope({ status: "PICKED_UP" }) }),
+    prisma.bookingRequest.count({
+      where: visibleScope({ status: { in: ["RETURNED", "COMPLETED"] } }),
     }),
     prisma.bookingRequest.count({
-      where: {
-        ...branchScope(),
-        status: "CONTACTED",
-        ...qFilter,
-      },
+      where: visibleScope({ status: { in: ["CANCELLED", "REJECTED"] } }),
     }),
     prisma.bookingRequest.count({
-      where: {
-        ...branchScope(),
-        status: "CONFIRMED",
-        ...qFilter,
-      },
-    }),
-    prisma.bookingRequest.count({
-      where: {
-        ...branchScope(),
-        status: "PICKED_UP",
-        ...qFilter,
-      },
-    }),
-    prisma.bookingRequest.count({
-      where: {
-        ...branchScope(),
-        status: { in: ["RETURNED", "COMPLETED"] },
-        ...qFilter,
-      },
-    }),
-    prisma.bookingRequest.count({
-      where: {
-        ...branchScope(),
-        status: { in: ["CANCELLED", "REJECTED"] },
-        ...qFilter,
-      },
-    }),
-    prisma.bookingRequest.count({
-      where: {
-        ...branchScope(),
+      where: visibleScope({
         status: { notIn: ["CANCELLED", "REJECTED"] },
         OR: [
           { paymentStatus: "PENDING", kind: "DIRECT" },
           { balanceDueAtBranchSar: { gt: 0 } },
         ],
-        ...qFilter,
-      },
+      }),
     }),
     prisma.bookingRequest.count({
-      where: {
-        ...branchScope(),
+      where: visibleScope({
         kind: "DIRECT",
         carModelId: { not: null },
         ...missedPickupCondition(),
-        ...qFilter,
-      },
+      }),
     }),
+    session.isSuperAdmin
+      ? prisma.bookingRequest.count({
+          where: composeWhere(rawBranchWhere, ARCHIVED_BOOKINGS_WHERE, qFilter),
+        })
+      : Promise.resolve(0),
     prisma.bookingRequest
       .findMany({
         where: bookingsWhere,
@@ -267,6 +267,7 @@ export default async function AdminDashboardPage(props: {
     paidAt: request.paidAt ? request.paidAt.toISOString() : null,
     paymentMethod: request.paymentMethod ?? null,
     paymentGatewayRef: request.paymentGatewayRef ?? null,
+    isHidden: request.isHidden,
     idDocumentKind: request.idDocumentKind ?? null,
     nationalIdNumber: request.nationalIdNumber ?? null,
     passportNumber: request.passportNumber ?? null,
@@ -318,6 +319,12 @@ export default async function AdminDashboardPage(props: {
     cardDescription = "حجوزات لم تُستلَم سياراتها ومرّ على موعد الاستلام أكثر من 12 ساعة.";
   }
 
+  if (isArchivedTab) {
+    cardTitle = "الحجوزات المؤرشفة";
+    cardDescription =
+      "حجوزات أُخفيت عن العميل وعن بقية اللوحة وعن كل الأقسام المالية. سجلها ودفتر حركاتها محفوظان، ويمكن إرجاعها في أي وقت.";
+  }
+
   const tabs = [
     { id: "", label: "الكل", count: countAll, icon: Inbox },
     { id: "new", label: "جديد وتحت المراجعة", count: countNewUnderReview, icon: AlertCircle },
@@ -327,6 +334,9 @@ export default async function AdminDashboardPage(props: {
     { id: "returned_completed", label: "مسلّم/مكتمل", count: countReturnedCompleted, icon: CheckCircle },
     { id: "unpaid", label: "مبالغ مستحقة", count: countUnpaid, icon: Banknote },
     { id: "cancelled_rejected", label: "ملغي/مرفوض", count: countCancelledRejected, icon: XCircle },
+    ...(session.isSuperAdmin
+      ? [{ id: "archived", label: "مؤرشفة", count: countArchived, icon: Archive }]
+      : []),
   ];
 
   return (
@@ -444,6 +454,7 @@ export default async function AdminDashboardPage(props: {
           rows={dashboardRows}
           categories={fleetCategoriesForEdit}
           models={bookableModels}
+          canArchive={session.isSuperAdmin}
         />
       </AdminCard>
 

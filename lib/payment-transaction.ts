@@ -5,6 +5,7 @@ import {
   scopeAllowsMultipleBranches,
   type AdminScope,
 } from "@/lib/admin-scope";
+import { VISIBLE_BOOKINGS_WHERE } from "@/lib/booking-visibility";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -103,9 +104,8 @@ function round2(n: number): number {
 
 /** شرط تحديد النطاق عبر الحجز المرتبط — مطابق لمنطق بقية صفحات الإدارة. */
 function txnScopeWhere(scope: PaymentTxnScope): Prisma.PaymentTransactionWhereInput {
-  const booking = bookingWhereForScope(scope);
-  if (Object.keys(booking).length === 0) return {};
-  return { booking };
+  // حركات الحجز المؤرشف تسقط من الدفتر ومن مجاميعه، فتتسق الأرقام مع بقية الأقسام.
+  return { booking: { ...bookingWhereForScope(scope), ...VISIBLE_BOOKINGS_WHERE } };
 }
 
 export type PaymentTxnListItem = Prisma.PaymentTransactionGetPayload<{

@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { bookingWhereForScope, type AdminScope } from "@/lib/admin-scope";
+import { VISIBLE_BOOKINGS_WHERE } from "@/lib/booking-visibility";
 import { computeCheckoutTotals } from "@/lib/booking-checkout-pricing";
 import {
   parseBookingPricingSnapshot,
@@ -24,7 +25,8 @@ const RECEIVABLE_TERMINAL_STATUSES = ["CANCELLED", "REJECTED"];
 
 /** شرط تحديد النطاق — مطابق لبقية صفحات الإدارة (استلام أو إرجاع داخل نطاق الموظف). */
 function scopeWhere(scope: DuesScope): Prisma.BookingRequestWhereInput {
-  return bookingWhereForScope(scope);
+  // المؤرشف يخرج من كل المستحقات — وإلا ظلّ ديناً قائماً على حجز لا يراه أحد.
+  return { ...bookingWhereForScope(scope), ...VISIBLE_BOOKINGS_WHERE };
 }
 
 /** رصيد على حجز مدفوع (فرق تمديد/تعديل/غرامة) — الفئة الكلاسيكية. */

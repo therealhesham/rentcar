@@ -13,11 +13,14 @@ import {
   ArrowLeft,
   Loader2,
   AlertCircle,
+  Archive,
+  ArchiveRestore,
 } from "lucide-react";
 import { AdminQuickPaymentModalInner } from "./AdminQuickPaymentModal";
 import { AdminBalancePaymentModalInner } from "./AdminBalancePaymentModal";
 import { EditBookingModalInner, type EditableBookingRow } from "./EditBookingRequestForm";
 import { quickUpdateBookingStatus } from "@/app/admin/booking-request-actions";
+import { setBookingArchived } from "@/app/admin/booking-archive-actions";
 
 import { VehiclePlateHandoverModal } from "./VehiclePlateHandoverModal";
 import { AdminRejectBookingModal } from "./AdminRejectBookingModal";
@@ -31,9 +34,20 @@ type Props = {
   categories: CategoryOption[];
   models: BookableModelOption[];
   isMobile?: boolean;
+  /** الأرشفة لمدير النظام وحده — الخادم يتحقق منها أيضاً. */
+  canArchive?: boolean;
+  isHidden?: boolean;
 };
 
-export function BookingRowActionsDropdown({ request, paymentStatus, categories, models, isMobile }: Props) {
+export function BookingRowActionsDropdown({
+  request,
+  paymentStatus,
+  categories,
+  models,
+  isMobile,
+  canArchive = false,
+  isHidden = false,
+}: Props) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
@@ -72,6 +86,22 @@ export function BookingRowActionsDropdown({ request, paymentStatus, categories, 
           open: true,
           type: "error",
           message: result.error || "حدث خطأ أثناء تحديث الحالة",
+        });
+      }
+    });
+  };
+
+  const handleArchive = (archived: boolean) => {
+    startTransition(async () => {
+      const fd = new FormData();
+      fd.set("bookingId", String(request.id));
+      fd.set("archived", String(archived));
+      const result = await setBookingArchived(null, fd);
+      if (!result.ok) {
+        setModalConfig({
+          open: true,
+          type: "error",
+          message: result.error || "تعذّر تنفيذ الأرشفة",
         });
       }
     });
@@ -140,6 +170,33 @@ export function BookingRowActionsDropdown({ request, paymentStatus, categories, 
                   <Pencil className="size-3.5 text-on-surface-variant" />
                   تعديل الحجز
                 </button>
+
+                {canArchive && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      isHidden
+                        ? handleArchive(false)
+                        : confirmAction(
+                            "سيختفي الحجز عن العميل وعن اللوحة وعن كل الأقسام المالية. لا يُحذف شيء، ويمكن إرجاعه في أي وقت.",
+                            () => handleArchive(true),
+                            "أرشفة",
+                          )
+                    }
+                    className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-start text-xs font-bold transition-colors ${
+                      isHidden
+                        ? "text-emerald-800 hover:bg-emerald-100"
+                        : "text-on-surface hover:bg-surface-container-low"
+                    }`}
+                  >
+                    {isHidden ? (
+                      <ArchiveRestore className="size-3.5 text-emerald-600" />
+                    ) : (
+                      <Archive className="size-3.5 text-on-surface-variant" />
+                    )}
+                    {isHidden ? "إرجاع من الأرشيف" : "أرشفة الحجز"}
+                  </button>
+                )}
 
                 {showPayment && (
                   <button

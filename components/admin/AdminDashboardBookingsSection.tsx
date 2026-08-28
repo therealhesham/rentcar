@@ -43,6 +43,8 @@ export type DashboardBookingRow = {
   paymentMethod: string | null;
   /** مرجع جيديا — وجوده يميّز الدفع أونلاين عن التسجيل اليدوي في الفرع. */
   paymentGatewayRef: string | null;
+  /** مؤرشف: مخفي عن العميل وعن الأقسام المالية، ويظهر في تبويب «مؤرشفة» وحده. */
+  isHidden: boolean;
   idDocumentKind: string | null;
   nationalIdNumber: string | null;
   passportNumber: string | null;
@@ -67,6 +69,8 @@ type Props = {
   rows: DashboardBookingRow[];
   categories: { slug: string; title: string }[];
   models: { id: number; label: string }[];
+  /** الأرشفة لمدير النظام وحده — الخادم يتحقق منها أيضاً. */
+  canArchive?: boolean;
 };
 
 function editRequestPayload(request: DashboardBookingRow) {
@@ -112,7 +116,12 @@ function editRequestPayload(request: DashboardBookingRow) {
   };
 }
 
-export function AdminDashboardBookingsSection({ rows, categories, models }: Props) {
+export function AdminDashboardBookingsSection({
+  rows,
+  categories,
+  models,
+  canArchive = false,
+}: Props) {
   if (rows.length === 0) {
     return (
       <div className="flex flex-col items-center gap-4 px-6 py-14 text-center">
@@ -241,6 +250,8 @@ export function AdminDashboardBookingsSection({ rows, categories, models }: Prop
                   categories={categories}
                   models={models}
                   isMobile
+                  canArchive={canArchive}
+                  isHidden={request.isHidden}
                 />
               </div>
             )}
@@ -347,6 +358,8 @@ export function AdminDashboardBookingsSection({ rows, categories, models }: Prop
                             paymentStatus={request.paymentStatus}
                             categories={categories}
                             models={models}
+                            canArchive={canArchive}
+                            isHidden={request.isHidden}
                           />
                         ) : (
                           <span className="text-xs text-on-surface-variant">—</span>

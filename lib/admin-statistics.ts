@@ -6,6 +6,7 @@ import {
   fleetWhereForScope,
   type AdminScope,
 } from "@/lib/admin-scope";
+import { VISIBLE_BOOKINGS_WHERE } from "@/lib/booking-visibility";
 import { prisma } from "@/lib/prisma";
 
 /** النطاق الافتراضي للدوال التي تُستدعى بلا سياق موظف (تقارير عامة). */
@@ -15,7 +16,11 @@ function bookingScope(
   scope: AdminScope,
   extra?: Prisma.BookingRequestWhereInput,
 ): Prisma.BookingRequestWhereInput {
-  return andScope(bookingPickupWhereForScope(scope), extra);
+  // المؤرشف خارج كل الإحصائيات — نقطة واحدة تغطّي العدادات والتجميعات جميعاً.
+  return andScope(
+    { ...bookingPickupWhereForScope(scope), ...VISIBLE_BOOKINGS_WHERE },
+    extra,
+  );
 }
 
 export type AdminStatsPeriod = 7 | 30 | 90 | 365;

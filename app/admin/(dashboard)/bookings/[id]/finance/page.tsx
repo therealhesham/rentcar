@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { assertBookingRequestInScope } from "@/lib/admin-access";
 import { requireAdminPage } from "@/lib/admin-page";
@@ -80,6 +81,9 @@ export default async function BookingFinancePage({
       paidAt: true,
       paymentReceivedBy: true,
       paymentExternalRef: true,
+      paymentGatewayRef: true,
+      refundDueToCustomerSar: true,
+      refundDueSettledAt: true,
       cancellationRefundAmountSar: true,
       balanceDueAtBranchSar: true,
       numberOfDays: true,
@@ -114,6 +118,10 @@ export default async function BookingFinancePage({
   const isPartiallyPaid = statusKey === "PAID" && totalDueNowSar > 0;
   // سقف الدفعة يطابق ما يقبله الخادم: عند PAID يحصّل الرصيد فقط، وقبلها الإيجار + الرسوم.
   const collectibleNowSar = statusKey === "PAID" ? balanceDueAtBranchSar : totalDueNowSar;
+
+  // مستحقات قائمة للعميل: مبلغ موجود ولم تُسجَّل له تسوية بعد.
+  const unsettledCustomerCreditSar =
+    booking.refundDueSettledAt == null ? (booking.refundDueToCustomerSar ?? 0) : 0;
 
   return (
     <div className="mx-auto max-w-4xl space-y-8">
@@ -151,12 +159,38 @@ export default async function BookingFinancePage({
             disabledReason="لا يمكن إضافة رسوم على حجز ملغى أو مرفوض."
           />
 
+          {/* مستحقات للعميل: لا تُسوَّى من لوحة الاسترداد أدناه بل من قسم مستقل —
+              فبدون هذا التنبيه يظل الدين قائماً بلا أن يلاحظه أحد. */}
+          {unsettledCustomerCreditSar > 0 ? (
+            <div className="rounded-2xl border border-rose-300 bg-rose-50 p-5">
+              <p className="text-sm font-extrabold text-rose-900">
+                على الشركة مستحقات لهذا العميل:{" "}
+                <SarAmountWithSymbol>
+                  {formatSarAmount(unsettledCustomerCreditSar)}
+                </SarAmountWithSymbol>
+              </p>
+              <p className="mt-1.5 text-xs leading-relaxed text-rose-800">
+                نشأت غالباً بعد تقليص مدة حجز مدفوع. تُسوَّى من قسم «مستحقات للعميل» —
+                نقداً أو استرداداً إلكترونياً على البطاقة — وليس من لوحة الاسترداد أدناه.
+              </p>
+              <Link
+                href="/admin/customer-dues"
+                className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-rose-700 px-4 py-2 text-xs font-bold text-white transition-opacity hover:opacity-95"
+              >
+                تسوية المستحقات
+                <span aria-hidden>←</span>
+              </Link>
+            </div>
+          ) : null}
+
           {/* استرداد */}
           <BookingFinanceOperationsPanel
             bookingId={id}
             paymentStatus={booking.paymentStatus}
             currentRefundAmount={booking.cancellationRefundAmountSar || 0}
             totalPaidAmountSar={booking.paidAmountSar ?? null}
+            paymentGatewayRef={booking.paymentGatewayRef ?? null}
+            paymentMethod={booking.paymentMethod}
           />
         </div>
 
@@ -276,6 +310,19 @@ export default async function BookingFinancePage({
                   <dd className="font-extrabold text-amber-700">
                     <SarAmountWithSymbol>
                       {formatSarAmount(booking.balanceDueAtBranchSar)}
+                    </SarAmountWithSymbol>
+                  </dd>
+                </div>
+              ) : null}
+
+              {/* مستحقات للعميل — تنشأ عند تقليص مدة حجز مدفوع. تُسوَّى من قسم
+                  «مستحقات للعميل»، وبدون عرضها هنا لا يرى الموظف أن على الشركة ديناً. */}
+              {unsettledCustomerCreditSar > 0 ? (
+                <div className="flex items-center justify-between gap-2">
+                  <dt className="font-medium text-on-surface-variant">مستحقات للعميل</dt>
+                  <dd className="font-extrabold text-rose-700">
+                    <SarAmountWithSymbol>
+                      {formatSarAmount(unsettledCustomerCreditSar)}
                     </SarAmountWithSymbol>
                   </dd>
                 </div>

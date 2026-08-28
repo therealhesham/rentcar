@@ -9,6 +9,7 @@ import {
   bookingWhereForScope,
   isBranchSlugInScope,
 } from "@/lib/admin-scope";
+import { VISIBLE_BOOKINGS_WHERE } from "@/lib/booking-visibility";
 import { prisma } from "@/lib/prisma";
 
 export function getAdminNavGroupsForSession(session: AdminSession): AdminNavGroup[] {
@@ -34,7 +35,13 @@ export function bookingBranchWhere(
   session: AdminSession,
   extra?: Prisma.BookingRequestWhereInput,
 ): Prisma.BookingRequestWhereInput {
-  return andScope(bookingWhereForScope(adminScope(session)), extra);
+  // يستبعد المؤرشف افتراضياً في كل صفحات اللوحة. الوحيد الذي يعرضه هو تبويب
+  // «مؤرشفة» بتجاوز `isHidden` صراحةً — ويصحّ لأن الاستدعاء هناك بلا `extra`
+  // فيعود الشرط مسطّحاً قابلاً للدهس، لا ملفوفاً في AND.
+  return andScope(
+    { ...bookingWhereForScope(adminScope(session)), ...VISIBLE_BOOKINGS_WHERE },
+    extra,
+  );
 }
 
 export async function requireAdminForAction(): Promise<

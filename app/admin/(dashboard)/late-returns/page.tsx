@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireAdminPage } from "@/lib/admin-page";
 import { adminScope, bookingWhereForScope } from "@/lib/admin-scope";
+import { VISIBLE_BOOKINGS_WHERE } from "@/lib/booking-visibility";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminCard } from "@/components/admin/AdminCard";
 import { AdminStatCard } from "@/components/admin/AdminStatCard";
@@ -25,7 +26,10 @@ function fmtWhen(d: Date | null): string {
 export default async function AdminLateReturnsPage() {
   const session = await requireAdminPage();
 
-  const scopeWhere = bookingWhereForScope(adminScope(session));
+  const scopeWhere = {
+    ...bookingWhereForScope(adminScope(session)),
+    ...VISIBLE_BOOKINGS_WHERE,
+  };
 
   const rows = await prisma.bookingRequest.findMany({
     where: { ...scopeWhere, lateReturnHours: { not: null } },

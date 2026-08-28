@@ -8,6 +8,7 @@ import {
 } from "@/lib/admin-access";
 import { currentRequestMeta, logActivity } from "@/lib/activity-log";
 import { isBookingPaymentMethod } from "@/lib/booking-payment-methods";
+import { executeCancellationRefundByPaymentMethod } from "@/lib/booking-refund-executor";
 import { prisma } from "@/lib/prisma";
 import { logBookingEvent } from "@/lib/booking-audit";
 import { recordPaymentTransaction } from "@/lib/payment-transaction";
@@ -19,6 +20,9 @@ import {
 
 /** هامش تقريب للمقارنات المالية (كسور الهللة). */
 const REFUND_EPS = 0.01;
+
+const CONCURRENT_REFUND_ERROR =
+  "تعذّر تنفيذ الاسترداد — تم تحديث حالة الطلب من عملية أخرى. حدّث الصفحة وحاول مجدداً.";
 
 export async function processBookingRefund(
   _prev: { ok: boolean; error?: string } | null,
@@ -42,6 +46,8 @@ export async function processBookingRefund(
   }
 
   const externalRef = String(formData.get("externalRef") || "").trim();
+  // ONLINE = استرداد فعلي على نفس مرجع الدفع لدى البوابة؛ MANUAL = تسجيل فقط.
+  const isOnline = String(formData.get("refundChannel") || "").trim().toUpperCase() === "ONLINE";
 
   const booking = await prisma.bookingRequest.findUnique({
     where: { id: bookingId },
@@ -49,6 +55,10 @@ export async function processBookingRefund(
       paymentStatus: true,
       cancellationRefundAmountSar: true,
       paidAmountSar: true,
+      paymentMethod: true,
+      paymentGatewayRef: true,
+      balanceDueAtBranchSar: true,
+      cancellationRefundExternalRef: true,
     },
   });
 
@@ -80,51 +90,106 @@ export async function processBookingRefund(
   // ولا قيمة الاسترداد منذ القراءة، لمنع الاسترداد المزدوج عند الطلبات المتزامنة.
   // سطر الاسترداد يُدرَج في الدفتر ذرّياً مع التحديث.
   // مرجع الموظف اليدوي أولاً؛ وإلا مرجع داخلي متتبّع (لا نستخدم بادئة MOCK لعملية حقيقية).
-  const refundRef = externalRef || `OFFICE-REFUND-${bookingId}-${Date.now()}`;
-  const applied = await prisma.$transaction(async (tx) => {
-    const res = await tx.bookingRequest.updateMany({
-      where: {
-        id: bookingId,
-        paymentStatus: { not: "REFUNDED" },
-        cancellationRefundAmountSar: booking.cancellationRefundAmountSar,
-      },
-      data: {
-        paymentStatus: fullyRefunded ? "REFUNDED" : "PARTIAL_REFUND",
-        cancellationRefundAmountSar: newRefundTotal,
-        cancellationRefundExternalRef: refundRef,
-        // الاسترداد الكامل يُلغي المعاملة: يُصفّى أي رصيد فرعي معلّق حتى لا يظهر
-        // الحجز المسترَدّ كمستحق للشركة. الاسترداد الجزئي يُبقي الرصيد (قد يبقى مديناً).
-        ...(fullyRefunded ? { balanceDueAtBranchSar: null } : {}),
-      },
-    });
-    if (res.count === 0) return false;
-    await recordPaymentTransaction(
-      {
-        bookingId,
-        kind: "REFUND",
-        amountSar: amount,
-        actorKind: "ADMIN",
-        actorName: auth.session.displayName,
-        externalRef: refundRef,
-        notes: fullyRefunded ? "استرداد كامل" : "استرداد جزئي",
-      },
-      tx,
-    );
-    return true;
-  });
+  let refundRef = externalRef || `OFFICE-REFUND-${bookingId}-${Date.now()}`;
 
-  if (!applied) {
-    return {
-      ok: false,
-      error: "تعذّر تنفيذ الاسترداد — تم تحديث حالة الطلب من عملية أخرى. حدّث الصفحة وحاول مجدداً.",
-    };
+  // الاسترداد الكامل يُلغي المعاملة: يُصفّى أي رصيد فرعي معلّق حتى لا يظهر الحجز
+  // المسترَدّ كمستحق للشركة. الاسترداد الجزئي يُبقي الرصيد (قد يبقى مديناً).
+  const claimData = {
+    paymentStatus: fullyRefunded ? "REFUNDED" : "PARTIAL_REFUND",
+    cancellationRefundAmountSar: newRefundTotal,
+    ...(fullyRefunded ? { balanceDueAtBranchSar: null } : {}),
+  };
+  const claimWhere = {
+    id: bookingId,
+    paymentStatus: { not: "REFUNDED" },
+    cancellationRefundAmountSar: booking.cancellationRefundAmountSar,
+  };
+
+  if (isOnline) {
+    if (!booking.paymentGatewayRef?.trim()) {
+      return {
+        ok: false,
+        error: "لا يوجد مرجع دفع لدى البوابة لهذا الحجز — استخدم التسجيل اليدوي.",
+      };
+    }
+
+    // تُحجَز الحالة (compare-and-swap) قبل تحريك أي مال: نقرتان متزامنتان لا تنتجان
+    // استردادين لدى البوابة. يُتراجع عن الحجز كاملاً إن رفضت البوابة.
+    const claimed = await prisma.bookingRequest.updateMany({
+      where: claimWhere,
+      data: { ...claimData, cancellationRefundExternalRef: `PENDING-ONLINE-${bookingId}-${Date.now()}` },
+    });
+    if (claimed.count === 0) return { ok: false, error: CONCURRENT_REFUND_ERROR };
+
+    const exec = await executeCancellationRefundByPaymentMethod({
+      bookingRequestId: bookingId,
+      paymentMethod: booking.paymentMethod,
+      refundAmountInclTaxSar: amount,
+    });
+
+    if (!exec.ok) {
+      // البوابة رفضت: تُعاد الحالة كما كانت بالضبط — لا سطر في الدفتر ولا مال تحرّك.
+      await prisma.bookingRequest.update({
+        where: { id: bookingId },
+        data: {
+          paymentStatus: booking.paymentStatus,
+          cancellationRefundAmountSar: booking.cancellationRefundAmountSar,
+          cancellationRefundExternalRef: booking.cancellationRefundExternalRef,
+          ...(fullyRefunded ? { balanceDueAtBranchSar: booking.balanceDueAtBranchSar } : {}),
+        },
+      });
+      return { ok: false, error: exec.error };
+    }
+
+    refundRef = exec.externalRef;
+    await prisma.$transaction(async (tx) => {
+      await tx.bookingRequest.update({
+        where: { id: bookingId },
+        data: { cancellationRefundExternalRef: refundRef },
+      });
+      await recordPaymentTransaction(
+        {
+          bookingId,
+          kind: "REFUND",
+          amountSar: amount,
+          actorKind: "ADMIN",
+          actorName: auth.session.displayName,
+          externalRef: refundRef,
+          notes: `${fullyRefunded ? "استرداد كامل" : "استرداد جزئي"} — عبر البوابة`,
+        },
+        tx,
+      );
+    });
+  } else {
+    const applied = await prisma.$transaction(async (tx) => {
+      const res = await tx.bookingRequest.updateMany({
+        where: claimWhere,
+        data: { ...claimData, cancellationRefundExternalRef: refundRef },
+      });
+      if (res.count === 0) return false;
+      await recordPaymentTransaction(
+        {
+          bookingId,
+          kind: "REFUND",
+          amountSar: amount,
+          actorKind: "ADMIN",
+          actorName: auth.session.displayName,
+          externalRef: refundRef,
+          notes: fullyRefunded ? "استرداد كامل" : "استرداد جزئي",
+        },
+        tx,
+      );
+      return true;
+    });
+
+    if (!applied) return { ok: false, error: CONCURRENT_REFUND_ERROR };
   }
 
   const meta = await currentRequestMeta();
   await logActivity({
     kind: "BOOKING_REFUND",
     path: `/admin/bookings/${bookingId}/finance`,
-    actorLabel: `${auth.session.displayName} — استرداد ${amount} ر.س`,
+    actorLabel: `${auth.session.displayName} — استرداد ${amount} ر.س${isOnline ? " عبر البوابة" : " (تسجيل يدوي)"}`,
     userId: auth.session.employeeId,
     ip: meta.ip,
     userAgent: meta.userAgent,
@@ -135,7 +200,7 @@ export async function processBookingRefund(
     event: "REFUND_PROCESSED",
     actorKind: "ADMIN",
     actorName: auth.session.displayName,
-    notes: `${amount} ر.س${externalRef ? ` — مرجع: ${externalRef}` : ""}`,
+    notes: `${amount} ر.س${isOnline ? " (عبر البوابة)" : ""} — مرجع: ${refundRef}`,
   });
 
   revalidatePath("/admin/financials");

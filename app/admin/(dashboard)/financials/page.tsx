@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { requireAdminPage } from "@/lib/admin-page";
 import { adminScope, bookingWhereForScope } from "@/lib/admin-scope";
+import { VISIBLE_BOOKINGS_WHERE } from "@/lib/booking-visibility";
 import { ReportExportButtons } from "@/components/admin/ReportExportButtons";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminCard } from "@/components/admin/AdminCard";
@@ -56,7 +57,11 @@ export default async function FinancialsPage(props: {
     };
   }
 
-  const baseWhere: Prisma.BookingRequestWhereInput = bookingWhereForScope(scope);
+  // المؤرشف مستبعد من كل أرقام هذه الصفحة — النطاق والرؤية في شرط واحد.
+  const baseWhere: Prisma.BookingRequestWhereInput = {
+    ...bookingWhereForScope(scope),
+    ...VISIBLE_BOOKINGS_WHERE,
+  };
 
   const combinedAnd = [baseWhere, searchWhere].filter(x => Object.keys(x).length > 0);
 

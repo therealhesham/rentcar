@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireAdminPage } from "@/lib/admin-page";
 import { adminScope, bookingWhereForScope } from "@/lib/admin-scope";
+import { VISIBLE_BOOKINGS_WHERE } from "@/lib/booking-visibility";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminCard } from "@/components/admin/AdminCard";
 import { AdminStatCard } from "@/components/admin/AdminStatCard";
@@ -25,7 +26,11 @@ function fmtDate(d: Date | null): string {
 export default async function CustomerDuesPage() {
   const session = await requireAdminPage();
 
-  const scopeWhere = bookingWhereForScope(adminScope(session));
+  // المؤرشف يخرج من المستحقات القائمة والمُسوّاة معاً.
+  const scopeWhere = {
+    ...bookingWhereForScope(adminScope(session)),
+    ...VISIBLE_BOOKINGS_WHERE,
+  };
 
   const [outstanding, settled] = await Promise.all([
     prisma.bookingRequest.findMany({

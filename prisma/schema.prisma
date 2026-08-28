@@ -732,6 +732,11 @@ model BookingRequest {
   legacyRef                     String?      @unique @db.VarChar(64)
 
 
+  /// أرشفة: تخفي الحجز عن العميل وعن لوحة الإدارة وكل الأقسام المالية دون حذف أي شيء.
+  /// يظهر في تبويب «مؤرشفة» لمدير النظام وحده ويمكن إرجاعه. الغرض استبعاد الحجوزات
+  /// التجريبية أو الخاطئة من الأرقام مع بقاء سجلها ودفترها كاملاً.
+  isHidden            Boolean              @default(false)
+
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   logs                BookingLog[]
@@ -739,6 +744,7 @@ model BookingRequest {
   extraCharges        BookingExtraCharge[]
   couponRedemption    CouponRedemption?
 
+  @@index([isHidden, createdAt])
   @@index([status, createdAt])
   @@index([branchId])
   @@index([returnBranchId])

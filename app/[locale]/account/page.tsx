@@ -10,6 +10,7 @@ import { isCashPaymentMethod } from "@/lib/booking-cash-flow";
 import { bookingStatusLabelAr } from "@/lib/booking-display-labels";
 import { computeCancellationRefundBreakdown } from "@/lib/booking-cancellation-refund";
 import { resolveBookingRentalPricePerDayExclTax } from "@/lib/booking-pricing-snapshot";
+import { VISIBLE_BOOKINGS_WHERE } from "@/lib/booking-visibility";
 import {
   bookingDaysPriceInputFromSnapshot,
   bookingTotalInclTaxForDays,
@@ -109,6 +110,7 @@ export default async function AccountDashboardPage() {
 
   const bookings = await prisma.bookingRequest.findMany({
     where: {
+      ...VISIBLE_BOOKINGS_WHERE,
       OR: [
         { customerId: profile.id },
         ...(profile.phone ? [{ phone: profile.phone }] : []),

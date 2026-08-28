@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import type { Prisma } from "@prisma/client";
 import { getCustomerProfile } from "@/lib/customer-auth";
 import { prisma } from "@/lib/prisma";
+import { VISIBLE_BOOKINGS_WHERE } from "@/lib/booking-visibility";
 
 /** مسارات مسموح العودة إليها بعد تسجيل الدخول. */
 export function safeCustomerReturnPath(next: string | null | undefined): string {
@@ -47,6 +48,8 @@ export async function bookingBelongsToCustomer(
     where: {
       id: bookingRequestId,
       kind: "DIRECT",
+      // المؤرشف محجوب عن العميل تماماً: لا صفحة دفع ولا تعديل ولا إلغاء.
+      ...VISIBLE_BOOKINGS_WHERE,
       ...customerBookingOwnershipWhere(customerId, customerPhone),
     },
     select: { id: true },

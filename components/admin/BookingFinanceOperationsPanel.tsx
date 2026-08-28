@@ -2,25 +2,35 @@
 
 import { useState, useActionState } from "react";
 import { processBookingRefund, reverseBookingRefund } from "@/app/admin/booking-finance-actions";
-import { AlertCircle, CheckCircle2, Loader2, ArrowLeftRight, Undo2 } from "lucide-react";
+import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
+import { AlertCircle, CheckCircle2, Loader2, ArrowLeftRight, Undo2, CreditCard, FileText } from "lucide-react";
 
 export function BookingFinanceOperationsPanel({
   bookingId,
   paymentStatus,
   currentRefundAmount = 0,
   totalPaidAmountSar = null,
+  paymentGatewayRef = null,
+  paymentMethod = null,
 }: {
   bookingId: number;
   paymentStatus: string;
   currentRefundAmount?: number;
   totalPaidAmountSar?: number | null;
+  /** مرجع الدفع لدى البوابة — بدونه لا استرداد إلكتروني ممكن. */
+  paymentGatewayRef?: string | null;
+  paymentMethod?: string | null;
 }) {
   const [isPartial, setIsPartial] = useState(false);
+  const [isOnline, setIsOnline] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [state, formAction, isPending] = useActionState(processBookingRefund, null);
   const [revState, revAction, revPending] = useActionState(reverseBookingRefund, null);
   const [reverseAmount, setReverseAmount] = useState<string>(String(currentRefundAmount || ""));
 
   const statusKey = paymentStatus.trim().toUpperCase();
+  const onlineAvailable = Boolean(paymentGatewayRef?.trim());
+  const methodLabel = paymentMethod ? bookingPaymentMethodLabelAr(paymentMethod) : "البوابة";
 
   // عند استرداد كامل، المبلغ يُحسب تلقائياً من المبلغ المدفوع مطروحاً منه ما سبق استرداده
   const remainingAmount =
@@ -68,6 +78,7 @@ export function BookingFinanceOperationsPanel({
         <form action={formAction} className="space-y-5">
           <input type="hidden" name="bookingId" value={bookingId} />
           <input type="hidden" name="isPartial" value={isPartial.toString()} />
+          <input type="hidden" name="refundChannel" value={isOnline ? "ONLINE" : "MANUAL"} />
 
           {state?.error ? (
             <div className="flex items-center gap-2 rounded-xl bg-error-container/50 p-3 text-sm font-semibold text-error">
@@ -82,6 +93,51 @@ export function BookingFinanceOperationsPanel({
               <span>تمت عملية الاسترداد بنجاح.</span>
             </div>
           ) : null}
+
+          <div>
+            <label className="mb-1.5 block text-sm font-bold text-on-surface">
+              طريقة الاسترداد
+            </label>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => setIsOnline(true)}
+                disabled={!onlineAvailable}
+                title={
+                  onlineAvailable
+                    ? undefined
+                    : "هذا الحجز لم يُدفع عبر البوابة — لا يوجد مرجع لاسترداده إلكترونياً."
+                }
+                className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${
+                  isOnline
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-outline-variant/40 bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-low"
+                }`}
+              >
+                <CreditCard className="h-4 w-4" />
+                استرداد أونلاين ({methodLabel})
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsOnline(false)}
+                className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-bold transition-colors ${
+                  !isOnline
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-outline-variant/40 bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-low"
+                }`}
+              >
+                <FileText className="h-4 w-4" />
+                تسجيل يدوي
+              </button>
+            </div>
+            <p className="mt-2 text-xs leading-relaxed text-on-surface-variant">
+              {isOnline
+                ? "ترجع الفلوس فعلياً على نفس البطاقة عبر مرجع الدفعة الأصلية — عملية حقيقية لا تراجع فيها."
+                : onlineAvailable
+                  ? "تسجيل في النظام فقط — استخدمها إن كنت ستحوّل المبلغ بطريقة أخرى."
+                  : "هذا الحجز لم يُدفع عبر البوابة، فالتسجيل اليدوي هو الخيار الوحيد."}
+            </p>
+          </div>
 
           <div>
             <label className="mb-1.5 block text-sm font-bold text-on-surface">
@@ -148,27 +204,58 @@ export function BookingFinanceOperationsPanel({
             )}
           </div>
 
-          <div>
-            <label htmlFor="externalRef" className="mb-1.5 block text-sm font-bold text-on-surface">
-              الرقم المرجعي للعملية (اختياري)
-            </label>
-            <input
-              type="text"
-              id="externalRef"
-              name="externalRef"
-              className="w-full rounded-xl border-outline-variant/40 bg-surface-container-lowest px-4 py-2.5 text-sm font-medium text-on-surface outline-none ring-primary/50 transition-all focus:border-primary focus:ring-2"
-              placeholder="مثال: REF-123456"
-            />
-          </div>
+          {isOnline ? null : (
+            <div>
+              <label htmlFor="externalRef" className="mb-1.5 block text-sm font-bold text-on-surface">
+                الرقم المرجعي للعملية (اختياري)
+              </label>
+              <input
+                type="text"
+                id="externalRef"
+                name="externalRef"
+                className="w-full rounded-xl border-outline-variant/40 bg-surface-container-lowest px-4 py-2.5 text-sm font-medium text-on-surface outline-none ring-primary/50 transition-all focus:border-primary focus:ring-2"
+                placeholder="مثال: REF-123456"
+              />
+            </div>
+          )}
 
-          <button
-            type="submit"
-            disabled={isPending}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-on-primary transition-opacity hover:opacity-95 disabled:opacity-70"
-          >
-            {isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <ArrowLeftRight className="h-5 w-5" />}
-            {isPending ? "جاري المعالجة..." : "تنفيذ الاسترداد"}
-          </button>
+          {/* الاسترداد الإلكتروني يحرّك مالاً حقيقياً على بطاقة العميل — تأكيد صريح قبله. */}
+          {isOnline && confirming ? (
+            <div className="space-y-3 rounded-xl border border-amber-300 bg-amber-50 p-4">
+              <p className="text-sm font-bold leading-relaxed text-amber-900">
+                سيُرَدّ {amountValue || "—"} ر.س فعلياً على بطاقة العميل عبر {methodLabel}. لا يمكن
+                التراجع عن العملية من هنا.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="submit"
+                  disabled={isPending}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-700 px-5 py-2.5 text-sm font-bold text-white transition-opacity hover:opacity-95 disabled:opacity-70"
+                >
+                  {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+                  {isPending ? "جاري التنفيذ..." : "تأكيد الاسترداد الفعلي"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirming(false)}
+                  disabled={isPending}
+                  className="rounded-xl border border-outline-variant/40 px-5 py-2.5 text-sm font-bold text-on-surface-variant hover:bg-surface-container-low disabled:opacity-70"
+                >
+                  رجوع
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type={isOnline ? "button" : "submit"}
+              onClick={isOnline ? () => setConfirming(true) : undefined}
+              disabled={isPending}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-on-primary transition-opacity hover:opacity-95 disabled:opacity-70"
+            >
+              {isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <ArrowLeftRight className="h-5 w-5" />}
+              {isPending ? "جاري المعالجة..." : isOnline ? "مراجعة وتنفيذ الاسترداد" : "تنفيذ الاسترداد"}
+            </button>
+          )}
         </form>
       )}
 
