@@ -38,7 +38,9 @@ export async function sendDroppedBookingNotificationAction(
     return { ok: false, error: "تم إرسال الإشعار لهذا الحجز بالفعل." };
   }
 
-  await sendNewBookingNotificationEmails(bookingId);
+  // إرسال يدوي مقصود: يتجاوز شرط "لسه ما اختارش وسيلة دفع" لأن الغرض هنا بالتحديد
+  // تنبيه الموظفين عن حجز/محاولة حجز حتى لو العميل سابها قبل ما يكمل الدفع.
+  await sendNewBookingNotificationEmails(bookingId, { bypassAwaitingPaymentChoice: true });
 
   // الدالة تبتلع أخطاءها ولا ترمي شيئاً — النتيجة الوحيدة الموثوقة هي فحص العلامة
   // في BookingLog بعد المحاولة لمعرفة هل الإرسال تم فعلاً.
@@ -52,8 +54,7 @@ export async function sendDroppedBookingNotificationAction(
   if (!sent) {
     return {
       ok: false,
-      error:
-        "لم يُرسل الإشعار — على الأرجح العميل لم يختر وسيلة دفع بعد، أو لا يوجد موظفون مفعَّل لهم استلام إشعار هذا الفرع.",
+      error: "لم يُرسل الإشعار — لا يوجد موظفون مفعَّل لهم استلام إشعار هذا الفرع.",
     };
   }
   return { ok: true };

@@ -235,7 +235,10 @@ async function claimStaffNotification(bookingRequestId: number): Promise<boolean
  * لو مفيش أي TO (فرع بلا موظف ولا مدينة ولا TO عام)، تُرسَل الرسالة لمستلمي CC وحدهم.
  * لا يرمي أي خطأ للخارج (فشل الإرسال ما يفشّلش تسجيل الحجز نفسه).
  */
-export async function sendNewBookingNotificationEmails(bookingRequestId: number): Promise<void> {
+export async function sendNewBookingNotificationEmails(
+  bookingRequestId: number,
+  opts?: { bypassAwaitingPaymentChoice?: boolean },
+): Promise<void> {
   try {
     const row = await prisma.bookingRequest.findUnique({
       where: { id: bookingRequestId },
@@ -260,7 +263,7 @@ export async function sendNewBookingNotificationEmails(bookingRequestId: number)
       },
     });
     if (!row) return;
-    if (isAwaitingPaymentChoice(row)) return;
+    if (!opts?.bypassAwaitingPaymentChoice && isAwaitingPaymentChoice(row)) return;
 
     const targetBranchId = row.branchId ?? row.returnBranchId;
     const targetCityId = row.pickupBranch?.cityId ?? row.returnBranch?.cityId ?? null;
