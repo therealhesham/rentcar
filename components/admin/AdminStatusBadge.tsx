@@ -1,5 +1,6 @@
 import { bookingStatusLabelAr, bookingPaymentStatusLabelAr } from "@/lib/booking-display-labels";
 import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
+import { isGeideaHostedCheckoutMethod } from "@/lib/checkout-payment-method-flags";
 const STATUS_STYLES: Record<string, string> = {
   NEW: "bg-[#fff7ed] text-[#9a3412] ring-[#fdba74]/40",
   UNDER_REVIEW: "bg-[#fef3c7] text-[#b45309] ring-[#fcd34d]/50",
@@ -45,10 +46,13 @@ export function AdminPaymentBadge({
   paymentStatus,
   paymentMethod,
   balanceDueAtBranchSar,
+  paymentGatewayRef,
 }: {
   paymentStatus: string | null;
   paymentMethod: string | null;
   balanceDueAtBranchSar?: number | null;
+  /** مرجع جيديا — لا يُكتب إلا لدفعة مرّت بالبوابة فعلاً، فهو الفيصل بين أونلاين والفرع. */
+  paymentGatewayRef?: string | null;
 }) {
   const code = (paymentStatus || "PENDING").trim().toUpperCase();
   const isPartiallyPaid = code === "PAID" && (balanceDueAtBranchSar ?? 0) > 0;
@@ -65,12 +69,22 @@ export function AdminPaymentBadge({
   const methodLabel = paymentMethod ? bookingPaymentMethodLabelAr(paymentMethod) : null;
   const statusLabel = isPartiallyPaid ? "مدفوع جزئياً" : bookingPaymentStatusLabelAr(code);
 
+  // مدى/البطاقة/Apple Pay وحدها تحتمل المعنيين: أونلاين عبر جيديا أو على جهاز الفرع.
+  // النقد وتابي لا لبس فيهما، فلا تُضاف لهما القناة.
+  const channelLabel =
+    code !== "PENDING" && paymentMethod && isGeideaHostedCheckoutMethod(paymentMethod)
+      ? paymentGatewayRef?.trim()
+        ? "أونلاين"
+        : "الفرع"
+      : null;
+
   return (
     <span
       className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold ring-1 ring-inset ${style}`}
     >
       {statusLabel}
       {methodLabel ? ` · ${methodLabel}` : ""}
+      {channelLabel ? <span className="opacity-70">{` · ${channelLabel}`}</span> : null}
     </span>
   );
 }

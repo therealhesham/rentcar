@@ -266,6 +266,7 @@ export default async function AdminDashboardPage(props: {
     paymentStatus: request.paymentStatus ?? null,
     paidAt: request.paidAt ? request.paidAt.toISOString() : null,
     paymentMethod: request.paymentMethod ?? null,
+    paymentGatewayRef: request.paymentGatewayRef ?? null,
     idDocumentKind: request.idDocumentKind ?? null,
     nationalIdNumber: request.nationalIdNumber ?? null,
     passportNumber: request.passportNumber ?? null,

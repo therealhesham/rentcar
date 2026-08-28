@@ -41,6 +41,8 @@ export type DashboardBookingRow = {
   paymentStatus: string | null;
   paidAt: string | null;
   paymentMethod: string | null;
+  /** مرجع جيديا — وجوده يميّز الدفع أونلاين عن التسجيل اليدوي في الفرع. */
+  paymentGatewayRef: string | null;
   idDocumentKind: string | null;
   nationalIdNumber: string | null;
   passportNumber: string | null;
@@ -171,10 +173,11 @@ export function AdminDashboardBookingsSection({ rows, categories, models }: Prop
               <div className="min-w-0">
                 <div className="flex flex-wrap gap-2">
                   <AdminStatusBadge status={request.status} />
-                  <AdminPaymentBadge 
-                    paymentStatus={request.paymentStatus} 
+                  <AdminPaymentBadge
+                    paymentStatus={request.paymentStatus}
                     paymentMethod={request.paymentMethod}
                     balanceDueAtBranchSar={request.balanceDueAtBranchSar}
+                    paymentGatewayRef={request.paymentGatewayRef}
                   />
                   {request.balanceDueAtBranchSar && request.balanceDueAtBranchSar > 0 ? (
                     <span className="inline-flex items-center gap-1 rounded-md bg-error-container/20 px-2 py-0.5 text-[10px] font-bold text-error border border-error/20">
@@ -321,10 +324,11 @@ export function AdminDashboardBookingsSection({ rows, categories, models }: Prop
                       <td className="px-4 py-3 align-top">
                         <div className="flex flex-col items-start gap-1.5">
                           <AdminStatusBadge status={request.status} />
-                          <AdminPaymentBadge 
-                            paymentStatus={request.paymentStatus} 
-                            paymentMethod={request.paymentMethod} 
-                            balanceDueAtBranchSar={request.balanceDueAtBranchSar} 
+                          <AdminPaymentBadge
+                            paymentStatus={request.paymentStatus}
+                            paymentMethod={request.paymentMethod}
+                            balanceDueAtBranchSar={request.balanceDueAtBranchSar}
+                            paymentGatewayRef={request.paymentGatewayRef}
                           />
                           {request.balanceDueAtBranchSar && request.balanceDueAtBranchSar > 0 ? (
                             <span className="inline-flex items-center gap-1 rounded-md bg-error-container/20 px-2 py-0.5 text-[10px] font-bold text-error border border-error/20">
