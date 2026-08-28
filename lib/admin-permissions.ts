@@ -22,6 +22,11 @@ const EXTRA_PAGE_PERMISSIONS: AdminPagePermission[] = [
     label: "أداة اختبار بوابة جيديا",
     groupLabel: "الإدارة المالية",
   },
+  {
+    href: "/admin/booking-notification-drops",
+    label: "حجوزات بلا إشعار (دروب الدفع)",
+    groupLabel: "الحجوزات والعملاء",
+  },
   // لازم تتسجّل مستقلة: بدونها يطابقها resolveAdminPagePermissionId بـ `/admin/vehicles`
   // فتاخد صلاحية عرض المركبات حق الاستيراد الجماعي بالغلط.
   {

@@ -128,6 +128,7 @@ const ADMIN_PAGE_LABELS: Array<[RegExp, string]> = [
   [/^\/admin\/system-guides/, "شروحات النظام"],
   [/^\/admin\/profile/, "ملفي الشخصي"],
   [/^\/admin\/test-geidea/, "اختبار بوابة جيديا"],
+  [/^\/admin\/booking-notification-drops/, "حجوزات بلا إشعار"],
 ];
 
 /** اسم عربي مفهوم للصفحة، أو `null` لو المسار غير معروف (يُعرض المسار الخام حينها). */
