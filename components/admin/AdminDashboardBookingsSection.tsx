@@ -5,6 +5,7 @@ import { AdminStatusBadge, AdminPaymentBadge } from "@/components/admin/AdminSta
 import { EditBookingRequestForm } from "@/components/admin/EditBookingRequestForm";
 import { BookingListQuickActions } from "@/components/admin/BookingListQuickActions";
 import { AdminQuickPaymentModal } from "@/components/admin/AdminQuickPaymentModal";
+import { BookingArchiveIconButton } from "@/components/admin/BookingArchiveIconButton";
 import { BookingRowActionsDropdown } from "@/components/admin/BookingRowActionsDropdown";
 
 /** بداية اليوم التقويمي بتوقيت الرياض — لتجميع «اليوم/الأمس» بنفس التوقيت المعروض. */
@@ -242,7 +243,7 @@ export function AdminDashboardBookingsSection({
               <div className="text-[11px] text-on-surface-variant">{request.createdAtLabel}</div>
             </dl>
 
-            {request.status !== "CANCELLED" && request.status !== "REJECTED" && (
+            {request.status !== "CANCELLED" && request.status !== "REJECTED" ? (
               <div className="mt-3 border-t border-outline-variant/10 pt-3 flex justify-end">
                 <BookingRowActionsDropdown
                   request={editRequestPayload(request)}
@@ -254,7 +255,12 @@ export function AdminDashboardBookingsSection({
                   isHidden={request.isHidden}
                 />
               </div>
-            )}
+            ) : canArchive ? (
+              // الملغي/المرفوض بلا قائمة إجراءات، فتظهر الأرشفة وحدها مكانها.
+              <div className="mt-3 border-t border-outline-variant/10 pt-3 flex justify-end">
+                <BookingArchiveIconButton bookingId={request.id} isHidden={request.isHidden} />
+              </div>
+            ) : null}
           </li>
         ))}
               </ul>
@@ -359,6 +365,12 @@ export function AdminDashboardBookingsSection({
                             categories={categories}
                             models={models}
                             canArchive={canArchive}
+                            isHidden={request.isHidden}
+                          />
+                        ) : canArchive ? (
+                          // الملغي/المرفوض بلا قائمة إجراءات، فتظهر الأرشفة وحدها مكانها.
+                          <BookingArchiveIconButton
+                            bookingId={request.id}
                             isHidden={request.isHidden}
                           />
                         ) : (
