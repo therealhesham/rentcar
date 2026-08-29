@@ -135,8 +135,11 @@ export async function confirmMockPayment(
       fullName: true,
       phone: true,
       contactEmail: true,
-      customer: { select: { email: true } },
+      customer: { select: { email: true, createdAt: true } },
       carModel: { select: { name: true, brand: { select: { name: true } } } },
+      pickupMode: true,
+      deliveryAddress: true,
+      pickupBranch: { select: { address: true, city: { select: { name: true } } } },
     },
   });
   if (!bookingGate) {
@@ -152,6 +155,12 @@ export async function confirmMockPayment(
       error: "بدأ موعد استلام هذا الحجز، لا يمكن إتمام الدفع من الحساب. يرجى التواصل مع الدعم.",
     };
   }
+
+  // عنوان الشحن لتابي: عنوان التوصيل لو الحجز توصيل، وإلا عنوان فرع الاستلام.
+  const tabbyShippingAddress =
+    bookingGate.pickupMode === "DELIVERY"
+      ? { city: bookingGate.pickupBranch?.city?.name, address: bookingGate.deliveryAddress }
+      : { city: bookingGate.pickupBranch?.city?.name, address: bookingGate.pickupBranch?.address };
 
   const isCash = paymentMethod === "CASH";
 
@@ -183,6 +192,11 @@ export async function confirmMockPayment(
             email: bookingGate.contactEmail || bookingGate.customer?.email || undefined,
             name: bookingGate.fullName || undefined,
           },
+          buyerHistory: {
+            registeredSinceIso: bookingGate.customer?.createdAt?.toISOString() ?? null,
+            loyaltyLevel: 0,
+          },
+          shippingAddress: tabbyShippingAddress,
           items: [
             {
               title: `${bookingGate.carModel?.brand?.name ?? ""} ${bookingGate.carModel?.name ?? ""}`.trim() || `فرق تمديد حجز #${id}`,
@@ -311,6 +325,11 @@ export async function confirmMockPayment(
           email: bookingGate.contactEmail || bookingGate.customer?.email || undefined,
           name: bookingGate.fullName || undefined,
         },
+        buyerHistory: {
+          registeredSinceIso: bookingGate.customer?.createdAt?.toISOString() ?? null,
+          loyaltyLevel: 0,
+        },
+        shippingAddress: tabbyShippingAddress,
         items: [
           {
             title: `${bookingGate.carModel?.brand?.name ?? ""} ${bookingGate.carModel?.name ?? ""}`.trim() || `حجز سيارة #${id}`,

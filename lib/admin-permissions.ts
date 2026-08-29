@@ -23,6 +23,11 @@ const EXTRA_PAGE_PERMISSIONS: AdminPagePermission[] = [
     groupLabel: "الإدارة المالية",
   },
   {
+    href: "/admin/test-tabby",
+    label: "أداة اختبار بوابة تابي",
+    groupLabel: "الإدارة المالية",
+  },
+  {
     href: "/admin/booking-notification-drops",
     label: "حجوزات بلا إشعار (دروب الدفع)",
     groupLabel: "الحجوزات والعملاء",

@@ -3,7 +3,7 @@ import { AdminCard } from "@/components/admin/AdminCard";
 import { SendDroppedBookingNotificationButton } from "@/components/admin/SendDroppedBookingNotificationButton";
 import { requireAdminPage } from "@/lib/admin-page";
 import { bookingBranchWhere } from "@/lib/admin-access";
-import { BOOKING_EVENTS } from "@/lib/booking-audit";
+import { droppedNotificationWhere } from "@/lib/booking-notification-drops";
 import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
 import { prisma } from "@/lib/prisma";
 
@@ -40,16 +40,8 @@ function reasonFor(row: {
 export default async function BookingNotificationDropsPage() {
   const session = await requireAdminPage();
 
-  const now = new Date();
-  const since = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-  // نتجاهل آخر ١٥ دقيقة حتى ما نزعجش عميل لسه في منتصف عملية الدفع فعلياً.
-  const staleBefore = new Date(now.getTime() - 15 * 60 * 1000);
-
   const bookings = await prisma.bookingRequest.findMany({
-    where: bookingBranchWhere(session, {
-      createdAt: { gte: since, lte: staleBefore },
-      logs: { none: { event: BOOKING_EVENTS.STAFF_BOOKING_EMAIL_SENT } },
-    }),
+    where: bookingBranchWhere(session, droppedNotificationWhere()),
     orderBy: { createdAt: "asc" },
     take: 200,
     select: {

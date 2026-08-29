@@ -86,6 +86,13 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         icon: "credit-card",
         superAdminOnly: true,
       },
+      {
+        // الصفحة نفسها تقصر الدخول على TABBY_REPORT_EMAIL فوق فحص السوبر أدمن هذا.
+        href: "/admin/tabby-payments",
+        label: "مدفوعات تابي",
+        icon: "credit-card",
+        superAdminOnly: true,
+      },
     ],
   },
   {

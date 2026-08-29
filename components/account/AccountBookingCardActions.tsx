@@ -330,7 +330,7 @@ export function AccountBookingCardActions({
           {bookingStarted ? null : (
             <button
               type="button"
-              disabled={cancelPastDeadline || isTerminal}
+              disabled={true /* cancelPastDeadline || isTerminal */}
               title={cancelDeadlineTitle}
               onClick={() => {
                 setCancelError(null);

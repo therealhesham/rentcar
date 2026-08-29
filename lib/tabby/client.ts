@@ -95,6 +95,12 @@ export type TabbyBuyerInfo = {
   dob?: string | null;
 };
 
+export type TabbyShippingAddress = {
+  city?: string | null;
+  address?: string | null;
+  zip?: string | null;
+};
+
 export type TabbyOrderItem = {
   title: string;
   description?: string;
@@ -160,6 +166,10 @@ export async function createTabbyCheckoutSession(args: {
   bookingRequestId: number;
   amountSar: number;
   buyer: TabbyBuyerInfo;
+  /** سياق العميل لتقييم مخاطر تابي — يُحذف من الحمولة لو غير متوفر (مثلاً أداة الاختبار الداخلية). */
+  buyerHistory?: { registeredSinceIso?: string | null; loyaltyLevel?: number };
+  /** عنوان فرع الاستلام أو عنوان التوصيل — مطلوب حسب توثيق تابي. */
+  shippingAddress?: TabbyShippingAddress;
   items?: TabbyOrderItem[];
   successUrl: string;
   cancelUrl: string;
@@ -203,6 +213,23 @@ export async function createTabbyCheckoutSession(args: {
         name: args.buyer.name || "Customer",
         dob: args.buyer.dob || undefined,
       },
+      ...(args.buyerHistory
+        ? {
+            buyer_history: {
+              registered_since: args.buyerHistory.registeredSinceIso || undefined,
+              loyalty_level: args.buyerHistory.loyaltyLevel ?? 0,
+            },
+          }
+        : {}),
+      ...(args.shippingAddress
+        ? {
+            shipping_address: {
+              city: args.shippingAddress.city || undefined,
+              address: args.shippingAddress.address || undefined,
+              zip: args.shippingAddress.zip || "",
+            },
+          }
+        : {}),
       order: {
         tax_amount: "0.00",
         shipping_amount: "0.00",
