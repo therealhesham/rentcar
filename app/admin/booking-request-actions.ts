@@ -201,6 +201,8 @@ export async function updateBookingRequest(
       branchId: true,
       returnBranchId: true,
       adminNotes: true,
+      carModelId: true,
+      carModel: { select: { name: true, brand: { select: { name: true } } } },
     },
   });
 
@@ -251,6 +253,34 @@ export async function updateBookingRequest(
   // أثر التعديل في سجل الحجز — بدونه يرى الموظف التواريخ الجديدة بلا أي بيان
   // لمن غيّرها ولا ما كانت عليه. مطابِق لما يُسجَّل عند تعديل العميل الذاتي.
   const [daysBefore, daysAfter] = result.changes?.numberOfDays ?? [0, 0];
+
+  // تبديل الموديل: يظهر بوضوح في السجل — كان يُحفظ فقط في meta غير المعروضة،
+  // فيبدو للموظف كأن السيارة لم تتغيّر أبداً.
+  const oldModelId = beforeUpdate?.carModelId ?? null;
+  const newModelId =
+    Number.isInteger(directModelId) && directModelId > 0 ? directModelId : null;
+  const carModelChanged =
+    oldModelId != null && newModelId != null && oldModelId !== newModelId;
+  let carModelChangeNote: string | undefined;
+  if (carModelChanged) {
+    const oldLabel = beforeUpdate?.carModel
+      ? `${beforeUpdate.carModel.brand.name} ${beforeUpdate.carModel.name}`
+      : `موديل #${oldModelId}`;
+    const newModel = await prisma.carModel.findUnique({
+      where: { id: newModelId },
+      select: { name: true, brand: { select: { name: true } } },
+    });
+    const newLabel = newModel ? `${newModel.brand.name} ${newModel.name}` : `موديل #${newModelId}`;
+    carModelChangeNote = `السيارة: ${oldLabel} ← ${newLabel}`;
+  }
+
+  const notes = [
+    daysBefore !== daysAfter ? `المدة: ${daysBefore} ← ${daysAfter} يوم` : null,
+    carModelChangeNote ?? null,
+  ]
+    .filter((n): n is string => Boolean(n))
+    .join(" — ");
+
   await logBookingEvent({
     bookingId: bookingRequestId,
     event: "BOOKING_UPDATED",
@@ -258,12 +288,12 @@ export async function updateBookingRequest(
     actorName: auth.session.displayName,
     fromStatus: beforeUpdate?.status,
     toStatus: status,
-    notes:
-      daysBefore !== daysAfter ? `المدة: ${daysBefore} ← ${daysAfter} يوم` : undefined,
+    notes: notes || undefined,
     meta: {
       numberOfDaysBefore: daysBefore,
       numberOfDaysAfter: daysAfter,
       snapshotTotalAmountSar: result.changes?.snapshotTotalAmountSar ?? null,
+      ...(carModelChanged ? { carModelIdBefore: oldModelId, carModelIdAfter: newModelId } : {}),
       ...(result.creditForCustomerSar ? { creditForCustomerSar: result.creditForCustomerSar } : {}),
     },
   });
