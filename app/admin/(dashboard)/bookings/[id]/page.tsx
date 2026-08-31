@@ -61,9 +61,8 @@ export default async function AdminBookingDetailPage({
     );
   }
 
-  const [booking, editContext, logs] = await Promise.all([
+  const [booking, logs] = await Promise.all([
     loadAdminBookingDetail(id),
-    loadAdminBookingEditContext(),
     prisma.bookingLog.findMany({
       where: { bookingId: id },
       orderBy: { createdAt: "desc" },
@@ -81,9 +80,21 @@ export default async function AdminBookingDetailPage({
   ]);
   if (!booking) notFound();
 
-  const cancellation = await loadAdminBookingCancellationContext(booking);
-
   const editable = toEditableBookingRow(booking);
+
+  const [cancellation, editContext] = await Promise.all([
+    loadAdminBookingCancellationContext(booking),
+    loadAdminBookingEditContext(
+      editable.kind === "DIRECT"
+        ? {
+            branchSlug: editable.branch,
+            pickupDate: new Date(editable.pickupIso),
+            numberOfDays: editable.numberOfDays,
+            excludeBookingRequestId: booking.id,
+          }
+        : undefined,
+    ),
+  ]);
 
   const canEditBooking =
     session.isSuperAdmin || session.permissions.includes("BOOKING_EDIT");

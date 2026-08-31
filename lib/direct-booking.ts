@@ -570,6 +570,78 @@ export async function listAvailableCarModelIds(input: {
   return available;
 }
 
+/**
+ * نسخة مجمّعة من `listAvailableCarModelIds`: استعلامان ثابتان بدل استعلامين
+ * لكل موديل (نفس أسلوب `listCheckoutAlternatives`). تقبل استثناء حجز حالٍ حتى
+ * لا يحجب الحجز نفسه عن موديله أثناء تعديله من لوحة الإدارة.
+ */
+export async function listAvailableCarModelIdsBulk(input: {
+  pickupDate: Date;
+  numberOfDays: number;
+  /** فرع الإرجاع — يُعرض فقط الموديلات المتوفرة في هذا الفرع */
+  branchSlug: string;
+  excludeBookingRequestId?: number;
+}): Promise<number[]> {
+  const { getBookingWidgetTabFlags } = await import("@/lib/site-settings");
+  const tabFlags = await getBookingWidgetTabFlags();
+
+  const safeDays = safeBookingDays(input.numberOfDays);
+  const branchSlug = input.branchSlug.trim().toLowerCase();
+
+  const stockRows = await prisma.fleet.findMany({
+    where: {
+      isVisible: true,
+      quantity: { gt: 0 },
+      branch: { slug: branchSlug, isActive: true },
+    },
+    select: { modelId: true, quantity: true },
+  });
+  if (!stockRows.length) return [];
+
+  const unitsByModel = new Map<number, number>();
+  for (const row of stockRows) {
+    unitsByModel.set(row.modelId, (unitsByModel.get(row.modelId) ?? 0) + row.quantity);
+  }
+
+  if (tabFlags.allowOverbooking) {
+    return [...unitsByModel.keys()];
+  }
+
+  const bookings = await prisma.bookingRequest.findMany({
+    where: {
+      kind: "DIRECT",
+      carModelId: { in: [...unitsByModel.keys()] },
+      NOT: { status: { in: [...NON_BLOCKING_BOOKING_STATUSES] } },
+      returnBranch: { slug: branchSlug },
+      ...(input.excludeBookingRequestId
+        ? { id: { not: input.excludeBookingRequestId } }
+        : {}),
+    },
+    select: { carModelId: true, pickupDate: true, numberOfDays: true, addonsJson: true },
+  });
+
+  const rowsByModel = new Map<number, typeof bookings>();
+  for (const b of bookings) {
+    if (b.carModelId == null) continue;
+    const list = rowsByModel.get(b.carModelId);
+    if (list) list.push(b);
+    else rowsByModel.set(b.carModelId, [b]);
+  }
+
+  const turnaroundMinutes = await getFleetTurnaroundMinutes();
+  const available: number[] = [];
+  for (const [modelId, units] of unitsByModel) {
+    const overlapping = countOverlapsFromRows(
+      rowsByModel.get(modelId) ?? [],
+      input.pickupDate,
+      safeDays,
+      { turnaroundMinutes },
+    );
+    if (overlapping < units) available.push(modelId);
+  }
+  return available;
+}
+
 export class DirectBookingCapacityError extends Error {
   readonly code: "NO_FLEET" | "SLOT_FULL";
 

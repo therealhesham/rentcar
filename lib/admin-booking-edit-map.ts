@@ -36,7 +36,7 @@ export function toEditableBookingRow(booking: AdminBookingDetail): EditableBooki
     status: booking.status,
     carModelId: booking.carModelId,
     carModelLabel: booking.carModel
-      ? `${booking.carModel.brand.name} ${booking.carModel.name}`
+      ? `${booking.carModel.brand.name} ${booking.carModel.name} ${booking.carModel.year}`
       : null,
     addonsJson: booking.addonsJson,
     paymentStatus: booking.paymentStatus,
