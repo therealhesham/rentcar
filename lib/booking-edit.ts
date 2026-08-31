@@ -62,6 +62,95 @@ export function bookingTotalInclTaxForDays(
   return totals.totalInclTax;
 }
 
+export type BalanceInputBooking = {
+  paymentStatus: string;
+  snapshotTotalAmountSar: number | null;
+  paidAmountSar: number | null;
+  balanceDueAtBranchSar: number | null;
+  refundDueToCustomerSar: number | null;
+  refundDueSettledAt: Date | null;
+};
+
+export type BalanceAfterTotalChange = {
+  snapshotTotalAmountSar: number;
+  /** undefined = لا تلمس الحقل (حجز غير مدفوع — الرصيد يُشتق حياً عند التحصيل). */
+  balanceDueAtBranchSar: number | null | undefined;
+  /** undefined = لا تلمس الحقل (نفس منطق balanceDueAtBranchSar للحجز غير المدفوع). */
+  refundDueToCustomerSar: number | null | undefined;
+  /** > 0 لو نتج مستحق جديد للعميل يلزم تسويته من «مستحقات للعميل». */
+  creditForCustomerSar: number;
+};
+
+/**
+ * يشتق الرصيد/المستحق للعميل بعد تغيّر إجمالي الحجز بمقدار `diff` — الصيغة الموثوقة
+ * المطابقة لمسار تعديل العميل (`updateCustomerBookingDates`): الرصيد يُشتق من
+ * (الإجمالي الجديد − المدفوع فعلياً) لا بالتراكم على الرصيد القديم، فيصحّح ذاتياً أي
+ * رصيد متراكم بشكل غير متسق. راجع ذاكرة `booking-edit-parity` و`unpaid-booking-balance-rule`.
+ *
+ * `oldTotalFallback` يُستخدم فقط لو الحجز بلا `snapshotTotalAmountSar` وغير مدفوع
+ * (حجوزات قديمة جداً) — كل استدعاء يشتق إجماله القديم بطريقته الخاصة قبل النداء.
+ */
+export function computeBalanceAfterTotalChange(
+  booking: BalanceInputBooking,
+  diff: number,
+  oldTotalFallback: number,
+): BalanceAfterTotalChange {
+  const isPaid = booking.paymentStatus.trim().toUpperCase() === "PAID";
+  const previousTotal =
+    booking.snapshotTotalAmountSar ??
+    (isPaid && typeof booking.paidAmountSar === "number"
+      ? booking.paidAmountSar + (booking.balanceDueAtBranchSar ?? 0)
+      : oldTotalFallback);
+
+  const snapshotTotalAmountSar = Math.round((previousTotal + diff) * 100) / 100;
+
+  if (!isPaid) {
+    // غير مدفوع: الإجمالي الجديد يُدفع كاملاً عند إتمام الدفع، وهو يُشتق من اللقطة
+    // نفسها (`computeBookingOutstanding`). ضمّ فرق التعديل إلى الرصيد كان يطالب
+    // العميل به مرتين: مرة داخل الإجمالي ومرة كرصيد عند الفرع.
+    //
+    // والرصيد لا يُصفَّر أيضاً: قد يحمل رسوماً إضافية أو غرامة تأخير سُجّلت قبل
+    // التحصيل، وتقليص المدة كان يبتلعها. فلا يُمسّ هنا إطلاقاً.
+    return {
+      snapshotTotalAmountSar,
+      balanceDueAtBranchSar: undefined,
+      refundDueToCustomerSar: undefined,
+      creditForCustomerSar: 0,
+    };
+  }
+
+  const unsettledCredit =
+    booking.refundDueSettledAt == null ? (booking.refundDueToCustomerSar ?? 0) : 0;
+  const net =
+    typeof booking.paidAmountSar === "number"
+      ? Math.round((snapshotTotalAmountSar - booking.paidAmountSar) * 100) / 100
+      : Math.round(((booking.balanceDueAtBranchSar ?? 0) - unsettledCredit + diff) * 100) / 100;
+
+  if (net > 0.005) {
+    return {
+      snapshotTotalAmountSar,
+      balanceDueAtBranchSar: net,
+      refundDueToCustomerSar: null,
+      creditForCustomerSar: 0,
+    };
+  }
+  if (net < -0.005) {
+    const creditForCustomerSar = Math.round(-net * 100) / 100;
+    return {
+      snapshotTotalAmountSar,
+      balanceDueAtBranchSar: null,
+      refundDueToCustomerSar: creditForCustomerSar,
+      creditForCustomerSar,
+    };
+  }
+  return {
+    snapshotTotalAmountSar,
+    balanceDueAtBranchSar: null,
+    refundDueToCustomerSar: null,
+    creditForCustomerSar: 0,
+  };
+}
+
 /** يستخرج مدخلات احتساب السعر من لقطة الحجز المخزّنة (لتمريرها للعميل وإعادة الحساب الحي). */
 export function bookingDaysPriceInputFromSnapshot(
   modelPricePerDayExclTax: number,

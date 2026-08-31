@@ -7,6 +7,7 @@ import { BookingListQuickActions } from "@/components/admin/BookingListQuickActi
 import { AdminQuickPaymentModal } from "@/components/admin/AdminQuickPaymentModal";
 import { BookingArchiveIconButton } from "@/components/admin/BookingArchiveIconButton";
 import { BookingRowActionsDropdown } from "@/components/admin/BookingRowActionsDropdown";
+import { parseBookingPricingSnapshot } from "@/lib/booking-pricing-snapshot";
 
 /** بداية اليوم التقويمي بتوقيت الرياض — لتجميع «اليوم/الأمس» بنفس التوقيت المعروض. */
 const RIYADH_YMD_FMT = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Riyadh" });
@@ -75,6 +76,7 @@ type Props = {
 };
 
 function editRequestPayload(request: DashboardBookingRow) {
+  const { couponCode } = parseBookingPricingSnapshot(request.addonsJson);
   return {
     id: request.id,
     kind: request.kind,
@@ -114,6 +116,8 @@ function editRequestPayload(request: DashboardBookingRow) {
     cancellationRefundExternalRef: request.cancellationRefundExternalRef,
     balanceDueAtBranchSar: request.balanceDueAtBranchSar,
     vehiclePlateNumber: request.vehiclePlateNumber,
+    appliedCouponCode: couponCode?.code ?? null,
+    appliedCouponScope: couponCode?.scope ?? null,
   };
 }
 

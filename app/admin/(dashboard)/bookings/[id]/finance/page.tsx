@@ -223,22 +223,7 @@ export default async function BookingFinancePage({
                 </span>
               </p>
             ) : null}
-            {/* {totalDueNowSar > 0 ? (
-              <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-amber-200">
-                <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-300" />
-                متبقٍ للتحصيل:{" "}
-                <SarAmountWithSymbol
-                  amountClassName="font-bold text-amber-200"
-                  glyphClassName="text-amber-200/70"
-                >
-                  {formatSarAmount(totalDueNowSar)}
-                </SarAmountWithSymbol>
-              </p>
-            ) : (
-              <p className="mt-3 text-xs font-semibold text-emerald-200">
-                لا يوجد مبلغ متبقٍ للتحصيل
-              </p>
-            )} */}
+
           </div>
 
           {/* ملخص الدفع */}
@@ -251,8 +236,8 @@ export default async function BookingFinancePage({
                 <dd>
                   <span
                     className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold ring-1 ring-inset ${isPartiallyPaid
-                        ? "bg-amber-50 text-amber-900 ring-amber-200/60"
-                        : paymentStatusStyles(booking.paymentStatus)
+                      ? "bg-amber-50 text-amber-900 ring-amber-200/60"
+                      : paymentStatusStyles(booking.paymentStatus)
                       }`}
                   >
                     {isPartiallyPaid ? "مدفوع جزئياً" : paymentStatusLabelAr(booking.paymentStatus)}

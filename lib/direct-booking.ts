@@ -666,7 +666,7 @@ export class CouponUnavailableError extends Error {
   }
 }
 
-function isSerializationConflict(e: unknown): boolean {
+export function isSerializationConflict(e: unknown): boolean {
   return e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2034";
 }
 
@@ -2117,6 +2117,7 @@ export async function updateBookingRequestByAdmin(
       bookingDaysPriceInputFromSnapshot,
       bookingTotalInclTaxForDays,
       repriceAddonsJsonForModel,
+      computeBalanceAfterTotalChange,
     } = await import("@/lib/booking-edit");
 
     // الإجمالي الحالي يُحسب دائماً من اللقطة الأصلية (السعر والأيام قبل التعديل).
@@ -2258,45 +2259,11 @@ export async function updateBookingRequestByAdmin(
     const newTotal = bookingTotalInclTaxForDays(newPriceInput, days);
     const diff = newTotal - oldTotal;
 
-    const isPaid = booking.paymentStatus.trim().toUpperCase() === "PAID";
-    // استرجاع الإجمالي السابق (للحجوزات القديمة التي لا تملك snapshot، نستنتجه)
-    const previousTotal =
-      booking.snapshotTotalAmountSar ??
-      (isPaid && typeof booking.paidAmountSar === "number"
-        ? booking.paidAmountSar + (booking.balanceDueAtBranchSar ?? 0)
-        : oldTotal);
-
-    updatedSnapshotTotalAmountSar = Math.round((previousTotal + diff) * 100) / 100;
-
-    if (isPaid) {
-      const unsettledCredit =
-        booking.refundDueSettledAt == null ? (booking.refundDueToCustomerSar ?? 0) : 0;
-      const net =
-        typeof booking.paidAmountSar === "number"
-          ? Math.round((updatedSnapshotTotalAmountSar - booking.paidAmountSar) * 100) / 100
-          : Math.round(
-              ((booking.balanceDueAtBranchSar ?? 0) - unsettledCredit + diff) * 100,
-            ) / 100;
-      if (net > 0.005) {
-        updatedBalanceDueAtBranchSar = net;
-        updatedRefundDueToCustomerSar = null;
-      } else if (net < -0.005) {
-        updatedBalanceDueAtBranchSar = null;
-        creditForCustomerSar = Math.round(-net * 100) / 100;
-        updatedRefundDueToCustomerSar = creditForCustomerSar;
-      } else {
-        updatedBalanceDueAtBranchSar = null;
-        updatedRefundDueToCustomerSar = null;
-      }
-    } else {
-      // غير مدفوع: الإجمالي الجديد يُدفع كاملاً عند إتمام الدفع، وهو يُشتق من اللقطة
-      // نفسها (`computeBookingOutstanding`). ضمّ فرق التعديل إلى الرصيد كان يطالب
-      // العميل به مرتين: مرة داخل الإجمالي ومرة كرصيد عند الفرع.
-      //
-      // والرصيد لا يُصفَّر أيضاً: قد يحمل رسوماً إضافية أو غرامة تأخير سُجّلت قبل
-      // التحصيل، وتقليص المدة كان يبتلعها. فلا يُمسّ هنا إطلاقاً.
-      updatedBalanceDueAtBranchSar = undefined;
-    }
+    const balanceOutcome = computeBalanceAfterTotalChange(booking, diff, oldTotal);
+    updatedSnapshotTotalAmountSar = balanceOutcome.snapshotTotalAmountSar;
+    updatedBalanceDueAtBranchSar = balanceOutcome.balanceDueAtBranchSar;
+    updatedRefundDueToCustomerSar = balanceOutcome.refundDueToCustomerSar;
+    creditForCustomerSar = balanceOutcome.creditForCustomerSar;
   }
   const commonData = {
     fullName: input.fullName.trim(),

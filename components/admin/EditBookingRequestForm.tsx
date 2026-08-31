@@ -12,6 +12,7 @@ import {
 import { SarCurrencyGlyph } from "@/components/ui/SarCurrencyGlyph";
 import type { BookableModelOption } from "@/components/admin/ConvertInquiryToDirectForm";
 import { BookingAddonsSnapshot } from "@/components/admin/BookingAddonsSnapshot";
+import { AdminBookingCouponModal } from "@/components/admin/AdminBookingCouponModal";
 import { BookingAttachmentsPanel } from "@/components/admin/BookingAttachmentsPanel";
 import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
 import { formatDeductDaysSummaryAr } from "@/lib/cancellation-deduct";
@@ -421,6 +422,17 @@ export function EditBookingModalInner({
                   <div className="mt-2">
                     <BookingAddonsSnapshot raw={request.addonsJson} />
                   </div>
+                </div>
+              ) : null}
+              {request.kind === "DIRECT" ? (
+                <div className="sm:col-span-2">
+                  <AdminBookingCouponModal
+                    bookingId={request.id}
+                    appliedCouponCode={request.appliedCouponCode}
+                    appliedCouponScope={request.appliedCouponScope}
+                    disabled={["CANCELLED", "REJECTED"].includes(request.status.trim().toUpperCase())}
+                    disabledReason="لا يمكن تطبيق كود خصم على حجز ملغى أو مرفوض."
+                  />
                 </div>
               ) : null}
               {request.pickupMode === "DELIVERY" &&

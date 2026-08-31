@@ -1,11 +1,15 @@
 import type { AdminBookingDetail } from "@/lib/admin-booking-detail";
 import type { EditableBookingRow } from "@/lib/admin-booking-edit-types";
 import { resolveBookingKycForDisplay } from "@/lib/booking-kyc-display";
-import { resolveBookingRentalPricePerDayExclTax } from "@/lib/booking-pricing-snapshot";
+import {
+  parseBookingPricingSnapshot,
+  resolveBookingRentalPricePerDayExclTax,
+} from "@/lib/booking-pricing-snapshot";
 import { bookingOccupiedUntil } from "@/lib/direct-booking";
 
 export function toEditableBookingRow(booking: AdminBookingDetail): EditableBookingRow {
   const kyc = resolveBookingKycForDisplay(booking, booking.customer);
+  const { couponCode } = parseBookingPricingSnapshot(booking.addonsJson);
 
   return {
     id: booking.id,
@@ -57,6 +61,8 @@ export function toEditableBookingRow(booking: AdminBookingDetail): EditableBooki
     adminNotes: booking.adminNotes,
     cancellationReasonAr: booking.cancellationReasonAr,
     rejectionReasonAr: booking.rejectionReasonAr,
+    appliedCouponCode: couponCode?.code ?? null,
+    appliedCouponScope: couponCode?.scope ?? null,
   };
 }
 

@@ -51,6 +51,9 @@ export type EditableBookingRow = {
   adminNotes?: string | null;
   cancellationReasonAr?: string | null;
   rejectionReasonAr?: string | null;
+  /** كود الخصم المُطبَّق على الحجز (إن وُجد) — يمنع تطبيق كود آخر فوقه. */
+  appliedCouponCode: string | null;
+  appliedCouponScope: "RENTAL_ONLY" | "FULL_TOTAL" | null;
 };
 
 
