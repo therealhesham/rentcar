@@ -146,6 +146,7 @@ export function AdminEditCarForm({ vehicle }: AdminEditCarFormProps) {
           type="number"
           required
           min={1}
+          step="0.01"
           defaultValue={vehicle.price}
           className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
         />

@@ -507,6 +507,7 @@ export function VehicleEditForm({ vehicle }: Props) {
                   type="number"
                   required
                   min={1}
+                  step="0.01"
                   defaultValue={vehicle.price}
                   className={inputCls}
                   dir="ltr"

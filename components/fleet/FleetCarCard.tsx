@@ -6,6 +6,11 @@ import { FleetBookNowButton } from "@/components/fleet/FleetBookNowButton";
 import type { FleetCar } from "@/lib/fleet-types";
 import type { BookingCityBranchesOption } from "@/lib/booking-location-options";
 import { SarCurrencyGlyph } from "@/components/ui/SarCurrencyGlyph";
+import {
+  NATIONAL_DAY_PROMO_DATE_RANGE_AR,
+  NATIONAL_DAY_PROMO_LABEL_AR,
+  isNationalDayPromoActive,
+} from "@/lib/national-day-promo";
 
 const SPEC_KEY_MAP: Record<string, string> = {
   airline_seat_recline_extra: "seats",
@@ -73,6 +78,7 @@ export function FleetCarCard({
   const discountLabel = isEn
     ? car.priceUi.discountLabelEn ?? car.priceUi.discountLabelAr
     : car.priceUi.discountLabelAr;
+  const promoActive = isNationalDayPromoActive();
 
   return (
     <article
@@ -108,9 +114,18 @@ export function FleetCarCard({
             {car.badge}
           </span>
         ) : discountLabel ? (
-          <span className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-bold text-red-600">
-            {discountLabel}
-          </span>
+          promoActive ? (
+            <span className="flex shrink-0 flex-col items-center gap-0.5 whitespace-nowrap rounded-xl bg-[#006C35] px-2.5 py-1 leading-none text-white shadow-sm">
+              <span className="text-[10.5px] font-extrabold">{NATIONAL_DAY_PROMO_LABEL_AR}</span>
+              <span className="text-[8.5px] font-semibold text-emerald-100">
+                {NATIONAL_DAY_PROMO_DATE_RANGE_AR}
+              </span>
+            </span>
+          ) : (
+            <span className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-bold text-red-600">
+              {discountLabel}
+            </span>
+          )
         ) : null}
       </div>
 
@@ -124,9 +139,18 @@ export function FleetCarCard({
           className="h-full w-full object-contain transition-transform duration-700 ease-out group-hover:scale-[1.04]"
         />
         {car.badge && discountLabel ? (
-          <span className="absolute top-4 left-4 rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white">
-            {discountLabel}
-          </span>
+          promoActive ? (
+            <span className="absolute top-4 left-4 flex flex-col items-center gap-0.5 rounded-xl bg-[#006C35] px-2.5 py-1 leading-none text-white shadow-md">
+              <span className="text-[10px] font-extrabold">{NATIONAL_DAY_PROMO_LABEL_AR}</span>
+              <span className="text-[8px] font-semibold text-emerald-100">
+                {NATIONAL_DAY_PROMO_DATE_RANGE_AR}
+              </span>
+            </span>
+          ) : (
+            <span className="absolute top-4 left-4 rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white">
+              {discountLabel}
+            </span>
+          )
         ) : null}
       </div>
 

@@ -48,6 +48,7 @@ export function InlineVehicleEditForm({ modelId, field, defaultValue }: Props) {
       <input
         type="number"
         name="value"
+        step={field === "year" || field === "chairs" ? 1 : 0.01}
         defaultValue={defaultValue}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
