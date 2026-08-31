@@ -39,19 +39,19 @@ const TXN_ACTOR_LABEL: Record<string, string> = {
 
 function paymentStatusLabelAr(ps: string): string {
   const k = ps.trim().toUpperCase();
-  if (k === "PAID")           return "مدفوع";
-  if (k === "REFUNDED")       return "مسترد بالكامل";
+  if (k === "PAID") return "مدفوع";
+  if (k === "REFUNDED") return "مسترد بالكامل";
   if (k === "PARTIAL_REFUND") return "استرداد جزئي";
-  if (k === "NO_REFUND")      return "بدون استرداد";
+  if (k === "NO_REFUND") return "بدون استرداد";
   return "بانتظار الدفع";
 }
 
 function paymentStatusStyles(ps: string): string {
   const k = ps.trim().toUpperCase();
-  if (k === "PAID")           return "bg-emerald-50 text-emerald-800 ring-emerald-200/60";
-  if (k === "REFUNDED")       return "bg-sky-50 text-sky-800 ring-sky-200/60";
+  if (k === "PAID") return "bg-emerald-50 text-emerald-800 ring-emerald-200/60";
+  if (k === "REFUNDED") return "bg-sky-50 text-sky-800 ring-sky-200/60";
   if (k === "PARTIAL_REFUND") return "bg-violet-50 text-violet-800 ring-violet-200/60";
-  if (k === "NO_REFUND")      return "bg-neutral-100 text-neutral-700 ring-neutral-200/60";
+  if (k === "NO_REFUND") return "bg-neutral-100 text-neutral-700 ring-neutral-200/60";
   return "bg-amber-50 text-amber-900 ring-amber-200/60";
 }
 
@@ -95,7 +95,7 @@ export default async function BookingFinancePage({
   if (!booking) notFound();
 
   const statusKey = booking.paymentStatus.trim().toUpperCase();
-  const canPay    = statusKey !== "PAID" && statusKey !== "REFUNDED";
+  const canPay = statusKey !== "PAID" && statusKey !== "REFUNDED";
   const bookingStatusKey = booking.status.trim().toUpperCase();
   const isTerminalBooking =
     bookingStatusKey === "CANCELLED" || bookingStatusKey === "REJECTED";
@@ -223,7 +223,7 @@ export default async function BookingFinancePage({
                 </span>
               </p>
             ) : null}
-            {totalDueNowSar > 0 ? (
+            {/* {totalDueNowSar > 0 ? (
               <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-amber-200">
                 <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-300" />
                 متبقٍ للتحصيل:{" "}
@@ -238,7 +238,7 @@ export default async function BookingFinancePage({
               <p className="mt-3 text-xs font-semibold text-emerald-200">
                 لا يوجد مبلغ متبقٍ للتحصيل
               </p>
-            )}
+            )} */}
           </div>
 
           {/* ملخص الدفع */}
@@ -250,11 +250,10 @@ export default async function BookingFinancePage({
                 <dt className="font-medium text-on-surface-variant">الحالة</dt>
                 <dd>
                   <span
-                    className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold ring-1 ring-inset ${
-                      isPartiallyPaid
+                    className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold ring-1 ring-inset ${isPartiallyPaid
                         ? "bg-amber-50 text-amber-900 ring-amber-200/60"
                         : paymentStatusStyles(booking.paymentStatus)
-                    }`}
+                      }`}
                   >
                     {isPartiallyPaid ? "مدفوع جزئياً" : paymentStatusLabelAr(booking.paymentStatus)}
                   </span>
