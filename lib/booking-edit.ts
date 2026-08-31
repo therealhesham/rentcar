@@ -159,8 +159,9 @@ export function applyDropoffDelayPenaltyToAddonsJson(input: {
  * ويُسقط لقطة الخصم القديمة (كانت تخص الموديل السابق — الخصم الجديد مدموج أصلاً في السعر).
  *
  * الإضافات والرسوم لمرة واحدة وكوبون `FULL_TOTAL` تبقى كما هي: مبالغ مستقلة عن الموديل.
- * كوبون `RENTAL_ONLY` مدموج في السعر اليومي القديم ولا يمكن إعادة اشتقاقه هنا — الاستدعاء
- * يجب أن يرفض التبديل في تلك الحالة (انظر `updateBookingRequestByAdmin`).
+ * كوبون `RENTAL_ONLY` مدموج في السعر اليومي، فهذه الدالة لا تعرف عنه شيئاً — على
+ * الاستدعاء إعادة تطبيقه على سعر الموديل الجديد قبل تمرير `pricePerDayExclTax`
+ * هنا (انظر `repriceRentalOnlyCouponForModelChange` و`updateBookingRequestByAdmin`).
  */
 export function repriceAddonsJsonForModel(
   addonsJson: string | null,

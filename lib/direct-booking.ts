@@ -52,6 +52,7 @@ import {
 } from "@/lib/rental-discount";
 import { computeCheckoutTotals } from "@/lib/booking-checkout-pricing";
 import { parseBookingPricingSnapshot, type CouponCodeSnap } from "@/lib/booking-pricing-snapshot";
+import { repriceRentalOnlyCouponForModelChange } from "@/lib/booking-edit-coupon-reprice";
 import { computeBookingReturnAt } from "@/lib/booking-return-schedule";
 import {
   DEFAULT_FLEET_TURNAROUND_MINUTES,
@@ -2143,13 +2144,6 @@ export async function updateBookingRequestByAdmin(
         };
       }
       const { couponCode } = parseBookingPricingSnapshot(booking.addonsJson);
-      if (couponCode?.scope === "RENTAL_ONLY") {
-        return {
-          ok: false,
-          error:
-            "الحجز عليه كود خصم على الإيجار مدموج في سعر السيارة الحالية، فلا يمكن نقله لموديل آخر. ألغِ الحجز وأنشئ حجزاً جديداً بالكود نفسه.",
-        };
-      }
 
       const newModel = await prisma.carModel.findUnique({
         where: { id: input.directCarModelId! },
@@ -2209,10 +2203,26 @@ export async function updateBookingRequestByAdmin(
           priceFloor,
         },
       );
+      let discountedPeriodAmountExclTax =
+        resolvedDiscount?.discountedAmountExclTax ?? basePeriodAmountExclTax;
+
+      // كوبون RENTAL_ONLY: يُعاد تطبيقه على سعر الموديل الجديد بدل رفض التبديل.
+      if (couponCode?.scope === "RENTAL_ONLY") {
+        const couponReprice = await repriceRentalOnlyCouponForModelChange({
+          couponCode: couponCode.code,
+          baseAfterAutoDiscountExclTax: discountedPeriodAmountExclTax,
+          periodKind: isMonthly ? "MONTHLY" : "DAILY",
+        });
+        if (!couponReprice.ok) {
+          return { ok: false, error: couponReprice.error };
+        }
+        discountedPeriodAmountExclTax = couponReprice.discountedAmountExclTax;
+      }
+
       const toPerDay = (periodAmount: number) =>
         isMonthly ? periodAmount / days : periodAmount;
       const floorOutcome = applyPriceFloorPerDay(
-        toPerDay(resolvedDiscount?.discountedAmountExclTax ?? basePeriodAmountExclTax),
+        toPerDay(discountedPeriodAmountExclTax),
         toPerDay(basePeriodAmountExclTax),
         priceFloor,
         isMonthly ? "MONTHLY" : "DAILY",
