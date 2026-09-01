@@ -34,6 +34,11 @@ import {
   normalizeKycDocRequirements,
   type KycDocRequirements,
 } from "@/lib/kyc-doc-requirements";
+import {
+  DEFAULT_PROMO_BADGE_SETTINGS,
+  normalizePromoBadgeSettings,
+  type PromoBadgeSettings,
+} from "@/lib/promo-badge";
 
 /* ─── Promo Banner (Carousel) ──────────────────────────────── */
 export const SITE_KEY_PROMO_BANNER_SLIDES = "promo_banner_slides";
@@ -504,5 +509,29 @@ export async function getKycDocRequirements(): Promise<KycDocRequirements> {
     return normalizeKycDocRequirements(parsed);
   } catch {
     return DEFAULT_KYC_DOC_REQUIREMENTS;
+  }
+}
+
+/** شارة ترويجية عامة على كارت السيارة (نص/ألوان/موديلات مختارة) — انظر `lib/promo-badge.ts`. */
+export const SITE_KEY_PROMO_BADGE = "promo_badge_v1";
+
+export async function getPromoBadgeSettings(): Promise<PromoBadgeSettings> {
+  try {
+    const row = await prisma.siteSetting.findUnique({
+      where: { key: SITE_KEY_PROMO_BADGE },
+      select: { value: true },
+    });
+    if (!row?.value?.trim()) {
+      return DEFAULT_PROMO_BADGE_SETTINGS;
+    }
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(row.value) as unknown;
+    } catch {
+      return DEFAULT_PROMO_BADGE_SETTINGS;
+    }
+    return normalizePromoBadgeSettings(parsed);
+  } catch {
+    return DEFAULT_PROMO_BADGE_SETTINGS;
   }
 }

@@ -1,14 +1,16 @@
 import type { FleetCar } from "@/lib/fleet-types";
 import type { BookingCityBranchesOption } from "@/lib/booking-location-options";
+import type { PromoBadgeSettings } from "@/lib/promo-badge";
 import { FleetCarCard } from "./FleetCarCard";
 
 type FleetCarGridProps = {
   cars: FleetCar[];
   cities?: BookingCityBranchesOption[];
   allowHolidayBooking?: boolean;
+  promoBadge?: PromoBadgeSettings;
 };
 
-export function FleetCarGrid({ cars, cities, allowHolidayBooking = false }: FleetCarGridProps) {
+export function FleetCarGrid({ cars, cities, allowHolidayBooking = false, promoBadge }: FleetCarGridProps) {
   if (cars.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-outline-variant/50 bg-surface-container-low/50 px-8 py-16 text-center">
@@ -25,7 +27,13 @@ export function FleetCarGrid({ cars, cities, allowHolidayBooking = false }: Flee
   return (
     <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
       {cars.map((car) => (
-        <FleetCarCard key={car.id} car={car} cities={cities} allowHolidayBooking={allowHolidayBooking} />
+        <FleetCarCard
+          key={car.id}
+          car={car}
+          cities={cities}
+          allowHolidayBooking={allowHolidayBooking}
+          promoBadge={promoBadge}
+        />
       ))}
     </div>
   );

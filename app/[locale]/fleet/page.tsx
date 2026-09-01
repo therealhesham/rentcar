@@ -19,7 +19,11 @@ import {
 import { fleetDailyPriceFilterLabel } from "@/components/fleet/FleetDailyPriceFilterLabel";
 import { buildFleetSearchUrlHydrate } from "@/lib/fleet-search-url-hydrate";
 import { buildPageMetadata } from "@/lib/seo";
-import { getBookingWidgetTabFlags, getRentalPriceDisplayMode } from "@/lib/site-settings";
+import {
+  getBookingWidgetTabFlags,
+  getPromoBadgeSettings,
+  getRentalPriceDisplayMode,
+} from "@/lib/site-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -65,13 +69,14 @@ export default async function FleetPage({
 
   let searchBanner: ReactNode = null;
 
-  const [cities, tabFlags, priceMode, categories, brands, priceBounds] = await Promise.all([
+  const [cities, tabFlags, priceMode, categories, brands, priceBounds, promoBadge] = await Promise.all([
     getActiveBookingCitiesWithBranches(locale).catch(() => []),
     getBookingWidgetTabFlags(),
     getRentalPriceDisplayMode(),
     getFleetCategoriesForFilter(locale),
     getFleetBrandsForFilter(locale),
     getFleetPriceBounds(rentalRaw),
+    getPromoBadgeSettings(),
   ]);
 
   const resolveBranchName = (slug: string) => {
@@ -305,7 +310,12 @@ export default async function FleetPage({
               </p>
             </div>
           ) : (
-            <FleetCarGrid cars={cars} cities={cities} allowHolidayBooking={tabFlags.allowHolidayBooking ?? false} />
+            <FleetCarGrid
+              cars={cars}
+              cities={cities}
+              allowHolidayBooking={tabFlags.allowHolidayBooking ?? false}
+              promoBadge={promoBadge}
+            />
           )}
         </main>
       </div>

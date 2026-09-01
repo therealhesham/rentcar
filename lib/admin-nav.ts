@@ -125,6 +125,12 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/admin/booking-otp-delivery", label: "رمز التحقق", icon: "shield-check" },
       { href: "/admin/booking-widget-tabs", label: "تبويبات ويدجت الحجز", icon: "sliders" },
       {
+        href: "/admin/promo-badge",
+        label: "شارة ترويجية على الكارت",
+        icon: "megaphone",
+        superAdminOnly: true,
+      },
+      {
         href: "/admin/kyc-doc-requirements",
         label: "مستندات الهوية والرخصة",
         icon: "shield-check",

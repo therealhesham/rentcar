@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { FleetCarCard } from "@/components/fleet/FleetCarCard";
 import type { FleetCar } from "@/lib/fleet-types";
 import type { BookingCityBranchesOption } from "@/lib/booking-location-options";
+import type { PromoBadgeSettings } from "@/lib/promo-badge";
 import { useLocale, useTranslations } from "next-intl";
 
 export type FleetCategoryTab = {
@@ -19,9 +20,16 @@ type Props = {
   cities?: BookingCityBranchesOption[];
   allowHolidayBooking?: boolean;
   rentalTab?: string | null;
+  promoBadge?: PromoBadgeSettings;
 };
 
-export function FleetCategoriesShowcase({ tabs, cities, allowHolidayBooking = false, rentalTab }: Props) {
+export function FleetCategoriesShowcase({
+  tabs,
+  cities,
+  allowHolidayBooking = false,
+  rentalTab,
+  promoBadge,
+}: Props) {
   const t = useTranslations("FleetShowcase");
   /* الاتجاه من اللغة لا من `rtl:` — متغيّر Tailwind لا يُولَّد في هذا الإعداد. */
   const isRtl = useLocale() === "ar";
@@ -191,7 +199,13 @@ export function FleetCategoriesShowcase({ tabs, cities, allowHolidayBooking = fa
           className="grid grid-cols-1 gap-6 sm:gap-8 md:grid-cols-2 lg:grid-cols-3"
         >
           {cars.map((car) => (
-            <FleetCarCard key={`${current.slug}-${car.modelId}`} car={car} cities={cities} allowHolidayBooking={allowHolidayBooking} />
+            <FleetCarCard
+              key={`${current.slug}-${car.modelId}`}
+              car={car}
+              cities={cities}
+              allowHolidayBooking={allowHolidayBooking}
+              promoBadge={promoBadge}
+            />
           ))}
         </div>
       ) : (

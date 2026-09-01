@@ -7,10 +7,10 @@ import type { FleetCar } from "@/lib/fleet-types";
 import type { BookingCityBranchesOption } from "@/lib/booking-location-options";
 import { SarCurrencyGlyph } from "@/components/ui/SarCurrencyGlyph";
 import {
-  NATIONAL_DAY_PROMO_DATE_RANGE_AR,
-  NATIONAL_DAY_PROMO_LABEL_AR,
-  isNationalDayPromoActive,
-} from "@/lib/national-day-promo";
+  DEFAULT_PROMO_BADGE_SETTINGS,
+  resolvePromoBadgeForModel,
+  type PromoBadgeSettings,
+} from "@/lib/promo-badge";
 
 const SPEC_KEY_MAP: Record<string, string> = {
   airline_seat_recline_extra: "seats",
@@ -50,15 +50,18 @@ export function FleetCarCard({
   car,
   cities,
   allowHolidayBooking = false,
+  promoBadge = DEFAULT_PROMO_BADGE_SETTINGS,
 }: {
   car: FleetCar;
   cities?: BookingCityBranchesOption[];
   allowHolidayBooking?: boolean;
+  promoBadge?: PromoBadgeSettings;
 }) {
   const locale = useLocale();
   const t = useTranslations("FleetCard");
   const isEn = locale === "en";
   const meta = metaFromSubtitle(car.subtitle);
+  const activePromo = resolvePromoBadgeForModel(promoBadge, car.modelId);
 
   const primaryLabel = isEn
     ? car.priceUi.primaryLabelEn ?? car.priceUi.primaryLabelAr
@@ -78,7 +81,6 @@ export function FleetCarCard({
   const discountLabel = isEn
     ? car.priceUi.discountLabelEn ?? car.priceUi.discountLabelAr
     : car.priceUi.discountLabelAr;
-  const promoActive = isNationalDayPromoActive();
 
   return (
     <article
@@ -113,19 +115,17 @@ export function FleetCarCard({
             <span className="inline-block h-2 w-2 shrink-0 rounded-full bg-gray-400" />
             {car.badge}
           </span>
+        ) : activePromo ? (
+          <span
+            className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-bold"
+            style={{ backgroundColor: activePromo.backgroundColor, color: activePromo.textColor }}
+          >
+            {isEn ? activePromo.labelEn : activePromo.labelAr}
+          </span>
         ) : discountLabel ? (
-          promoActive ? (
-            <span className="flex shrink-0 flex-col items-center gap-0.5 whitespace-nowrap rounded-xl bg-[#006C35] px-2.5 py-1 leading-none text-white shadow-sm">
-              <span className="text-[10.5px] font-extrabold">{NATIONAL_DAY_PROMO_LABEL_AR}</span>
-              <span className="text-[8.5px] font-semibold text-emerald-100">
-                {NATIONAL_DAY_PROMO_DATE_RANGE_AR}
-              </span>
-            </span>
-          ) : (
-            <span className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-bold text-red-600">
-              {discountLabel}
-            </span>
-          )
+          <span className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-bold text-red-600">
+            {discountLabel}
+          </span>
         ) : null}
       </div>
 
@@ -138,19 +138,17 @@ export function FleetCarCard({
           loading="lazy"
           className="h-full w-full object-contain transition-transform duration-700 ease-out group-hover:scale-[1.04]"
         />
-        {car.badge && discountLabel ? (
-          promoActive ? (
-            <span className="absolute top-4 left-4 flex flex-col items-center gap-0.5 rounded-xl bg-[#006C35] px-2.5 py-1 leading-none text-white shadow-md">
-              <span className="text-[10px] font-extrabold">{NATIONAL_DAY_PROMO_LABEL_AR}</span>
-              <span className="text-[8px] font-semibold text-emerald-100">
-                {NATIONAL_DAY_PROMO_DATE_RANGE_AR}
-              </span>
-            </span>
-          ) : (
-            <span className="absolute top-4 left-4 rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white">
-              {discountLabel}
-            </span>
-          )
+        {car.badge && activePromo ? (
+          <span
+            className="absolute top-4 left-4 rounded-full px-2 py-0.5 text-[10px] font-bold shadow-sm"
+            style={{ backgroundColor: activePromo.backgroundColor, color: activePromo.textColor }}
+          >
+            {isEn ? activePromo.labelEn : activePromo.labelAr}
+          </span>
+        ) : car.badge && discountLabel ? (
+          <span className="absolute top-4 left-4 rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white">
+            {discountLabel}
+          </span>
         ) : null}
       </div>
 

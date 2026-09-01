@@ -1,7 +1,11 @@
 import { getActiveBookingCitiesWithBranches } from "@/lib/branch-data";
 import { getFleetCategoriesForHome } from "@/lib/fleet-category-data";
 import { getFleetCarMapByModelIds } from "@/lib/fleet-data";
-import { getBookingWidgetTabFlags, getRentalPriceDisplayMode } from "@/lib/site-settings";
+import {
+  getBookingWidgetTabFlags,
+  getPromoBadgeSettings,
+  getRentalPriceDisplayMode,
+} from "@/lib/site-settings";
 import {
   FleetCategoriesShowcase,
   type FleetCategoryTab,
@@ -20,10 +24,11 @@ export async function FleetCategories({ rentalTab }: { rentalTab?: string | null
 
   const allModelIds = categories.flatMap((c) => c.models.map((m) => m.id));
   const priceMode = await getRentalPriceDisplayMode();
-  const [carByModel, cities, tabFlags] = await Promise.all([
+  const [carByModel, cities, tabFlags, promoBadge] = await Promise.all([
     getFleetCarMapByModelIds(allModelIds, priceMode, { locale, rentalTab }),
     getActiveBookingCitiesWithBranches(locale).catch(() => []),
     getBookingWidgetTabFlags(),
+    getPromoBadgeSettings(),
   ]);
 
   // فئة بلا سيارات متاحة لا تُعرض إطلاقاً — تبويب فارغ يوهم الزائر بوجود خيار.
@@ -65,6 +70,7 @@ export async function FleetCategories({ rentalTab }: { rentalTab?: string | null
           cities={cities}
           allowHolidayBooking={tabFlags.allowHolidayBooking ?? false}
           rentalTab={rentalTab}
+          promoBadge={promoBadge}
         />
       </Reveal>
     </section>
