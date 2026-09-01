@@ -19,7 +19,9 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useLocale } from "next-intl";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { TabbyPromoSnippet } from "@/components/fleet/TabbyPromoSnippet";
 import { SiteFooter } from "@/components/home/SiteFooter";
 import { SiteNav } from "@/components/shared/SiteNav";
 import { BookingWidget } from "@/components/home/BookingWidget";
@@ -156,6 +158,8 @@ type Props = {
   rentalTerms?: RentalTermDTO[];
   /** إلزامي/اختياري/مخفي لحقلَي صورة الهوية وصورة الرخصة — يضبطها السوبر أدمن */
   kycDocFlags?: KycDocRequirements | null;
+  /** مفاتيح تابي العامة لعرض شعار/نص "ادفع على 4 أقساط" — null لو البوابة غير مهيّأة */
+  tabbyPromo?: { publicKey: string; merchantCode: string } | null;
 };
 
 export function FleetCheckoutClient({
@@ -172,8 +176,10 @@ export function FleetCheckoutClient({
   fleetUrlHydrate,
   rentalTerms = [],
   kycDocFlags,
+  tabbyPromo,
 }: Props) {
   const kycDocReq = kycDocFlags ?? DEFAULT_KYC_DOC_REQUIREMENTS;
+  const locale = useLocale();
   const sp = useSearchParams();
   const router = useRouter();
   const [ctxStore, setCtxStore] = useState<StoredFleetSearchContext | null>(null);
@@ -2430,6 +2436,18 @@ export function FleetCheckoutClient({
                         </div>
                       </div>
                     </div>
+
+                    {tabbyPromo ? (
+                      <div className="mt-3">
+                        <TabbyPromoSnippet
+                          publicKey={tabbyPromo.publicKey}
+                          merchantCode={tabbyPromo.merchantCode}
+                          priceSar={totals.totalInclTax}
+                          lang={locale === "en" ? "en" : "ar"}
+                          source="cart"
+                        />
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               </div>

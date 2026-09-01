@@ -7,6 +7,7 @@ import { getBookingForPayment } from "@/lib/booking-payment-data";
 import { geideaCheckoutScriptUrl, isGeideaConfigured } from "@/lib/geidea/client";
 import { reconcilePendingGeideaPaymentById } from "@/lib/geidea/mark-paid";
 import { reconcilePendingTabbyPaymentById } from "@/lib/tabby/mark-paid";
+import { checkTabbyEligibility, getTabbyConfig } from "@/lib/tabby/client";
 import {
   getApplePayExpressEnabled,
   getCheckoutPaymentMethodFlags,
@@ -48,6 +49,26 @@ export default async function FleetPaymentPage({
   ]);
   if (!booking) notFound();
 
+  const tabbyCfg = getTabbyConfig();
+  const tabbyPromo = tabbyCfg
+    ? { publicKey: tabbyCfg.publicKey, merchantCode: tabbyCfg.merchantCode }
+    : null;
+
+  // فحص أهلية تابي المسبق (pre-scoring) — يُعرض في الواجهة فقط؛ التحقق الملزِم يتكرر
+  // وقت الإرسال الفعلي في payment-actions.ts (لا نثق بحالة العميل وحدها).
+  let tabbyEligibility: { isEligible: boolean; rejectionReason?: string } | null = null;
+  if (tabbyCfg) {
+    const ps = booking.paymentStatus.trim().toUpperCase();
+    const balanceDueSar = booking.balanceDueAtBranchSar ?? 0;
+    const amountSar = ps === "PAID" && balanceDueSar > 0 ? balanceDueSar : booking.totals.totalInclTax;
+    if (amountSar > 0) {
+      tabbyEligibility = await checkTabbyEligibility({
+        amountSar,
+        buyer: { phone: booking.phone, email: booking.invoiceEmail, name: booking.fullName },
+      });
+    }
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-[#fdfbf6] text-on-surface">
       <SiteNav active="fleet" />
@@ -59,6 +80,8 @@ export default async function FleetPaymentPage({
           // معطّلاً يبقى null فيسقط Apple Pay تلقائياً إلى التحويل لصفحة جيديا.
           geideaScriptUrl={applePayExpress ? geideaCheckoutScriptUrl() : null}
           paymentIconUrls={paymentIconUrls}
+          tabbyPromo={tabbyPromo}
+          tabbyEligibility={tabbyEligibility}
         />
       </div>
       <SiteFooter />

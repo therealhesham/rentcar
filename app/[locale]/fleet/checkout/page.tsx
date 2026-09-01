@@ -15,6 +15,7 @@ import { loadFleetCheckoutEditPrefill } from "@/lib/fleet-checkout-edit-prefill"
 import { buildFleetSearchUrlHydrate } from "@/lib/fleet-search-url-hydrate";
 import { getBookingWidgetTabFlags } from "@/lib/site-settings";
 import { buildPageMetadata } from "@/lib/seo";
+import { getTabbyConfig } from "@/lib/tabby/client";
 
 export const dynamic = "force-dynamic";
 
@@ -135,6 +136,11 @@ export default async function FleetCheckoutPage({
 
   const bookingIdForPrefill = excludeBookingRequestId ?? prefillBookingRequestId;
 
+  const tabbyCfg = getTabbyConfig();
+  const tabbyPromo = tabbyCfg
+    ? { publicKey: tabbyCfg.publicKey, merchantCode: tabbyCfg.merchantCode }
+    : null;
+
   const editPrefill =
     profile && bookingIdForPrefill != null
       ? await loadFleetCheckoutEditPrefill({
@@ -167,6 +173,7 @@ export default async function FleetCheckoutPage({
         fleetUrlHydrate={fleetUrlHydrate}
         rentalTerms={rentalTerms}
         kycDocFlags={kycDocFlags}
+        tabbyPromo={tabbyPromo}
       />
     </Suspense>
   );

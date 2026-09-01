@@ -73,26 +73,20 @@ export async function markBookingPaidFromTabbyPayment(
     actorLabel: `بوابة تابي (${source === "webhook" ? "إشعار" : "مصالحة"}) — دفعة ${payment.amount} ر.س (${payment.id})`,
   });
 
-  try {
-    await sendBookingInvoiceEmailAfterPayment(bookingId);
-  } catch (e) {
-    console.error(`[tabby-${source}] invoice email:`, e);
-  }
-  try {
-    await sendAdminEmailForNewBooking(bookingId);
-  } catch (e) {
-    console.error(`[tabby-${source}] admin email:`, e);
-  }
-  try {
-    await sendNewBookingNotificationEmails(bookingId);
-  } catch (e) {
-    console.error(`[tabby-${source}] staff notification email:`, e);
-  }
-  try {
-    await sendBookingCompletionWhatsAppAfterPayment(bookingId);
-  } catch (e) {
-    console.error(`[tabby-${source}] whatsapp:`, e);
-  }
+  // غير مُنتظَرة عمداً: تابي بتشترط رد سريع على الـwebhook (200)، وإرسال ٤ إشعارات
+  // بالتتابع كان ممكن يأخّر الرد. الحجز اتحدّث فعلاً فوق (transaction) قبل هنا.
+  void sendBookingInvoiceEmailAfterPayment(bookingId).catch((e) =>
+    console.error(`[tabby-${source}] invoice email:`, e),
+  );
+  void sendAdminEmailForNewBooking(bookingId).catch((e) =>
+    console.error(`[tabby-${source}] admin email:`, e),
+  );
+  void sendNewBookingNotificationEmails(bookingId).catch((e) =>
+    console.error(`[tabby-${source}] staff notification email:`, e),
+  );
+  void sendBookingCompletionWhatsAppAfterPayment(bookingId).catch((e) =>
+    console.error(`[tabby-${source}] whatsapp:`, e),
+  );
 
   return { updated: true };
 }

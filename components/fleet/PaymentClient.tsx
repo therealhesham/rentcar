@@ -43,6 +43,8 @@ import {
 import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
 import { ApplePayExpressButton } from "@/components/fleet/ApplePayExpressButton";
 import type { PaymentIconUrls } from "@/lib/site-settings";
+import { useLocale } from "next-intl";
+import { TabbyPromoSnippet } from "@/components/fleet/TabbyPromoSnippet";
 
 type Props = {
   booking: BookingPaymentSnapshot;
@@ -53,6 +55,10 @@ type Props = {
   geideaScriptUrl?: string | null;
   /** شعارات وسائل الدفع (تابي/تمارا/البطاقة/مدى/إمكان) — قابلة للتعديل من لوحة الإدارة. */
   paymentIconUrls: PaymentIconUrls;
+  /** مفاتيح تابي العامة لعرض شعار/نص "ادفع على 4 أقساط" — null لو البوابة غير مهيّأة */
+  tabbyPromo?: { publicKey: string; merchantCode: string } | null;
+  /** نتيجة فحص الأهلية المسبق (pre-scoring) — null لو لم يُفحص (تابي غير مهيّأة مثلاً) */
+  tabbyEligibility?: { isEligible: boolean; rejectionReason?: string } | null;
 };
 
 export type CheckoutPaymentMethod = CustomerCheckoutPaymentMethod;
@@ -199,7 +205,10 @@ export function PaymentClient({
   hostedCheckout,
   geideaScriptUrl,
   paymentIconUrls,
+  tabbyPromo,
+  tabbyEligibility,
 }: Props) {
+  const locale = useLocale();
   const enabledMethods = useMemo(
     () => listEnabledCheckoutPaymentMethods(paymentMethodFlags),
     [paymentMethodFlags],
@@ -232,6 +241,9 @@ export function PaymentClient({
     [methodOptions, enabledMethods, balancePaymentMode],
   );
 
+  // pre-scoring: تابي مرفوضة مسبقاً لهذا العميل/المبلغ — تبقى ظاهرة (مش مخفية) لكن غير قابلة للاختيار.
+  const tabbyIneligible = tabbyEligibility?.isEligible === false;
+
   const [state, formAction, pending] = useActionState<ConfirmPaymentResult | null, FormData>(
     confirmMockPayment,
     null,
@@ -240,8 +252,11 @@ export function PaymentClient({
     ResendBookingInvoiceResult | null,
     FormData
   >(resendBookingInvoice, null);
+  const pickDefaultMethod = (methods: CheckoutPaymentMethod[]): CheckoutPaymentMethod =>
+    methods.find((m) => !(m === "TABBY" && tabbyIneligible)) ?? methods[0] ?? "CARD";
+
   const [method, setMethod] = useState<CheckoutPaymentMethod>(
-    () => enabledMethods[0] ?? "CARD",
+    () => pickDefaultMethod(enabledMethods),
   );
   const [card, setCard] = useState("");
   const [expiry, setExpiry] = useState("");
@@ -251,10 +266,10 @@ export function PaymentClient({
   const [clientError, setClientError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (enabledMethods.includes(method)) return;
-    const next = enabledMethods[0];
+    if (enabledMethods.includes(method) && !(method === "TABBY" && tabbyIneligible)) return;
+    const next = pickDefaultMethod(enabledMethods);
     if (next) setMethod(next);
-  }, [enabledMethods, method]);
+  }, [enabledMethods, method, tabbyIneligible]);
 
   // المبلغ المطلوب سداده الآن: الرصيد فقط في وضع فرق التمديد، وإلا الإجمالي كاملاً.
   const payableAmountSar = balancePaymentMode ? balanceDueSar : booking.totals.totalInclTax;
@@ -605,6 +620,7 @@ export function PaymentClient({
               <div className="grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="طريقة الدفع">
                 {visibleMethodOptions.map((opt) => {
                   const on = method === opt.id;
+                  const ineligible = opt.id === "TABBY" && tabbyIneligible;
                   return (
                     <button
                       key={opt.id}
@@ -612,13 +628,18 @@ export function PaymentClient({
                       role="radio"
                       aria-checked={on}
                       aria-label={opt.title}
+                      aria-disabled={ineligible}
+                      disabled={ineligible}
                       onClick={() => {
+                        if (ineligible) return;
                         setMethod(opt.id);
                         setClientError(null);
                       }}
-                      className={`relative flex flex-col items-start gap-2 rounded-xl border px-4 py-3 text-start transition-all ${on
-                        ? "border-[#dbb878] bg-[#003749]/[0.04] ring-2 ring-[#dbb878]/35"
-                        : "border-[#ebe4d3] bg-white hover:border-[#dbb878]/40 hover:shadow-sm"
+                      className={`relative flex flex-col items-start gap-2 rounded-xl border px-4 py-3 text-start transition-all ${ineligible
+                        ? "cursor-not-allowed border-[#ebe4d3] bg-neutral-50 opacity-60"
+                        : on
+                          ? "border-[#dbb878] bg-[#003749]/[0.04] ring-2 ring-[#dbb878]/35"
+                          : "border-[#ebe4d3] bg-white hover:border-[#dbb878]/40 hover:shadow-sm"
                         }`}
                     >
                       {on ? (
@@ -654,7 +675,11 @@ export function PaymentClient({
                         )}
                         <span className="font-extrabold text-[#003749]">{opt.title}</span>
                       </span>
-                      {opt.hint ? (
+                      {ineligible ? (
+                        <span className="text-[11px] leading-snug font-bold text-red-700">
+                          عذراً، تعذّر على تابي اعتماد هذه العملية حالياً.
+                        </span>
+                      ) : opt.hint ? (
                         <span className="text-[11px] leading-snug text-on-surface-variant">{opt.hint}</span>
                       ) : null}
                     </button>
@@ -669,6 +694,17 @@ export function PaymentClient({
                     سيتم تحويلك إلى صفحة تابي لاختيار خطة التقسيط والموافقة على الشروط.
                     المبلغ المعروض هو الإجمالي شاملاً الضريبة — بدون فوائد أو رسوم إضافية.
                   </p>
+                  {tabbyPromo ? (
+                    <div className="mt-2">
+                      <TabbyPromoSnippet
+                        publicKey={tabbyPromo.publicKey}
+                        merchantCode={tabbyPromo.merchantCode}
+                        priceSar={payableAmountSar}
+                        lang={locale === "en" ? "en" : "ar"}
+                        source="cart"
+                      />
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
 

@@ -38,7 +38,7 @@ async function tabbyFetch<T>(
   cfg: TabbyConfig,
   path: string,
   useSecretKey: boolean,
-  init: { method: "GET" | "POST"; body?: unknown },
+  init: { method: "GET" | "POST"; body?: unknown; extraHeaders?: Record<string, string> },
 ): Promise<T> {
   const url = `${cfg.apiBase}${path}`;
   const apiKey = useSecretKey ? cfg.secretKey : cfg.publicKey;
@@ -54,6 +54,7 @@ async function tabbyFetch<T>(
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
+        ...init.extraHeaders,
       },
       body: init.body != null ? JSON.stringify(init.body) : undefined,
       cache: "no-store",
@@ -238,6 +239,9 @@ export async function createTabbyCheckoutSession(args: {
         reference_id: merchantReferenceId,
         items: formattedItems,
       },
+      // مصفوفة فارغة لعميل جديد بلا حجوزات سابقة — Tabby's "Session payload model"
+      // (sub-fields غير موثّقة في quick-start) لسه محتاجة مراجعة لملئها بحجوزات حقيقية.
+      order_history: [],
     },
     lang: args.language || "ar",
     merchant_code: cfg.merchantCode,
@@ -362,6 +366,8 @@ export async function refundTabbyPayment(args: {
   paymentId: string;
   amountSar: number;
   reason?: string;
+  /** فريد لكل استرداد منطقي — إعادة استخدامه تُعيد نفس الاسترداد الأصلي بدل تكراره. */
+  referenceId?: string;
 }): Promise<{ refundId: string; status: string }> {
   const cfg = getTabbyConfig();
   if (!cfg) throw new Error("Tabby غير مهيّأة — أضف مفاتيح البيئة.");
@@ -376,6 +382,7 @@ export async function refundTabbyPayment(args: {
       body: {
         amount,
         reason: args.reason || "Booking Refund",
+        reference_id: args.referenceId || `refund-${args.paymentId}-${Date.now()}`,
       },
     },
   );
@@ -384,4 +391,23 @@ export async function refundTabbyPayment(args: {
     refundId: data.id || `TABBY-REFUND-${Date.now()}`,
     status: data.status || "REFUNDED",
   };
+}
+
+/**
+ * تسجيل رابط الـwebhook لدى تابي — عملية مرة واحدة (لكل مفتاح سري: ساندبوكس
+ * وإنتاج منفصلين). تُشغَّل يدوياً عبر scripts/register-tabby-webhook.ts، مش من
+ * أي مسار في التطبيق — تُغيّر إعدادات حساب تابي فلا يصح تنفيذها تلقائياً.
+ */
+export async function registerTabbyWebhook(webhookUrl: string): Promise<{ id: string; url: string }> {
+  const cfg = getTabbyConfig();
+  if (!cfg) throw new Error("Tabby غير مهيّأة — أضف مفاتيح البيئة.");
+
+  const data = await tabbyFetch<{ id?: string; url?: string }>(cfg, "/api/v1/webhooks", true, {
+    method: "POST",
+    body: { url: webhookUrl },
+    extraHeaders: { "X-Merchant-Code": cfg.merchantCode },
+  });
+
+  if (!data.id) throw new Error("Tabby webhook registration returned no id.");
+  return { id: data.id, url: data.url || webhookUrl };
 }

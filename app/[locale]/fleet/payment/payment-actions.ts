@@ -2,12 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { getLocale } from "next-intl/server";
 import { Prisma } from "@prisma/client";
 import {
   createGeideaCheckoutSession,
   isGeideaConfigured,
 } from "@/lib/geidea/client";
 import {
+  checkTabbyEligibility,
   createTabbyCheckoutSession,
   isTabbyConfigured,
 } from "@/lib/tabby/client";
@@ -104,6 +106,9 @@ export async function confirmMockPayment(
     return { ok: false, error: "طريقة الدفع غير صالحة." };
   }
 
+  const locale = await getLocale();
+  const tabbyLang: "ar" | "en" = locale === "en" ? "en" : "ar";
+
   const methodFlags = await getCheckoutPaymentMethodFlags();
   if (!isCheckoutPaymentMethodEnabled(methodFlags, paymentMethod)) {
     return { ok: false, error: "طريقة الدفع غير متاحة حالياً." };
@@ -181,6 +186,17 @@ export async function confirmMockPayment(
 
     const tabbyBalanceHosted = isTabbyConfigured() && paymentMethod === "TABBY";
     if (tabbyBalanceHosted) {
+      const eligibility = await checkTabbyEligibility({
+        amountSar: balanceDueSar,
+        buyer: {
+          phone: bookingGate.phone,
+          email: bookingGate.contactEmail || bookingGate.customer?.email,
+          name: bookingGate.fullName,
+        },
+      });
+      if (!eligibility.isEligible) {
+        return { ok: false, error: "عذراً، تعذّر على تابي اعتماد هذه العملية حالياً. اختر وسيلة دفع أخرى." };
+      }
       const appUrl = (process.env.APP_PUBLIC_URL ?? "").trim().replace(/\/$/, "");
       let redirectUrl: string;
       try {
@@ -207,7 +223,7 @@ export async function confirmMockPayment(
           successUrl: `${appUrl}/fleet/payment/${id}?status=success`,
           cancelUrl: `${appUrl}/fleet/payment/${id}?status=cancel`,
           failureUrl: `${appUrl}/fleet/payment/${id}?status=failure`,
-          language: "ar",
+          language: tabbyLang,
         });
         await prisma.bookingRequest.update({
           where: { id },
@@ -314,6 +330,17 @@ export async function confirmMockPayment(
     if (paidTotalSar == null || paidTotalSar <= 0) {
       return { ok: false, error: "تعذّر احتساب مبلغ الحجز. تواصل مع الدعم." };
     }
+    const eligibility = await checkTabbyEligibility({
+      amountSar: paidTotalSar,
+      buyer: {
+        phone: bookingGate.phone,
+        email: bookingGate.contactEmail || bookingGate.customer?.email,
+        name: bookingGate.fullName,
+      },
+    });
+    if (!eligibility.isEligible) {
+      return { ok: false, error: "عذراً، تعذّر على تابي اعتماد هذه العملية حالياً. اختر وسيلة دفع أخرى." };
+    }
     const appUrl = (process.env.APP_PUBLIC_URL ?? "").trim().replace(/\/$/, "");
     let redirectUrl: string;
     try {
@@ -340,7 +367,7 @@ export async function confirmMockPayment(
         successUrl: `${appUrl}/fleet/payment/${id}?status=success`,
         cancelUrl: `${appUrl}/fleet/payment/${id}?status=cancel`,
         failureUrl: `${appUrl}/fleet/payment/${id}?status=failure`,
-        language: "ar",
+        language: tabbyLang,
       });
       await prisma.bookingRequest.update({
         where: { id },

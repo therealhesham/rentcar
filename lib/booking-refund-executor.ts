@@ -55,6 +55,7 @@ export async function executeCancellationRefundByPaymentMethod(args: {
       const res = await refundTabbyPayment({
         paymentId: booking.paymentGatewayRef,
         amountSar: amount,
+        referenceId: `refund-booking-${args.bookingRequestId}`,
       });
       return { ok: true, externalRef: res.refundId };
     } catch (e) {
