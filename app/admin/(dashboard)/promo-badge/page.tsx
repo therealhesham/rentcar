@@ -3,7 +3,8 @@ import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { getAdminSession } from "@/lib/admin-auth";
 import { getPromoBadgeSettings } from "@/lib/site-settings";
 import { prisma } from "@/lib/prisma";
-import { PromoBadgeForm, type PromoBadgeModelOption } from "./PromoBadgeForm";
+import { PromoBadgeCampaignsManager } from "./PromoBadgeCampaignsManager";
+import type { PromoBadgeModelOption } from "./PromoBadgeCampaignCard";
 
 export const dynamic = "force-dynamic";
 
@@ -43,14 +44,15 @@ export default async function AdminPromoBadgePage() {
         title="شارة ترويجية على كارت السيارة"
         description={
           <>
-            شارة نصية بلون خلفية تختاره، تظهر بدل شارة «وفّرت/خصم» المعتادة على الموديلات
-            اللي تختارها فقط. عطّل التفعيل وترجع كل الموديلات لشارتها الافتراضية تلقائياً.
+            عروض مستقلة — كل عرض بنصه وألوانه وموديلاته الخاصة، وتقدر تشغّل أكتر من عرض في
+            نفس الوقت. عرض معطَّل أو موديل مش مختار فيه يرجع لشارة «وفّرت/خصم» المعتادة
+            تلقائياً.
           </>
         }
         backHref="/admin"
       />
 
-      <PromoBadgeForm key={JSON.stringify(settings)} settings={settings} models={models} />
+      <PromoBadgeCampaignsManager key={JSON.stringify(settings)} campaigns={settings.campaigns} models={models} />
     </>
   );
 }

@@ -1,8 +1,13 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
-import { updatePromoBadgeAction } from "@/app/admin/promo-badge-actions";
-import type { PromoBadgeSettings } from "@/lib/promo-badge";
+import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { Trash2 } from "lucide-react";
+import {
+  deletePromoBadgeCampaignAction,
+  savePromoBadgeCampaignAction,
+} from "@/app/admin/promo-badge-actions";
+import type { PromoBadgeCampaign } from "@/lib/promo-badge";
 
 export type PromoBadgeModelOption = {
   id: number;
@@ -13,8 +18,10 @@ export type PromoBadgeModelOption = {
 };
 
 type Props = {
-  settings: PromoBadgeSettings;
+  campaign: PromoBadgeCampaign;
   models: PromoBadgeModelOption[];
+  /** يمسح الكارت من الواجهة محلياً بلا نداء سيرفر — لعرض لسه ما اتحفظش أبداً. */
+  onRemoveDraft: () => void;
 };
 
 type SortKey = "updatedDesc" | "createdDesc" | "name";
@@ -37,14 +44,22 @@ function formatDateAr(iso: string): string {
   });
 }
 
-export function PromoBadgeForm({ settings, models }: Props) {
-  const [state, formAction, pending] = useActionState(updatePromoBadgeAction, null);
+export function PromoBadgeCampaignCard({ campaign, models, onRemoveDraft }: Props) {
+  const router = useRouter();
+  const [state, formAction, pending] = useActionState(savePromoBadgeCampaignAction, null);
+  const [isDeleting, startDeleteTransition] = useTransition();
 
-  const [isActive, setIsActive] = useState(settings.isActive);
-  const [labelAr, setLabelAr] = useState(settings.labelAr);
-  const [backgroundColor, setBackgroundColor] = useState(settings.backgroundColor);
-  const [textColor, setTextColor] = useState(settings.textColor);
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set(settings.carModelIds));
+  const isDraft = !campaign.id;
+
+  useEffect(() => {
+    if (state?.ok) router.refresh();
+  }, [state, router]);
+
+  const [isActive, setIsActive] = useState(campaign.isActive);
+  const [labelAr, setLabelAr] = useState(campaign.labelAr);
+  const [backgroundColor, setBackgroundColor] = useState(campaign.backgroundColor);
+  const [textColor, setTextColor] = useState(campaign.textColor);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set(campaign.carModelIds));
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("updatedDesc");
 
@@ -52,13 +67,9 @@ export function PromoBadgeForm({ settings, models }: Props) {
     const q = search.trim().toLowerCase();
     const filtered = q ? models.filter((m) => m.label.toLowerCase().includes(q)) : models;
     const sorted = [...filtered];
-    if (sortKey === "updatedDesc") {
-      sorted.sort((a, b) => b.updatedAtIso.localeCompare(a.updatedAtIso));
-    } else if (sortKey === "createdDesc") {
-      sorted.sort((a, b) => b.createdAtIso.localeCompare(a.createdAtIso));
-    } else {
-      sorted.sort((a, b) => a.label.localeCompare(b.label, "ar"));
-    }
+    if (sortKey === "updatedDesc") sorted.sort((a, b) => b.updatedAtIso.localeCompare(a.updatedAtIso));
+    else if (sortKey === "createdDesc") sorted.sort((a, b) => b.createdAtIso.localeCompare(a.createdAtIso));
+    else sorted.sort((a, b) => a.label.localeCompare(b.label, "ar"));
     return sorted;
   }, [models, search, sortKey]);
 
@@ -71,6 +82,8 @@ export function PromoBadgeForm({ settings, models }: Props) {
     });
   }
 
+  // مقصود: التحديد الجماعي شغّال بس على النتائج المفلترة بالبحث، عشان زرار واحد
+  // من غير بحث ما يحددش كل الأسطول فجأة (كان سبب ظهور الشارة على كل السيارات).
   function selectAllVisible() {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -78,7 +91,6 @@ export function PromoBadgeForm({ settings, models }: Props) {
       return next;
     });
   }
-
   function clearAllVisible() {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -87,12 +99,24 @@ export function PromoBadgeForm({ settings, models }: Props) {
     });
   }
 
+  function handleDelete() {
+    if (isDraft) {
+      onRemoveDraft();
+      return;
+    }
+    if (!confirm("حذف هذا العرض نهائياً؟")) return;
+    startDeleteTransition(async () => {
+      const res = await deletePromoBadgeCampaignAction(campaign.id);
+      if (res.ok) router.refresh();
+      else alert(res.error || "تعذّر حذف العرض.");
+    });
+  }
+
   return (
-    <form
-      action={formAction}
-      className="max-w-3xl space-y-8 rounded-2xl border border-outline-variant/30 bg-surface-container-low p-6"
-    >
-      <fieldset className="space-y-3">
+    <form action={formAction} className="space-y-6 rounded-2xl border border-outline-variant/30 bg-surface-container-low p-6">
+      <input type="hidden" name="id" value={campaign.id} />
+
+      <div className="flex items-center justify-between gap-3">
         <label className="flex cursor-pointer items-center gap-3">
           <input
             type="checkbox"
@@ -101,12 +125,20 @@ export function PromoBadgeForm({ settings, models }: Props) {
             onChange={(e) => setIsActive(e.target.checked)}
             className="size-4 accent-primary"
           />
-          <span className="text-base font-extrabold text-on-surface">تفعيل الشارة</span>
+          <span className="text-base font-extrabold text-on-surface">
+            {isActive ? "مفعَّل" : "معطَّل"} {isDraft ? "— عرض جديد" : ""}
+          </span>
         </label>
-        <p className="text-xs text-on-surface-variant">
-          معطَّلة = كل الموديلات ترجع لشارة «وفّرت/خصم» المعتادة تلقائياً بدون أي تعديل إضافي.
-        </p>
-      </fieldset>
+        <button
+          type="button"
+          onClick={handleDelete}
+          disabled={isDeleting}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-error/30 px-3 py-1.5 text-xs font-bold text-error transition-colors hover:bg-error-container/40 disabled:opacity-50"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+          حذف
+        </button>
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block text-sm font-bold text-on-surface">
@@ -127,7 +159,7 @@ export function PromoBadgeForm({ settings, models }: Props) {
           <input
             type="text"
             name="labelEn"
-            defaultValue={settings.labelEn}
+            defaultValue={campaign.labelEn}
             maxLength={40}
             placeholder="e.g. National Day Offer"
             className={`${INPUT_CLASS} mt-1.5`}
@@ -212,9 +244,11 @@ export function PromoBadgeForm({ settings, models }: Props) {
           <button
             type="button"
             onClick={selectAllVisible}
-            className="rounded-lg border border-outline-variant/40 px-3 py-1.5 text-xs font-bold text-on-surface hover:bg-surface-container"
+            disabled={!search.trim()}
+            title={!search.trim() ? "ابحث الأول عشان تحدد مجموعة محدَّدة، منعاً لتحديد الأسطول كله بالغلط" : undefined}
+            className="rounded-lg border border-outline-variant/40 px-3 py-1.5 text-xs font-bold text-on-surface hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-40"
           >
-            تحديد الظاهر كله
+            تحديد نتائج البحث كلها
           </button>
           <button
             type="button"
@@ -232,7 +266,7 @@ export function PromoBadgeForm({ settings, models }: Props) {
             visibleModels.map((m) => (
               <li key={m.id}>
                 <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg px-3 py-2 hover:bg-surface-container">
-                  <span className="flex items-center gap-2.5 min-w-0">
+                  <span className="flex min-w-0 items-center gap-2.5">
                     <input
                       type="checkbox"
                       name="carModelIds"
@@ -259,18 +293,13 @@ export function PromoBadgeForm({ settings, models }: Props) {
       {state?.error ? (
         <p className="rounded-lg bg-error-container/30 px-3 py-2 text-sm font-bold text-error">{state.error}</p>
       ) : null}
-      {state?.ok ? (
-        <p className="rounded-lg bg-primary-container/30 px-3 py-2 text-sm font-bold text-on-primary-container">
-          تم حفظ الإعداد.
-        </p>
-      ) : null}
 
       <button
         type="submit"
         disabled={pending}
         className="rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-on-primary transition-opacity disabled:opacity-60"
       >
-        {pending ? "جاري الحفظ…" : "حفظ"}
+        {pending ? "جاري الحفظ…" : "حفظ هذا العرض"}
       </button>
     </form>
   );
