@@ -102,3 +102,62 @@ export async function updateFleetDisplayOrder(
   revalidateAll();
   return { ok: true };
 }
+
+/**
+ * يرتّب جميع موديلات الأسطول حسب سعرها اليومي الفعلي (override الفرع أو سعر الموديل)
+ * ويحفظ displayOrder في DB — يُطبَّق فوراً على صفحة العميل.
+ */
+export async function sortFleetByPrice(
+  _prev: { ok: boolean; error?: string } | null,
+  formData: FormData,
+): Promise<{ ok: boolean; error?: string }> {
+  const auth = await requireAdminForAction();
+  if (!auth.ok) return { ok: false, error: auth.error };
+
+  const direction = formData.get("direction") as "asc" | "desc" | null;
+  if (direction !== "asc" && direction !== "desc") {
+    return { ok: false, error: "اتجاه ترتيب غير صالح." };
+  }
+
+  // جلب الموديلات مع أسعار الفروع (للحصول على effective price)
+  const models = await prisma.carModel.findMany({
+    where: { fleetItems: { some: { quantity: { gt: 0 } } } },
+    select: {
+      id: true,
+      price: true,                // السعر الأساسي (Int)
+      fleetItems: {
+        where: { quantity: { gt: 0 } },
+        select: { pricePerDayExclTax: true },
+      },
+    },
+  });
+
+  // الـ effective price = أقل سعر متاح عبر فروع الموديل
+  // (لو موديل موجود في أكثر من فرع بأسعار مختلفة نأخذ الأقل عشان الترتيب يكون منطقي)
+  const withPrice = models.map((m) => {
+    const branchPrices = m.fleetItems
+      .map((f) => f.pricePerDayExclTax)
+      .filter((p): p is number => p !== null);
+    const effectivePrice =
+      branchPrices.length > 0 ? Math.min(...branchPrices) : m.price;
+    return { id: m.id, effectivePrice };
+  });
+
+  withPrice.sort((a, b) =>
+    direction === "asc"
+      ? a.effectivePrice - b.effectivePrice
+      : b.effectivePrice - a.effectivePrice,
+  );
+
+  await prisma.$transaction(
+    withPrice.map((m, idx) =>
+      prisma.carModel.update({
+        where: { id: m.id },
+        data: { displayOrder: idx },
+      }),
+    ),
+  );
+
+  revalidateAll();
+  return { ok: true };
+}

@@ -2,7 +2,11 @@
 
 import Image from "next/image";
 import { useActionState } from "react";
-import { updateFleetVisibility, updateFleetDisplayOrder } from "@/app/admin/fleet-visibility-actions";
+import {
+  updateFleetVisibility,
+  updateFleetDisplayOrder,
+  sortFleetByPrice,
+} from "@/app/admin/fleet-visibility-actions";
 
 export type FleetVisibilityRow = {
   id: number;
@@ -16,6 +20,7 @@ export type FleetVisibilityRow = {
   quantity: number;
   activeBookings: number;
   isVisible: boolean;
+  effectivePrice: number;
 };
 
 function VisibilityToggle({ row }: { row: FleetVisibilityRow }) {
@@ -98,24 +103,81 @@ function OrderButtons({
   );
 }
 
+function SortByPriceToolbar() {
+  const [stateAsc, actionAsc] = useActionState(sortFleetByPrice, null);
+  const [stateDesc, actionDesc] = useActionState(sortFleetByPrice, null);
+
+  return (
+    <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-outline-variant/20 bg-surface-container-lowest px-4 py-3">
+      <span className="text-sm font-semibold text-on-surface">
+        ترتيب حسب السعر:
+      </span>
+
+      <form action={actionAsc} className="flex items-center gap-2">
+        <input type="hidden" name="direction" value="asc" />
+        <button
+          type="submit"
+          title="ترتيب من الأرخص للأغلى"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-outline-variant bg-surface-container px-3 py-1.5 text-sm font-medium text-on-surface transition-colors hover:bg-primary-container hover:text-on-primary-container active:scale-95"
+        >
+          <span>💰</span>
+          <span>الأرخص أولاً</span>
+          <span className="text-xs opacity-60">↑</span>
+        </button>
+        {stateAsc && !stateAsc.ok && (
+          <span className="text-xs text-red-600">{stateAsc.error}</span>
+        )}
+        {stateAsc?.ok && (
+          <span className="text-xs text-green-600">✓ تم</span>
+        )}
+      </form>
+
+      <form action={actionDesc} className="flex items-center gap-2">
+        <input type="hidden" name="direction" value="desc" />
+        <button
+          type="submit"
+          title="ترتيب من الأغلى للأرخص"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-outline-variant bg-surface-container px-3 py-1.5 text-sm font-medium text-on-surface transition-colors hover:bg-primary-container hover:text-on-primary-container active:scale-95"
+        >
+          <span>💎</span>
+          <span>الأغلى أولاً</span>
+          <span className="text-xs opacity-60">↓</span>
+        </button>
+        {stateDesc && !stateDesc.ok && (
+          <span className="text-xs text-red-600">{stateDesc.error}</span>
+        )}
+        {stateDesc?.ok && (
+          <span className="text-xs text-green-600">✓ تم</span>
+        )}
+      </form>
+
+      <span className="text-xs text-on-surface-variant">
+        يُطبَّق فوراً على صفحة العميل
+      </span>
+    </div>
+  );
+}
+
 export function FleetVisibilityClient({ rows }: { rows: FleetVisibilityRow[] }) {
-  // حساب ترتيب كل موديل (بدون تكرار) لتحديد isFirst/isLast بدقة
   const uniqueModelIds = Array.from(new Set(rows.map((r) => r.modelId)));
   const modelPos = new Map(uniqueModelIds.map((id, i) => [id, i]));
 
   return (
     <section className="rounded-2xl border border-outline-variant/30 bg-surface-container-low p-5 md:p-6">
+      <SortByPriceToolbar />
+
       {rows.length === 0 ? (
         <p className="text-sm text-on-surface-variant">لا توجد مركبات في الأسطول حالياً.</p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[820px] text-start text-sm">
+          <table className="w-full min-w-[900px] text-start text-sm">
             <thead>
               <tr className="border-b border-outline-variant/30 text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
                 <th className="px-3 py-2 text-start">الترتيب</th>
                 <th className="px-3 py-2 text-start"></th>
                 <th className="px-3 py-2 text-start">المركبة</th>
                 <th className="px-3 py-2 text-start">الفرع</th>
+                <th className="px-3 py-2 text-end">السعر / يوم</th>
                 <th className="px-3 py-2 text-center">الوحدات</th>
                 <th className="px-3 py-2 text-center">حجوزات نشطة</th>
                 <th className="px-3 py-2 text-center">متاح</th>
@@ -126,7 +188,6 @@ export function FleetVisibilityClient({ rows }: { rows: FleetVisibilityRow[] }) 
               {rows.map((row, idx) => {
                 const freeSlots = Math.max(0, row.quantity - row.activeBookings);
                 const fullyBooked = freeSlots === 0;
-                // أزرار الترتيب تظهر فقط على أول صف من كل موديل
                 const isFirstRowOfModel = rows[idx - 1]?.modelId !== row.modelId;
                 const pos = modelPos.get(row.modelId) ?? 0;
                 const isFirstModel = pos === 0;
@@ -171,6 +232,12 @@ export function FleetVisibilityClient({ rows }: { rows: FleetVisibilityRow[] }) 
                         {row.branchName}
                       </span>
                     </td>
+                    <td className="px-3 py-2 text-end tabular-nums">
+                      <span className="font-semibold text-on-surface">
+                        {row.effectivePrice.toLocaleString("ar-SA")}
+                      </span>
+                      <span className="mr-0.5 text-xs text-on-surface-variant">ر.س</span>
+                    </td>
                     <td className="px-3 py-2 text-center tabular-nums">{row.quantity}</td>
                     <td className="px-3 py-2 text-center tabular-nums">
                       {row.activeBookings > 0 ? (
@@ -205,3 +272,4 @@ export function FleetVisibilityClient({ rows }: { rows: FleetVisibilityRow[] }) 
     </section>
   );
 }
+

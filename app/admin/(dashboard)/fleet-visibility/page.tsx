@@ -26,11 +26,13 @@ export default async function FleetVisibilityPage() {
       displayOrder: true,
       modelId: true,
       branchId: true,
+      pricePerDayExclTax: true,
       model: {
         select: {
           id: true,
           name: true,
           year: true,
+          price: true,
           image: true,
           alt: true,
           displayOrder: true,
@@ -63,6 +65,8 @@ export default async function FleetVisibilityPage() {
 
   const rows: FleetVisibilityRow[] = fleetRows.map((row) => {
     const key = `${row.modelId}_${row.branchId}`;
+    // السعر الفعلي: override الفرع إن وُجد وإلا السعر الأساسي للموديل
+    const effectivePrice = row.pricePerDayExclTax ?? row.model.price;
     return {
       id: row.id,
       modelId: row.model.id,
@@ -75,6 +79,7 @@ export default async function FleetVisibilityPage() {
       quantity: row.quantity,
       activeBookings: bookingMap.get(key) ?? 0,
       isVisible: row.isVisible,
+      effectivePrice,
     };
   });
   // الترتيب من DB مطابق للعميل — لا داعي لـ sort إضافي
@@ -108,8 +113,9 @@ export default async function FleetVisibilityPage() {
 
       <div className="mb-4 rounded-xl border border-outline-variant/30 bg-surface-container-low px-4 py-3 text-sm text-on-surface-variant">
         <span className="font-medium text-on-surface">تلميح:</span> استخدم أزرار
-        ↑ ↓ لإعادة ترتيب السيارات داخل كل فرع. الترتيب يؤثر على ترتيب الظهور في
-        صفحة الأسطول.
+        ↑ ↓ لإعادة ترتيب السيارات يدوياً، أو استخدم{" "}
+        <span className="font-medium text-on-surface">ترتيب حسب السعر</span>{" "}
+        للترتيب التلقائي. الترتيب يؤثر على ترتيب الظهور في صفحة الأسطول.
       </div>
 
       <FleetVisibilityClient rows={rows} />
