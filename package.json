@@ -15,7 +15,8 @@
     "vehicles:upload-images": "tsx prisma/scripts/upload-vehicle-images.ts",
     "migrate:employee-permissions": "tsx prisma/scripts/migrate-employee-permissions-to-pages.ts",
     "postinstall": "prisma generate",
-    "geo:update": "node scripts/download-geolite.mjs"
+    "geo:update": "node scripts/download-geolite.mjs",
+    "tabby:register-webhook": "tsx scripts/register-tabby-webhook.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

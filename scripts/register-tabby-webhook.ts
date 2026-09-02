@@ -1,9 +1,4 @@
-/**
- * تسجيل رابط الـwebhook لدى تابي — يُشغَّل يدوياً مرة واحدة (ولمرة أخرى عند
- * الحصول على مفاتيح الإنتاج، لأن تسجيل webhook بمفتاح test لا يستقبل إلا دفعات test).
- *
- * تشغيل: npx tsx scripts/register-tabby-webhook.ts
- */
+
 import { registerTabbyWebhook } from "../lib/tabby/client";
 
 async function main() {
