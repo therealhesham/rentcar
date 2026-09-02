@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createTabbyCheckoutSession, isTabbyConfigured } from "@/lib/tabby/client";
 import { getBookingForPayment } from "@/lib/booking-payment-data";
+import { getAppPublicUrl } from "@/lib/app-public-url";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +47,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "invalid amount to pay" }, { status: 400 });
   }
 
-  const appUrl = (process.env.APP_PUBLIC_URL ?? "").trim().replace(/\/$/, "");
+  const appUrl = getAppPublicUrl();
   const successUrl = `${appUrl}/fleet/payment/${bookingId}?status=success`;
   const cancelUrl = `${appUrl}/fleet/payment/${bookingId}?status=cancel`;
   const failureUrl = `${appUrl}/fleet/payment/${bookingId}?status=failure`;

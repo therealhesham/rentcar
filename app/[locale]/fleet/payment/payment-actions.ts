@@ -34,6 +34,7 @@ import {
 } from "@/lib/booking-edit";
 import { prisma } from "@/lib/prisma";
 import { recordPaymentTransaction } from "@/lib/payment-transaction";
+import { getAppPublicUrl } from "@/lib/app-public-url";
 
 export type ConfirmPaymentResult =
   | { ok: true; paymentMethod: string; underReview?: boolean }
@@ -197,7 +198,7 @@ export async function confirmMockPayment(
       if (!eligibility.isEligible) {
         return { ok: false, error: "عذراً، تعذّر على تابي اعتماد هذه العملية حالياً. اختر وسيلة دفع أخرى." };
       }
-      const appUrl = (process.env.APP_PUBLIC_URL ?? "").trim().replace(/\/$/, "");
+      const appUrl = getAppPublicUrl();
       let redirectUrl: string;
       try {
         const session = await createTabbyCheckoutSession({
@@ -245,7 +246,7 @@ export async function confirmMockPayment(
       isGeideaConfigured() && isGeideaHostedCheckoutMethod(paymentMethod);
 
     if (geideaBalanceHosted) {
-      const appUrl = (process.env.APP_PUBLIC_URL ?? "").trim().replace(/\/$/, "");
+      const appUrl = getAppPublicUrl();
       let redirectUrl: string;
       try {
         const session = await createGeideaCheckoutSession({
@@ -341,7 +342,7 @@ export async function confirmMockPayment(
     if (!eligibility.isEligible) {
       return { ok: false, error: "عذراً، تعذّر على تابي اعتماد هذه العملية حالياً. اختر وسيلة دفع أخرى." };
     }
-    const appUrl = (process.env.APP_PUBLIC_URL ?? "").trim().replace(/\/$/, "");
+    const appUrl = getAppPublicUrl();
     let redirectUrl: string;
     try {
       const session = await createTabbyCheckoutSession({
@@ -394,7 +395,7 @@ export async function confirmMockPayment(
     if (paidTotalSar == null || paidTotalSar <= 0) {
       return { ok: false, error: "تعذّر احتساب مبلغ الحجز. تواصل مع الدعم." };
     }
-    const appUrl = (process.env.APP_PUBLIC_URL ?? "").trim().replace(/\/$/, "");
+    const appUrl = getAppPublicUrl();
     let redirectUrl: string;
     try {
       const session = await createGeideaCheckoutSession({
@@ -652,7 +653,7 @@ export async function createApplePayExpressSession(
     return { ok: false, error: "تعذّر احتساب مبلغ الحجز. تواصل مع الدعم." };
   }
 
-  const appUrl = (process.env.APP_PUBLIC_URL ?? "").trim().replace(/\/$/, "");
+  const appUrl = getAppPublicUrl();
   try {
     const session = await createGeideaCheckoutSession({
       bookingRequestId: id,

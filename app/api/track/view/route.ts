@@ -8,6 +8,7 @@ import {
 } from "@/lib/activity-log";
 import { getCustomerSessionUserId } from "@/lib/customer-auth";
 import { isFormFailureAlertKind, notifyFormFailure } from "@/lib/form-failure-alert";
+import { getAppPublicUrl } from "@/lib/app-public-url";
 
 export const dynamic = "force-dynamic";
 
@@ -110,7 +111,7 @@ export async function POST(request: Request) {
       detail,
       path,
       context,
-      siteOrigin: process.env.APP_PUBLIC_URL?.trim().replace(/\/+$/, "") || null,
+      siteOrigin: getAppPublicUrl() || null,
       ...meta,
     });
   }

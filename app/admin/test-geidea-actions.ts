@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { requirePermissionForAction } from "@/lib/admin-access";
 import { createGeideaCheckoutSession, refundGeideaPayment } from "@/lib/geidea/client";
 import { TEST_GEIDEA_REF_COOKIE } from "@/lib/test-geidea-constants";
+import { getAppPublicUrl } from "@/lib/app-public-url";
 
 /**
  * أداة اختبار داخلية لبوابة جيديا على بيئة الإنتاج الحقيقية — سوبر أدمن فقط.
@@ -23,7 +24,7 @@ export async function startGeideaTestPaymentAction(): Promise<void> {
   const auth = await requirePermissionForAction("/admin/test-geidea");
   if (!auth.ok) redirect("/admin/test-geidea?error=" + encodeURIComponent(auth.error));
 
-  const appUrl = (process.env.APP_PUBLIC_URL ?? "").trim().replace(/\/$/, "");
+  const appUrl = getAppPublicUrl();
 
   let redirectUrl: string;
   let merchantReferenceId: string;
@@ -69,7 +70,7 @@ export async function startGeideaApplePayTestSessionAction(): Promise<ApplePayTe
   const auth = await requirePermissionForAction("/admin/test-geidea");
   if (!auth.ok) return { ok: false, error: auth.error };
 
-  const appUrl = (process.env.APP_PUBLIC_URL ?? "").trim().replace(/\/$/, "");
+  const appUrl = getAppPublicUrl();
   try {
     const session = await createGeideaCheckoutSession({
       bookingRequestId: 0,

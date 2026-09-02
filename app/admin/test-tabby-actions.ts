@@ -9,6 +9,7 @@ import {
   refundTabbyPayment,
 } from "@/lib/tabby/client";
 import { TEST_TABBY_PAYMENT_COOKIE } from "@/lib/test-tabby-constants";
+import { getAppPublicUrl } from "@/lib/app-public-url";
 
 /**
  * أداة اختبار داخلية لبوابة تابي على بيئة الإنتاج الحقيقية — سوبر أدمن فقط.
@@ -26,7 +27,7 @@ export async function startTabbyTestPaymentAction(formData: FormData): Promise<v
     redirect("/admin/test-tabby?error=" + encodeURIComponent("مبلغ غير صالح."));
   }
 
-  const appUrl = (process.env.APP_PUBLIC_URL ?? "").trim().replace(/\/$/, "");
+  const appUrl = getAppPublicUrl();
   const returnUrl = `${appUrl}/admin/test-tabby`;
 
   let webUrl: string;

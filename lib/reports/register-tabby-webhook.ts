@@ -5,9 +5,10 @@
  * تشغيل: npx tsx scripts/register-tabby-webhook.ts
  */
 import { registerTabbyWebhook } from "../tabby/client";
+import { getAppPublicUrl } from "../app-public-url";
 
 async function main() {
-  const appUrl = (process.env.APP_PUBLIC_URL ?? "").trim().replace(/\/$/, "");
+  const appUrl = getAppPublicUrl();
   if (!appUrl) throw new Error("APP_PUBLIC_URL غير مضبوط في .env");
 
   const webhookUrl = `${appUrl}/api/payments/tabby/webhook`;
