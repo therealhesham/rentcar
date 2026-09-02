@@ -393,21 +393,57 @@ export async function refundTabbyPayment(args: {
   };
 }
 
+export type TabbyWebhook = { id: string; url: string };
+
 /**
- * تسجيل رابط الـwebhook لدى تابي — عملية مرة واحدة (لكل مفتاح سري: ساندبوكس
- * وإنتاج منفصلين). تُشغَّل يدوياً عبر scripts/register-tabby-webhook.ts، مش من
- * أي مسار في التطبيق — تُغيّر إعدادات حساب تابي فلا يصح تنفيذها تلقائياً.
+ * جلب قائمة الـwebhooks المسجّلة لدى تابي.
  */
-export async function registerTabbyWebhook(webhookUrl: string): Promise<{ id: string; url: string }> {
+export async function listTabbyWebhooks(): Promise<TabbyWebhook[]> {
   const cfg = getTabbyConfig();
   if (!cfg) throw new Error("Tabby غير مهيّأة — أضف مفاتيح البيئة.");
 
-  const data = await tabbyFetch<{ id?: string; url?: string }>(cfg, "/api/v1/webhooks", true, {
-    method: "POST",
-    body: { url: webhookUrl },
-    extraHeaders: { "X-Merchant-Code": cfg.merchantCode },
-  });
+  const data = await tabbyFetch<TabbyWebhook[] | { items?: TabbyWebhook[] }>(
+    cfg, "/api/v1/webhooks", true,
+    { method: "GET", extraHeaders: { "X-Merchant-Code": cfg.merchantCode } },
+  );
 
-  if (!data.id) throw new Error("Tabby webhook registration returned no id.");
-  return { id: data.id, url: data.url || webhookUrl };
+  // Tabby may return an array directly or wrap it in { items: [] }
+  if (Array.isArray(data)) return data;
+  return (data as { items?: TabbyWebhook[] }).items ?? [];
+}
+
+/**
+ * تسجيل رابط الـwebhook لدى تابي — idempotent:
+ * إن كان الـwebhook مسجّلاً بالفعل ("webhook already exists") تُعاد بياناته
+ * بدل رمي خطأ، مما يُتيح إعادة تشغيل السكريبت بأمان في أي وقت.
+ *
+ * تُشغَّل يدوياً عبر scripts/register-tabby-webhook.ts، مش من
+ * أي مسار في التطبيق — تُغيّر إعدادات حساب تابي فلا يصح تنفيذها تلقائياً.
+ */
+export async function registerTabbyWebhook(webhookUrl: string): Promise<{ id: string; url: string; alreadyExisted?: boolean }> {
+  const cfg = getTabbyConfig();
+  if (!cfg) throw new Error("Tabby غير مهيّأة — أضف مفاتيح البيئة.");
+
+  try {
+    const data = await tabbyFetch<{ id?: string; url?: string }>(cfg, "/api/v1/webhooks", true, {
+      method: "POST",
+      body: { url: webhookUrl },
+      extraHeaders: { "X-Merchant-Code": cfg.merchantCode },
+    });
+    if (!data.id) throw new Error("Tabby webhook registration returned no id.");
+    return { id: data.id, url: data.url || webhookUrl };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    // Tabby returns HTTP 400 "webhook already exists" when re-registering the same URL.
+    // That means the webhook IS active — treat it as a success.
+    if (msg.includes("webhook already exists")) {
+      console.log("[Tabby] Webhook already registered — fetching existing entry...");
+      const existing = await listTabbyWebhooks();
+      const match = existing.find((w) => w.url === webhookUrl) ?? existing[0];
+      if (match) return { ...match, alreadyExisted: true };
+      // Registered but list returned nothing — still not an error.
+      return { id: "unknown", url: webhookUrl, alreadyExisted: true };
+    }
+    throw err;
+  }
 }

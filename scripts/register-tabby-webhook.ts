@@ -15,7 +15,11 @@ async function main() {
   console.log(`Registering webhook: ${webhookUrl}`);
 
   const result = await registerTabbyWebhook(webhookUrl);
-  console.log("✅ Registered:", result);
+  if (result.alreadyExisted) {
+    console.log("✅ Webhook already registered (no change needed):", result);
+  } else {
+    console.log("✅ Webhook registered successfully:", result);
+  }
 }
 
 main().catch((e) => {
