@@ -54,6 +54,3 @@ next-env.d.ts
 /data/GeoLite2-City.mmdb
 /data/.geolite-tmp/
 reports/checkout-funnel-report.html
-scripts/geidea-inspect-booking.mjs
-scripts/geidea-orders.mjs
-scripts/geidea-reconcile.mjs
