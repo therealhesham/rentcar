@@ -203,12 +203,12 @@ export function FleetCarCard({
             ) : null}
             {car.priceUi.originalPrimaryAmount ? (
               <span className="flex items-baseline gap-0.5 text-sm font-semibold text-gray-400 line-through decoration-red-500 decoration-[1.5px] opacity-85 me-0.5">
-                {Math.ceil(Number(car.priceUi.originalPrimaryAmount))}
+                {Math.ceil(Number(String(car.priceUi.originalPrimaryAmount).replace(/,/g, "")))}
                 <SarCurrencyGlyph className="h-[0.7em] w-[0.7em]" />
               </span>
             ) : null}
             <span className="text-[26px] font-extrabold leading-none tracking-tight text-gray-900">
-              {Math.ceil(Number(car.priceUi.primaryAmount))}
+              {Math.ceil(Number(String(car.priceUi.primaryAmount).replace(/,/g, "")))}
             </span>
             <SarCurrencyGlyph className="h-4 w-4 shrink-0 text-gray-700" />
             {periodLabel && primaryLabel !== periodLabel ? (
@@ -219,7 +219,7 @@ export function FleetCarCard({
           </div>
           {car.priceUi.secondaryAmount && (
             <p className="mt-0.5 flex items-baseline gap-1 text-[11px] text-gray-500">
-              {Math.ceil(Number(car.priceUi.secondaryAmount))}
+              {Math.ceil(Number(String(car.priceUi.secondaryAmount).replace(/,/g, "")))}
               <SarCurrencyGlyph className="h-[0.65em] w-[0.65em]" />
               {secondaryLabel && (
                 <span>· {secondaryLabel}</span>
