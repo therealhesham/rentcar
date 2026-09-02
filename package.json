@@ -16,7 +16,7 @@
     "migrate:employee-permissions": "tsx prisma/scripts/migrate-employee-permissions-to-pages.ts",
     "postinstall": "prisma generate",
     "geo:update": "node scripts/download-geolite.mjs",
-    "tabby:register-webhook": "tsx scripts/register-tabby-webhook.ts"
+    "tabby:register-webhook": "node scripts/webhook-bundle.js"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

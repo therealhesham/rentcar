@@ -24,6 +24,18 @@ COPY . .
 # You can bypass this by passing dummy values if needed, or injecting them inside Docker run.
 RUN npm run build
 
+# Pre-compile the Tabby webhook registration script into a self-contained JS bundle.
+# This avoids needing tsx + esbuild + their native binaries in the production image.
+# server-only is a Next.js guard (no-op in a plain Node context) — we stub it out.
+RUN printf '// server-only shim\n' > /tmp/so-shim.js && \
+    ./node_modules/.bin/esbuild \
+      --bundle \
+      --platform=node \
+      --target=node20 \
+      --alias:server-only=/tmp/so-shim.js \
+      --outfile=scripts/webhook-bundle.js \
+      scripts/register-tabby-webhook.ts
+
 # Production image, copy all the files and run next
 FROM base AS runner
 WORKDIR /app
@@ -53,10 +65,6 @@ COPY --from=builder --chown=nextjs:nodejs /app/lib ./lib
 # Copy Prisma engines into the standalone output (needed at runtime)
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
-# Required by scripts/register-tabby-webhook.ts (via lib/tabby/client.ts) and tsx runner
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/server-only ./node_modules/server-only
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/tsx ./node_modules/tsx
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.bin/tsx ./node_modules/.bin/tsx
 
 USER nextjs
 
