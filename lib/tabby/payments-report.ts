@@ -67,10 +67,6 @@ export type TabbyPaymentsReport = {
   };
 };
 
-function dateOnly(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
-
 /** رقم الحجز من reference_id بصيغة booking-{id}-{ts}؛ booking-0-… أداة اختبار. */
 function bookingIdFromReference(ref: string | null): number | null {
   const m = /^booking-(\d+)-\d+$/.exec(ref ?? "");
@@ -127,7 +123,14 @@ async function fetchPaymentsPage(
   return { payments: data.payments ?? [], totalCount: data.pagination?.total_count ?? 0 };
 }
 
-/** يبني التقرير لآخر `days` يوماً (بلا حد أقصى موثَّق من تابي، نُبقيه لأسباب أداء). */
+/**
+ * يبني التقرير لآخر `days` يوماً (بلا حد أقصى موثَّق من تابي، نُبقيه لأسباب أداء).
+ *
+ * لا فلترة بالتاريخ من طرف تابي: `created_at__gte` مش باراميتر مدعوم فعلياً —
+ * تحقّقنا بنداء مباشر: بدونه ترجع تابي الدفعات الحقيقية، وبيه ترجع صفر نتائج
+ * دايماً (فلترة صامتة بلا خطأ). الفلترة هنا يدوية على الصفحة المجلوبة، ونتوقف
+ * عن طلب صفحات جديدة أول ما نعدّي حد التاريخ — النتائج مرتبة الأحدث أولاً.
+ */
 export async function buildTabbyPaymentsReport(days: number): Promise<TabbyPaymentsReport> {
   const cfg = getTabbyConfig();
   if (!cfg) throw new Error("بوابة تابي غير مهيّأة — أضف مفاتيح البيئة.");
@@ -137,10 +140,14 @@ export async function buildTabbyPaymentsReport(days: number): Promise<TabbyPayme
 
   const all: RawPayment[] = [];
   let offset = 0;
-  for (let page = 0; page < MAX_PAGES; page++) {
-    const query = `?created_at__gte=${dateOnly(from)}&limit=${PAGE_LIMIT}&offset=${offset}`;
+  pageLoop: for (let page = 0; page < MAX_PAGES; page++) {
+    const query = `?limit=${PAGE_LIMIT}&offset=${offset}`;
     const { payments, totalCount } = await fetchPaymentsPage(cfg, query);
-    all.push(...payments);
+    for (const p of payments) {
+      const createdAt = p.created_at ? new Date(p.created_at) : null;
+      if (createdAt && createdAt < from) break pageLoop;
+      all.push(p);
+    }
     offset += PAGE_LIMIT;
     if (offset >= totalCount || payments.length === 0) break;
   }
