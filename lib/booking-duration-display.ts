@@ -67,6 +67,24 @@ export function computeDailyBookingDurationParts(
   return { days, extraHours };
 }
 
+/** نص إنجليزي: "2 days" أو "2 days + 4 hours" — مقابل النسخة العربية أدناه. */
+function formatDaysUnitEn(days: number): string {
+  return days === 1 ? "1 day" : `${days} days`;
+}
+
+function formatHoursUnitEn(hours: number): string {
+  const h = Math.ceil(hours);
+  return h === 1 ? "1 hour" : `${h} hours`;
+}
+
+export function formatDailyBookingDurationEn(parts: DailyBookingDurationParts): string {
+  const daysLabel = formatDaysUnitEn(parts.days);
+  if (parts.extraHours <= EXACT_TIME_TOLERANCE_MS / 3_600_000) {
+    return daysLabel;
+  }
+  return `${daysLabel} + ${formatHoursUnitEn(parts.extraHours)}`;
+}
+
 /** نص عربي: «يومين» أو «يومين + 4 ساعات». */
 export function formatDailyBookingDurationAr(parts: DailyBookingDurationParts): string {
   const daysLabel = formatDaysUnitAr(parts.days);
@@ -79,11 +97,14 @@ export function formatDailyBookingDurationAr(parts: DailyBookingDurationParts): 
 export function formatDailyBookingDurationFromIso(
   pickupIso: string,
   dropoffIso: string,
+  locale: string = "ar",
 ): string | null {
   if (!pickupIso.trim() || !dropoffIso.trim()) return null;
   const pickup = new Date(pickupIso);
   const dropoff = new Date(dropoffIso);
   const parts = computeDailyBookingDurationParts(pickup, dropoff);
   if (!parts) return null;
-  return formatDailyBookingDurationAr(parts);
+  return locale === "en"
+    ? formatDailyBookingDurationEn(parts)
+    : formatDailyBookingDurationAr(parts);
 }

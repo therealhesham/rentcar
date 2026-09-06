@@ -31,9 +31,9 @@ export async function generateMetadata() {
 export default async function FleetPaymentPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ id: string; locale: string }>;
 }) {
-  const { id: rawId } = await params;
+  const { id: rawId, locale } = await params;
   const id = Number(rawId);
   if (!Number.isInteger(id) || id < 1) notFound();
 
@@ -47,7 +47,7 @@ export default async function FleetPaymentPage({
   ]);
 
   const [booking, paymentMethodFlags, applePayExpress, paymentIconUrls] = await Promise.all([
-    getBookingForPayment(id),
+    getBookingForPayment(id, locale),
     getCheckoutPaymentMethodFlags(),
     getApplePayExpressEnabled(),
     getPaymentIconUrls(),

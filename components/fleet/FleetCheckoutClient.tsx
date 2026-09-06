@@ -94,13 +94,15 @@ function AddonVisual({ iconKey }: { iconKey: string | null }) {
   }
 }
 
-function fmtWhen(iso: string | null | undefined): { date: string; time: string } {
+/** العربي كما كان (`ar-SA`)؛ الإنجليزي `en-GB` ليرى أرقاماً لاتينية لا عربية‑هندية. */
+function fmtWhen(iso: string | null | undefined, locale: string = "ar"): { date: string; time: string } {
+  const tag = locale === "en" ? "en-GB" : "ar-SA";
   if (!iso) return { date: "—", time: "" };
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return { date: "—", time: "" };
   return {
-    date: d.toLocaleDateString("ar-SA", { year: "numeric", month: "numeric", day: "numeric" }),
-    time: d.toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit" }),
+    date: d.toLocaleDateString(tag, { year: "numeric", month: "numeric", day: "numeric" }),
+    time: d.toLocaleTimeString(tag, { hour: "2-digit", minute: "2-digit" }),
   };
 }
 
@@ -579,10 +581,10 @@ export function FleetCheckoutClient({
       return d === 1 ? t("oneDay") : d === 2 ? t("twoDays") : t("nDays", { count: d });
     }
     return (
-      formatDailyBookingDurationFromIso(trip.pickupIso, trip.dropoffIso) ??
+      formatDailyBookingDurationFromIso(trip.pickupIso, trip.dropoffIso, locale) ??
       t("nDays", { count: trip.days })
     );
-  }, [rentalTab, trip.pickupIso, trip.dropoffIso, trip.days]);
+  }, [rentalTab, trip.pickupIso, trip.dropoffIso, trip.days, locale, t]);
 
   // تبويب «شهري»: سعر شهري ثابت — يُحوَّل لسعر يومي مكافئ (السعر الشهري ÷ الأيام)
   // بحيث يطابق الإجمالي المعروض هنا ما سيُحتسب فعلياً عند إنشاء الحجز.
@@ -1122,8 +1124,8 @@ export function FleetCheckoutClient({
     }
   }
 
-  const pu = fmtWhen(trip.pickupIso);
-  const du = fmtWhen(trip.dropoffIso);
+  const pu = fmtWhen(trip.pickupIso, locale);
+  const du = fmtWhen(trip.dropoffIso, locale);
   const slotBlocked = Boolean(
     availability && !availability.loading && !availability.available,
   );

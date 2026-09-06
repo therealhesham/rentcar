@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
@@ -8,7 +10,7 @@ import { loginCustomer, type AuthFormState } from "@/app/[locale]/account/action
 import { SiteFooter } from "@/components/home/SiteFooter";
 import { SiteNav } from "@/components/shared/SiteNav";
 import { OtpPinInput } from "@/components/ui/OtpPinInput";
-import { BOOKING_OTP_LENGTH, BOOKING_OTP_REGEX, bookingOtpLengthLabelAr } from "@/lib/booking-otp-constants";
+import { BOOKING_OTP_LENGTH, BOOKING_OTP_REGEX } from "@/lib/booking-otp-constants";
 import type { BookingOtpChannel } from "@/lib/site-settings";
 
 const TEAL = "#003749";
@@ -20,6 +22,7 @@ type Props = {
 };
 
 export function AccountLoginClient({ returnTo = "/account" }: Props) {
+  const t = useTranslations("Account");
   const router = useRouter();
   const [state, formAction, pending] = useActionState(loginCustomer, null as AuthFormState);
 
@@ -80,18 +83,18 @@ export function AccountLoginClient({ returnTo = "/account" }: Props) {
     const raw = identifier.trim();
     if (otpChannel === "EMAIL") {
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw) || raw.length > 254) {
-        return "أدخل البريد الإلكتروني المسجّل في حسابك بصيغة صحيحة.";
+        return t("errEmailFormat");
       }
       return null;
     }
     if (otpChannel === "SMS" || otpChannel === "WHATSAPP") {
       const d = raw.replace(/\s+/g, "").replace(/\D/g, "");
       if (!/^5\d{8}$/.test(d)) {
-        return "أدخل جوالك المسجّل: 9 أرقام تبدأ بـ 5 (بدون 966).";
+        return t("errPhoneFormat");
       }
       return null;
     }
-    return "إعداد الدخول غير صالح.";
+    return t("errLoginConfig");
   }
 
   async function handleSendOtp() {
@@ -122,10 +125,10 @@ export function AccountLoginClient({ returnTo = "/account" }: Props) {
         setOtpStep("code");
         setOtpHint(
           otpChannel === "EMAIL"
-            ? "تم إرسال الرمز إلى بريدك المسجّل. تحقق من صندوق الوارد والبريد غير الهام."
+            ? t("otpSentEmail")
             : otpChannel === "WHATSAPP"
-              ? "تم إرسال الرمز إلى واتساب جوالك المسجّل."
-              : "تم إرسال الرمز إلى جوالك المسجّل كرسالة نصية.",
+              ? t("otpSentWhatsapp")
+              : t("otpSentSms"),
         );
         setOtpCooldownSec(45);
         return;
@@ -133,7 +136,7 @@ export function AccountLoginClient({ returnTo = "/account" }: Props) {
       if (typeof data.retryAfterSec === "number" && data.retryAfterSec > 0) {
         setOtpCooldownSec(data.retryAfterSec);
       }
-      setOtpError(data.error ?? "تعذّر إرسال الرمز.");
+      setOtpError(data.error ?? t("errOtpSend"));
     } catch {
       setOtpError("تعذّر الاتصال بالخادم.");
     } finally {
@@ -145,7 +148,7 @@ export function AccountLoginClient({ returnTo = "/account" }: Props) {
     if (otpVerifyBusy) return;
     setOtpError(null);
     if (!BOOKING_OTP_REGEX.test(code)) {
-      setOtpError(`أدخل الرمز المكوّن من ${bookingOtpLengthLabelAr()}.`);
+      setOtpError(t("errOtpLength", { length: BOOKING_OTP_LENGTH }));
       return;
     }
     const toSend =
@@ -166,7 +169,7 @@ export function AccountLoginClient({ returnTo = "/account" }: Props) {
         router.refresh();
         return;
       }
-      setOtpError(data.error ?? "تعذّر تأكيد الرمز.");
+      setOtpError(data.error ?? t("errOtpConfirm"));
     } catch {
       setOtpError("تعذّر الاتصال بالخادم.");
     } finally {
@@ -207,10 +210,10 @@ export function AccountLoginClient({ returnTo = "/account" }: Props) {
       if (data.ok) {
         setOtpHint(
           otpChannel === "EMAIL"
-            ? "تم إرسال رمز جديد إلى بريدك."
+            ? t("otpResentEmail")
             : otpChannel === "WHATSAPP"
-              ? "تم إرسال رمز جديد إلى واتساب جوالك."
-              : "تم إرسال رمز جديد إلى جوالك.",
+              ? t("otpResentWhatsapp")
+              : t("otpResentSms"),
         );
         setOtpCooldownSec(45);
         return;
@@ -218,7 +221,7 @@ export function AccountLoginClient({ returnTo = "/account" }: Props) {
       if (typeof data.retryAfterSec === "number" && data.retryAfterSec > 0) {
         setOtpCooldownSec(data.retryAfterSec);
       }
-      setOtpError(data.error ?? "تعذّر إعادة الإرسال.");
+      setOtpError(data.error ?? t("errOtpResend"));
     } catch {
       setOtpError("تعذّر الاتصال بالخادم.");
     } finally {
@@ -239,21 +242,21 @@ export function AccountLoginClient({ returnTo = "/account" }: Props) {
           className="w-full max-w-md overflow-hidden rounded-3xl border border-[#ebe4d3] bg-white p-8 shadow-[0_24px_60px_-20px_rgba(15,61,71,0.12)]"
           style={{ color: TEAL }}
         >
-          <h1 className="mb-1 text-2xl font-extrabold text-[#003749]">دخول العميل</h1>
+          <h1 className="mb-1 text-2xl font-extrabold text-[#003749]">{t("loginTitle")}</h1>
           <p className="mb-8 text-sm font-semibold leading-relaxed text-[#6b5a3b]">
             {useOtpOnly
               ? otpChannel === "EMAIL"
-                ? "أدخل البريد المسجّل في حسابك، ثم الرمز الذي يصلك بالبريد — دون الحاجة إلى كلمة مرور."
+                ? t("loginSubtitleEmail")
                 : otpChannel === "WHATSAPP"
-                  ? "أدخل جوالك المسجّل في حسابك، ثم الرمز الذي يصلك على واتساب — دون الحاجة إلى كلمة مرور."
-                  : "أدخل جوالك المسجّل في حسابك، ثم الرمز الذي يصلك برسالة نصية — دون الحاجة إلى كلمة مرور."
-              : "سجّل الدخول بالبريد وكلمة المرور، أو أنشئ حساباً جديداً."}
+                  ? t("loginSubtitleWhatsapp")
+                  : t("loginSubtitleSms")
+              : t("loginSubtitlePassword")}
           </p>
 
           {!cfgLoaded ? (
             <div className="flex items-center justify-center gap-2 py-12 text-sm font-bold text-[#aaa08e]">
               <Loader2 className="size-5 animate-spin" aria-hidden />
-              جاري التحميل…
+              {t("loading")}
             </div>
           ) : useOtpOnly ? (
             <div className="space-y-6">
@@ -264,7 +267,7 @@ export function AccountLoginClient({ returnTo = "/account" }: Props) {
                   {otpChannel === "EMAIL" ? (
                     <label className="block">
                       <span className="mb-1.5 block text-[13px] font-extrabold text-[#003749]">
-                        البريد الإلكتروني
+                        {t("email")}
                       </span>
                       <input
                         type="email"
@@ -279,7 +282,7 @@ export function AccountLoginClient({ returnTo = "/account" }: Props) {
                   ) : (
                     <label className="block">
                       <span className="mb-1.5 block text-[13px] font-extrabold text-[#003749]">
-                        رقم الجوال
+                        {t("phone")}
                       </span>
                       <div className="flex overflow-hidden rounded-xl border border-[#ebe4d3] transition-shadow focus-within:border-[#dbb878] focus-within:ring-2 focus-within:ring-[#dbb878]/40">
                       <input
@@ -305,7 +308,7 @@ export function AccountLoginClient({ returnTo = "/account" }: Props) {
                   
                       </div>
                       <span className="mt-1.5 block text-[11px] font-semibold text-[#8a7752]">
-                        نفس الرقم المسجّل في حسابك (9 أرقام تبدأ بـ 5).
+                        {t("phoneHint")}
                       </span>
                     </label>
                   )}
@@ -321,23 +324,23 @@ export function AccountLoginClient({ returnTo = "/account" }: Props) {
                   >
                     {otpSendBusy ? <Loader2 className="size-5 animate-spin" aria-hidden /> : null}
                     {otpSendBusy
-                      ? "جاري الإرسال…"
+                      ? t("sending")
                       : otpCooldownSec > 0
-                        ? `انتظر ${otpCooldownSec} ث`
-                        : "إرسال رمز التحقق"}
+                        ? t("waitSeconds", { sec: otpCooldownSec })
+                        : t("sendOtp")}
                   </button>
                 </div>
               ) : (
                 <form className="space-y-5" onSubmit={handleVerifyOtp}>
                   <div className="space-y-3">
                     <p className="text-center text-[13px] font-extrabold text-[#003749]">
-                      {`رمز التحقق (${bookingOtpLengthLabelAr()})`}
+                      {t("otpLabel", { length: BOOKING_OTP_LENGTH })}
                     </p>
                     <OtpPinInput
                       value={otp}
                       autoFocus
                       disabled={otpVerifyBusy}
-                      aria-label="رمز التحقق"
+                      aria-label={t("otpAria")}
                       onChange={(next) => {
                         setOtp(next);
                         setOtpError(null);
@@ -350,7 +353,7 @@ export function AccountLoginClient({ returnTo = "/account" }: Props) {
                     className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#003749] py-4 text-[15px] font-extrabold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-45"
                   >
                     {otpVerifyBusy ? <Loader2 className="size-5 animate-spin text-white" aria-hidden /> : null}
-                    {otpVerifyBusy ? "جاري الدخول…" : "تأكيد الدخول"}
+                    {otpVerifyBusy ? t("signingIn") : t("confirmLogin")}
                   </button>
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <button
@@ -359,7 +362,7 @@ export function AccountLoginClient({ returnTo = "/account" }: Props) {
                       disabled={otpSendBusy || otpCooldownSec > 0}
                       className="text-[13px] font-extrabold text-[#003749] underline decoration-[#dbb878] underline-offset-2 disabled:opacity-40"
                     >
-                      {otpCooldownSec > 0 ? `إعادة الإرسال بعد ${otpCooldownSec} ث` : "إعادة إرسال الرمز"}
+                      {otpCooldownSec > 0 ? t("resendAfter", { sec: otpCooldownSec }) : t("resend")}
                     </button>
                     <button
                       type="button"
@@ -371,7 +374,7 @@ export function AccountLoginClient({ returnTo = "/account" }: Props) {
                         setOtpError(null);
                       }}
                     >
-                      {otpChannel === "EMAIL" ? "← تغيير البريد" : "← تغيير الجوال"}
+                      {otpChannel === "EMAIL" ? t("changeEmail") : t("changePhone")}
                     </button>
                   </div>
                 </form>
@@ -392,7 +395,7 @@ export function AccountLoginClient({ returnTo = "/account" }: Props) {
             <form action={formAction} className="flex flex-col gap-4">
               <input type="hidden" name="next" value={returnTo} />
               <label className="text-[13px] font-extrabold text-[#003749]">
-                البريد الإلكتروني
+                {t("email")}
                 <input
                   name="email"
                   type="email"
@@ -403,7 +406,7 @@ export function AccountLoginClient({ returnTo = "/account" }: Props) {
                 />
               </label>
               <label className="text-[13px] font-extrabold text-[#003749]">
-                كلمة المرور
+                {t("password")}
                 <input
                   name="password"
                   type="password"
@@ -422,20 +425,20 @@ export function AccountLoginClient({ returnTo = "/account" }: Props) {
                 disabled={pending}
                 className="rounded-2xl bg-[#003749] py-4 text-[15px] font-extrabold text-white transition-opacity disabled:opacity-50"
               >
-                {pending ? "جاري الدخول…" : "دخول"}
+                {pending ? t("signingIn") : t("signIn")}
               </button>
             </form>
           )}
 
           <p className="mt-8 text-center text-sm font-semibold text-[#6b5a3b]">
-            ليس لديك حساب؟{" "}
+            {t("noAccount")}{" "}
             <Link href="/account/register" className="font-extrabold text-[#003749] underline underline-offset-2">
-              إنشاء حساب
+              {t("createAccount")}
             </Link>
           </p>
           <p className="mt-3 text-center text-sm">
             <Link href="/" className="font-semibold text-[#8a7752] hover:text-[#003749]">
-              العودة للرئيسية
+              {t("backHome")}
             </Link>
           </p>
         </div>

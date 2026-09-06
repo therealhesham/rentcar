@@ -7,7 +7,7 @@ import { AccountBookingCardActions } from "@/components/account/AccountBookingCa
 import { getCustomerProfile } from "@/lib/customer-auth";
 import { prisma } from "@/lib/prisma";
 import { isCashPaymentMethod } from "@/lib/booking-cash-flow";
-import { bookingStatusLabelAr } from "@/lib/booking-display-labels";
+import { bookingStatusLabel } from "@/lib/booking-display-labels";
 import { computeCancellationRefundBreakdown } from "@/lib/booking-cancellation-refund";
 import { resolveBookingRentalPricePerDayExclTax } from "@/lib/booking-pricing-snapshot";
 import { VISIBLE_BOOKINGS_WHERE } from "@/lib/booking-visibility";
@@ -17,6 +17,7 @@ import {
 } from "@/lib/booking-edit";
 import type { BookingEditModalData } from "@/components/account/BookingEditModal";
 import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
+import { getTranslations } from "next-intl/server";
 import {
   computeCancellationDeductedDays,
   hoursBeforePickup,
@@ -60,11 +61,14 @@ function addDays(date: Date, days: number): Date {
   return d;
 }
 
-function pickupModeLabel(mode: string | null | undefined): string | null {
+function pickupModeLabel(
+  mode: string | null | undefined,
+  t: (k: string) => string,
+): string | null {
   const k = mode?.trim().toLowerCase();
   if (!k) return null;
-  if (k === "delivery") return "توصيل للعميل";
-  if (k === "branch" || k === "pickup") return "استلام من الفرع";
+  if (k === "delivery") return t("deliveryToCustomer");
+  if (k === "branch" || k === "pickup") return t("pickupFromBranch");
   return null;
 }
 
@@ -80,14 +84,15 @@ function bookingPaymentPillClass(paymentStatus: string): string {
 function bookingPaymentPillLabel(
   paymentStatus: string,
   paymentMethod: string | null | undefined,
+  t: (k: string) => string,
 ): string {
   const k = paymentStatus.trim().toUpperCase();
-  if (k === "PAID") return "مدفوع";
-  if (k === "REFUNDED") return "مسترد بالكامل";
-  if (k === "PARTIAL_REFUND") return "استرداد جزئي";
-  if (k === "NO_REFUND") return "بدون استرداد";
-  if (isCashPaymentMethod(paymentMethod)) return "عند الفرع";
-  return "بانتظار الدفع";
+  if (k === "PAID") return t("payPaid");
+  if (k === "REFUNDED") return t("payRefunded");
+  if (k === "PARTIAL_REFUND") return t("payPartial");
+  if (k === "NO_REFUND") return t("payNoRefund");
+  if (isCashPaymentMethod(paymentMethod)) return t("payAtBranch");
+  return t("payPending");
 }
 
 function bookingStatusStyles(status: string): string {
@@ -104,7 +109,14 @@ function bookingStatusStyles(status: string): string {
   return "border-neutral-200 bg-neutral-100 text-on-surface";
 }
 
-export default async function AccountDashboardPage() {
+export default async function AccountDashboardPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  const t = await getTranslations("Account");
+  const en = locale === "en";
   const profile = await getCustomerProfile();
   if (!profile) redirect("/account/login");
 
@@ -188,13 +200,13 @@ export default async function AccountDashboardPage() {
     };
 
     const returnDate = addDays(b.pickupDate, b.numberOfDays);
-    const modeLabel = pickupModeLabel(b.pickupMode);
+    const modeLabel = pickupModeLabel(b.pickupMode, t);
     const carImage = b.kind === "DIRECT" ? (b.carModel?.image?.trim() || null) : null;
     const carName =
       b.kind === "DIRECT" && b.carModel
-        ? `${b.carModel.brand.name} ${b.carModel.name}`.trim()
-        : (b.carType ?? "سيارة");
-    const categoryTitle = b.carModel?.category?.title ?? null;
+        ? `${(en ? b.carModel.brand.nameEn?.trim() : null) || b.carModel.brand.name} ${(en ? b.carModel.nameEn?.trim() : null) || b.carModel.name}`.trim()
+        : (b.carType ?? t("vehicle"));
+    const categoryTitle = (en ? b.carModel?.category?.titleEn?.trim() : null) || b.carModel?.category?.title || null;
     const pickupBranchName = b.pickupBranch?.name ?? null;
     const returnBranchName = b.returnBranch?.name ?? null;
     const balanceDue = typeof rowRefund.balanceDueAtBranchSar === "number"
@@ -267,13 +279,13 @@ export default async function AccountDashboardPage() {
               <span
                 className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-bold shadow-sm backdrop-blur-sm ${bookingStatusStyles(b.status)}`}
               >
-                {bookingStatusLabelAr(b.status)}
+                {bookingStatusLabel(b.status, locale)}
               </span>
               {b.kind === "DIRECT" ? (
                 <span
                   className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-bold shadow-sm backdrop-blur-sm ${bookingPaymentPillClass(b.paymentStatus)}`}
                 >
-                  {bookingPaymentPillLabel(b.paymentStatus, b.paymentMethod)}
+                  {bookingPaymentPillLabel(b.paymentStatus, b.paymentMethod, t)}
                 </span>
               ) : null}
             </div>
@@ -303,7 +315,7 @@ export default async function AccountDashboardPage() {
             <div>
               <div className="flex flex-wrap items-center gap-1.5">
                 <span className="inline-flex rounded-md bg-neutral-100 px-2 py-0.5 text-[11px] font-bold text-on-surface-variant">
-                  {b.kind === "DIRECT" ? "حجز مباشر" : "طلب حجز"}
+                  {b.kind === "DIRECT" ? t("directBooking") : t("bookingRequest")}
                 </span>
                 {categoryTitle ? (
                   <span className="inline-flex rounded-md bg-[#f0fbfb] px-2 py-0.5 text-[11px] font-bold text-[#003749]">
@@ -346,7 +358,7 @@ export default async function AccountDashboardPage() {
             <div className="rounded-2xl border border-neutral-100 bg-gradient-to-br from-neutral-50/80 to-white p-4">
               <div className="flex items-center gap-3">
                 <div className="min-w-0 flex-1 text-start">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">الاستلام</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">{t("pickup")}</p>
                   <p className="mt-1 text-sm font-extrabold text-on-surface">{formatBookingDate(b.pickupDate)}</p>
                   <p className="text-[11px] tabular-nums text-on-surface-variant" dir="ltr">{formatBookingTime(b.pickupDate)}</p>
                 </div>
@@ -356,11 +368,11 @@ export default async function AccountDashboardPage() {
                     <svg viewBox="0 0 24 24" fill="none" className="h-3 w-3" aria-hidden>
                       <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                     </svg>
-                    {b.numberOfDays} {b.numberOfDays === 1 ? "يوم" : "أيام"}
+                    {b.numberOfDays} {b.numberOfDays === 1 ? t("day") : t("days")}
                   </span>
                 </div>
                 <div className="min-w-0 flex-1 text-end">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">الإرجاع</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">{t("dropoff")}</p>
                   <p className="mt-1 text-sm font-extrabold text-on-surface">{formatBookingDate(returnDate)}</p>
                   <p className="text-[11px] tabular-nums text-on-surface-variant" dir="ltr">{formatBookingTime(returnDate)}</p>
                 </div>
@@ -437,9 +449,9 @@ export default async function AccountDashboardPage() {
                   <span className="absolute -bottom-1 -left-1 h-4 w-4 rounded-full border-2 border-[#013040] bg-emerald-400" aria-hidden />
                 </div>
                 <div className="text-center sm:text-start">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-[#e6be82]/80">حساب العميل</p>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-[#e6be82]/80">{t("customerAccount")}</p>
                   <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
-                    {profile.name ?? "عميلنا العزيز"}
+                    {profile.name ?? t("dearCustomer")}
                   </h1>
                   <div className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 sm:justify-start">
                     {profile.email ? (
@@ -471,7 +483,7 @@ export default async function AccountDashboardPage() {
                   <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden>
                     <path d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                   </svg>
-                  الاشتراك الشهري
+                  {t("monthlySubscription")}
                 </Link>
                 <Link
                   href="/account/subscription"
@@ -480,7 +492,7 @@ export default async function AccountDashboardPage() {
                   <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden>
                     <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                   </svg>
-                  اشتراكي
+                  {t("mySubscription")}
                 </Link> */}
                 <form action={logoutCustomer}>
                   <button
@@ -490,7 +502,7 @@ export default async function AccountDashboardPage() {
                     <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden>
                       <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
-                    تسجيل الخروج
+                    {t("signOut")}
                   </button>
                 </form>
               </div>
@@ -511,8 +523,8 @@ export default async function AccountDashboardPage() {
             </svg>
             <span>
               {licenseWarning.kind === "expired"
-                ? "رخصة قيادتك منتهية الصلاحية — لا يمكن إتمام حجوزات جديدة حتى يتم تجديدها."
-                : `تنتهي رخصة قيادتك خلال ${licenseWarning.diffDays} ${licenseWarning.diffDays === 1 ? "يوم" : "أيام"} — تأكد من تجديدها قبل موعد الإرجاع.`}
+                ? t("licenseExpired")
+                : t("licenseExpiring", { days: `${licenseWarning.diffDays} ${licenseWarning.diffDays === 1 ? t("day") : t("days")}` })}
             </span>
           </div>
         ) : null}
@@ -521,9 +533,9 @@ export default async function AccountDashboardPage() {
         <section className="mt-8">
           <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h2 className="text-xl font-extrabold text-[#003749]">حجوزاتي</h2>
+              <h2 className="text-xl font-extrabold text-[#003749]">{t("myBookings")}</h2>
               <p className="mt-1 text-sm text-on-surface-variant">
-                الطلبات المرتبطة بحسابك أو بنفس رقم الجوال المسجّل.
+                {t("myBookingsSub")}
               </p>
             </div>
             <Link
@@ -533,7 +545,7 @@ export default async function AccountDashboardPage() {
               <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden>
                 <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
               </svg>
-              حجز جديد
+              {t("newBooking")}
             </Link>
           </div>
 
@@ -544,9 +556,9 @@ export default async function AccountDashboardPage() {
                   <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
-              <p className="text-base font-bold text-on-surface">لا توجد حجوزات بعد</p>
+              <p className="text-base font-bold text-on-surface">{t("noBookings")}</p>
               <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-on-surface-variant">
-                ابدأ بتصفّح السيارات المتاحة واحجز ما يناسبك في خطوات بسيطة.
+                {t("noBookingsSub")}
               </p>
               <Link
                 href="/fleet"
@@ -555,7 +567,7 @@ export default async function AccountDashboardPage() {
                 <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden>
                   <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                 </svg>
-                تصفح الأسطول
+                {t("browseFleet")}
               </Link>
             </div>
           ) : (
@@ -567,7 +579,7 @@ export default async function AccountDashboardPage() {
                       <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
                       <span className="relative inline-flex h-3 w-3 rounded-full bg-emerald-500" />
                     </span>
-                    <h3 className="font-extrabold text-[#003749]">الحجوزات النشطة والقادمة</h3>
+                    <h3 className="font-extrabold text-[#003749]">{t("activeBookings")}</h3>
                     <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-black tabular-nums text-emerald-800">
                       {upcomingBookings.length}
                     </span>
@@ -582,7 +594,7 @@ export default async function AccountDashboardPage() {
                 <div>
                   <div className="mb-4 flex items-center gap-2.5">
                     <span className="h-3 w-3 rounded-full bg-neutral-400" aria-hidden />
-                    <h3 className="font-extrabold text-[#003749]">حجوزات سابقة</h3>
+                    <h3 className="font-extrabold text-[#003749]">{t("pastBookings")}</h3>
                     <span className="rounded-full bg-neutral-200 px-2.5 py-0.5 text-[11px] font-black tabular-nums text-neutral-600">
                       {pastBookings.length}
                     </span>

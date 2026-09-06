@@ -27,3 +27,36 @@ export function bookingStatusLabelAr(status: string): string {
 export function bookingPaymentStatusLabelAr(status: string): string {
   return BOOKING_PAYMENT_STATUS_LABELS_AR[status.trim().toUpperCase()] ?? status;
 }
+
+/** نظائر إنجليزية — للواجهات المواجهة للعميل فقط؛ لوحة الإدارة تبقى عربية. */
+export const BOOKING_STATUS_LABELS_EN: Record<string, string> = {
+  NEW: "New",
+  UNDER_REVIEW: "Under review",
+  CONTACTED: "Contacted",
+  CONFIRMED: "Upcoming",
+  PICKED_UP: "Picked up from branch",
+  RETURNED: "Returned to branch",
+  CANCELLED: "Cancelled",
+  REJECTED: "Rejected",
+  COMPLETED: "Completed",
+};
+
+export const BOOKING_PAYMENT_STATUS_LABELS_EN: Record<string, string> = {
+  PAID: "Paid",
+  PENDING: "Awaiting payment",
+  REFUNDED: "Refunded",
+  PARTIAL_REFUND: "Partially refunded",
+  NO_REFUND: "No refund",
+};
+
+export function bookingStatusLabel(status: string, locale: string = "ar"): string {
+  const key = status.trim().toUpperCase();
+  const map = locale === "en" ? BOOKING_STATUS_LABELS_EN : BOOKING_STATUS_LABELS_AR;
+  return map[key] ?? status;
+}
+
+export function bookingPaymentStatusLabel(status: string, locale: string = "ar"): string {
+  const key = status.trim().toUpperCase();
+  const map = locale === "en" ? BOOKING_PAYMENT_STATUS_LABELS_EN : BOOKING_PAYMENT_STATUS_LABELS_AR;
+  return map[key] ?? status;
+}

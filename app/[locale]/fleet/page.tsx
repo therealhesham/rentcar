@@ -98,7 +98,7 @@ export default async function FleetPage({
       const days = computeBookingDays(pickupDate, dropoffDate);
       const durationLabel =
         rentalRaw === "daily" || rentalRaw == null || rentalRaw === ""
-          ? (formatDailyBookingDurationFromIso(pickupRaw, dropoffRaw) ?? t("daysCount", { days }))
+          ? (formatDailyBookingDurationFromIso(pickupRaw, dropoffRaw, locale) ?? t("daysCount", { days }))
           : t("daysCount", { days });
       const targetBranch =
         qFirst(params.returnBranch)?.toLowerCase() ||

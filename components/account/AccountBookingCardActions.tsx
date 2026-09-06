@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
@@ -85,6 +87,7 @@ export function AccountBookingCardActions({
   cancellationFinancePreview = null,
   editData = null,
 }: AccountBookingCardActionsProps) {
+  const t = useTranslations("Account");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -146,7 +149,7 @@ export function AccountBookingCardActions({
   );
   const cancelDeadlineTitle =
     cancelPastDeadline && cancelMinHoursBeforePickup > 0
-      ? `انتهت مهلة الإلغاء . يجب الإلغاء قبل موعد الاستلام بأكثر من ${cancelMinHoursBeforePickup} ساعة.`
+      ? t("cancelDeadlinePassed", { hours: cancelMinHoursBeforePickup })
       : undefined;
 
   return (
@@ -161,7 +164,7 @@ export function AccountBookingCardActions({
         b.cancellationDeductedDays != null &&
         b.cancellationDeductedDays > 0 ? (
         <p className="text-[12px] font-bold leading-relaxed text-on-surface-variant">
-          عند الإلغاء سُجِّل خصم مدة:{" "}
+          {t("cancelDeductRecorded")}{" "}
           <span className="tabular-nums text-on-surface">
             {formatDeductDaysSummaryAr(b.cancellationDeductedDays)}
           </span>
@@ -176,22 +179,22 @@ export function AccountBookingCardActions({
           paymentKey === "PARTIAL_REFUND" ||
           paymentKey === "NO_REFUND") ? (
         <p className="text-[12px] font-bold leading-relaxed text-on-surface-variant">
-          الاسترداد عبر{" "}
+          {t("refundVia")}{" "}
           <span className="text-on-surface">{bookingPaymentMethodLabelAr(b.paymentMethod)}</span>
           {typeof b.cancellationRefundAmountSar === "number" ? (
             <>
-              : مبلغ مسترد{" "}
+              {t("refundAmountIs")}{" "}
               <span className="text-on-surface">
                 <SarAmountInline amount={b.cancellationRefundAmountSar} />
               </span>
               {b.cancellationRefundExternalRef?.startsWith("MOCK") ? (
                 <span className="ms-1 text-[11px] font-semibold text-on-surface-variant">
-                  (محاكاة بوابة — جاهز لربط تابي/تمارا/البوابة)
+                  {t("mockGateway")}
                 </span>
               ) : null}
             </>
           ) : paymentKey === "NO_REFUND" ? (
-            <span className="text-on-surface">: لا يوجد مبلغ مسترد بحسب السياسة.</span>
+            <span className="text-on-surface">{t("noRefundPerPolicy")}</span>
           ) : null}
         </p>
       ) : null}
@@ -205,36 +208,36 @@ export function AccountBookingCardActions({
           ) : null}
           {cancellationDeductTiers.length > 0 ? (
             <p className="mb-3 rounded-lg border border-amber-200/80 bg-amber-50/90 p-2.5 text-[12px] font-bold leading-relaxed text-amber-950">
-              بحسب الإعدادات الحالية، عند تأكيد الإلغاء الآن يُسجَّل خصم:{" "}
+              {t("deductPreview")}{" "}
               <span className="tabular-nums">{formatDeductDaysSummaryAr(previewDeductDays)}</span>{" "}
-              من مدة الإيجار (بحد أقصى {b.numberOfDays} يوم للحجز).
+              {t("deductMaxNote", { days: b.numberOfDays })}
             </p>
           ) : null}
 
           {b.kind === "DIRECT" && paymentKey === "PENDING" ? (
             <p className="mb-3 rounded-lg border border-neutral-200 bg-white/70 p-2.5 text-[12px] font-bold text-on-surface">
-              لم يُدفع هذا الحجز بعد — لا يوجد استرداد نقدي؛ سيتم إلغاء الطلب فقط.
+              {t("notPaidNoRefund")}
             </p>
           ) : null}
 
           {b.kind === "DIRECT" && paymentKey === "PAID" && cancellationFinancePreview ? (
             <div className="mb-3 space-y-2 rounded-lg border border-emerald-200/80 bg-emerald-50/90 p-2.5 text-[12px] font-bold leading-relaxed text-emerald-950">
               <p>
-                المدفوع سابقاً (شامل الضريبة):{" "}
+                {t("paidBeforeInclTax")}{" "}
                 <SarAmountInline amount={cancellationFinancePreview.paidInclTax} />
               </p>
               <p>
-                المبلغ المقدَّر للاسترداد عبر{" "}
+                {t("estimatedRefundVia")}{" "}
                 <span className="text-emerald-900">{cancellationFinancePreview.methodLabel}</span>:{" "}
                 <SarAmountInline amount={cancellationFinancePreview.refundInclTax} />
               </p>
               <p className="text-[11px] font-semibold text-emerald-900/90">
-                يُنفَّذ الاسترداد آلياً عبر نفس وسيلة الدفع عند التأكيد
+                {t("refundAuto")}
               </p>
             </div>
           ) : null}
 
-          <p className="mb-3">هل تريد إلغاء هذا الطلب؟ لا يمكن التراجع بعد التأكيد.</p>
+          <p className="mb-3">{t("cancelConfirmQ")}</p>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <button
@@ -247,7 +250,7 @@ export function AccountBookingCardActions({
                   fd.set("bookingId", String(b.id));
                   const r = await cancelCustomerBooking(fd);
                   if (!r.ok) {
-                    setCancelError(r.error ?? "تعذّر الإلغاء.");
+                    setCancelError(r.error ?? t("errCancel"));
                     return;
                   }
                   setCancelOpen(false);
@@ -256,7 +259,7 @@ export function AccountBookingCardActions({
               }}
               className="inline-flex flex-1 items-center justify-center rounded-xl bg-red-700 px-4 py-2.5 text-sm font-extrabold text-white shadow-sm transition-opacity hover:opacity-95 disabled:opacity-60"
             >
-              {pending ? "جاري الإلغاء…" : "تأكيد الغاء الحجز"}
+              {pending ? t("cancelling") : t("confirmCancel")}
             </button>
             <button
               type="button"
@@ -267,7 +270,7 @@ export function AccountBookingCardActions({
               }}
               className="inline-flex flex-1 items-center justify-center rounded-xl border-2 border-[#003749] bg-white px-4 py-2.5 text-sm font-extrabold text-[#003749] shadow-sm transition-colors hover:bg-[#003749]/5"
             >
-              حفظ الحجز (تراجع)
+              {t("keepBooking")}
             </button>
           </div>
         </div>
@@ -275,7 +278,7 @@ export function AccountBookingCardActions({
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
           {noActionsAvailable ? (
             <p className="text-[12px] font-bold leading-relaxed text-on-surface-variant">
-              بدأ موعد استلام هذا الحجز — لا يمكن إجراء أي تعديل أو إلغاء أو دفع عليه من الحساب.
+              {t("bookingStarted")}
             </p>
           ) : null}
 
@@ -284,7 +287,7 @@ export function AccountBookingCardActions({
               href={`/fleet/payment/${b.id}`}
               className="inline-flex w-full items-center justify-center rounded-xl bg-[#ea580c] px-4 py-2.5 text-center text-sm font-extrabold text-white shadow-sm transition-opacity hover:opacity-95 sm:w-auto sm:flex-1"
             >
-              إتمام الدفع
+              {t("completePayment")}
             </Link>
           ) : null}
 
@@ -293,7 +296,7 @@ export function AccountBookingCardActions({
               href={`/fleet/payment/${b.id}`}
               className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-[#ea580c] px-4 py-2.5 text-center text-sm font-extrabold text-white shadow-sm transition-opacity hover:opacity-95 sm:w-auto sm:flex-1"
             >
-              سداد فرق التمديد{" "}
+              {t("payBalance")}{" "}
               <SarAmountInline amount={b.balanceDueAtBranchSar ?? 0} />
             </Link>
           ) : null}
@@ -306,7 +309,7 @@ export function AccountBookingCardActions({
                   onClick={() => setEditOpen(true)}
                   className="inline-flex w-full items-center justify-center rounded-xl border-2 border-[#003749] bg-white px-4 py-2.5 text-center text-sm font-extrabold text-[#003749] shadow-sm transition-colors hover:bg-[#003749]/5 sm:w-auto sm:flex-1"
                 >
-                  تعديل الحجز
+                  {t("editBooking")}
                 </button>
               ) : null}
               {showRebook ? (
@@ -314,7 +317,7 @@ export function AccountBookingCardActions({
                   href={rebookCheckoutHref}
                   className="inline-flex w-full items-center justify-center rounded-xl bg-[#003749] px-4 py-2.5 text-center text-sm font-extrabold text-white shadow-sm transition-opacity hover:opacity-95 sm:w-auto sm:flex-1"
                 >
-                  إعادة الحجز
+                  {t("rebook")}
                 </Link>
               ) : null}
             </>
@@ -323,7 +326,7 @@ export function AccountBookingCardActions({
               href="/fleet"
               className="inline-flex w-full items-center justify-center rounded-xl border-2 border-[#003749] bg-white px-4 py-2.5 text-center text-sm font-extrabold text-[#003749] shadow-sm transition-colors hover:bg-[#003749]/5 sm:w-auto"
             >
-              طلب حجز جديد
+              {t("newBookingRequest")}
             </Link>
           ) : null}
 
@@ -338,7 +341,7 @@ export function AccountBookingCardActions({
               }}
               className="inline-flex w-full items-center justify-center rounded-xl border border-red-300 bg-white px-4 py-2.5 text-sm font-extrabold text-red-800 shadow-sm transition-colors hover:bg-red-50 enabled:cursor-pointer disabled:cursor-not-allowed disabled:opacity-55 sm:w-auto sm:flex-1"
             >
-              الغاء الحجز
+              {t("cancelBooking")}
             </button>
           )}
         </div>

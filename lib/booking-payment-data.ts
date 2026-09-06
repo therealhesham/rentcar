@@ -87,14 +87,16 @@ export type BookingPaymentSnapshot = {
 
 export async function getBookingForPayment(
   id: number,
+  /** لغة العرض — تُنتقى الحقول الإنجليزية من القاعدة عند "en" مع رجوع للعربي إن كانت فارغة. */
+  locale: string = "ar",
 ): Promise<BookingPaymentSnapshot | null> {
   if (!Number.isInteger(id) || id < 1) return null;
 
   const row = await prisma.bookingRequest.findUnique({
     where: { id },
     include: {
-      pickupBranch: { select: { slug: true, name: true } },
-      returnBranch: { select: { slug: true, name: true, address: true, mapUrl: true } },
+      pickupBranch: { select: { slug: true, name: true, nameEn: true } },
+      returnBranch: { select: { slug: true, name: true, nameEn: true, address: true, addressEn: true, mapUrl: true } },
       customer: { select: { email: true } },
       carModel: {
         include: { brand: true, category: true },
@@ -104,8 +106,12 @@ export async function getBookingForPayment(
   if (!row || row.kind !== "DIRECT" || !row.carModel) return null;
 
   const m = row.carModel;
-  const brandName = m.brand.name.trim();
-  const modelName = m.name.trim();
+  const en = locale === "en";
+  // الرجوع للعربي مقصود: أعمدة *En اختيارية وقد تكون فارغة لبعض السجلات.
+  const brandName = (en ? m.brand.nameEn?.trim() : null) || m.brand.name.trim();
+  const modelName = (en ? m.nameEn?.trim() : null) || m.name.trim();
+  const categoryTitle =
+    (en ? m.category.titleEn?.trim() : null) || m.category.title.trim();
 
   const { addons, interCityShipping, checkoutOneTimeFees, delayPenalty, tripDurationLabelAr, couponCode } =
     parseBookingPricingSnapshot(row.addonsJson);
@@ -130,16 +136,21 @@ export async function getBookingForPayment(
     phone: row.phone,
     invoiceEmail: resolveInvoiceEmail(row.contactEmail, row.customer?.email),
     branch: returnSlug,
-    pickupBranchLabelAr: resolvePickupBranchDisplayName({
-      branchId: row.branchId,
-      returnBranchId: row.returnBranchId,
-      pickupMode: row.pickupMode,
-      addonsJson: row.addonsJson,
-      pickupBranch: row.pickupBranch,
-      returnBranch: row.returnBranch,
-    }),
-    returnBranchLabelAr: row.returnBranch?.name?.trim() || null,
-    branchAddress: row.returnBranch?.address?.trim() || null,
+    pickupBranchLabelAr: resolvePickupBranchDisplayName(
+      {
+        branchId: row.branchId,
+        returnBranchId: row.returnBranchId,
+        pickupMode: row.pickupMode,
+        addonsJson: row.addonsJson,
+        pickupBranch: row.pickupBranch,
+        returnBranch: row.returnBranch,
+      },
+      locale,
+    ),
+    returnBranchLabelAr:
+      (en ? row.returnBranch?.nameEn?.trim() : null) || row.returnBranch?.name?.trim() || null,
+    branchAddress:
+      (en ? row.returnBranch?.addressEn?.trim() : null) || row.returnBranch?.address?.trim() || null,
     branchMapUrl: row.returnBranch?.mapUrl?.trim() || null,
     pickupMode: row.pickupMode,
     deliveryLat: row.deliveryLat,
@@ -155,7 +166,7 @@ export async function getBookingForPayment(
     car: {
       modelId: m.id,
       fullTitle: `${brandName} ${modelName}`.trim(),
-      categoryTitle: m.category.title.trim(),
+      categoryTitle,
       pricePerDayExclTax: effectiveRentalPrice,
       vatRatePercent: m.vatRatePercent,
       image: m.image?.trim() || PLACEHOLDER_IMG,

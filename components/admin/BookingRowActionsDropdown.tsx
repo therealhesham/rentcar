@@ -178,16 +178,15 @@ export function BookingRowActionsDropdown({
                       isHidden
                         ? handleArchive(false)
                         : confirmAction(
-                            "سيختفي الحجز عن العميل وعن اللوحة وعن كل الأقسام المالية. لا يُحذف شيء، ويمكن إرجاعه في أي وقت.",
-                            () => handleArchive(true),
-                            "أرشفة",
-                          )
+                          "سيختفي الحجز عن العميل وعن اللوحة وعن كل الأقسام المالية. لا يُحذف شيء، ويمكن إرجاعه في أي وقت.",
+                          () => handleArchive(true),
+                          "أرشفة",
+                        )
                     }
-                    className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-start text-xs font-bold transition-colors ${
-                      isHidden
+                    className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-start text-xs font-bold transition-colors ${isHidden
                         ? "text-emerald-800 hover:bg-emerald-100"
                         : "text-on-surface hover:bg-surface-container-low"
-                    }`}
+                      }`}
                   >
                     {isHidden ? (
                       <ArchiveRestore className="size-3.5 text-emerald-600" />
@@ -208,7 +207,7 @@ export function BookingRowActionsDropdown({
                     دفع
                   </button>
                 )}
-                
+
                 {showBalancePayment && (
                   <button
                     type="button"

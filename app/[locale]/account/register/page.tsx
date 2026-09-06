@@ -5,8 +5,10 @@ import { useActionState } from "react";
 import { registerCustomer, type AuthFormState } from "@/app/[locale]/account/actions";
 import { SiteFooter } from "@/components/home/SiteFooter";
 import { SiteNav } from "@/components/shared/SiteNav";
+import { useTranslations } from "next-intl";
 
 export default function AccountRegisterPage() {
+  const t = useTranslations("Account");
   const [state, formAction, pending] = useActionState(registerCustomer, null as AuthFormState);
 
   return (
@@ -14,13 +16,13 @@ export default function AccountRegisterPage() {
       <SiteNav active="home" />
       <div className="flex flex-1 flex-col items-center justify-center px-4 pb-16 pt-28">
         <div className="w-full max-w-md rounded-2xl border border-neutral-200 bg-white p-8 shadow-lg">
-          <h1 className="mb-2 text-2xl font-extrabold text-[#003749]">إنشاء حساب</h1>
+          <h1 className="mb-2 text-2xl font-extrabold text-[#003749]">{t("registerTitle")}</h1>
           <p className="mb-6 text-sm text-on-surface-variant">
-            أنشئ حساباً لربط حجوزاتك بنفس الجوال المستخدم عند الحجز.
+            {t("registerSubtitle")}
           </p>
           <form action={formAction} className="flex flex-col gap-4">
             <label className="text-sm font-bold text-on-surface-variant">
-              الاسم الكامل
+              {t("fullName")}
               <input
                 name="name"
                 type="text"
@@ -32,7 +34,7 @@ export default function AccountRegisterPage() {
               />
             </label>
             <label className="text-sm font-bold text-on-surface-variant">
-              البريد الإلكتروني
+              {t("email")}
               <input
                 name="email"
                 type="email"
@@ -43,7 +45,7 @@ export default function AccountRegisterPage() {
               />
             </label>
             <label className="text-sm font-bold text-on-surface-variant">
-              الجوال
+              {t("mobile")}
               <div className="mt-1.5 flex overflow-hidden rounded-xl border border-neutral-200" dir="ltr">
                 <span className="flex items-center border-e border-neutral-200 px-3 text-sm font-bold">
                   +966
@@ -62,7 +64,7 @@ export default function AccountRegisterPage() {
               </div>
             </label>
             <label className="text-sm font-bold text-on-surface-variant">
-              كلمة المرور
+              {t("password")}
               <input
                 name="password"
                 type="password"
@@ -73,7 +75,7 @@ export default function AccountRegisterPage() {
               />
             </label>
             <label className="text-sm font-bold text-on-surface-variant">
-              تأكيد كلمة المرور
+              {t("confirmPassword")}
               <input
                 name="passwordConfirm"
                 type="password"
@@ -93,18 +95,18 @@ export default function AccountRegisterPage() {
               disabled={pending}
               className="rounded-xl bg-[#003749] py-3 text-sm font-extrabold text-white transition-opacity hover:opacity-95 disabled:opacity-50"
             >
-              {pending ? "جاري التسجيل…" : "إنشاء الحساب"}
+              {pending ? t("registering") : t("createAccountBtn")}
             </button>
           </form>
           <p className="mt-6 text-center text-sm text-on-surface-variant">
-            لديك حساب بالفعل؟{" "}
+            {t("haveAccount")}{" "}
             <Link href="/account/login" className="font-bold text-[#003749] underline underline-offset-2">
-              دخول
+              {t("signIn")}
             </Link>
           </p>
           <p className="mt-3 text-center text-sm">
             <Link href="/" className="font-bold text-on-surface-variant hover:text-[#003749]">
-              العودة للرئيسية
+              {t("backHome")}
             </Link>
           </p>
         </div>

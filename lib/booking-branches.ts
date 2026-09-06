@@ -10,8 +10,8 @@ export type BookingBranchRow = {
   returnBranchId: number | null;
   pickupMode: string | null;
   addonsJson: string | null;
-  pickupBranch?: { slug: string; name?: string } | null;
-  returnBranch?: { slug: string; name?: string } | null;
+  pickupBranch?: { slug: string; name?: string; nameEn?: string | null } | null;
+  returnBranch?: { slug: string; name?: string; nameEn?: string | null } | null;
 };
 
 /** slug فرع الاستلام من العلاقة أو JSON قديم */
@@ -23,15 +23,21 @@ export function resolvePickupBranchSlug(row: BookingBranchRow): string | null {
   return null;
 }
 
-/** الاسم العربي لفرع الاستلام (من جدول Branch) */
-export function resolvePickupBranchDisplayName(row: BookingBranchRow): string | null {
+/** اسم فرع الاستلام (من جدول Branch) — إنجليزي عند locale="en" مع رجوع للعربي إن لم يُترجَم. */
+export function resolvePickupBranchDisplayName(
+  row: BookingBranchRow,
+  locale: string = "ar",
+): string | null {
   if (row.pickupMode === "DELIVERY") return null;
-  const fromPickup = row.pickupBranch?.name?.trim();
+  const pick = (b?: { name?: string; nameEn?: string | null } | null) =>
+    (locale === "en" ? b?.nameEn?.trim() : null) || b?.name?.trim() || null;
+
+  const fromPickup = pick(row.pickupBranch);
   if (fromPickup) return fromPickup;
   const pickupSlug = resolvePickupBranchSlug(row);
   const returnSlug = resolveReturnBranchSlug(row);
   if (pickupSlug && returnSlug && pickupSlug === returnSlug) {
-    const returnName = row.returnBranch?.name?.trim();
+    const returnName = pick(row.returnBranch);
     if (returnName) return returnName;
   }
   return null;
