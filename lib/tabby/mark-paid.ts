@@ -38,7 +38,15 @@ export async function markBookingPaidFromTabbyPayment(
   // إدراج سطر الدفعة الأولى في دفتر الأستاذ ذرّياً مع تحديث الحجز.
   const applied = await prisma.$transaction(async (tx) => {
     const updated = await tx.bookingRequest.updateMany({
-      where: { id: bookingId, kind: "DIRECT", paymentStatus: { not: "PAID" } },
+      where: {
+        id: bookingId,
+        kind: "DIRECT",
+        // حالات ما بعد الاسترداد مستثناة عمداً: البوابة تُطلق إشعاراً عند الاسترداد
+        // أيضاً، والدفعة تبقى لديها `CLOSED`/`Paid` — فكان `not: "PAID"` وحده يمرّر
+        // ذلك الإشعار فيُعاد تعليم الحجز مدفوعاً بسطر دفتر مكرر ورسالة تأكيد للعميل
+        // بعد استرداده (حدث فعلاً على الحجز #244).
+        paymentStatus: { notIn: ["PAID", "REFUNDED", "PARTIAL_REFUND", "NO_REFUND"] },
+      },
       data: {
         paymentStatus: "PAID",
         paidAt: new Date(),

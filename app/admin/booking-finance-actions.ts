@@ -74,7 +74,9 @@ export async function processBookingRefund(
   }
 
   const alreadyRefunded = booking.cancellationRefundAmountSar ?? 0;
-  const newRefundTotal = alreadyRefunded + amount;
+  // يُقرَّب لهللتين: تراكم الجمع العائم بلا تقريب كان يخزّن قيماً مثل
+  // 150.88000000000002 فيظهر المتبقي للأدمن 144.03000000000003.
+  const newRefundTotal = Math.round((alreadyRefunded + amount) * 100) / 100;
   if (newRefundTotal > paid + REFUND_EPS) {
     const remaining = Math.max(0, Math.round((paid - alreadyRefunded) * 100) / 100);
     return {

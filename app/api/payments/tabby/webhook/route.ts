@@ -52,6 +52,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ received: true, status: payment.status });
   }
 
+  // تابي تُطلق إشعاراً عند الاسترداد أيضاً والدفعة تبقى `CLOSED` — فبدون هذا الشرط
+  // يُقرأ إشعار الاسترداد كتأكيد دفع جديد. (الحارس في mark-paid طبقة ثانية.)
+  if (payment.refundedAmount > 0) {
+    return NextResponse.json({ received: true, ignored: "payment has refunds" });
+  }
+
   await applyAuthorizedTabbyPaymentToBooking(bookingId, payment, "webhook");
 
   return NextResponse.json({ received: true });

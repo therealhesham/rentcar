@@ -306,6 +306,8 @@ export type TabbyPayment = {
   currency: string;
   merchantCode: string;
   orderReferenceId: string | null;
+  /** مجموع ما استُرد من هذه الدفعة — تبقى حالتها `CLOSED` بعد الاسترداد. */
+  refundedAmount: number;
 };
 
 /**
@@ -324,6 +326,7 @@ export async function fetchTabbyPayment(paymentId: string): Promise<TabbyPayment
     order?: {
       reference_id?: string;
     };
+    refunds?: Array<{ amount?: string | number; status?: string }>;
   }>(cfg, `/api/v2/payments/${encodeURIComponent(paymentId)}`, true, {
     method: "GET",
   });
@@ -339,6 +342,9 @@ export async function fetchTabbyPayment(paymentId: string): Promise<TabbyPayment
     currency: data.currency || "SAR",
     merchantCode: data.merchant_code || "",
     orderReferenceId: data.order?.reference_id || null,
+    refundedAmount: (data.refunds ?? [])
+      .filter((r) => (r.status ?? "").trim().toLowerCase() !== "failed")
+      .reduce((sum, r) => sum + Number(r.amount ?? 0), 0),
   };
 }
 

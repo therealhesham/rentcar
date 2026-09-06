@@ -5,6 +5,11 @@ import { processBookingRefund, reverseBookingRefund } from "@/app/admin/booking-
 import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
 import { AlertCircle, CheckCircle2, Loader2, ArrowLeftRight, Undo2, CreditCard, FileText } from "lucide-react";
 
+/** طرح مبالغ مالية بتقريب الهللتين — الطرح العائم المباشر يُنتج 144.03000000000003. */
+function money(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
 export function BookingFinanceOperationsPanel({
   bookingId,
   paymentStatus,
@@ -35,7 +40,7 @@ export function BookingFinanceOperationsPanel({
   // عند استرداد كامل، المبلغ يُحسب تلقائياً من المبلغ المدفوع مطروحاً منه ما سبق استرداده
   const remainingAmount =
     totalPaidAmountSar != null
-      ? Math.max(0, totalPaidAmountSar - currentRefundAmount)
+      ? money(Math.max(0, totalPaidAmountSar - currentRefundAmount))
       : null;
 
   const autoAmount = !isPartial ? remainingAmount : null;
@@ -51,7 +56,7 @@ export function BookingFinanceOperationsPanel({
       // Full refund: ملء تلقائي بالمبلغ المتبقي
       const remaining =
         totalPaidAmountSar != null
-          ? Math.max(0, totalPaidAmountSar - currentRefundAmount)
+          ? money(Math.max(0, totalPaidAmountSar - currentRefundAmount))
           : null;
       setAmountValue(remaining != null ? String(remaining) : "");
     } else {
