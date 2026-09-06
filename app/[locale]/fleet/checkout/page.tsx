@@ -16,14 +16,19 @@ import { buildFleetSearchUrlHydrate } from "@/lib/fleet-search-url-hydrate";
 import { getBookingWidgetTabFlags } from "@/lib/site-settings";
 import { buildPageMetadata } from "@/lib/seo";
 import { getTabbyConfig } from "@/lib/tabby/client";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = buildPageMetadata({
-  title: "إتمام الحجز",
-  description: "مراجعة السعر والإضافات وإتمام حجز السيارة.",
-  noIndex: true,
-});
+// ديناميكي لا ثابت: العنوان يتبع لغة الزائر مثل محتوى الصفحة.
+export async function generateMetadata() {
+  const t = await getTranslations("Checkout");
+  return buildPageMetadata({
+    title: t("metaTitle"),
+    description: t("metaDescription"),
+    noIndex: true,
+  });
+}
 
 function firstSearchParam(
   v: string | string[] | undefined,

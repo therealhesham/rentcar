@@ -4,6 +4,7 @@ import { Clock3, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
+import { useTranslations } from "next-intl";
 import { DIALOG_Z } from "@/lib/overlay-z-index";
 
 const GOLD = "#dbb878";
@@ -13,7 +14,7 @@ const TEAL = "#003749";
 type Props = {
   open: boolean;
   message: string;
-  /** عنوان الرأس؛ الافتراضي: «الفرع غير متاح» */
+  /** عنوان الرأس؛ الافتراضي: المترجَم «الفرع غير متاح» */
   title?: string;
   onClose: () => void;
   onChangeTimes: () => void;
@@ -22,10 +23,12 @@ type Props = {
 export function BranchOutsideHoursModal({
   open,
   message,
-  title = "الفرع غير متاح",
+  title,
   onClose,
   onChangeTimes,
 }: Props) {
+  const t = useTranslations("BookingFlow");
+  const heading = title ?? t("branchUnavailable");
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
@@ -48,7 +51,7 @@ export function BranchOutsideHoursModal({
       <button
         type="button"
         className="absolute inset-0 bg-[#0f1923]/45 backdrop-blur-[3px] transition-opacity"
-        aria-label="إغلاق"
+        aria-label={t("close")}
         onClick={onClose}
       />
 
@@ -57,7 +60,7 @@ export function BranchOutsideHoursModal({
           type="button"
           onClick={onClose}
           className="absolute end-4 top-4 rounded-full p-1.5 text-[#aaa08e] transition-colors hover:bg-[#fdfbf6] hover:text-[#003749]"
-          aria-label="إغلاق"
+          aria-label={t("close")}
         >
           <X className="size-5" aria-hidden />
         </button>
@@ -77,7 +80,7 @@ export function BranchOutsideHoursModal({
             id="branch-hours-title"
             className="text-[1.35rem] font-extrabold tracking-tight text-[#003749] sm:text-2xl"
           >
-            {title}
+            {heading}
           </h2>
           <p className="mt-3 text-[15px] font-medium leading-relaxed text-[#4b5563]">{message}</p>
 
@@ -93,14 +96,14 @@ export function BranchOutsideHoursModal({
                 background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)`,
               }}
             >
-              تعديل الموعد أو الفرع
+              {t("editTimeOrBranch")}
             </button>
             <Link
               href="/fleet"
               onClick={onClose}
               className="w-full rounded-2xl border-2 border-[#003749]/18 bg-white py-3.5 text-center text-[14px] font-extrabold text-[#003749] transition-colors hover:border-[#dbb878]/45 hover:bg-[#fdfbf6]"
             >
-              تصفح الأسطول
+              {t("browseFleet")}
             </Link>
           </div>
         </div>

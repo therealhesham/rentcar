@@ -4,7 +4,7 @@ import { JsonLd } from "@/components/seo/JsonLd";
 import { PageViewTracker } from "@/components/shared/PageViewTracker";
 import { SiteBrandingProvider } from "@/components/shared/SiteBrandingProvider";
 import { NextIntlClientProvider } from "next-intl";
-import { getMessages } from "next-intl/server";
+import { getLocale, getMessages } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 
@@ -25,9 +25,9 @@ const tajawal = Tajawal({
 });
 
 export async function generateMetadata(): Promise<Metadata> {
-  const branding = await getSiteBranding();
+  const [branding, locale] = await Promise.all([getSiteBranding(), getLocale()]);
   return {
-    ...buildRootLayoutMetadata(branding),
+    ...buildRootLayoutMetadata(branding, locale),
     formatDetection: {
       email: false,
       address: false,

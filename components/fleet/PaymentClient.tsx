@@ -40,11 +40,10 @@ import {
   type CheckoutPaymentMethodFlags,
   type CustomerCheckoutPaymentMethod,
 } from "@/lib/checkout-payment-method-flags";
-import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
 import { ApplePayExpressButton } from "@/components/fleet/ApplePayExpressButton";
 import type { PaymentIconUrls } from "@/lib/site-settings";
-import { useLocale } from "next-intl";
 import { TabbyPromoSnippet } from "@/components/fleet/TabbyPromoSnippet";
+import { useLocale, useTranslations } from "next-intl";
 
 type Props = {
   booking: BookingPaymentSnapshot;
@@ -58,7 +57,7 @@ type Props = {
   /** مفاتيح تابي العامة لعرض شعار/نص "ادفع على 4 أقساط" — null لو البوابة غير مهيّأة */
   tabbyPromo?: { publicKey: string; merchantCode: string } | null;
   /** نتيجة فحص الأهلية المسبق (pre-scoring) — null لو لم يُفحص (تابي غير مهيّأة مثلاً) */
-  tabbyEligibility?: { isEligible: boolean; rejectionReason?: string } | null;
+  tabbyEligibility?: { status: "eligible" | "rejected" | "unknown"; rejectionReason?: string } | null;
 };
 
 export type CheckoutPaymentMethod = CustomerCheckoutPaymentMethod;
@@ -81,10 +80,12 @@ function maskEmail(email: string): string {
   return `${visible}${"•".repeat(Math.max(1, local.length - visible.length))}${domain}`;
 }
 
-function fmtWhen(d: Date): { date: string; time: string } {
+/** العربي كما كان بالضبط (`ar-SA`)؛ الإنجليزي `en-GB` ليرى أرقاماً لاتينية لا عربية‑هندية. */
+function fmtWhen(d: Date, locale: string): { date: string; time: string } {
+  const tag = locale === "en" ? "en-GB" : "ar-SA";
   return {
-    date: d.toLocaleDateString("ar-SA", { year: "numeric", month: "numeric", day: "numeric" }),
-    time: d.toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit" }),
+    date: d.toLocaleDateString(tag, { year: "numeric", month: "numeric", day: "numeric" }),
+    time: d.toLocaleTimeString(tag, { hour: "2-digit", minute: "2-digit" }),
   };
 }
 
@@ -119,10 +120,11 @@ function formatExpiry(v: string): string {
   return `${d.slice(0, 2)}/${d.slice(2)}`;
 }
 
-const BRANCH_LABEL_AR: Record<string, string> = {
-  jeddah: "جدة",
-  madinah: "المدينة المنورة",
-  tabuk: "تبوك",
+/** احتياطي فقط حين لا يصل اسم الفرع من قاعدة البيانات (`pickupBranchLabelAr`). */
+const BRANCH_FALLBACK: Record<string, { ar: string; en: string }> = {
+  jeddah: { ar: "جدة", en: "Jeddah" },
+  madinah: { ar: "المدينة المنورة", en: "Madinah" },
+  tabuk: { ar: "تبوك", en: "Tabuk" },
 };
 
 type MethodOption =
@@ -146,57 +148,76 @@ type MethodOption =
  * لوحة الإدارة) — لا قيم مثبّتة هنا، حتى تتفرّع الواجهة تلقائياً بمجرد رفع الأدمن
  * شعاراً جديداً دون أي تعديل على الكود.
  */
-function buildMethodOptions(paymentIconUrls: PaymentIconUrls): MethodOption[] {
+function buildMethodOptions(
+  paymentIconUrls: PaymentIconUrls,
+  t: (key: string) => string,
+): MethodOption[] {
   return [
     {
       id: "TABBY",
-      title: "تابي",
-      hint: "4 أقساط شهرية بدون فوائد — تُحوَّل لصفحة تابي لإتمام الموافقة",
+      title: t("methodTabby"),
+      hint: t("methodTabbyHint"),
       logoSrc: paymentIconUrls.TABBY,
     },
     {
       id: "TAMARA",
-      title: "تمارا",
-      hint: "تقسيط حسب شروط تمارا — يُفعَّل الربط لاحقاً",
+      title: t("methodTamara"),
+      hint: t("methodTamaraHint"),
       logoSrc: paymentIconUrls.TAMARA,
     },
     {
       id: "CARD",
-      title: "بطاقة ائتمانية",
-      hint: "فيزا، ماستركارد — بوابة الدفع بالبطاقة",
+      title: t("methodCard"),
+      hint: t("methodCardHint"),
       logoSrc: paymentIconUrls.CARD,
     },
     {
       id: "MADA",
-      title: "مدى",
-      hint: "الدفع ببطاقة مدى",
+      title: t("methodMada"),
+      hint: t("methodMadaHint"),
       logoSrc: paymentIconUrls.MADA,
     },
     {
       id: "AMKAN",
-      title: "إمكان",
-      hint: "خدمة إمكان للدفع",
+      title: t("methodAmkan"),
+      hint: t("methodAmkanHint"),
       logoSrc: paymentIconUrls.AMKAN,
     },
     {
       id: "CASH",
-      title: "عند الفرع",
+      title: t("methodCash"),
       hint: "",
       Icon: Store,
     },
     {
       id: "APPLE_PAY",
-      title: "Apple Pay",
+      title: t("methodApplePay"),
       hint: "",
       logoSrc: paymentIconUrls.APPLE_PAY,
     },
     {
       id: "POINTS",
-      title: "استبدال نقاط",
-      hint: "خصم من رصيد نقاط برنامج الولاء — يُربَط بنظام النقاط لاحقاً",
+      title: t("methodPoints"),
+      hint: t("methodPointsHint"),
       Icon: Gift,
     },
   ];
+}
+
+/** تسمية وسيلة الدفع المخزّنة على الحجز، باللغة المعروضة (بديل bookingPaymentMethodLabelAr). */
+function methodLabel(code: string | null | undefined, t: (key: string) => string): string {
+  const key = code?.trim().toUpperCase() ?? "";
+  const map: Record<string, string> = {
+    CASH: "methodCash",
+    CARD: "methodCard",
+    MADA: "methodMada",
+    AMKAN: "methodAmkan",
+    TABBY: "methodTabby",
+    TAMARA: "methodTamara",
+    APPLE_PAY: "methodApplePay",
+    POINTS: "methodPoints",
+  };
+  return map[key] ? t(map[key]) : (code?.trim() || "—");
 }
 
 export function PaymentClient({
@@ -208,15 +229,17 @@ export function PaymentClient({
   tabbyPromo,
   tabbyEligibility,
 }: Props) {
+  const t = useTranslations("Payment");
   const locale = useLocale();
+
   const enabledMethods = useMemo(
     () => listEnabledCheckoutPaymentMethods(paymentMethodFlags),
     [paymentMethodFlags],
   );
 
   const methodOptions = useMemo(
-    () => buildMethodOptions(paymentIconUrls),
-    [paymentIconUrls],
+    () => buildMethodOptions(paymentIconUrls, t),
+    [paymentIconUrls, t],
   );
 
   const router = useRouter();
@@ -241,8 +264,9 @@ export function PaymentClient({
     [methodOptions, enabledMethods, balancePaymentMode],
   );
 
-  // pre-scoring: تابي مرفوضة مسبقاً لهذا العميل/المبلغ — تبقى ظاهرة (مش مخفية) لكن غير قابلة للاختيار.
-  const tabbyIneligible = tabbyEligibility?.isEligible === false;
+  // pre-scoring: تُعطَّل فقط عند رفض صريح من تابي. "unknown" (تعذّر الوصول) تبقى
+  // متاحة عمداً — تعطيلها بسبب عطل شبكي مؤقت عندنا كان يخسر بيعاً بلا سبب.
+  const tabbyIneligible = tabbyEligibility?.status === "rejected";
 
   const [state, formAction, pending] = useActionState<ConfirmPaymentResult | null, FormData>(
     confirmMockPayment,
@@ -312,7 +336,7 @@ export function PaymentClient({
     ps === "PARTIAL_REFUND" ||
     ps === "NO_REFUND";
 
-  const pickup = useMemo(() => fmtWhen(booking.pickupDate), [booking.pickupDate]);
+  const pickup = useMemo(() => fmtWhen(booking.pickupDate, locale), [booking.pickupDate, locale]);
   /*
    * موعد التسليم الذي طلبه العميل محفوظ في لقطة الغرامة وحدها — لا عمود
    * `dropoffDate` في الجدول. واشتقاقه من الأيام الكاملة يُسقط الساعات الزائدة،
@@ -326,14 +350,16 @@ export function PaymentClient({
     const requested = booking.delayPenalty?.actualDropoffAt;
     if (requested) {
       const exact = new Date(requested);
-      if (!Number.isNaN(exact.getTime())) return fmtWhen(exact);
+      if (!Number.isNaN(exact.getTime())) return fmtWhen(exact, locale);
     }
     const d = new Date(booking.pickupDate);
     d.setDate(d.getDate() + booking.numberOfDays);
-    return fmtWhen(d);
-  }, [booking.pickupDate, booking.numberOfDays, booking.delayPenalty]);
-  const branchLabelAr =
-    booking.pickupBranchLabelAr?.trim() || BRANCH_LABEL_AR[booking.branch] || booking.branch;
+    return fmtWhen(d, locale);
+  }, [booking.pickupDate, booking.numberOfDays, booking.delayPenalty, locale]);
+  const branchLabel =
+    booking.pickupBranchLabelAr?.trim() ||
+    BRANCH_FALLBACK[booking.branch]?.[locale === "en" ? "en" : "ar"] ||
+    booking.branch;
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     if (checkoutComplete) return;
@@ -343,69 +369,77 @@ export function PaymentClient({
     const cardClean = card.replace(/\s+/g, "");
     if (!luhnOk(cardClean)) {
       e.preventDefault();
-      setClientError("رقم البطاقة غير صحيح.");
+      setClientError(t("errCardNumber"));
       return;
     }
     const exp = expiry.replace(/\D/g, "");
     if (exp.length !== 4) {
       e.preventDefault();
-      setClientError("صلاحية البطاقة غير صحيحة (MM/YY).");
+      setClientError(t("errCardExpiry"));
       return;
     }
     const mm = Number(exp.slice(0, 2));
     if (mm < 1 || mm > 12) {
       e.preventDefault();
-      setClientError("صلاحية البطاقة غير صحيحة (MM/YY).");
+      setClientError(t("errCardExpiry"));
       return;
     }
     if (cvc.length < 3 || cvc.length > 4) {
       e.preventDefault();
-      setClientError("رمز التحقق (CVC) غير صحيح.");
+      setClientError(t("errCardCvc"));
       return;
     }
     if (holder.trim().length < 3) {
       e.preventDefault();
-      setClientError("اسم حامل البطاقة قصير.");
+      setClientError(t("errCardHolder"));
       return;
     }
   }
 
+  // المبلغ يُحقن كعنصر (رمز الريال أيقونة، لا نص) — لذلك تُقسَّم الترجمة حول {amount}.
+  const amountNode = (
+    <>
+      {formatSarAmount(payableAmountSar)} <SarCurrencyGlyph />
+    </>
+  );
+  const withAmount = (key: "submitApplePay" | "submitMada") => {
+    const [before, after] = t(key).split("{amount}");
+    return (
+      <>
+        {before}
+        {amountNode}
+        {after}
+      </>
+    );
+  };
+
   const submitLabel: ReactNode =
     method === "TABBY"
-      ? "المتابعة عبر تابي — 4 أقساط"
+      ? t("submitTabby")
       : method === "TAMARA"
-        ? "المتابعة عبر تمارا (تجريبي)"
+        ? t("submitTamara")
         : method === "AMKAN"
-          ? "المتابعة عبر إمكان (تجريبي)"
+          ? t("submitAmkan")
           : method === "POINTS"
-            ? "تأكيد استبدال النقاط (تجريبي)"
+            ? t("submitPoints")
             : method === "CASH"
               ? (
                 <>
-                  تأكيد الحجز (عند الفرع) {formatSarAmount(payableAmountSar)}{" "}
-                  <SarCurrencyGlyph />
+                  {t("submitCash")} {amountNode}
                 </>
               )
               : method === "APPLE_PAY"
-                ? (
-                  <>
-                    ادفع {formatSarAmount(payableAmountSar)} <SarCurrencyGlyph /> عبر Apple Pay
-                  </>
-                )
+                ? withAmount("submitApplePay")
                 : method === "MADA"
-                  ? (
-                    <>
-                      ادفع {formatSarAmount(payableAmountSar)} <SarCurrencyGlyph /> عبر مدى
-                    </>
-                  )
+                  ? withAmount("submitMada")
                   : (
                     <>
-                      ادفع {formatSarAmount(payableAmountSar)} <SarCurrencyGlyph />
+                      {t("submitPay")} {amountNode}
                     </>
                   );
 
   return (
-    <main dir="rtl" className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+    <main className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
       {/* Stepper */}
       <BookingStepper
         currentStep={checkoutComplete ? 4 : 3}
@@ -414,32 +448,32 @@ export function PaymentClient({
       />
 
       <div className="mb-8">
-        <h1 className="text-2xl font-extrabold tracking-tight text-[#003749] sm:text-3xl">إتمام الدفع</h1>
+        <h1 className="text-2xl font-extrabold tracking-tight text-[#003749] sm:text-3xl">{t("title")}</h1>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#6b5a3b]">
-          طلب الحجز رقم{" "}
+          {t("bookingNoPrefix")}{" "}
           <span dir="ltr" className="tabular-nums font-bold text-[#003749]">
             #{booking.id}
           </span>
           {" — "}
           {underReview
-            ? "تم تسجيل طلبك بالدفع نقداً وهو تحت المراجعة — سيتواصل معك فريقنا قريباً لتأكيد الحجز هاتفياً."
+            ? t("introUnderReview")
             : cashConfirmed
-              ? "تم تأكيد حجزك بالدفع نقداً — يُستحق المبلغ عند الاستلام أو في الفرع حسب الاتفاق."
+              ? t("introCashConfirmed")
               : cashSubmitted
-                ? "تم تسجيل طلبك بالدفع نقداً — سيتابعك فريقنا لإتمام الإجراءات."
+                ? t("introCashSubmitted")
                 : checkoutComplete
                   ? ps === "REFUNDED"
-                    ? `تم استرداد المبلغ بالكامل عبر ${bookingPaymentMethodLabelAr(resolvedMethodCode)}.`
+                    ? t("introRefunded", { method: methodLabel(resolvedMethodCode, t) })
                     : ps === "PARTIAL_REFUND"
-                      ? `تم استرداد جزء من المبلغ عبر ${bookingPaymentMethodLabelAr(resolvedMethodCode)}.`
+                      ? t("introPartialRefund", { method: methodLabel(resolvedMethodCode, t) })
                       : ps === "NO_REFUND"
-                        ? "لا يوجد مبلغ مسترد بحسب سياسة الإلغاء."
+                        ? t("introNoRefund")
                         : resolvedMethodCode
-                          ? `تم الدفع عبر ${bookingPaymentMethodLabelAr(resolvedMethodCode)}.`
-                          : "تم الدفع بنجاح."
+                          ? t("introPaidVia", { method: methodLabel(resolvedMethodCode, t) })
+                          : t("introPaid")
                   : balancePaymentMode
-                    ? `تم تعديل حجزك ونتج عنه فرق تمديد مستحق ${formatSarAmount(balanceDueSar)} ر.س — اختر وسيلة الدفع لسداده.`
-                    : "اختر طريقة الدفع المناسبة وأكمل الإجراء."}
+                    ? t("introBalanceDue", { amount: formatSarAmount(balanceDueSar) })
+                    : t("introChooseMethod")}
         </p>
       </div>
 
@@ -466,28 +500,28 @@ export function PaymentClient({
                     }`}
                 >
                   {underReview
-                    ? "تم استلام طلبك"
+                    ? t("successTitleUnderReview")
                     : cashConfirmed
-                      ? "تم تأكيد حجزك"
+                      ? t("successTitleCashConfirmed")
                       : cashSubmitted
-                        ? "تم تسجيل طلبك"
+                        ? t("successTitleCashSubmitted")
                         : ps === "REFUNDED" || ps === "PARTIAL_REFUND" || ps === "NO_REFUND"
-                          ? "حالة الدفع بعد الإلغاء"
-                          : "تم استلام الدفع"}
+                          ? t("successTitleRefundStatus")
+                          : t("successTitlePaid")}
                 </h2>
                 <p
                   className={`max-w-md text-sm leading-relaxed ${showAmberSuccessPanel ? "text-amber-950/80" : "text-emerald-900/80"
                     }`}
                 >
                   {underReview
-                    ? "شكراً لك! تم تسجيل طلبك بالدفع نقداً. سيتواصل معك فريقنا قريباً لتأكيد الحجز هاتفياً."
+                    ? t("successBodyUnderReview")
                     : cashConfirmed
-                      ? "شكراً لك! تم تأكيد حجزك هاتفياً. يُستحق المبلغ نقداً عند الاستلام أو في الفرع حسب الاتفاق."
+                      ? t("successBodyCashConfirmed")
                       : cashSubmitted
-                        ? "شكراً لك! تم تسجيل طلبك بالدفع نقداً."
+                        ? t("successBodyCashSubmitted")
                         : ps === "REFUNDED" || ps === "PARTIAL_REFUND" || ps === "NO_REFUND"
-                          ? "تم تحديث حالة الدفع وفق سياسة الإلغاء. للاستفسار تواصل مع فريق الدعم."
-                          : "شكراً لك! تم تأكيد حجزك وسيتواصل معك فريقنا قريباً لتأكيد التسليم وأي إجراءات إضافية."}
+                          ? t("successBodyRefundStatus")
+                          : t("successBodyPaid")}
                 </p>
                 <p
                   dir="ltr"
@@ -500,17 +534,17 @@ export function PaymentClient({
                     className={`text-sm font-bold ${showAmberSuccessPanel ? "text-amber-900" : "text-emerald-900"
                       }`}
                   >
-                    طريقة الدفع: {bookingPaymentMethodLabelAr(resolvedMethodCode)}
+                    {t("paymentMethodLabel", { method: methodLabel(resolvedMethodCode, t) })}
                   </p>
                 ) : null}
                 <dl className="mt-3 grid w-full max-w-md gap-3 text-start text-xs sm:text-sm">
                   <div className="grid grid-cols-2 gap-3">
                     <div className="rounded-lg bg-white/70 px-3 py-2">
-                      <dt className="text-on-surface-variant">الاسم</dt>
+                      <dt className="text-on-surface-variant">{t("name")}</dt>
                       <dd className="font-bold text-[#003749]">{booking.fullName}</dd>
                     </div>
                     <div className="rounded-lg bg-white/70 px-3 py-2">
-                      <dt className="text-on-surface-variant">الجوال</dt>
+                      <dt className="text-on-surface-variant">{t("phone")}</dt>
                       <dd className="tabular-nums font-bold text-[#003749]" dir="ltr">
                         {maskPhone(booking.phone)}
                       </dd>
@@ -518,7 +552,7 @@ export function PaymentClient({
                   </div>
                   <div className="rounded-lg bg-white/70 px-3 py-2">
                     <dt className="text-on-surface-variant">
-                      {booking.pickupMode === "DELIVERY" ? "موقع التوصيل" : "الفرع"}
+                      {booking.pickupMode === "DELIVERY" ? t("deliveryLocation") : t("branch")}
                     </dt>
                     <dd className="mt-0.5 text-[#003749]">
                       {booking.pickupMode === "DELIVERY" ? (
@@ -536,7 +570,7 @@ export function PaymentClient({
                               className="text-xs font-bold text-emerald-800 underline"
                               dir="ltr"
                             >
-                              فتح الخريطة
+                              {t("openMap")}
                             </a>
                           ) : !booking.deliveryAddress?.trim() ? (
                             <span className="text-on-surface-variant">—</span>
@@ -544,7 +578,7 @@ export function PaymentClient({
                         </span>
                       ) : (
                         <span className="font-bold">
-                          {branchLabelAr}
+                          {branchLabel}
                         </span>
                       )}
                     </dd>
@@ -556,28 +590,26 @@ export function PaymentClient({
                     href="/"
                     className="rounded-xl bg-[#003749] px-5 py-2.5 text-sm font-extrabold text-white hover:opacity-95"
                   >
-                    العودة للرئيسية
+                    {t("backHome")}
                   </Link>
                   <Link
                     href="/fleet"
                     className="rounded-xl border border-[#003749] px-5 py-2.5 text-sm font-extrabold text-[#003749] hover:bg-[#003749]/5"
                   >
-                    تصفح الأسطول
+                    {t("browseFleet")}
                   </Link>
                 </div>
               </div>
             </div>
           ) : noPaymentMethods ? (
             <div className="rounded-3xl border border-amber-200 bg-amber-50 px-6 py-10 text-center">
-              <p className="font-extrabold text-amber-950">لا توجد طرق دفع متاحة حالياً</p>
-              <p className="mt-2 text-sm text-amber-950/80">
-                تواصل مع فريق الحجز لإتمام الدفع، أو حاول لاحقاً بعد تفعيل الطرق من الإدارة.
-              </p>
+              <p className="font-extrabold text-amber-950">{t("noMethodsTitle")}</p>
+              <p className="mt-2 text-sm text-amber-950/80">{t("noMethodsBody")}</p>
               <Link
                 href="/"
                 className="mt-5 inline-flex rounded-xl bg-[#003749] px-5 py-2.5 text-sm font-extrabold text-white hover:opacity-95"
               >
-                العودة للرئيسية
+                {t("backHome")}
               </Link>
             </div>
           ) : (
@@ -592,32 +624,30 @@ export function PaymentClient({
               <header className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <h2 className="text-lg font-extrabold text-[#003749]">
-                    {balancePaymentMode ? "سداد فرق التمديد" : "طرق الدفع"}
+                    {balancePaymentMode ? t("balanceTitle") : t("methodsTitle")}
                   </h2>
 
                 </div>
                 <p className="text-xs text-on-surface-variant">
-                  يمكن للعميل الدفع عبر تابي أو تمارا أو بطاقة ائتمانية أو Apple Pay أو استبدال نقاط. الربط
-                  الفعلي مع مزوّدي الخدمة يُضاف لاحقاً دون تغيير مسار الحجز.
+                  {t("methodsHint")}
                 </p>
               </header>
 
               {balancePaymentMode ? (
                 <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
                   <div className="flex items-center justify-between gap-3 font-extrabold">
-                    <span>فرق التمديد المستحق الآن</span>
+                    <span>{t("balanceDueNow")}</span>
                     <span className="tabular-nums" dir="ltr">
                       {formatSarAmount(balanceDueSar)} <SarCurrencyGlyph className="inline h-[0.85em] w-[0.85em]" />
                     </span>
                   </div>
                   <p className="mt-1 text-xs leading-relaxed opacity-90">
-                    حجزك مدفوع سابقاً — المطلوب سداد فرق التعديل/التمديد فقط. يمكنك أيضاً دفعه
-                    نقداً لدى موظف الفرع عند الاستلام.
+                    {t("balanceNote")}
                   </p>
                 </div>
               ) : null}
 
-              <div className="grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="طريقة الدفع">
+              <div className="grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label={t("methodsAriaLabel")}>
                 {visibleMethodOptions.map((opt) => {
                   const on = method === opt.id;
                   const ineligible = opt.id === "TABBY" && tabbyIneligible;
@@ -677,7 +707,7 @@ export function PaymentClient({
                       </span>
                       {ineligible ? (
                         <span className="text-[11px] leading-snug font-bold text-red-700">
-                          عذراً، تعذّر على تابي اعتماد هذه العملية حالياً.
+                          {t("tabbyIneligible")}
                         </span>
                       ) : opt.hint ? (
                         <span className="text-[11px] leading-snug text-on-surface-variant">{opt.hint}</span>
@@ -689,10 +719,9 @@ export function PaymentClient({
 
               {method === "TABBY" ? (
                 <div className="rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-950">
-                  <p className="font-bold">تابي — ادفع على 4 أقساط شهرية</p>
+                  <p className="font-bold">{t("tabbyPanelTitle")}</p>
                   <p className="mt-1 text-xs leading-relaxed opacity-90">
-                    سيتم تحويلك إلى صفحة تابي لاختيار خطة التقسيط والموافقة على الشروط.
-                    المبلغ المعروض هو الإجمالي شاملاً الضريبة — بدون فوائد أو رسوم إضافية.
+                    {t("tabbyPanelBody")}
                   </p>
                   {tabbyPromo ? (
                     <div className="mt-2">
@@ -710,10 +739,9 @@ export function PaymentClient({
 
               {method === "TAMARA" ? (
                 <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-950">
-                  <p className="font-bold">تمارا</p>
+                  <p className="font-bold">{t("tamaraPanelTitle")}</p>
                   <p className="mt-1 text-xs leading-relaxed opacity-90">
-                    بعد التفعيل، سيتم فتح جلسة تمارا لإتمام التقسيط وفق سياساتهم. يمكن دمجها مع عروض
-                    الشركة لاحقاً.
+                    {t("tamaraPanelBody")}
                   </p>
                 </div>
               ) : null}
@@ -730,8 +758,8 @@ export function PaymentClient({
                   ) : (
                     <p className="text-xs leading-relaxed opacity-90">
                       {hostedCheckout
-                        ? "سيتم تحويلك إلى صفحة الدفع الآمنة لإتمام العملية عبر Apple Pay. يتطلب متصفح Safari على جهاز Apple مُضاف إليه بطاقة."
-                        : "الوضع الحالي تجريبي ويُسجَّل الطلب كمدفوع للاختبار."}
+                        ? t("applePayHosted")
+                        : t("applePayMock")}
                     </p>
                   )}
                 </div>
@@ -739,19 +767,18 @@ export function PaymentClient({
 
               {method === "POINTS" ? (
                 <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-                  <p className="text-sm font-bold text-amber-950">استبدال نقاط</p>
+                  <p className="text-sm font-bold text-amber-950">{t("pointsTitle")}</p>
                   <p className="text-xs leading-relaxed text-amber-950/85">
-                    أدخل ملاحظة اختيارية (مثلاً رقم العضوية أو النقاط المراد استخدامها). ربط نظام النقاط
-                    الفعلي يُضاف على الخادم لاحقاً.
+                    {t("pointsBody")}
                   </p>
                   <label className="flex flex-col gap-1">
-                    <span className="text-xs font-bold text-amber-950/80">ملاحظة (اختياري)</span>
+                    <span className="text-xs font-bold text-amber-950/80">{t("pointsNoteLabel")}</span>
                     <textarea
                       value={pointsNote}
                       onChange={(e) => setPointsNote(e.target.value)}
                       rows={2}
                       className="rounded-lg border border-amber-200/80 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#dbb878]/40"
-                      placeholder="مثال: استخدام 5000 نقطة من برنامج الولاء"
+                      placeholder={t("pointsNotePlaceholder")}
                       dir="rtl"
                     />
                   </label>
@@ -763,12 +790,12 @@ export function PaymentClient({
                   <div className="flex items-center gap-2">
                     <CreditCard className="size-5 text-[#003749]" aria-hidden />
                     <h3 className="font-extrabold text-[#003749]">
-                      {method === "MADA" ? "بيانات بطاقة مدى" : "بيانات البطاقة"}
+                      {method === "MADA" ? t("cardSectionMada") : t("cardSectionCard")}
                     </h3>
                   </div>
 
                   <label className="flex flex-col gap-1.5">
-                    <span className="text-xs font-bold text-on-surface-variant">اسم حامل البطاقة</span>
+                    <span className="text-xs font-bold text-on-surface-variant">{t("cardHolder")}</span>
                     <input
                       value={holder}
                       onChange={(e) => setHolder(e.target.value)}
@@ -781,7 +808,7 @@ export function PaymentClient({
                   </label>
 
                   <label className="flex flex-col gap-1.5">
-                    <span className="text-xs font-bold text-on-surface-variant">رقم البطاقة</span>
+                    <span className="text-xs font-bold text-on-surface-variant">{t("cardNumber")}</span>
                     <input
                       value={card}
                       onChange={(e) => setCard(formatCardNumber(e.target.value))}
@@ -796,7 +823,7 @@ export function PaymentClient({
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label className="flex flex-col gap-1.5">
-                      <span className="text-xs font-bold text-on-surface-variant">الصلاحية (MM/YY)</span>
+                      <span className="text-xs font-bold text-on-surface-variant">{t("cardExpiry")}</span>
                       <input
                         value={expiry}
                         onChange={(e) => setExpiry(formatExpiry(e.target.value))}
@@ -827,8 +854,7 @@ export function PaymentClient({
 
               {/* <p className="flex items-start gap-2 rounded-lg bg-neutral-50 px-3 py-2 text-[11px] text-on-surface-variant">
                 <Shield className="mt-0.5 size-3.5 shrink-0 text-[#003749]" aria-hidden />
-                التأكيد الحالي يحدّث حالة الطلب في النظام للاختبار. ربط تابي وتمارا والبوابة البنكية وApple
-                Pay ونظام النقاط يتم على مستوى الخادم والامتثال (PCI-DSS) عند التشغيل الفعلي.
+                {t("complianceNote")}
               </p> */}
 
               {(clientError || serverError) ? (
@@ -851,11 +877,11 @@ export function PaymentClient({
                   {pending ? (
                     <>
                       <Loader2 className="size-4 animate-spin" aria-hidden />
-                      جاري المعالجة…
+                      {t("processing")}
                     </>
                   ) : hostedCheckout && isGeideaHostedCheckoutMethod(method) ? (
                     <>
-                      المتابعة للدفع الآمن {formatSarAmount(payableAmountSar)}{" "}
+                      {t("submitSecure")} {formatSarAmount(payableAmountSar)}{" "}
                       <SarCurrencyGlyph />
                     </>
                   ) : (
@@ -887,20 +913,20 @@ export function PaymentClient({
               </div>
               <dl className="space-y-3 text-sm">
                 <div>
-                  <dt className="font-bold text-[#003749]">الاستلام</dt>
+                  <dt className="font-bold text-[#003749]">{t("pickup")}</dt>
                   <dd className="tabular-nums text-on-surface" dir="ltr">
                     {pickup.date} · {pickup.time}
                   </dd>
                 </div>
                 <div>
-                  <dt className="font-bold text-[#003749]">التسليم</dt>
+                  <dt className="font-bold text-[#003749]">{t("dropoff")}</dt>
                   <dd className="tabular-nums text-on-surface" dir="ltr">
                     {dropoff.date} · {dropoff.time}
                   </dd>
                 </div>
                 {booking.pickupMode === "DELIVERY" ? (
                   <div>
-                    <dt className="font-bold text-[#003749]">موقع التوصيل</dt>
+                    <dt className="font-bold text-[#003749]">{t("deliveryLocation")}</dt>
                     <dd className="mt-1 text-on-surface">
                       {booking.deliveryAddress?.trim() ? (
                         <p className="whitespace-pre-wrap text-sm">{booking.deliveryAddress.trim()}</p>
@@ -913,7 +939,7 @@ export function PaymentClient({
                           className="mt-1 inline-block text-xs font-bold text-[#003749] underline"
                           dir="ltr"
                         >
-                          فتح الموقع على الخريطة
+                          {t("openMapFull")}
                         </a>
                       ) : !booking.deliveryAddress?.trim() ? (
                         <span className="text-sm text-on-surface-variant">—</span>
@@ -922,24 +948,24 @@ export function PaymentClient({
                   </div>
                 ) : (
                   <div>
-                    <dt className="font-bold text-[#003749]">الفرع</dt>
+                    <dt className="font-bold text-[#003749]">{t("branch")}</dt>
                     <dd className="text-on-surface">
-                      {branchLabelAr}
+                      {branchLabel}
                     </dd>
                   </div>
                 )}
                 <div className="flex justify-between border-t border-neutral-100 pt-3 font-bold">
-                  <dt>مدة الإيجار</dt>
+                  <dt>{t("rentalDuration")}</dt>
                   <dd>
                     {booking.tripDurationLabelAr ??
-                      `${booking.numberOfDays} ${booking.numberOfDays === 1 ? "يوم" : "أيام"}`}
+                      `${booking.numberOfDays} ${booking.numberOfDays === 1 ? t("day") : t("days")}`}
                   </dd>
                 </div>
               </dl>
 
               {booking.addons.length > 0 ? (
                 <div className="border-t border-neutral-100 pt-3">
-                  <p className="mb-2 text-xs font-extrabold text-[#003749]">الإضافات</p>
+                  <p className="mb-2 text-xs font-extrabold text-[#003749]">{t("addons")}</p>
                   <ul className="space-y-1.5 text-xs">
                     {booking.addons.map((a, i) => (
                       <li key={i} className="flex justify-between gap-3">
@@ -955,7 +981,7 @@ export function PaymentClient({
 
               <div className="space-y-2 border-t border-neutral-100 pt-3 text-sm">
                 <Row
-                  label="الإيجار (غير شامل الضريبة)"
+                  label={t("rentalExclTax")}
                   value={
                     <>
                       {formatSarAmount(booking.totals.rentalExclTax)} <SarCurrencyGlyph />
@@ -963,7 +989,7 @@ export function PaymentClient({
                   }
                 />
                 <Row
-                  label="الإضافات"
+                  label={t("addons")}
                   value={
                     <>
                       {formatSarAmount(booking.totals.addonsExclTax)} <SarCurrencyGlyph />
@@ -1004,7 +1030,7 @@ export function PaymentClient({
                   />
                 ) : null}
                 <Row
-                  label={`ضريبة القيمة المضافة ${booking.car.vatRatePercent}%`}
+                  label={t("vat", { rate: booking.car.vatRatePercent })}
                   value={
                     <>
                       {formatSarAmount(booking.totals.vatAmount)} <SarCurrencyGlyph />
@@ -1012,7 +1038,7 @@ export function PaymentClient({
                   }
                 />
                 <Row
-                  label="المبلغ الإجمالي"
+                  label={t("totalAmount")}
                   value={
                     <>
                       {formatSarAmount(booking.totals.totalInclTax)} <SarCurrencyGlyph />
@@ -1022,7 +1048,7 @@ export function PaymentClient({
                 />
                 {balancePaymentMode ? (
                   <Row
-                    label="المستحق الآن (فرق تمديد)"
+                    label={t("dueNowBalance")}
                     value={
                       <>
                         {formatSarAmount(balanceDueSar)} <SarCurrencyGlyph />
@@ -1037,7 +1063,7 @@ export function PaymentClient({
 
           {!checkoutComplete ? (
             <p className="rounded-2xl border border-[#ebe4d3] bg-[#fffdf9] px-4 py-3 text-center text-xs leading-relaxed text-[#6b5a3b]">
-              المبلغ المعروض شاملاً ضريبة القيمة المضافة. لن يُخصم أي مبلغ حتى تؤكد الدفع.
+              {t("totalsNote")}
             </p>
           ) : null}
         </aside>

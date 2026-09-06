@@ -19,9 +19,9 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useLocale } from "next-intl";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { TabbyPromoSnippet } from "@/components/fleet/TabbyPromoSnippet";
+import { useLocale, useTranslations } from "next-intl";
 import { SiteFooter } from "@/components/home/SiteFooter";
 import { SiteNav } from "@/components/shared/SiteNav";
 import { BookingWidget } from "@/components/home/BookingWidget";
@@ -179,6 +179,7 @@ export function FleetCheckoutClient({
   tabbyPromo,
 }: Props) {
   const kycDocReq = kycDocFlags ?? DEFAULT_KYC_DOC_REQUIREMENTS;
+  const t = useTranslations("Checkout");
   const locale = useLocale();
   const sp = useSearchParams();
   const router = useRouter();
@@ -382,12 +383,12 @@ export function FleetCheckoutClient({
       mode === "delivery"
         ? (() => {
           if (deliveryAddressMerged.length > 0) {
-            return `توصيل — ${deliveryAddressMerged}`;
+            return t("deliveryTo", { address: deliveryAddressMerged });
           }
           if (coordsOk) {
-            return "توصيل (تم التحديد على الخريطة)";
+            return t("deliveryPinned");
           }
-          return "توصيل";
+          return t("delivery");
         })()
         : pickupBranch
           ? (branchBySlug[pickupBranch] ?? pickupBranch)
@@ -514,7 +515,7 @@ export function FleetCheckoutClient({
     if (interCityShippingFeeSar <= 0) return null;
     const a = cityArName(trip.pickupCitySlug, bookingCities);
     const b = cityArName(trip.returnCitySlug, bookingCities);
-    return `رسوم شحن بين المدن (${a} → ${b})`;
+    return t("interCityFee", { from: a, to: b });
   }, [interCityShippingFeeSar, trip.pickupCitySlug, trip.returnCitySlug, bookingCities]);
 
   const deliveryDistanceKm = useMemo(() => {
@@ -575,11 +576,11 @@ export function FleetCheckoutClient({
   const rentalDurationLabel = useMemo(() => {
     if (rentalTab !== "daily" || !trip.pickupIso || !trip.dropoffIso) {
       const d = trip.days;
-      return d === 1 ? "يوم واحد" : d === 2 ? "يومين" : `${d} أيام`;
+      return d === 1 ? t("oneDay") : d === 2 ? t("twoDays") : t("nDays", { count: d });
     }
     return (
       formatDailyBookingDurationFromIso(trip.pickupIso, trip.dropoffIso) ??
-      `${trip.days} أيام`
+      t("nDays", { count: trip.days })
     );
   }, [rentalTab, trip.pickupIso, trip.dropoffIso, trip.days]);
 
@@ -736,7 +737,7 @@ export function FleetCheckoutClient({
       const res = await fetch("/api/bookings/kyc-upload", { method: "POST", body: fd });
       const data = (await res.json()) as { ok?: boolean; url?: string; error?: string };
       if (!data.ok || !data.url) {
-        throw new Error(data.error ?? "تعذّر رفع الملف.");
+        throw new Error(data.error ?? t("uploadFailed"));
       }
       if (slot === "id") setIdCardUrl(data.url);
       else setLicenseDocUrl(data.url);
@@ -745,14 +746,14 @@ export function FleetCheckoutClient({
         detail: `${slot}:${sizeMb}mb:${Math.round((Date.now() - startedAt) / 1000)}s`,
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "تعذّر رفع الملف.";
+      const message = err instanceof Error ? err.message : t("uploadFailed");
       setKycFieldError(message);
       trackEvent("KYC_UPLOAD_FAIL", {
         carModelId: car.modelId,
         detail: `${slot}:${sizeMb}mb:${message}`.slice(0, 255),
         context: failureContext({
-          uploadSlot: slot === "id" ? "صورة الهوية" : "صورة الرخصة",
-          uploadSize: `${sizeMb} ميجابايت`,
+          uploadSlot: slot === "id" ? t("idImage") : t("licenseImage"),
+          uploadSize: t("megabytes", { size: sizeMb }),
         }),
       });
     } finally {
@@ -766,7 +767,7 @@ export function FleetCheckoutClient({
     const code = couponInput.trim();
     setCouponError(null);
     if (!code) {
-      setCouponError("أدخل كود الخصم.");
+      setCouponError(t("couponEnterCode"));
       return;
     }
     // زرّ الكوبون داخل الشريط الجانبي (aside) وليس داخل <form> بيانات الهوية، فلازم نقرأ
@@ -777,7 +778,7 @@ export function FleetCheckoutClient({
       "";
     const phone = phoneRaw.replace(/\s+/g, "").trim();
     if (!/^5\d{8}$/.test(phone)) {
-      setCouponError("أدخل رقم الجوال أولاً.");
+      setCouponError(t("couponEnterPhone"));
       return;
     }
 
@@ -815,7 +816,7 @@ export function FleetCheckoutClient({
       });
     } catch {
       setAppliedCoupon(null);
-      setCouponError("تعذّر التحقق من الكود الآن، حاول مرة أخرى.");
+      setCouponError(t("couponCheckFailed"));
     } finally {
       setCouponChecking(false);
     }
@@ -863,14 +864,14 @@ export function FleetCheckoutClient({
       dropoff: trip.dropoffIso
         ? `${trip.returnLabel} — ${fmtWhenForAlert(trip.dropoffIso)}`
         : undefined,
-      days: trip.pickupIso ? `${trip.days} يوم` : undefined,
+      days: trip.pickupIso ? t("nDaysShort", { count: trip.days }) : undefined,
       rental: rentalTab,
-      idKind: idDocKind === "SAUDI_ID" ? "هوية/إقامة" : "جواز سفر",
+      idKind: idDocKind === "SAUDI_ID" ? t("idKindResident") : t("idKindPassport"),
       idNumber: (idDocKind === "SAUDI_ID" ? nationalId : passportNumber).trim() || undefined,
       licenseNo: licenseNumber.trim() || undefined,
       licenseExpiry: licenseExpiryDdmmyy.trim() || undefined,
-      idImage: idCardUrl ? "مرفوعة" : "لم تُرفع",
-      licenseImage: licenseDocUrl ? "مرفوعة" : "لم تُرفع",
+      idImage: idCardUrl ? t("uploaded") : t("notUploaded"),
+      licenseImage: licenseDocUrl ? t("uploaded") : t("notUploaded"),
       coupon: appliedCoupon?.code,
       editingBooking:
         excludeBookingRequestIdFromUrl != null ? String(excludeBookingRequestIdFromUrl) : undefined,
@@ -897,13 +898,13 @@ export function FleetCheckoutClient({
     submitAttemptedRef.current = true;
     trackEvent("CHECKOUT_SUBMIT", { carModelId: car.modelId });
     if (!trip.pickupIso) {
-      failWith("NO_DATES", "لم يُعثر على تواريخ الحجز. ارجع إلى الأسطول أو الصفحة الرئيسية وابحث مجدداً.");
+      failWith("NO_DATES", t("errNoDates"));
       return;
     }
     if (slotBlocked) {
       // كان يخرج صامتاً: الزائر يضغط فلا يحدث شيء ولا تظهر رسالة — وهو المسار
       // الوحيد في هذا المعالج الذي كان يترك الزرّ يبدو معطّلاً بلا سبب.
-      failWith("SLOT_BLOCKED", "السيارة غير متاحة في الفترة المحددة. غيّر تواريخ الحجز للمتابعة.");
+      failWith("SLOT_BLOCKED", t("errSlotBlocked"));
       return;
     }
 
@@ -918,42 +919,42 @@ export function FleetCheckoutClient({
     const terms = fd.get("terms") === "on";
 
     if (name.trim().split(/\s+/).filter(Boolean).length < 2) {
-      failWith("NAME_INCOMPLETE", "رجاء كتابة الاسم بالكامل");
+      failWith("NAME_INCOMPLETE", t("errNameIncomplete"));
       return;
     }
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      failWith("EMAIL_INVALID", "أدخل بريداً إلكترونياً صالحاً لإرسال الفاتورة بعد الدفع.");
+      failWith("EMAIL_INVALID", t("errEmailInvalid"));
       return;
     }
 
     setKycFieldError(null);
     if (kycDocReq.idImage === "REQUIRED" && !idCardUrl) {
-      failWith("ID_IMAGE_MISSING", "يرجى رفع صورة الهوية أو الجواز (إلزامي).");
+      failWith("ID_IMAGE_MISSING", t("errIdImageMissing"));
       return;
     }
     if (kycDocReq.licenseImage === "REQUIRED" && !licenseDocUrl) {
-      failWith("LICENSE_IMAGE_MISSING", "يرجى رفع صورة الرخصة (إلزامي).");
+      failWith("LICENSE_IMAGE_MISSING", t("errLicenseImageMissing"));
       return;
     }
     const lic = licenseNumber.trim();
     if (!/^\d{10}$/.test(lic)) {
-      failWith("LICENSE_NUMBER_INVALID", "رقم الرخصة يجب أن يتكوّن من 10 أرقام فقط.");
+      failWith("LICENSE_NUMBER_INVALID", t("errLicenseNumber"));
       return;
     }
     const expYmd = parseDdMmYyToYmd(licenseExpiryDdmmyy);
     if (!expYmd) {
-      failWith("LICENSE_EXPIRY_FORMAT", "أدخل تاريخ انتهاء الرخصة بصيغة يوم-شهر-سنة (DD-MM-YY).");
+      failWith("LICENSE_EXPIRY_FORMAT", t("errLicenseExpiryFormat"));
       return;
     }
     if (!rentalLastDayYmdForLicense) {
-      failWith("NO_DATES", "لم يُعثر على تواريخ الحجز. ارجع إلى الأسطول أو الصفحة الرئيسية وابحث مجدداً.");
+      failWith("NO_DATES", t("errNoDates"));
       return;
     }
     if (expYmd < rentalLastDayYmdForLicense) {
       failWith(
         "LICENSE_EXPIRED_BEFORE_RENTAL",
-        `يجب أن يكون تاريخ انتهاء الرخصة في أو بعد آخر يوم من الإيجار (أقل تاريخ صالح: ${formatYmdAsDdMmYy(rentalLastDayYmdForLicense)}).`,
+        t("errLicenseExpiryTooEarly", { date: formatYmdAsDdMmYy(rentalLastDayYmdForLicense) }),
       );
       return;
     }
@@ -961,18 +962,18 @@ export function FleetCheckoutClient({
     if (idDocKind === "SAUDI_ID") {
       const nid = nationalId.replace(/\D/g, "");
       if (!/^1\d{9}$/.test(nid) && !/^2\d{9}$/.test(nid)) {
-        failWith("NATIONAL_ID_INVALID", "رقم الهوية أو الإقامة: 10 أرقام؛ يبدأ بـ 1 للمواطن أو بـ 2 للمقيم.");
+        failWith("NATIONAL_ID_INVALID", t("errNationalId"));
         return;
       }
       idDocumentKindForApi = nid.startsWith("1") ? "CITIZEN" : "RESIDENT";
     } else {
       const p = passportNumber.trim().toUpperCase();
       if (p.length < 6 || p.length > 24) {
-        failWith("PASSPORT_LENGTH", "أدخل رقم الجواز (6–24 حرفاً).");
+        failWith("PASSPORT_LENGTH", t("errPassportLength"));
         return;
       }
       if (!/^[A-Z0-9\-]+$/.test(p)) {
-        failWith("PASSPORT_CHARS", "رقم الجواز: أحرف إنجليزية وأرقام وشرطة فقط.");
+        failWith("PASSPORT_CHARS", t("errPassportChars"));
         return;
       }
       idDocumentKindForApi = "VISITOR";
@@ -997,7 +998,7 @@ export function FleetCheckoutClient({
           context: failureContext(),
         });
         setBranchHoursMessage(
-          `${trip.pickupLabel}: الفرع غير متاح في الوقت المحدّد. اختر موعداً ضمن مواعيد العمل أو فرعاً آخر.`,
+          t("errBranchClosedPickup", { label: trip.pickupLabel }),
         );
         setBranchHoursOpen(true);
         return;
@@ -1012,7 +1013,7 @@ export function FleetCheckoutClient({
           context: failureContext(),
         });
         setBranchHoursMessage(
-          `${trip.returnLabel}: الفرع غير متاح في وقت التسليم المحدّد. عدّل الموعد أو الفرع.`,
+          t("errBranchClosedReturn", { label: trip.returnLabel }),
         );
         setBranchHoursOpen(true);
         return;
@@ -1111,11 +1112,11 @@ export function FleetCheckoutClient({
         setBranchHoursOpen(true);
         return;
       }
-      failWith("SERVER_REJECTED", data.error ?? "تعذّر إرسال الطلب.", {
+      failWith("SERVER_REJECTED", data.error ?? t("errSubmitFailed"), {
         serverError: data.error,
       });
     } catch {
-      failWith("NETWORK", "تعذّر الاتصال بالخادم.");
+      failWith("NETWORK", t("errNetwork"));
     } finally {
       setPending(false);
     }
@@ -1269,11 +1270,11 @@ export function FleetCheckoutClient({
    * يبدو «جافاً» بلا تفسير — وهو أكثر ما يوقف الزوّار بعد ملء النموذج كاملاً.
    */
   const submitBlockedReason = !trip.pickupIso
-    ? "حدّد تواريخ الحجز أولاً."
+    ? t("hintPickDates")
     : slotBlocked
-      ? "السيارة غير متاحة في الفترة المحددة."
+      ? t("hintUnavailable")
       : uploadingKyc !== null
-        ? "جارٍ رفع الصورة… انتظر حتى يكتمل الرفع."
+        ? t("hintUploading")
         : null;
 
   return (
@@ -1306,7 +1307,6 @@ export function FleetCheckoutClient({
             ) : null} */}
             <div
               ref={tripEditorRef}
-              dir="rtl"
               className="rounded-2xl border border-[#ebe4d3] bg-white/70 scroll-mt-24"
             >
               <button
@@ -1318,7 +1318,7 @@ export function FleetCheckoutClient({
               >
                 <span className="min-w-0">
                   <span className="block text-[13px] font-extrabold text-[#003749]">
-                    تعديل التواريخ أو الفرع
+                    {t("editDatesOrBranch")}
                   </span>
                   {trip.pickupIso ? (
                     <span className="mt-0.5 block truncate text-[12px] font-semibold text-[#6b5a3b]">
@@ -1326,7 +1326,7 @@ export function FleetCheckoutClient({
                     </span>
                   ) : (
                     <span className="mt-0.5 block text-[12px] font-bold text-red-600">
-                      لم تُحدَّد تواريخ الحجز بعد
+                      {t("noDatesYet")}
                     </span>
                   )}
                 </span>
@@ -1352,7 +1352,7 @@ export function FleetCheckoutClient({
           </div>
 
           {/* Core Layout */}
-          <div dir="rtl" className="grid gap-8 lg:grid-cols-[1fr_360px] xl:gap-12">
+          <div className="grid gap-8 lg:grid-cols-[1fr_360px] xl:gap-12">
             {/* ─── Main Content (Left side in LTR, Right side in RTL) ─── */}
             {/* على الجوال: كارت السيارة والسعر أولاً ثم الفورم (انظر `order` على الطرفين).
                 عكسُه كان يضع السيارة المختارة في آخر صفحة طولها خمس شاشات، فيواجه الزائرَ
@@ -1362,7 +1362,7 @@ export function FleetCheckoutClient({
               {/* Header Title */}
               <div>
                 <h1 className="text-2xl font-extrabold tracking-tight text-[#003749] sm:text-3xl">
-                  بيانات الحجز
+                  {t("bookingData")}
                 </h1>
 
               </div>
@@ -1373,24 +1373,24 @@ export function FleetCheckoutClient({
                   <span className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-[#dbb878] to-[#c9a356] text-sm font-extrabold text-white shadow-sm">
                     1
                   </span>
-                  <h2 className="text-xl font-extrabold text-[#003749]">الهوية والرخصة</h2>
+                  <h2 className="text-xl font-extrabold text-[#003749]">{t("idAndLicense")}</h2>
                 </div>
                 {kycDocReq.licenseImage !== "HIDDEN" || kycDocReq.idImage !== "HIDDEN" ? (
                   <p className="text-[13px] font-semibold leading-relaxed text-[#6b5a3b]">
                     {kycDocReq.licenseImage !== "HIDDEN" ? (
                       <>
-                        صورة الرخصة{" "}
+                        {t("licenseImageLabel")}{" "}
                         <span className={kycDocReq.licenseImage === "REQUIRED" ? "font-extrabold text-red-600" : "font-extrabold"}>
-                          {kycDocReq.licenseImage === "REQUIRED" ? "إلزامية" : "اختيارية"}
+                          {kycDocReq.licenseImage === "REQUIRED" ? t("requiredF") : t("optionalF")}
                         </span>
                       </>
                     ) : null}
                     {kycDocReq.licenseImage !== "HIDDEN" && kycDocReq.idImage !== "HIDDEN" ? " — " : null}
                     {kycDocReq.idImage !== "HIDDEN" ? (
                       <>
-                        صورة الهوية أو الجواز{" "}
+                        {t("idOrPassportImage")}{" "}
                         <span className={kycDocReq.idImage === "REQUIRED" ? "font-extrabold text-red-600" : "font-extrabold"}>
-                          {kycDocReq.idImage === "REQUIRED" ? "إلزامية" : "اختيارية"}
+                          {kycDocReq.idImage === "REQUIRED" ? t("requiredF") : t("optionalF")}
                         </span>
                       </>
                     ) : null}
@@ -1411,7 +1411,7 @@ export function FleetCheckoutClient({
                         : "border border-[#ebe4d3] bg-[#fdfbf6] text-[#003749] hover:border-[#dbb878]/40"
                         }`}
                     >
-                      مواطن/مقيم
+                      {t("citizenResident")}
                     </button>
                     <button
                       type="button"
@@ -1426,7 +1426,7 @@ export function FleetCheckoutClient({
                         : "border border-[#ebe4d3] bg-[#fdfbf6] text-[#003749] hover:border-[#dbb878]/40"
                         }`}
                     >
-                      زائر
+                      {t("visitor")}
                     </button>
                   </div>
 
@@ -1455,7 +1455,7 @@ export function FleetCheckoutClient({
                           htmlFor="checkout-passport"
                           className="absolute start-4 top-4 text-[13px] font-bold text-[#aaa08e] transition-all peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-[#dbb878] peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:text-[10px]"
                         >
-                          رقم الجواز
+                          {t("passportNumber")}
                         </label>
                       </div>
                     ) : (
@@ -1488,7 +1488,7 @@ export function FleetCheckoutClient({
                           htmlFor="checkout-national-id"
                           className="absolute start-4 top-4 text-[13px] font-bold text-[#aaa08e] transition-all peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-[#dbb878] peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:text-[10px]"
                         >
-                          الهوية الوطنية أو الإقامة
+                          {t("nationalIdOrIqama")}
                         </label>
                       </div>
                     )}
@@ -1528,11 +1528,11 @@ export function FleetCheckoutClient({
                         htmlFor="checkout-license-no"
                         className="absolute start-4 top-4 text-[13px] font-bold text-[#aaa08e] transition-all peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-[#dbb878] peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:text-[10px]"
                       >
-                        {idDocKind === "VISITOR" ? "رقم الرخصة الدولية" : "رقم رخصة القيادة"}
+                        {idDocKind === "VISITOR" ? t("intlLicenseNumber") : t("licenseNumber")}
                       </label>
                       {idDocKind === "SAUDI_ID" ? (
                         <p className="mt-1.5 text-[11px] font-semibold text-[#aaa08e]">
-                          يُملأ تلقائياً من رقم الهوية الوطنية أو الإقامة
+                          {t("licenseAutofillNote")}
                         </p>
                       ) : null}
                     </div>
@@ -1542,7 +1542,7 @@ export function FleetCheckoutClient({
                         htmlFor="checkout-license-expiry"
                         className="mb-1.5 block text-[13px] font-bold text-[#003749]"
                       >
-                        تاريخ انتهاء الرخصة
+                        {t("licenseExpiry")}
                         <span className="text-red-600"> *</span>
                         <span className="ms-1 font-mono text-[12px] font-semibold text-[#6b5a3b]">
                           (DD-MM-YY)
@@ -1571,7 +1571,7 @@ export function FleetCheckoutClient({
                           id="checkout-license-expiry-hint"
                           className="mt-1.5 text-[12px] font-semibold text-[#6b5a3b]"
                         >
-                          أقل تاريخ صالح لانتهاء الرخصة (آخر يوم إيجار):{" "}
+                          {t("licenseMinDateNote")}{" "}
                           <span dir="ltr" className="font-mono font-bold text-[#003749]">
                             {formatYmdAsDdMmYy(rentalLastDayYmdForLicense)}
                           </span>
@@ -1595,9 +1595,9 @@ export function FleetCheckoutClient({
                           <UserRound className="size-4" aria-hidden />
                         </div>
                         <div>
-                          <p className="text-[13px] font-extrabold text-[#003749]">صورة الهوية أو الجواز</p>
+                          <p className="text-[13px] font-extrabold text-[#003749]">{t("idOrPassportImage")}</p>
                           <p className="text-[11px] font-semibold text-[#aaa08e]">
-                            {kycDocReq.idImage === "REQUIRED" ? "إلزامي" : "اختياري"}
+                            {kycDocReq.idImage === "REQUIRED" ? t("required") : t("optional")}
                           </p>
                         </div>
                       </div>
@@ -1605,20 +1605,20 @@ export function FleetCheckoutClient({
                         <div className="relative mb-3 aspect-[16/10] w-full overflow-hidden rounded-xl border border-[#ebe4d3] bg-white shadow-sm">
                           <Image src={idCardUrl} alt="" fill className="object-cover" sizes="(max-width:640px) 100vw,280px" unoptimized />
                           <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition-opacity group-hover:opacity-100">
-                            <span className="rounded-lg bg-white/90 px-3 py-1 text-[11px] font-bold text-[#003749]">تغيير الصورة</span>
+                            <span className="rounded-lg bg-white/90 px-3 py-1 text-[11px] font-bold text-[#003749]">{t("changeImage")}</span>
                           </div>
                         </div>
                       ) : (
                         <div className="mb-3 flex h-20 items-center justify-center rounded-xl border border-dashed border-[#dbb878]/30 bg-[#fdfbf6]">
                           <div className="text-center">
                             <UserRound className="mx-auto mb-1 size-6 text-[#dbb878]/60" />
-                            <p className="text-[11px] font-semibold text-[#aaa08e]">اسحب الصورة هنا أو اضغط للتحديد</p>
+                            <p className="text-[11px] font-semibold text-[#aaa08e]">{t("dragOrClick")}</p>
                           </div>
                         </div>
                       )}
                       <label className="relative flex cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl bg-[#003749] px-4 py-2.5 text-[12px] font-bold text-white transition-all hover:bg-[#004d63]">
                         <FileImage className="size-3.5" />
-                        {uploadingKyc === "id" ? "جاري الرفع…" : (idCardUrl ? "تغيير" : "اختر ملفاً")}
+                        {uploadingKyc === "id" ? t("uploading") : (idCardUrl ? t("change") : t("chooseFile"))}
                         <input
                           type="file"
                           accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
@@ -1646,13 +1646,13 @@ export function FleetCheckoutClient({
                           <FileImage className="size-4" aria-hidden />
                         </div>
                         <div>
-                          <p className="text-[13px] font-extrabold text-[#003749]">صورة رخصة القيادة</p>
+                          <p className="text-[13px] font-extrabold text-[#003749]">{t("driverLicenseImage")}</p>
                           <p
                             className={`text-[11px] font-extrabold ${
                               kycDocReq.licenseImage === "REQUIRED" ? "text-red-600" : "text-[#aaa08e]"
                             }`}
                           >
-                            {kycDocReq.licenseImage === "REQUIRED" ? "إلزامي" : "اختياري"}
+                            {kycDocReq.licenseImage === "REQUIRED" ? t("required") : t("optional")}
                           </p>
                         </div>
                       </div>
@@ -1660,21 +1660,21 @@ export function FleetCheckoutClient({
                         <div className="relative mb-3 aspect-[16/10] w-full overflow-hidden rounded-xl border border-[#dbb878]/30 bg-white shadow-sm">
                           <Image src={licenseDocUrl} alt="" fill className="object-cover" sizes="(max-width:640px) 100vw,280px" unoptimized />
                           <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition-opacity group-hover:opacity-100">
-                            <span className="rounded-lg bg-white/90 px-3 py-1 text-[11px] font-bold text-[#003749]">تغيير الصورة</span>
+                            <span className="rounded-lg bg-white/90 px-3 py-1 text-[11px] font-bold text-[#003749]">{t("changeImage")}</span>
                           </div>
                         </div>
                       ) : (
                         <div className="mb-3 flex h-20 items-center justify-center rounded-xl border border-dashed border-[#dbb878]/50 bg-[#fffdf9]">
                           <div className="text-center">
                             <FileImage className="mx-auto mb-1 size-6 text-[#dbb878]/70" />
-                            <p className="text-[11px] font-semibold text-[#aaa08e]">اسحب الصورة هنا أو اضغط للتحديد</p>
+                            <p className="text-[11px] font-semibold text-[#aaa08e]">{t("dragOrClick")}</p>
                           </div>
                         </div>
                       )}
                       <label className="relative flex cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl px-4 py-2.5 text-[12px] font-bold text-white transition-all"
                         style={{ background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)`, boxShadow: '0 4px 12px -4px rgba(219,184,120,0.5)' }}>
                         <FileImage className="size-3.5" />
-                        {uploadingKyc === "license" ? "جاري الرفع…" : (licenseDocUrl ? "تغيير الرخصة" : "ارفع صورة الرخصة")}
+                        {uploadingKyc === "license" ? t("uploading") : (licenseDocUrl ? t("changeLicense") : t("uploadLicense"))}
                         <input
                           type="file"
                           accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
@@ -1709,14 +1709,14 @@ export function FleetCheckoutClient({
                   <span className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-[#dbb878] to-[#c9a356] text-sm font-extrabold text-white shadow-sm">
                     2
                   </span>
-                  <h2 className="text-xl font-extrabold text-[#003749]">إضافات وتأمين</h2>
-                  <span className="rounded-full border border-[#ebe4d3] bg-[#fdfbf6] px-2.5 py-0.5 text-[11px] font-bold text-[#aaa08e]">اختياري</span>
+                  <h2 className="text-xl font-extrabold text-[#003749]">{t("addonsAndInsurance")}</h2>
+                  <span className="rounded-full border border-[#ebe4d3] bg-[#fdfbf6] px-2.5 py-0.5 text-[11px] font-bold text-[#aaa08e]">{t("optional")}</span>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   {addons.length === 0 ? (
                     <div className="col-span-2 rounded-2xl border border-dashed border-[#ebe4d3] bg-white p-8 text-center">
-                      <p className="text-[14px] font-semibold text-[#aaa08e]">لا توجد إضافات متاحة لهذه المركبة.</p>
+                      <p className="text-[14px] font-semibold text-[#aaa08e]">{t("noAddons")}</p>
                     </div>
                   ) : (
                     addons.map((a) => {
@@ -1761,7 +1761,7 @@ export function FleetCheckoutClient({
                                     type="button"
                                     aria-expanded={infoOpen}
                                     aria-controls={infoId}
-                                    aria-label={`شرح ${a.title}`}
+                                    aria-label={t("explain", { title: a.title })}
                                     className="inline-flex size-5 items-center justify-center rounded-full border border-[#d9d0bf] text-[#8f8573] transition-colors hover:border-[#dbb878] hover:text-[#dbb878]"
                                     onClick={(e) => {
                                       e.preventDefault();
@@ -1797,14 +1797,14 @@ export function FleetCheckoutClient({
                                 {formatSarAmount(a.pricePerDay)} <SarCurrencyGlyph />
                               </span>
                               <span className="text-[11px] font-bold uppercase tracking-wider text-[#aaa08e]">
-                                يومياً
+                                {t("perDay")}
                               </span>
                             </div>
                             <div
                               className={`text-[12px] font-bold transition-colors ${on ? "text-[#dbb878]" : "text-[#aaa08e] group-hover:text-[#003749]"
                                 }`}
                             >
-                              {on ? "تم الإختيار" : "إضافة"}
+                              {on ? t("selected") : t("add")}
                             </div>
                           </div>
                         </label>
@@ -1824,12 +1824,12 @@ export function FleetCheckoutClient({
                       <CreditCard className="size-6" />
                     </div>
                     <div>
-                      <h3 className="text-[14px] font-extrabold text-white">قسّمها على 4 دفعات بدون فوائد</h3>
-                      <p className="mt-0.5 text-[12px] font-semibold text-white/60">متوفر عبر تابي وتمارا — تختار عند الدفع</p>
+                      <h3 className="text-[14px] font-extrabold text-white">{t("splitTitle")}</h3>
+                      <p className="mt-0.5 text-[12px] font-semibold text-white/60">{t("splitSubtitle")}</p>
                     </div>
                     <div className="ms-auto flex gap-2">
-                      <span className="rounded-lg bg-white/10 px-3 py-1.5 text-[11px] font-extrabold text-[#dbb878] backdrop-blur-sm">تابي</span>
-                      <span className="rounded-lg bg-white/10 px-3 py-1.5 text-[11px] font-extrabold text-[#dbb878] backdrop-blur-sm">تمارا</span>
+                      <span className="rounded-lg bg-white/10 px-3 py-1.5 text-[11px] font-extrabold text-[#dbb878] backdrop-blur-sm">{t("brandTabby")}</span>
+                      <span className="rounded-lg bg-white/10 px-3 py-1.5 text-[11px] font-extrabold text-[#dbb878] backdrop-blur-sm">{t("brandTamara")}</span>
                     </div>
                   </div>
                 </div>
@@ -1841,7 +1841,7 @@ export function FleetCheckoutClient({
                   <span className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-[#dbb878] to-[#c9a356] text-sm font-extrabold text-white shadow-sm">
                     3
                   </span>
-                  <h2 className="text-xl font-extrabold text-[#003749]">بيانات التواصل</h2>
+                  <h2 className="text-xl font-extrabold text-[#003749]">{t("contactData")}</h2>
                 </div>
 
                 <form
@@ -1894,7 +1894,7 @@ export function FleetCheckoutClient({
                           htmlFor="name"
                           className="absolute start-4 top-4 text-[13px] font-bold text-[#aaa08e] transition-all peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-[#dbb878] peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:text-[10px]"
                         >
-                          الاسم الكامل
+                          {t("fullName")}
                         </label>
                       </div>
 
@@ -1932,7 +1932,7 @@ export function FleetCheckoutClient({
                               htmlFor="phone"
                               className="absolute end-4 top-4 text-[13px] font-bold text-[#aaa08e] transition-all peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-[#dbb878] peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:text-[10px]"
                             >
-                              رقم الجوال (5XXXXXXXX)
+                              {t("phoneNumber")}
                             </label>
                           </div>
                         </div>
@@ -1947,15 +1947,15 @@ export function FleetCheckoutClient({
                           defaultValue={contactAgeDefault}
                           className="peer w-full appearance-none rounded-xl border border-[#ebe4d3] bg-transparent px-4 pb-3 pt-6 text-[14px] font-semibold text-[#003749] outline-none transition-all focus:border-[#dbb878] focus:ring-1 focus:ring-[#dbb878]"
                         >
-                          <option value="25-35">25-35 سنة</option>
-                          <option value="35-50">35-50 سنة</option>
-                          <option value="50+">أكبر من 50 سنة</option>
+                          <option value="25-35">{t("age2535")}</option>
+                          <option value="35-50">{t("age3550")}</option>
+                          <option value="50+">{t("age50plus")}</option>
                         </select>
                         <label
                           htmlFor="age"
                           className="absolute start-4 top-1 text-[10px] font-bold text-[#aaa08e] transition-all peer-focus:text-[#dbb878]"
                         >
-                          الفئة العمرية
+                          {t("ageGroup")}
                         </label>
                         <ChevronDown className="pointer-events-none absolute end-4 top-1/2 size-4 -translate-y-1/2 text-[#aaa08e]" />
                       </div>
@@ -1976,7 +1976,7 @@ export function FleetCheckoutClient({
                           htmlFor="checkout-email"
                           className="absolute start-4 top-4 text-[13px] font-bold text-[#aaa08e] transition-all peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-[#dbb878] peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:text-[10px]"
                         >
-                          البريد الإلكتروني (لإرسال الفاتورة)
+                          {t("emailForInvoice")}
                         </label>
                       </div>
                     </div>
@@ -1995,22 +1995,22 @@ export function FleetCheckoutClient({
                       <Check className="pointer-events-none absolute size-3.5 text-white opacity-0 transition-opacity peer-checked:opacity-100" />
                     </div>
                     <label htmlFor="terms" className="cursor-pointer text-[13px] font-semibold text-[#6b5a3b] select-none">
-                      أوافق على{" "}
+                      {t("agreeTo")}{" "}
                       <button
                         type="button"
                         onClick={() => setTermsOpen(true)}
                         className="text-[#dbb878] hover:underline"
                       >
-                        الشروط والأحكام
+                        {t("termsAndConditions")}
                       </button>{" "}
-                      وسياسة التأجير.
+                      {t("andRentalPolicy")}
                     </label>
                   </div>
 
                   {/* Status Messages */}
                   {availability?.loading && (
                     <div className="mb-6 text-[13px] font-bold text-[#aaa08e]">
-                      جاري التحقق من التوفر في الأسطول...
+                      {t("checkingAvailability")}
                     </div>
                   )}
                   {error && (
@@ -2036,13 +2036,12 @@ export function FleetCheckoutClient({
                       <CheckCircle2 className="size-5 text-white/90" />
                     )}
                     <span className="text-[15px] font-extrabold tracking-wide text-white">
-                      {pending ? "جاري المعالجة..." : "تأكيد البيانات والمتابعة"}
+                      {pending ? t("processing") : t("confirmAndContinue")}
                     </span>
                   </button>
 
                   {submitBlockedReason && !pending ? (
                     <p
-                      dir="rtl"
                       role="status"
                       className="mt-3 text-center text-[12.5px] font-bold leading-relaxed text-[#8a7752]"
                     >
@@ -2055,7 +2054,7 @@ export function FleetCheckoutClient({
                             onClick={openTripEditorToChangeDates}
                             className="font-extrabold text-[#003749] underline decoration-[#dbb878] underline-offset-4 hover:text-[#dbb878]"
                           >
-                            تعديل التواريخ
+                            {t("editDates")}
                           </button>
                         </>
                       ) : null}
@@ -2107,7 +2106,7 @@ export function FleetCheckoutClient({
                         <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
                         <path d="M8 16H3v5" />
                       </svg>
-                      غيّر السيارة
+                      {t("changeCar")}
                     </button>
                   </div>
                 </div>
@@ -2117,7 +2116,7 @@ export function FleetCheckoutClient({
                   <h2 className="text-xl font-extrabold leading-tight text-[#003749]">
                     {car.fullTitle}
                   </h2>
-                  <p className="mt-1 text-[12px] font-semibold text-[#8a7752]">أو مركبة مشابهة من نفس الفئة</p>
+                  <p className="mt-1 text-[12px] font-semibold text-[#8a7752]">{t("orSimilar")}</p>
 
                   <div className="mt-3 rounded-xl border border-[#ebe4d3] bg-[#fdfbf6] px-3 py-2.5 text-[11px] font-semibold leading-relaxed text-[#5c4d38]">
                     {car.discountLabelAr && !appliedCoupon ? (
@@ -2129,7 +2128,7 @@ export function FleetCheckoutClient({
                     ) : null}
                     {rentalPriceDisplayMode === "INCLUSIVE" ? (
                       <p dir="ltr" className="text-end">
-                        السعر اليومي:{" "}
+                        {t("dailyPrice")}{" "}
                         {car.originalPricePerDayExclTax > car.pricePerDayExclTax ? (
                           <span className="me-2 font-bold text-gray-400 line-through decoration-red-500 decoration-[1.5px] opacity-80">
                             {formatSarAmount(
@@ -2147,12 +2146,12 @@ export function FleetCheckoutClient({
                           )}{" "}
                           <SarCurrencyGlyph />
                         </span>{" "}
-                        <span className="text-[#8a7752]">(شامل الضريبة {car.vatRatePercent}%)</span>
+                        <span className="text-[#8a7752]">{t("inclVat", { rate: car.vatRatePercent })}</span>
                       </p>
                     ) : rentalPriceDisplayMode === "SPLIT" ? (
                       <div className="space-y-1.5" dir="ltr">
                         <p className="text-end">
-                          قبل الضريبة:{" "}
+                          {t("beforeVat")}{" "}
                           {car.originalPricePerDayExclTax > car.pricePerDayExclTax ? (
                             <span className="me-2 font-bold text-gray-400 line-through decoration-red-500 decoration-[1.5px] opacity-80">
                               {formatSarAmount(car.originalPricePerDayExclTax)} <SarCurrencyGlyph />
@@ -2163,7 +2162,7 @@ export function FleetCheckoutClient({
                           </span>
                         </p>
                         <p className="text-end">
-                          بعد الضريبة ({car.vatRatePercent}%):{" "}
+                          {t("afterVat", { rate: car.vatRatePercent })}{" "}
                           <span className="font-extrabold text-[#003749]">
                             {formatSarAmount(
                               dailyRentalInclTaxSar(car.pricePerDayExclTax, car.vatRatePercent),
@@ -2174,7 +2173,7 @@ export function FleetCheckoutClient({
                       </div>
                     ) : (
                       <p dir="ltr" className="text-end">
-                        السعر اليومي:{" "}
+                        {t("dailyPrice")}{" "}
                         {car.originalPricePerDayExclTax > car.pricePerDayExclTax ? (
                           <span className="me-2 font-bold text-gray-400 line-through decoration-red-500 decoration-[1.5px] opacity-80">
                             {formatSarAmount(car.originalPricePerDayExclTax)} <SarCurrencyGlyph />
@@ -2183,12 +2182,12 @@ export function FleetCheckoutClient({
                         <span className="font-extrabold text-[#003749]">
                           {formatSarAmount(car.pricePerDayExclTax)} <SarCurrencyGlyph />
                         </span>{" "}
-                        <span className="text-[#8a7752]">(غير شامل الضريبة)</span>
+                        <span className="text-[#8a7752]">{t("exclVatShort")}</span>
                       </p>
                     )}
                     {rentalTab === "weekly" ? (
                       <p dir="ltr" className="mt-2 border-t border-[#ebe4d3] pt-2 text-end">
-                        السعر الأسبوعي:{" "}
+                        {t("weeklyPrice")}{" "}
                         <span className="font-extrabold text-[#003749]">
                           {formatSarAmount(
                             dailyRentalInclTaxSar(
@@ -2198,7 +2197,7 @@ export function FleetCheckoutClient({
                           )}{" "}
                           <SarCurrencyGlyph />
                         </span>{" "}
-                        <span className="text-[#8a7752]">(شامل الضريبة {car.vatRatePercent}%)</span>
+                        <span className="text-[#8a7752]">{t("inclVat", { rate: car.vatRatePercent })}</span>
                       </p>
                     ) : null}
                     {rentalTab === "monthly" && car.pricePerMonthExclTax != null ? (
@@ -2211,7 +2210,7 @@ export function FleetCheckoutClient({
                           </p>
                         ) : null}
                         <p dir="ltr" className="mt-2 border-t border-[#ebe4d3] pt-2 text-end">
-                          السعر الشهري:{" "}
+                          {t("monthlyPrice")}{" "}
                           {monthlyPriceResolved?.days === trip.days &&
                           monthlyPriceResolved.pricePerDayExclTax <
                             monthlyPriceResolved.originalPricePerDayExclTax ? (
@@ -2233,7 +2232,7 @@ export function FleetCheckoutClient({
                             )}{" "}
                             <SarCurrencyGlyph />
                           </span>{" "}
-                          <span className="text-[#8a7752]">(شامل الضريبة {car.vatRatePercent}%)</span>
+                          <span className="text-[#8a7752]">{t("inclVat", { rate: car.vatRatePercent })}</span>
                         </p>
                       </>
                     ) : null}
@@ -2246,12 +2245,12 @@ export function FleetCheckoutClient({
 
                       <div className="relative mb-4">
                         <div className="absolute -start-[23px] top-1 size-2.5 rounded-full border-2 border-[#dbb878] bg-white ring-4 ring-white" />
-                        <p className="text-[11px] font-bold uppercase text-[#aaa08e]">الاستلام</p>
+                        <p className="text-[11px] font-bold uppercase text-[#aaa08e]">{t("pickup")}</p>
                         <p className="font-extrabold text-[#003749]">
                           {trip.pickupLabel}
                           {deliveryDistanceKm !== null && (
                             <span className="block mt-0.5 text-[11px] font-bold text-[#c9a356]">
-                              يبعد عن الفرع: {deliveryDistanceKm.toFixed(1)} كم
+                              {t("distanceFromBranch", { km: deliveryDistanceKm.toFixed(1) })}
                             </span>
                           )}
                         </p>
@@ -2262,7 +2261,7 @@ export function FleetCheckoutClient({
 
                       <div className="relative">
                         <div className="absolute -start-[23px] top-1 size-2.5 rounded-full border-2 border-[#003749] bg-white ring-4 ring-white" />
-                        <p className="text-[11px] font-bold uppercase text-[#aaa08e]">التسليم</p>
+                        <p className="text-[11px] font-bold uppercase text-[#aaa08e]">{t("dropoff")}</p>
                         <p className="font-extrabold text-[#003749]">{trip.returnLabel}</p>
                         <p className="text-[12px] font-semibold text-[#8a7752]" dir="ltr">
                           {du.date} {du.time ? `• ${du.time}` : ""}
@@ -2272,7 +2271,7 @@ export function FleetCheckoutClient({
 
                     <div className="my-5 flex items-center gap-3">
                       <div className="h-px flex-1 bg-gradient-to-r from-[#ebe4d3] to-transparent" />
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-[#c4b89a]">تفاصيل التسعير</span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-[#c4b89a]">{t("pricingDetails")}</span>
                       <div className="h-px flex-1 bg-gradient-to-l from-[#ebe4d3] to-transparent" />
                     </div>
 
@@ -2280,7 +2279,7 @@ export function FleetCheckoutClient({
                     <div className="space-y-3">
                       <div className="flex justify-between text-[13px]">
                         <span className="font-semibold text-[#6b5a3b]">
-                          الإيجار ({rentalDurationLabel})
+                          {t("rentalFor", { duration: rentalDurationLabel })}
                         </span>
                         <span className="font-bold text-[#003749] tabular-nums" dir="ltr">
                           {formatSarAmount(totals.rentalExclTax)} <SarCurrencyGlyph />
@@ -2291,7 +2290,7 @@ export function FleetCheckoutClient({
                         <div className="space-y-2">
                           <div className="flex justify-between text-[13px]">
                             <span className="font-semibold text-[#6b5a3b]">
-                              الإضافات ({rentalDurationLabel})
+                              {t("addonsFor", { duration: rentalDurationLabel })}
                             </span>
                             <span className="font-bold text-[#003749] tabular-nums" dir="ltr">
                               {formatSarAmount(totals.addonsExclTax)} <SarCurrencyGlyph />
@@ -2324,7 +2323,7 @@ export function FleetCheckoutClient({
                       {deliveryFeeSar > 0 && deliveryDistanceKm != null ? (
                         <div className="flex justify-between text-[13px]">
                           <span className="font-semibold text-[#6b5a3b]">
-                            رسوم التوصيل ({deliveryDistanceKm.toFixed(1)} كم)
+                            {t("deliveryFee", { km: deliveryDistanceKm.toFixed(1) })}
                           </span>
                           <span className="font-bold text-[#003749] tabular-nums" dir="ltr">
                             {formatSarAmount(deliveryFeeSar)} <SarCurrencyGlyph />
@@ -2359,14 +2358,14 @@ export function FleetCheckoutClient({
                         {appliedCoupon ? (
                           <div className="flex items-center justify-between gap-2 text-[13px]">
                             <span className="font-bold text-[#0f7a3d]">
-                              {appliedCoupon.code} — {appliedCoupon.labelAr || "تم تطبيق الخصم"}
+                              {appliedCoupon.code} — {appliedCoupon.labelAr || t("couponApplied")}
                             </span>
                             <button
                               type="button"
                               onClick={handleRemoveCoupon}
                               className="shrink-0 text-[12px] font-bold text-[#8a7752] underline underline-offset-2 hover:text-[#c2410c]"
                             >
-                              إزالة
+                              {t("couponRemove")}
                             </button>
                           </div>
                         ) : (
@@ -2378,7 +2377,7 @@ export function FleetCheckoutClient({
                                 setCouponInput(e.target.value);
                                 setCouponError(null);
                               }}
-                              placeholder="كود الخصم (إن وُجد)"
+                              placeholder={t("couponPlaceholder")}
                               className="w-full min-w-0 rounded-lg border border-[#ebe4d3] bg-white px-3 py-2 text-[13px] font-semibold text-[#003749] outline-none focus:border-[#dbb878]"
                             />
                             <button
@@ -2387,7 +2386,7 @@ export function FleetCheckoutClient({
                               disabled={couponChecking || !couponInput.trim()}
                               className="shrink-0 rounded-lg bg-[#003749] px-3 py-2 text-[12px] font-extrabold text-white disabled:opacity-50"
                             >
-                              {couponChecking ? "..." : "تطبيق"}
+                              {couponChecking ? "..." : t("couponApply")}
                             </button>
                           </div>
                         )}
@@ -2398,7 +2397,7 @@ export function FleetCheckoutClient({
 
                       {totals.discountExclTax > 0 ? (
                         <div className="flex justify-between text-[13px]">
-                          <span className="font-semibold text-[#0f7a3d]">خصم الكوبون</span>
+                          <span className="font-semibold text-[#0f7a3d]">{t("couponDiscount")}</span>
                           <span className="font-bold text-[#0f7a3d] tabular-nums" dir="ltr">
                             -{formatSarAmount(totals.discountExclTax)} <SarCurrencyGlyph />
                           </span>
@@ -2406,7 +2405,7 @@ export function FleetCheckoutClient({
                       ) : null}
 
                       <div className="flex justify-between text-[13px]">
-                        <span className="font-semibold text-[#6b5a3b]">ضريبة القيمة المضافة ({car.vatRatePercent}%)</span>
+                        <span className="font-semibold text-[#6b5a3b]">{t("vat", { rate: car.vatRatePercent })}</span>
                         <span className="font-bold text-[#003749] tabular-nums" dir="ltr">
                           {formatSarAmount(totals.vatAmount)} <SarCurrencyGlyph />
                         </span>
@@ -2419,14 +2418,14 @@ export function FleetCheckoutClient({
                       <div className="absolute bottom-0 start-0 h-1 w-full" style={{ background: `linear-gradient(90deg, ${GOLD} 0%, ${GOLD_DARK} 100%)` }} />
                       <div className="relative flex items-end justify-between">
                         <div>
-                          <p className="text-[11px] font-bold uppercase tracking-widest text-white/60">المجموع النهائي</p>
-                          <p className="mt-0.5 text-[10px] text-white/40">شامل ضريبة القيمة المضافة</p>
+                          <p className="text-[11px] font-bold uppercase tracking-widest text-white/60">{t("grandTotal")}</p>
+                          <p className="mt-0.5 text-[10px] text-white/40">{t("inclVatNote")}</p>
                         </div>
                         <div className="text-end">
                           <p
                             className="text-[28px] font-extrabold tabular-nums tracking-tight leading-none"
                             dir="ltr"
-                            aria-label={`${formatSarAmount(totals.totalInclTax)} ريال سعودي`}
+                            aria-label={t("sarAria", { amount: formatSarAmount(totals.totalInclTax) })}
                           >
                             {formatSarAmount(totals.totalInclTax)}{" "}
                             <span className="text-[#dbb878]" aria-hidden>
@@ -2460,18 +2459,17 @@ export function FleetCheckoutClient({
       {/* شريط الإجمالي الثابت — جوال فقط: يبقي السعر ظاهراً بعد أن يمرّ الزائر
           بكارت الملخص في أعلى الصفحة وينزل إلى الفورم. */}
       <div
-        dir="rtl"
         className="fixed inset-x-0 bottom-0 z-40 border-t border-[#dbb878]/30 bg-[#003749]/95 px-4 py-3 shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.5)] backdrop-blur-md lg:hidden"
       >
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-widest text-white/55">
-              المجموع النهائي
+              {t("grandTotal")}
             </p>
             <p
               className="mt-0.5 text-[19px] font-extrabold leading-none tabular-nums text-white"
               dir="ltr"
-              aria-label={`${formatSarAmount(totals.totalInclTax)} ريال سعودي`}
+              aria-label={t("sarAria", { amount: formatSarAmount(totals.totalInclTax) })}
             >
               {formatSarAmount(totals.totalInclTax)}{" "}
               <span className="text-[#dbb878]" aria-hidden>
@@ -2483,7 +2481,7 @@ export function FleetCheckoutClient({
             href="#order-summary"
             className="shrink-0 rounded-xl border border-[#dbb878]/50 px-3.5 py-2 text-[12px] font-extrabold text-[#dbb878] transition-colors hover:bg-[#dbb878]/10"
           >
-            تفاصيل التسعير
+            {t("pricingDetails")}
           </a>
         </div>
       </div>

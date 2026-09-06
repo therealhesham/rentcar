@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 import { Loader2, Shield } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -7,7 +9,7 @@ import { useEffect, useState } from "react";
 import { SiteFooter } from "@/components/home/SiteFooter";
 import { SiteNav } from "@/components/shared/SiteNav";
 import { OtpPinInput } from "@/components/ui/OtpPinInput";
-import { BOOKING_OTP_LENGTH, BOOKING_OTP_REGEX, bookingOtpLengthLabelAr } from "@/lib/booking-otp-constants";
+import { BOOKING_OTP_LENGTH, BOOKING_OTP_REGEX } from "@/lib/booking-otp-constants";
 import type { BookingOtpChannel } from "@/lib/site-settings";
 import {
   isBranchOutsideHoursBookingError,
@@ -18,6 +20,7 @@ const TEAL = "#003749";
 const GOLD = "#dbb878";
 
 export function FleetCheckoutOtpClient() {
+  const t = useTranslations("BookingFlow");
   const sp = useSearchParams();
   const router = useRouter();
   const token = sp.get("token")?.trim() ?? "";
@@ -34,6 +37,8 @@ export function FleetCheckoutOtpClient() {
   const [pending, setPending] = useState(false);
   const [otpSendBusy, setOtpSendBusy] = useState(false);
   const [otpHint, setOtpHint] = useState<string | null>(null);
+  // منفصلة عن نص الرسالة عمداً: مطابقة النص ("تم إرسال") كانت تفشل بأي لغة أخرى.
+  const [otpHintOk, setOtpHintOk] = useState(false);
   const [otpCooldownSec, setOtpCooldownSec] = useState(0);
 
   useEffect(() => setMounted(true), []);
@@ -55,7 +60,7 @@ export function FleetCheckoutOtpClient() {
   useEffect(() => {
     if (!token || !/^[a-f0-9]{64}$/i.test(token)) {
       setMetaLoading(false);
-      setMetaError("رابط التحقق غير صالح. ارجع إلى صفحة إتمام الحجز من الأسطول.");
+      setMetaError(t("otpBadLink"));
       return;
     }
     let cancel = false;
@@ -75,7 +80,7 @@ export function FleetCheckoutOtpClient() {
         };
         if (cancel) return;
         if (j.ok !== true) {
-          setMetaError(j.error ?? "تعذّر تحميل بيانات التحقق.");
+          setMetaError(j.error ?? t("otpLoadFailed"));
           setMetaLoading(false);
           return;
         }
@@ -87,7 +92,7 @@ export function FleetCheckoutOtpClient() {
         );
         setDestinationHint(typeof j.destinationHint === "string" ? j.destinationHint : null);
       } catch {
-        if (!cancel) setMetaError("تعذّر الاتصال بالخادم.");
+        if (!cancel) setMetaError(t("otpNetwork"));
       } finally {
         if (!cancel) setMetaLoading(false);
       }
@@ -116,20 +121,23 @@ export function FleetCheckoutOtpClient() {
       if (data.ok) {
         setOtpHint(
           channel === "EMAIL"
-            ? "تم إرسال رمز جديد. تحقق من البريد (والبريد غير الهام)."
+            ? t("otpResentEmail")
             : channel === "WHATSAPP"
-              ? "تم إرسال رمز جديد. تحقق من واتساب على جوالك."
-              : "تم إرسال رمز جديد. تحقق من رسائل الجوال.",
+              ? t("otpResentWhatsapp")
+              : t("otpResentSms"),
         );
+        setOtpHintOk(true);
         setOtpCooldownSec(45);
         return;
       }
       if (typeof data.retryAfterSec === "number" && data.retryAfterSec > 0) {
         setOtpCooldownSec(data.retryAfterSec);
       }
-      setOtpHint(data.error ?? "تعذّر إرسال الرمز.");
+      setOtpHintOk(false);
+      setOtpHint(data.error ?? t("otpSendFailed"));
     } catch {
-      setOtpHint("تعذّر الاتصال بالخادم.");
+      setOtpHintOk(false);
+      setOtpHint(t("otpNetwork"));
     } finally {
       setOtpSendBusy(false);
     }
@@ -139,7 +147,7 @@ export function FleetCheckoutOtpClient() {
     if (pending) return;
     setError(null);
     if (!BOOKING_OTP_REGEX.test(code)) {
-      setError(`أدخل رمز التحقق المكوّن من ${bookingOtpLengthLabelAr()}.`);
+      setError(t("otpEnterLength", { length: BOOKING_OTP_LENGTH }));
       return;
     }
     setPending(true);
@@ -159,14 +167,14 @@ export function FleetCheckoutOtpClient() {
         router.push(`/fleet/payment/${data.bookingRequestId}`);
         return;
       }
-      const rawErr = data.error ?? "تعذّر تأكيد الرمز.";
+      const rawErr = data.error ?? t("otpConfirmFailed");
       setError(
         isBranchOutsideHoursBookingError(rawErr)
           ? stripBranchHoursErrorCodeForDisplay(rawErr)
           : rawErr,
       );
     } catch {
-      setError("تعذّر الاتصال بالخادم.");
+      setError(t("otpNetwork"));
     } finally {
       setPending(false);
     }
@@ -189,7 +197,7 @@ export function FleetCheckoutOtpClient() {
         <main className="mx-auto max-w-lg px-4 sm:px-6">
           <nav className="mb-6 text-[13px] font-semibold text-[#aaa08e]">
             <Link href={backHref} className="hover:text-[#dbb878]">
-              ← العودة إلى الإتمام
+              {t("otpBackToCheckout")}
             </Link>
           </nav>
 
@@ -205,14 +213,14 @@ export function FleetCheckoutOtpClient() {
                 <Shield className="size-5" aria-hidden />
               </div>
               <div>
-                <h1 className="text-lg font-extrabold text-[#003749]">رمز التحقق</h1>
+                <h1 className="text-lg font-extrabold text-[#003749]">{t("otpTitle")}</h1>
                 {/* <p className="mt-2 text-[13px] font-semibold leading-relaxed text-[#6b5a3b]">
-                  بعد تأكيد بياناتك في الخطوة السابقة، أُرسل تلقائياً رمز مكوّن من {bookingOtpLengthLabelAr()} إلى{" "}
+                  {t("otpSentTo", { length: BOOKING_OTP_LENGTH })}{" "}
                   {channel === "EMAIL"
-                    ? "بريدك الإلكتروني"
+                    ? t("otpChannelEmail")
                     : channel === "WHATSAPP"
-                      ? "واتساب جوالك"
-                      : "جوالك"}
+                      ? t("otpChannelWhatsapp")
+                      : t("otpChannelSms")}
                   {destinationHint ? (
                     <>
                       {" "}
@@ -234,7 +242,7 @@ export function FleetCheckoutOtpClient() {
             {metaLoading ? (
               <div className="flex items-center gap-2 py-8 text-[13px] font-bold text-[#aaa08e]">
                 <Loader2 className="size-5 animate-spin" aria-hidden />
-                جاري التحميل…
+                {t("otpLoading")}
               </div>
             ) : metaError ? (
               <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-[13px] font-bold text-red-700" role="alert">
@@ -242,20 +250,20 @@ export function FleetCheckoutOtpClient() {
               </div>
             ) : channel === "OFF" ? (
               <p className="text-[13px] font-bold text-amber-800">
-                رمز التحقق غير مفعّل حالياً. ارجع إلى صفحة الإتمام وأعد إرسال الطلب.
+                {t("otpDisabled")}
               </p>
             ) : (
               <form onSubmit={handleConfirm} className="space-y-5">
                 <div className="space-y-3">
                   <p className="text-center text-[13px] font-bold text-[#8a7752]">
-                    {`أدخل الرمز (${bookingOtpLengthLabelAr()})`}
+                    {t("otpInputLabel", { length: BOOKING_OTP_LENGTH })}
                   </p>
                   <OtpPinInput
                     id="checkout-otp-pin"
                     value={otp}
                     autoFocus
                     disabled={pending}
-                    aria-label={`رمز التحقق من ${bookingOtpLengthLabelAr()}`}
+                    aria-label={t("otpInputAria", { length: BOOKING_OTP_LENGTH })}
                     onChange={(next) => {
                       setOtp(next);
                       setError(null);
@@ -271,16 +279,16 @@ export function FleetCheckoutOtpClient() {
                     className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border-2 border-[#003749] bg-white px-5 py-3 text-[13px] font-extrabold text-[#003749] transition-colors hover:bg-[#003749] hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
                   >
                     {otpSendBusy ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
-                    {otpCooldownSec > 0 ? `إعادة الإرسال (${otpCooldownSec})` : "إعادة إرسال الرمز"}
+                    {otpCooldownSec > 0 ? t("otpResendIn", { sec: otpCooldownSec }) : t("otpResend")}
                   </button>
                   <p className="text-[12px] font-semibold text-[#8a7752]">
-                    لم تصلك رسالة؟ تحقق من الرسائل غير المرغوب فيها أو انتظر ثوانٍ ثم أعد الطلب.
+                    {t("otpNoMessage")}
                   </p>
                 </div>
 
                 {otpHint ? (
                   <p
-                    className={`text-[12px] font-bold ${otpHint.startsWith("تم إرسال") ? "text-emerald-700" : "text-[#8a7752]"}`}
+                    className={`text-[12px] font-bold ${otpHintOk ? "text-emerald-700" : "text-[#8a7752]"}`}
                     role="status"
                   >
                     {otpHint}
@@ -305,10 +313,10 @@ export function FleetCheckoutOtpClient() {
                   {pending ? (
                     <>
                       <Loader2 className="size-5 animate-spin" aria-hidden />
-                      جاري تسجيل الحجز…
+                      {t("otpSubmitting")}
                     </>
                   ) : (
-                    "تأكيد الرمز والانتقال للدفع"
+                    t("otpSubmit")
                   )}
                 </button>
               </form>

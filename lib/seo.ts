@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 export const SITE_NAME_AR = "روائس لتأجير السيارات";
 export const SITE_NAME_EN = "Rawaes";
+export const SITE_NAME_EN_FULL = "Rawaes Car Rental";
 /** اسم مختصر — متوافق مع layout الحالي */
 export const SITE_NAME = SITE_NAME_AR;
 export const SITE_TAGLINE =
@@ -109,12 +110,15 @@ export function buildRootLayoutMetadata(
     favicon: FAVICON_PATH,
     ogImage: OG_IMAGE_PATH,
   },
+  /** اسم العلامة يتبع لغة الزائر — الإنجليزي يرى Rawaes Car Rental لا الاسم العربي. */
+  locale: string = "ar",
 ): Metadata {
+  const siteName = locale === "en" ? SITE_NAME_EN_FULL : SITE_NAME_AR;
   return {
     metadataBase: new URL(getSiteUrl()),
     title: {
-      default: SITE_NAME_AR,
-      template: `%s | ${SITE_NAME_AR}`,
+      default: siteName,
+      template: `%s | ${siteName}`,
     },
     description: DEFAULT_DESCRIPTION,
     keywords: DEFAULT_KEYWORDS,

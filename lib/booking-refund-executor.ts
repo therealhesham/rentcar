@@ -52,10 +52,14 @@ export async function executeCancellationRefundByPaymentMethod(args: {
       };
     }
     try {
+      // بلا reference_id ثابت لكل حجز عمداً: النظام يسمح باسترداد جزئي متكرر
+      // (`PARTIAL_REFUND` يتراكم)، وتابي «تُعيد الاسترداد الأصلي» عند تكرار نفس
+      // المرجع — فكان الاسترداد الثاني يُسجَّل عندنا دون أن يصل العميل. يُترك
+      // المرجع فريداً لكل نداء (كما في مسار جيديا)، والحماية من التكرار المتزامن
+      // قائمة أصلاً بقفل compare-and-swap في مُستدعي هذه الدالة.
       const res = await refundTabbyPayment({
         paymentId: booking.paymentGatewayRef,
         amountSar: amount,
-        referenceId: `refund-booking-${args.bookingRequestId}`,
       });
       return { ok: true, externalRef: res.refundId };
     } catch (e) {

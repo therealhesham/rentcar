@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { getLocale } from "next-intl/server";
 import { Prisma } from "@prisma/client";
 import {
   createGeideaCheckoutSession,
@@ -35,6 +34,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import { recordPaymentTransaction } from "@/lib/payment-transaction";
 import { getAppPublicUrl } from "@/lib/app-public-url";
+import { getLocale, getTranslations } from "next-intl/server";
 
 export type ConfirmPaymentResult =
   | { ok: true; paymentMethod: string; underReview?: boolean }
@@ -97,22 +97,24 @@ export async function confirmMockPayment(
   _prev: ConfirmPaymentResult | null,
   formData: FormData,
 ): Promise<ConfirmPaymentResult> {
+  const te = await getTranslations("PaymentErrors");
   const id = Number(formData.get("bookingRequestId"));
   if (!Number.isInteger(id) || id < 1) {
-    return { ok: false, error: "معرّف الطلب غير صالح." };
+    return { ok: false, error: te("bookingIdInvalid") };
   }
 
   const paymentMethod = parsePaymentMethod(formData);
   if (!paymentMethod) {
-    return { ok: false, error: "طريقة الدفع غير صالحة." };
+    return { ok: false, error: te("methodInvalid") };
   }
 
+  // صفحة الدفع مترجَمة بالكامل الآن، فصفحة تابي المستضافة تتبع لغة الزائر الفعلية.
   const locale = await getLocale();
   const tabbyLang: "ar" | "en" = locale === "en" ? "en" : "ar";
 
   const methodFlags = await getCheckoutPaymentMethodFlags();
   if (!isCheckoutPaymentMethodEnabled(methodFlags, paymentMethod)) {
-    return { ok: false, error: "طريقة الدفع غير متاحة حالياً." };
+    return { ok: false, error: te("methodUnavailable") };
   }
 
   const access = await requireCustomerBookingActionAccess(id);
@@ -120,7 +122,7 @@ export async function confirmMockPayment(
 
   const profile = await getCustomerProfile();
   if (!profile) {
-    return { ok: false, error: "يجب تسجيل الدخول لإتمام هذه العملية." };
+    return { ok: false, error: te("loginRequired") };
   }
 
   // بوابة الحالة/الموعد: لا يُسمح بإتمام الدفع لحجز ملغى/مرفوض أو بدأ موعد استلامه بالفعل،
@@ -149,16 +151,16 @@ export async function confirmMockPayment(
     },
   });
   if (!bookingGate) {
-    return { ok: false, error: "الحجز غير موجود أو لا يخص حسابك." };
+    return { ok: false, error: te("bookingNotYours") };
   }
   const gateStatusKey = bookingGate.status.trim().toUpperCase();
   if (gateStatusKey === "CANCELLED" || gateStatusKey === "REJECTED") {
-    return { ok: false, error: "لا يمكن إتمام الدفع لحجز ملغى أو مرفوض." };
+    return { ok: false, error: te("bookingCancelled") };
   }
   if (hasBookingPickupPassed(bookingGate.pickupDate)) {
     return {
       ok: false,
-      error: "بدأ موعد استلام هذا الحجز، لا يمكن إتمام الدفع من الحساب. يرجى التواصل مع الدعم.",
+      error: te("pickupStartedPay"),
     };
   }
 
@@ -181,7 +183,7 @@ export async function confirmMockPayment(
     if (isCash) {
       return {
         ok: false,
-        error: "فرق التمديد يُسدَّد أونلاين من هذه الصفحة، أو نقداً لدى موظف الفرع.",
+        error: te("balanceOnlineOnly"),
       };
     }
 
@@ -195,8 +197,9 @@ export async function confirmMockPayment(
           name: bookingGate.fullName,
         },
       });
-      if (!eligibility.isEligible) {
-        return { ok: false, error: "عذراً، تعذّر على تابي اعتماد هذه العملية حالياً. اختر وسيلة دفع أخرى." };
+      // لا نمنع عند "unknown" (تعذّر الوصول لتابي) — صفحة تابي ترفض إن لزم.
+      if (eligibility.status === "rejected") {
+        return { ok: false, error: te("tabbyIneligible") };
       }
       const appUrl = getAppPublicUrl();
       let redirectUrl: string;
@@ -216,7 +219,7 @@ export async function confirmMockPayment(
           shippingAddress: tabbyShippingAddress,
           items: [
             {
-              title: `${bookingGate.carModel?.brand?.name ?? ""} ${bookingGate.carModel?.name ?? ""}`.trim() || `فرق تمديد حجز #${id}`,
+              title: `${bookingGate.carModel?.brand?.name ?? ""} ${bookingGate.carModel?.name ?? ""}`.trim() || te("itemExtension", { id }),
               quantity: 1,
               unitPriceSar: balanceDueSar,
             },
@@ -237,7 +240,7 @@ export async function confirmMockPayment(
         redirectUrl = session.webUrl;
       } catch (e) {
         console.error("[tabby] balance session creation failed:", e);
-        return { ok: false, error: "تعذّر فتح صفحة تابي للدفع. حاول مجدداً." };
+        return { ok: false, error: te("tabbyOpenFailed") };
       }
       redirect(redirectUrl);
     }
@@ -262,7 +265,7 @@ export async function confirmMockPayment(
         redirectUrl = session.redirectUrl;
       } catch (e) {
         console.error("[geidea] balance session creation failed:", e);
-        return { ok: false, error: "تعذّر فتح صفحة الدفع الآمنة. حاول مجدداً." };
+        return { ok: false, error: te("hppFailed") };
       }
       redirect(redirectUrl);
     }
@@ -300,7 +303,7 @@ export async function confirmMockPayment(
     if (res.count === 0) {
       return {
         ok: false,
-        error: "تعذّر تسجيل دفعة الفرق — تحدّثت حالة الحجز. حدّث الصفحة وحاول مجدداً.",
+        error: te("balanceRaceFailed"),
       };
     }
     await logActivity({
@@ -329,7 +332,7 @@ export async function confirmMockPayment(
   const tabbyHosted = !isCash && isTabbyConfigured() && paymentMethod === "TABBY";
   if (tabbyHosted) {
     if (paidTotalSar == null || paidTotalSar <= 0) {
-      return { ok: false, error: "تعذّر احتساب مبلغ الحجز. تواصل مع الدعم." };
+      return { ok: false, error: te("amountFailed") };
     }
     const eligibility = await checkTabbyEligibility({
       amountSar: paidTotalSar,
@@ -339,8 +342,8 @@ export async function confirmMockPayment(
         name: bookingGate.fullName,
       },
     });
-    if (!eligibility.isEligible) {
-      return { ok: false, error: "عذراً، تعذّر على تابي اعتماد هذه العملية حالياً. اختر وسيلة دفع أخرى." };
+    if (eligibility.status === "rejected") {
+      return { ok: false, error: te("tabbyIneligible") };
     }
     const appUrl = getAppPublicUrl();
     let redirectUrl: string;
@@ -360,7 +363,7 @@ export async function confirmMockPayment(
         shippingAddress: tabbyShippingAddress,
         items: [
           {
-            title: `${bookingGate.carModel?.brand?.name ?? ""} ${bookingGate.carModel?.name ?? ""}`.trim() || `حجز سيارة #${id}`,
+            title: `${bookingGate.carModel?.brand?.name ?? ""} ${bookingGate.carModel?.name ?? ""}`.trim() || te("itemBooking", { id }),
             quantity: 1,
             unitPriceSar: paidTotalSar,
           },
@@ -381,7 +384,7 @@ export async function confirmMockPayment(
       redirectUrl = session.webUrl;
     } catch (e) {
       console.error("[tabby] session creation failed:", e);
-      return { ok: false, error: "تعذّر فتح صفحة تابي للدفع. حاول مجدداً." };
+      return { ok: false, error: te("tabbyOpenFailed") };
     }
     redirect(redirectUrl);
   }
@@ -393,7 +396,7 @@ export async function confirmMockPayment(
 
   if (geideaHosted) {
     if (paidTotalSar == null || paidTotalSar <= 0) {
-      return { ok: false, error: "تعذّر احتساب مبلغ الحجز. تواصل مع الدعم." };
+      return { ok: false, error: te("amountFailed") };
     }
     const appUrl = getAppPublicUrl();
     let redirectUrl: string;
@@ -416,7 +419,7 @@ export async function confirmMockPayment(
       redirectUrl = session.redirectUrl;
     } catch (e) {
       console.error("[geidea] session creation failed:", e);
-      return { ok: false, error: "تعذّر فتح صفحة الدفع الآمنة. حاول مجدداً." };
+      return { ok: false, error: te("hppFailed") };
     }
     redirect(redirectUrl);
   }
@@ -483,7 +486,7 @@ export async function confirmMockPayment(
         select: { paymentStatus: true, paymentMethod: true, status: true },
       });
       if (!exists) {
-        return { ok: false, error: "الحجز غير موجود أو لا يخص حسابك." };
+        return { ok: false, error: te("bookingNotYours") };
       }
       const existingMethod = exists.paymentMethod?.trim().toUpperCase() ?? "";
       if (existingMethod === "CASH") {
@@ -506,7 +509,7 @@ export async function confirmMockPayment(
           paymentMethod: paidRow?.paymentMethod ?? paymentMethod,
         };
       }
-      return { ok: false, error: "تعذّر تحديث حالة الدفع." };
+      return { ok: false, error: te("updateFailed") };
     }
 
     if (isCash) {
@@ -554,10 +557,10 @@ export async function confirmMockPayment(
     }
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2025") {
-      return { ok: false, error: "الحجز غير موجود." };
+      return { ok: false, error: te("bookingNotFound") };
     }
     console.error(e);
-    return { ok: false, error: "تعذّر تأكيد الدفع." };
+    return { ok: false, error: te("confirmFailed") };
   }
 
   revalidatePath(`/fleet/payment/${id}`);
@@ -571,9 +574,10 @@ export async function resendBookingInvoice(
   _prev: ResendBookingInvoiceResult | null,
   formData: FormData,
 ): Promise<ResendBookingInvoiceResult> {
+  const te = await getTranslations("PaymentErrors");
   const id = Number(formData.get("bookingRequestId"));
   if (!Number.isInteger(id) || id < 1) {
-    return { ok: false, error: "معرّف الطلب غير صالح." };
+    return { ok: false, error: te("bookingIdInvalid") };
   }
 
   const access = await requireCustomerBookingActionAccess(id);
@@ -597,18 +601,19 @@ export type ApplePayExpressSessionResult =
 export async function createApplePayExpressSession(
   bookingRequestId: number,
 ): Promise<ApplePayExpressSessionResult> {
+  const te = await getTranslations("PaymentErrors");
   const id = Number(bookingRequestId);
   if (!Number.isInteger(id) || id < 1) {
-    return { ok: false, error: "معرّف الطلب غير صالح." };
+    return { ok: false, error: te("bookingIdInvalid") };
   }
 
   if (!isGeideaConfigured()) {
-    return { ok: false, error: "بوابة الدفع غير مهيّأة حالياً." };
+    return { ok: false, error: te("gatewayNotConfigured") };
   }
 
   const methodFlags = await getCheckoutPaymentMethodFlags();
   if (!isCheckoutPaymentMethodEnabled(methodFlags, "APPLE_PAY")) {
-    return { ok: false, error: "طريقة الدفع غير متاحة حالياً." };
+    return { ok: false, error: te("methodUnavailable") };
   }
 
   const access = await requireCustomerBookingActionAccess(id);
@@ -616,7 +621,7 @@ export async function createApplePayExpressSession(
 
   const profile = await getCustomerProfile();
   if (!profile) {
-    return { ok: false, error: "يجب تسجيل الدخول لإتمام هذه العملية." };
+    return { ok: false, error: te("loginRequired") };
   }
 
   const ownerWhere = customerBookingOwnershipWhere(profile.id, profile.phone);
@@ -630,15 +635,15 @@ export async function createApplePayExpressSession(
     },
   });
   if (!booking) {
-    return { ok: false, error: "الحجز غير موجود أو لا يخص حسابك." };
+    return { ok: false, error: te("bookingNotYours") };
   }
 
   const statusKey = booking.status.trim().toUpperCase();
   if (statusKey === "CANCELLED" || statusKey === "REJECTED") {
-    return { ok: false, error: "لا يمكن إتمام الدفع لحجز ملغى أو مرفوض." };
+    return { ok: false, error: te("bookingCancelled") };
   }
   if (hasBookingPickupPassed(booking.pickupDate)) {
-    return { ok: false, error: "بدأ موعد استلام هذا الحجز. يرجى التواصل مع الدعم." };
+    return { ok: false, error: te("pickupStarted") };
   }
 
   // نفس قاعدة تأكيد الدفع: لو الحجز مدفوع وعليه رصيد تمديد فالمستحق هو الرصيد فقط.
@@ -650,7 +655,7 @@ export async function createApplePayExpressSession(
     balanceDueSar > 0 ? balanceDueSar : await bookingOnlineTotalInclTaxSar(id, ownerWhere);
 
   if (amountSar == null || amountSar <= 0) {
-    return { ok: false, error: "تعذّر احتساب مبلغ الحجز. تواصل مع الدعم." };
+    return { ok: false, error: te("amountFailed") };
   }
 
   const appUrl = getAppPublicUrl();
@@ -672,6 +677,6 @@ export async function createApplePayExpressSession(
     return { ok: true, sessionId: session.sessionId };
   } catch (e) {
     console.error("[geidea] apple pay express session creation failed:", e);
-    return { ok: false, error: "تعذّر تهيئة Apple Pay. حاول مجدداً." };
+    return { ok: false, error: te("applePayFailed") };
   }
 }

@@ -114,12 +114,23 @@ export type TabbyOrderItem = {
 /**
  * فحص أهلية العميل لدفع التابي (Eligibility check).
  */
+export type TabbyEligibility = {
+  /**
+   * `rejected` = تابي ردّت فعلاً برفض ⇒ نُعطّل الخيار.
+   * `unknown` = تعذّر الوصول لتابي (شبكة/مهلة) ⇒ **لا نُعطّل**؛ نترك العميل يجرّب
+   * وصفحة تابي نفسها ترفض إن كان غير مؤهَّل. تعطيلها هنا كان يخسر بيعاً بسبب
+   * عطل شبكي مؤقت عندنا لا علاقة له بأهلية العميل.
+   */
+  status: "eligible" | "rejected" | "unknown";
+  rejectionReason?: string;
+};
+
 export async function checkTabbyEligibility(args: {
   amountSar: number;
   buyer: TabbyBuyerInfo;
-}): Promise<{ isEligible: boolean; rejectionReason?: string }> {
+}): Promise<TabbyEligibility> {
   const cfg = getTabbyConfig();
-  if (!cfg) return { isEligible: false, rejectionReason: "TABBY_NOT_CONFIGURED" };
+  if (!cfg) return { status: "unknown", rejectionReason: "TABBY_NOT_CONFIGURED" };
 
   try {
     const amount = formatAmount(args.amountSar);
@@ -150,12 +161,13 @@ export async function checkTabbyEligibility(args: {
     const installments = data.configuration?.available_products?.installments;
     const isEligible = Array.isArray(installments) && installments.length > 0;
     return {
-      isEligible,
+      status: isEligible ? "eligible" : "rejected",
       rejectionReason: data.configuration?.rejection_reason,
     };
   } catch (err) {
-    console.error("[checkTabbyEligibility] failed:", err);
-    return { isEligible: false, rejectionReason: String(err) };
+    // فشل شبكي/مهلة — ليس رفضاً من تابي.
+    console.error("[checkTabbyEligibility] unreachable:", err);
+    return { status: "unknown", rejectionReason: String(err) };
   }
 }
 

@@ -7,21 +7,26 @@ import { getBookingForPayment } from "@/lib/booking-payment-data";
 import { geideaCheckoutScriptUrl, isGeideaConfigured } from "@/lib/geidea/client";
 import { reconcilePendingGeideaPaymentById } from "@/lib/geidea/mark-paid";
 import { reconcilePendingTabbyPaymentById } from "@/lib/tabby/mark-paid";
-import { checkTabbyEligibility, getTabbyConfig } from "@/lib/tabby/client";
+import { checkTabbyEligibility, getTabbyConfig, type TabbyEligibility } from "@/lib/tabby/client";
 import {
   getApplePayExpressEnabled,
   getCheckoutPaymentMethodFlags,
   getPaymentIconUrls,
 } from "@/lib/site-settings";
 import { buildPageMetadata } from "@/lib/seo";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = buildPageMetadata({
-  title: "إتمام الدفع",
-  description: "اختر طريقة الدفع وأكمل حجز السيارة.",
-  noIndex: true,
-});
+// ديناميكي لا ثابت: العنوان يتبع لغة الزائر مثل محتوى الصفحة.
+export async function generateMetadata() {
+  const t = await getTranslations("Payment");
+  return buildPageMetadata({
+    title: t("title"),
+    description: t("metaDescription"),
+    noIndex: true,
+  });
+}
 
 export default async function FleetPaymentPage({
   params,
@@ -56,7 +61,7 @@ export default async function FleetPaymentPage({
 
   // فحص أهلية تابي المسبق (pre-scoring) — يُعرض في الواجهة فقط؛ التحقق الملزِم يتكرر
   // وقت الإرسال الفعلي في payment-actions.ts (لا نثق بحالة العميل وحدها).
-  let tabbyEligibility: { isEligible: boolean; rejectionReason?: string } | null = null;
+  let tabbyEligibility: TabbyEligibility | null = null;
   if (tabbyCfg) {
     const ps = booking.paymentStatus.trim().toUpperCase();
     const balanceDueSar = booking.balanceDueAtBranchSar ?? 0;
