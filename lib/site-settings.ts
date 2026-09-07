@@ -90,6 +90,79 @@ export async function getPromoBannerSlides(): Promise<PromoBannerSlide[]> {
 }
 /* ──────────────────────────────────────────────────────────── */
 
+/* ─── Promo Modal (نافذة ترويجية على الرئيسية) ─────────────── */
+export const SITE_KEY_PROMO_MODAL = "promo_modal_v1";
+
+/** مجلد المعرض الذي تُرفَع إليه صور النافذة الترويجية. */
+export const PROMO_MODAL_GALLERY_FOLDER = "promo-modal";
+
+export type PromoModalSlide = {
+  imageUrl: string;
+  linkUrl: string;
+};
+
+export type PromoModalSettings = {
+  enabled: boolean;
+  /** فترة التهدئة بالدقائق قبل أن تظهر النافذة للزائر نفسه مجدداً. */
+  cooldownMinutes: number;
+  slides: PromoModalSlide[];
+};
+
+export const DEFAULT_PROMO_MODAL_COOLDOWN_MINUTES = 30;
+export const MIN_PROMO_MODAL_COOLDOWN_MINUTES = 1;
+export const MAX_PROMO_MODAL_COOLDOWN_MINUTES = 24 * 60;
+
+export const DEFAULT_PROMO_MODAL_SETTINGS: PromoModalSettings = {
+  enabled: false,
+  cooldownMinutes: DEFAULT_PROMO_MODAL_COOLDOWN_MINUTES,
+  slides: [],
+};
+
+export function normalizePromoModalCooldownMinutes(raw: unknown): number {
+  const n = Math.round(Number(raw));
+  if (!Number.isFinite(n)) return DEFAULT_PROMO_MODAL_COOLDOWN_MINUTES;
+  return Math.min(
+    MAX_PROMO_MODAL_COOLDOWN_MINUTES,
+    Math.max(MIN_PROMO_MODAL_COOLDOWN_MINUTES, n),
+  );
+}
+
+/** نفس سياسة البانر الترويجي: Spaces الموثوق أو مضيفَي الصور المسموحَين. */
+export function isAllowedPromoModalImageUrl(url: string): boolean {
+  return isAllowedPromoBannerImageUrl(url);
+}
+
+export async function getPromoModalSettings(): Promise<PromoModalSettings> {
+  try {
+    const row = await prisma.siteSetting.findUnique({
+      where: { key: SITE_KEY_PROMO_MODAL },
+      select: { value: true },
+    });
+    if (!row?.value) return DEFAULT_PROMO_MODAL_SETTINGS;
+
+    const parsed = JSON.parse(row.value) as Partial<PromoModalSettings> | null;
+    if (!parsed || typeof parsed !== "object") return DEFAULT_PROMO_MODAL_SETTINGS;
+
+    const slides = Array.isArray(parsed.slides)
+      ? parsed.slides.filter(
+          (s): s is PromoModalSlide =>
+            typeof s === "object" && s !== null &&
+            typeof (s as PromoModalSlide).imageUrl === "string" &&
+            (s as PromoModalSlide).imageUrl.trim() !== "",
+        )
+      : [];
+
+    return {
+      enabled: parsed.enabled === true,
+      cooldownMinutes: normalizePromoModalCooldownMinutes(parsed.cooldownMinutes),
+      slides,
+    };
+  } catch {
+    return DEFAULT_PROMO_MODAL_SETTINGS;
+  }
+}
+/* ──────────────────────────────────────────────────────────── */
+
 /**
  * صورة الهيرو الافتراضية — الخلفية كاملة العرض. الإعداد الحالي عدة شرائح تتنقل
  * تلقائياً (`SITE_KEY_HOME_HERO_SLIDES`)، والمفتاحان المفردان أدناه يبقيان

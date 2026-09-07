@@ -5,6 +5,7 @@ export { FleetCategories } from "./FleetCategories";
 export { FloatingBookCta } from "./FloatingBookCta";
 export { HomeCtaSection } from "./HomeCtaSection";
 export { PromoBanner } from "./PromoBanner";
+export { PromoModal } from "./PromoModal";
 export { FleetShowcase } from "./FleetShowcase";
 export { HomeScrollSections } from "./HomeScrollSections";
 export { MotionSection } from "./MotionSection";

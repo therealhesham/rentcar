@@ -7,13 +7,18 @@ import {
   HomeCtaSection,
   HomeScrollSections,
   PromoBanner,
+  PromoModal,
   ServicesSection,
   SiteFooter,
   TopNav,
 } from "@/components/home";
 import { getActiveBookingCitiesWithBranches } from "@/lib/branch-data";
 import { buildPageMetadata } from "@/lib/seo";
-import { getBookingWidgetTabFlags, getHomeHeroSettings } from "@/lib/site-settings";
+import {
+  getBookingWidgetTabFlags,
+  getHomeHeroSettings,
+  getPromoModalSettings,
+} from "@/lib/site-settings";
 import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
@@ -41,10 +46,11 @@ export default async function Home({
   // تبويب الإيجار في الويدجت يكتب `?rental=` — لتتحدّث أسعار بطاقات الأسطول تحته
   const rentalRaw = (await searchParams).rental;
   const rentalTab = Array.isArray(rentalRaw) ? rentalRaw[0] : rentalRaw;
-  const [hero, cities, tabFlags] = await Promise.all([
+  const [hero, cities, tabFlags, promoModal] = await Promise.all([
     getHomeHeroSettings(),
     getActiveBookingCitiesWithBranches(locale).catch(() => []),
     getBookingWidgetTabFlags(),
+    getPromoModalSettings(),
   ]);
 
   return (
@@ -70,6 +76,13 @@ export default async function Home({
         />
         <FloatingBookCta />
       </main>
+      {promoModal.enabled && promoModal.slides.length > 0 && (
+        <PromoModal
+          slides={promoModal.slides}
+          cooldownMinutes={promoModal.cooldownMinutes}
+          locale={locale}
+        />
+      )}
       <SiteFooter />
     </div>
   );

@@ -121,6 +121,12 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/admin/social-links", label: "روابط التواصل الاجتماعي", icon: "megaphone" },
       { href: "/admin/home", label: "هيرو الرئيسية", icon: "image" },
       { href: "/admin/promo-banner", label: "البانر الترويجي", icon: "megaphone" },
+      {
+        href: "/admin/promo-modal",
+        label: "النافذة الترويجية",
+        icon: "megaphone",
+        superAdminOnly: true,
+      },
       { href: "/admin/rental-pricing-display", label: "عرض أسعار التأجير", icon: "badge-dollar" },
       { href: "/admin/booking-otp-delivery", label: "رمز التحقق", icon: "shield-check" },
       { href: "/admin/booking-widget-tabs", label: "تبويبات ويدجت الحجز", icon: "sliders" },

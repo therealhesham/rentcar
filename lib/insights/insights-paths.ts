@@ -115,6 +115,7 @@ const ADMIN_PAGE_LABELS: Array<[RegExp, string]> = [
   [/^\/admin\/social-links/, "روابط التواصل"],
   [/^\/admin\/home/, "هيرو الرئيسية"],
   [/^\/admin\/promo-banner/, "البانر الترويجي"],
+  [/^\/admin\/promo-modal/, "النافذة الترويجية"],
   [/^\/admin\/rental-pricing-display/, "عرض أسعار التأجير"],
   [/^\/admin\/booking-otp-delivery/, "رمز التحقق"],
   [/^\/admin\/booking-widget-tabs/, "تبويبات ويدجت الحجز"],
