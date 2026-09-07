@@ -138,7 +138,7 @@ export function AccountLoginClient({ returnTo = "/account" }: Props) {
       }
       setOtpError(data.error ?? t("errOtpSend"));
     } catch {
-      setOtpError("تعذّر الاتصال بالخادم.");
+      setOtpError(t("errNetwork"));
     } finally {
       setOtpSendBusy(false);
     }
@@ -171,7 +171,7 @@ export function AccountLoginClient({ returnTo = "/account" }: Props) {
       }
       setOtpError(data.error ?? t("errOtpConfirm"));
     } catch {
-      setOtpError("تعذّر الاتصال بالخادم.");
+      setOtpError(t("errNetwork"));
     } finally {
       setOtpVerifyBusy(false);
     }
@@ -223,7 +223,7 @@ export function AccountLoginClient({ returnTo = "/account" }: Props) {
       }
       setOtpError(data.error ?? t("errOtpResend"));
     } catch {
-      setOtpError("تعذّر الاتصال بالخادم.");
+      setOtpError(t("errNetwork"));
     } finally {
       setOtpSendBusy(false);
     }

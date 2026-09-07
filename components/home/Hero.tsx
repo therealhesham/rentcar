@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { Clock, MapPin, ShieldCheck, Zap } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import {
@@ -6,33 +5,28 @@ import {
   type BookingCityBranchesOption,
 } from "./BookingWidget";
 import type { BookingWidgetTabFlags } from "@/lib/booking-widget-tabs";
+import type { HomeHeroSlide } from "@/lib/site-settings";
 import { HeroEntrance } from "./HomeMotion";
+import { HeroSlideshow } from "./HeroSlideshow";
 
 export type HeroProps = {
-  imageUrl: string;
-  imageAlt: string;
+  /** صور الخلفية — أكثر من واحدة تتنقّل تلقائياً */
+  slides: HomeHeroSlide[];
   cities: BookingCityBranchesOption[];
   tabFlags?: BookingWidgetTabFlags | null;
   /** تبويب الإيجار من `?rental=` — حتى يطابق الويدجت أسعار البطاقات بعد إعادة التحميل */
   initialRental?: string | null;
 };
 
-export function Hero({ imageUrl, imageAlt, cities, tabFlags, initialRental }: HeroProps) {
+export function Hero({ slides, cities, tabFlags, initialRental }: HeroProps) {
   const t = useTranslations("Hero");
   const locale = useLocale();
   const isRtl = locale === "ar";
 
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-[#eef6f8] via-white to-[#fdfbf6] pt-[4.5rem] sm:pt-24">
-      <div className="pointer-events-none absolute inset-0" aria-hidden>
-        <Image
-          src={imageUrl}
-          alt={imageAlt}
-          fill
-          priority
-          className="object-cover object-center"
-          sizes="100vw"
-        />
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+        <HeroSlideshow slides={slides} isRtl={isRtl} />
         <div className="absolute inset-0" />
         <div className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-white/80 via-white/40 to-transparent sm:h-64" />
         <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-white/70 to-transparent" />

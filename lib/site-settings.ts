@@ -86,8 +86,9 @@ export async function getPromoBannerSlides(): Promise<PromoBannerSlide[]> {
 /* ──────────────────────────────────────────────────────────── */
 
 /**
- * صورة الهيرو الافتراضية — التصميم الحالي خلفية واحدة كاملة العرض (لا صورتان
- * يمين/يسار كما في تصميم سابق)، فالإعداد صورة واحدة فقط.
+ * صورة الهيرو الافتراضية — الخلفية كاملة العرض. الإعداد الحالي عدة شرائح تتنقل
+ * تلقائياً (`SITE_KEY_HOME_HERO_SLIDES`)، والمفتاحان المفردان أدناه يبقيان
+ * للتوافق مع الإعداد القديم قبل تفعيل الشرائح.
  */
 export const DEFAULT_HOME_HERO_IMAGE_URL = "/heros.webp";
 
@@ -96,6 +97,11 @@ export const DEFAULT_HOME_HERO_IMAGE_ALT =
 
 export const SITE_KEY_HOME_HERO_IMAGE_URL = "home_hero_image_url";
 export const SITE_KEY_HOME_HERO_IMAGE_ALT = "home_hero_image_alt";
+
+/** JSON: مصفوفة شرائح خلفية الهيرو المتنقلة. */
+export const SITE_KEY_HOME_HERO_SLIDES = "home_hero_slides_v1";
+
+export const MAX_HOME_HERO_SLIDES = 5;
 
 const ALLOWED_DEFAULT_HERO_URLS = new Set([DEFAULT_HOME_HERO_IMAGE_URL]);
 
@@ -106,16 +112,53 @@ export function isAllowedHomeHeroImageUrl(url: string): boolean {
   return isTrustedSpacesImageUrl(u);
 }
 
-export type HomeHeroSettings = {
+export type HomeHeroSlide = {
   imageUrl: string;
   imageAlt: string;
 };
 
-const HOME_HERO_SETTING_KEYS = [SITE_KEY_HOME_HERO_IMAGE_URL, SITE_KEY_HOME_HERO_IMAGE_ALT];
+export type HomeHeroSettings = {
+  /** الشريحة الأولى — يبقى للتوافق مع أي قراءة تتوقع صورة واحدة. */
+  imageUrl: string;
+  imageAlt: string;
+  /** شريحة واحدة على الأقل دائماً؛ أكثر من واحدة = تنقّل تلقائي. */
+  slides: HomeHeroSlide[];
+};
+
+/** يتجاهل أي شريحة برابط غير مسموح بدل رفض الإعداد كله. */
+function parseHomeHeroSlidesJson(raw: string | null | undefined): HomeHeroSlide[] {
+  if (!raw?.trim()) return [];
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw) as unknown;
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(parsed)) return [];
+
+  const slides: HomeHeroSlide[] = [];
+  for (const item of parsed) {
+    if (typeof item !== "object" || item === null) continue;
+    const record = item as { imageUrl?: unknown; imageAlt?: unknown };
+    const imageUrl = String(record.imageUrl ?? "").trim();
+    if (!isAllowedHomeHeroImageUrl(imageUrl)) continue;
+    const imageAlt = String(record.imageAlt ?? "").trim() || DEFAULT_HOME_HERO_IMAGE_ALT;
+    slides.push({ imageUrl, imageAlt });
+    if (slides.length >= MAX_HOME_HERO_SLIDES) break;
+  }
+  return slides;
+}
+
+const HOME_HERO_SETTING_KEYS = [
+  SITE_KEY_HOME_HERO_IMAGE_URL,
+  SITE_KEY_HOME_HERO_IMAGE_ALT,
+  SITE_KEY_HOME_HERO_SLIDES,
+];
 
 const DEFAULT_HOME_HERO_SETTINGS: HomeHeroSettings = {
   imageUrl: DEFAULT_HOME_HERO_IMAGE_URL,
   imageAlt: DEFAULT_HOME_HERO_IMAGE_ALT,
+  slides: [{ imageUrl: DEFAULT_HOME_HERO_IMAGE_URL, imageAlt: DEFAULT_HOME_HERO_IMAGE_ALT }],
 };
 
 export async function getHomeHeroSettings(): Promise<HomeHeroSettings> {
@@ -127,14 +170,19 @@ export async function getHomeHeroSettings(): Promise<HomeHeroSettings> {
     const settings = new Map(rows.map((row) => [row.key, row.value]));
 
     const urlCandidate = settings.get(SITE_KEY_HOME_HERO_IMAGE_URL)?.trim() ?? "";
-    const imageUrl = isAllowedHomeHeroImageUrl(urlCandidate)
+    const legacyImageUrl = isAllowedHomeHeroImageUrl(urlCandidate)
       ? urlCandidate
       : DEFAULT_HOME_HERO_IMAGE_URL;
 
-    const imageAlt =
+    const legacyImageAlt =
       settings.get(SITE_KEY_HOME_HERO_IMAGE_ALT)?.trim() || DEFAULT_HOME_HERO_IMAGE_ALT;
 
-    return { imageUrl, imageAlt };
+    const parsedSlides = parseHomeHeroSlidesJson(settings.get(SITE_KEY_HOME_HERO_SLIDES));
+    const slides = parsedSlides.length
+      ? parsedSlides
+      : [{ imageUrl: legacyImageUrl, imageAlt: legacyImageAlt }];
+
+    return { imageUrl: slides[0].imageUrl, imageAlt: slides[0].imageAlt, slides };
   } catch (e: unknown) {
     const code =
       e && typeof e === "object" && "code" in e ? String((e as { code: string }).code) : "";

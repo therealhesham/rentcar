@@ -54,8 +54,7 @@ export default async function Home({
         <HomeScrollSections
           hero={
             <Hero
-              imageUrl={hero.imageUrl}
-              imageAlt={hero.imageAlt}
+              slides={hero.slides}
               cities={cities}
               tabFlags={tabFlags}
               initialRental={rentalTab}

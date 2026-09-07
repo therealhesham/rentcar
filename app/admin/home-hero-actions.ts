@@ -4,10 +4,14 @@ import { revalidatePath } from "next/cache";
 import { requireSuperAdminForAction } from "@/lib/admin-access";
 import { resolveUploadedImageUrl } from "@/lib/admin-image-resolve";
 import {
+  DEFAULT_HOME_HERO_IMAGE_ALT,
   DEFAULT_HOME_HERO_IMAGE_URL,
   isAllowedHomeHeroImageUrl,
+  MAX_HOME_HERO_SLIDES,
   SITE_KEY_HOME_HERO_IMAGE_ALT,
   SITE_KEY_HOME_HERO_IMAGE_URL,
+  SITE_KEY_HOME_HERO_SLIDES,
+  type HomeHeroSlide,
 } from "@/lib/site-settings";
 import { prisma } from "@/lib/prisma";
 
@@ -26,27 +30,47 @@ export async function updateHomeHero(
   const auth = await requireSuperAdminForAction();
   if (!auth.ok) return { ok: false, error: auth.error };
 
-  const imageAlt = String(formData.get("imageAlt") ?? "").trim();
-  if (!imageAlt) {
-    return { ok: false, error: "أدخل وصفاً (alt) لصورة الهيرو." };
+  const slides: HomeHeroSlide[] = [];
+
+  for (let i = 0; i < MAX_HOME_HERO_SLIDES; i++) {
+    if (String(formData.get(`remove_${i}`) ?? "") === "on") continue;
+
+    const currentImage = String(formData.get(`currentImage_${i}`) ?? "").trim();
+    const galleryImageUrl = String(formData.get(`galleryImageUrl_${i}`) ?? "").trim();
+    const imageFile = formData.get(`imageFile_${i}`);
+    const hasUpload = imageFile instanceof File && imageFile.size > 0;
+
+    // شريحة فارغة تماماً تُتجاهل بدل أن تسقط على الصورة الافتراضية
+    if (!hasUpload && !galleryImageUrl && !currentImage) continue;
+
+    const resolved = await resolveUploadedImageUrl({
+      imageFile,
+      galleryImageUrl,
+      currentImage,
+      fallbackDefault: DEFAULT_HOME_HERO_IMAGE_URL,
+      isAllowedUrl: isAllowedHomeHeroImageUrl,
+      folderSlug: "home",
+      folderLabel: "الصفحة الرئيسية (هيرو)",
+    });
+    if (!resolved.ok) {
+      return { ok: false, error: `الشريحة ${i + 1}: ${resolved.error}` };
+    }
+
+    const imageAlt =
+      String(formData.get(`imageAlt_${i}`) ?? "").trim() || DEFAULT_HOME_HERO_IMAGE_ALT;
+
+    slides.push({ imageUrl: resolved.imageUrl, imageAlt });
   }
 
-  const resolved = await resolveUploadedImageUrl({
-    imageFile: formData.get("imageFile"),
-    galleryImageUrl: String(formData.get("galleryImageUrl") ?? "").trim(),
-    currentImage: String(formData.get("currentImage") ?? "").trim(),
-    fallbackDefault: DEFAULT_HOME_HERO_IMAGE_URL,
-    isAllowedUrl: isAllowedHomeHeroImageUrl,
-    folderSlug: "home",
-    folderLabel: "الصفحة الرئيسية (هيرو)",
-  });
-  if (!resolved.ok) {
-    return { ok: false, error: resolved.error };
+  if (slides.length === 0) {
+    return { ok: false, error: "أضف صورة واحدة على الأقل لخلفية الهيرو." };
   }
 
   try {
-    await upsertSiteSetting(SITE_KEY_HOME_HERO_IMAGE_URL, resolved.imageUrl);
-    await upsertSiteSetting(SITE_KEY_HOME_HERO_IMAGE_ALT, imageAlt);
+    await upsertSiteSetting(SITE_KEY_HOME_HERO_SLIDES, JSON.stringify(slides));
+    // المفتاحان المفردان يبقيان محدَّثين بالشريحة الأولى للتوافق مع الإعداد القديم
+    await upsertSiteSetting(SITE_KEY_HOME_HERO_IMAGE_URL, slides[0].imageUrl);
+    await upsertSiteSetting(SITE_KEY_HOME_HERO_IMAGE_ALT, slides[0].imageAlt);
   } catch (e: unknown) {
     console.error(e);
     const code =

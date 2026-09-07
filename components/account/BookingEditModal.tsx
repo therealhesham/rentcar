@@ -1,5 +1,7 @@
 "use client";
 
+import { useLocale, useTranslations } from "next-intl";
+
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
@@ -39,11 +41,17 @@ export type BookingEditModalProps = BookingEditModalData & {
 
 const MAX_DAYS = 60;
 
-const MONTHS_AR = [
-  "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
-  "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر",
-];
-const DAYS_AR = ["ح", "ن", "ث", "ر", "خ", "ج", "س"];
+/** أسماء الشهور/الأيام من Intl حسب اللغة — بديل المصفوفة العربية الثابتة. */
+function monthNames(locale: string): string[] {
+  const tag = locale === "en" ? "en-GB" : "ar-SA-u-ca-gregory";
+  const fmt = new Intl.DateTimeFormat(tag, { month: "long" });
+  return Array.from({ length: 12 }, (_, m) => fmt.format(new Date(2026, m, 1)));
+}
+
+function weekdayInitials(locale: string): string[] {
+  if (locale !== "en") return ["ح", "ن", "ث", "ر", "خ", "ج", "س"];
+  return ["S", "M", "T", "W", "T", "F", "S"];
+}
 
 const TIME_OPTIONS: string[] = [];
 for (let h = 0; h < 24; h++) {
@@ -88,6 +96,10 @@ function SarAmount({ amount }: { amount: number }) {
 }
 
 export function BookingEditModal(props: BookingEditModalProps) {
+  const t = useTranslations("BookingEdit");
+  const locale = useLocale();
+  const months = monthNames(locale);
+  const weekdays = weekdayInitials(locale);
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -228,7 +240,7 @@ export function BookingEditModal(props: BookingEditModalProps) {
       fd.set("pickupDate", effectivePickup.toISOString());
       const r = await updateCustomerBookingDates(fd);
       if (!r.ok) {
-        setError(r.error ?? "تعذّر حفظ التعديل.");
+        setError(r.error ?? t("errSave"));
         return;
       }
       props.onClose();
@@ -250,7 +262,7 @@ export function BookingEditModal(props: BookingEditModalProps) {
       className="fixed inset-0 z-[90] flex items-end justify-center sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
-      aria-label="تعديل الحجز"
+      aria-label={t("editTitle", { id: props.bookingId })}
     >
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
@@ -274,7 +286,7 @@ export function BookingEditModal(props: BookingEditModalProps) {
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-[11px] font-bold uppercase tracking-wider text-[#775927]">
-              تعديل الحجز #{props.bookingId}
+              {t("editTitle", { id: props.bookingId })}
             </p>
             <h2 className="truncate text-base font-extrabold text-[#003749]">{props.carName}</h2>
           </div>
@@ -282,7 +294,7 @@ export function BookingEditModal(props: BookingEditModalProps) {
             type="button"
             onClick={props.onClose}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-neutral-100 hover:text-[#003749]"
-            aria-label="إغلاق"
+            aria-label={t("close")}
           >
             <X className="h-5 w-5" />
           </button>
@@ -303,7 +315,7 @@ export function BookingEditModal(props: BookingEditModalProps) {
                   : "border-orange-200 bg-orange-50 text-orange-900"
               }`}
             >
-              {isPaid ? "مدفوع" : "بانتظار الدفع"}
+              {isPaid ? t("paid") : t("awaitingPayment")}
             </span>
             {props.branchName ? (
               <span className="inline-flex items-center gap-1.5 text-xs font-bold text-on-surface-variant">
@@ -320,19 +332,19 @@ export function BookingEditModal(props: BookingEditModalProps) {
                 <svg viewBox="0 0 24 24" fill="none" className="mt-0.5 h-4 w-4 shrink-0" aria-hidden>
                   <path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                 </svg>
-                حجز شهري بمدة ثابتة ({props.numberOfDays} يوم) — اختر يوماً لنقل موعد الاستلام، وتتحرك العودة معه.
+                {t("monthlyFixed", { days: props.numberOfDays })}
               </div>
             ) : props.started ? (
               <div className="mb-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-[12px] font-bold leading-relaxed text-amber-950">
                 <svg viewBox="0 0 24 24" fill="none" className="mt-0.5 h-4 w-4 shrink-0" aria-hidden>
                   <path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                 </svg>
-                بدأ موعد هذا الحجز — اختر يوماً لاحقاً لتمديد تاريخ العودة (تاريخ الاستلام ثابت).
+                {t("startedExtendOnly")}
               </div>
             ) : (
               <div className="mb-3 flex items-center gap-2 text-[12px] font-bold text-on-surface-variant">
                 <Calendar className="h-4 w-4 text-[#dbb878]" />
-                {pendingStart ? "الآن اختر تاريخ العودة." : "اختر تاريخ الاستلام ثم تاريخ العودة."}
+                {pendingStart ? t("pickReturn") : t("pickPickupThenReturn")}
               </div>
             )}
 
@@ -341,25 +353,25 @@ export function BookingEditModal(props: BookingEditModalProps) {
                 type="button"
                 onClick={prevMonth}
                 className="flex h-8 w-8 items-center justify-center rounded-full text-[#8a7752] transition-colors hover:bg-[#f0ebe4] hover:text-[#003749]"
-                aria-label="الشهر السابق"
+                aria-label={t("prevMonth")}
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
               <span className="text-sm font-extrabold text-[#003749]">
-                {MONTHS_AR[calMonth]} {calYear}
+                {months[calMonth]} {calYear}
               </span>
               <button
                 type="button"
                 onClick={nextMonth}
                 className="flex h-8 w-8 items-center justify-center rounded-full text-[#8a7752] transition-colors hover:bg-[#f0ebe4] hover:text-[#003749]"
-                aria-label="الشهر التالي"
+                aria-label={t("nextMonth")}
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
             </div>
 
             <div className="mb-1 grid grid-cols-7 gap-1 text-center">
-              {DAYS_AR.map((d) => (
+              {weekdays.map((d) => (
                 <span key={d} className="py-1 text-[11px] font-bold text-[#8a7752]">{d}</span>
               ))}
             </div>
@@ -400,7 +412,7 @@ export function BookingEditModal(props: BookingEditModalProps) {
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-neutral-100 pt-4">
               <span className="inline-flex items-center gap-1.5 text-xs font-bold text-on-surface-variant">
                 <Clock className="h-4 w-4 text-[#dbb878]" />
-                وقت الاستلام
+                {t("pickupTime")}
               </span>
               {props.started ? (
                 <span className="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-sm font-extrabold tabular-nums text-on-surface" dir="ltr">
@@ -422,11 +434,11 @@ export function BookingEditModal(props: BookingEditModalProps) {
 
             {/* المدة */}
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-              <span className="text-xs font-bold text-on-surface-variant">مدة الإيجار</span>
+              <span className="text-xs font-bold text-on-surface-variant">{t("rentalDuration")}</span>
               {props.fixedDuration ? (
                 <span className="inline-flex items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm font-extrabold tabular-nums text-on-surface">
-                  {days} يوم
-                  <span className="text-[11px] font-bold text-on-surface-variant">(ثابتة)</span>
+                  {days} {t("dayUnit")}
+                  <span className="text-[11px] font-bold text-on-surface-variant">{t("fixed")}</span>
                 </span>
               ) : (
               <div className="flex items-center gap-2">
@@ -434,19 +446,19 @@ export function BookingEditModal(props: BookingEditModalProps) {
                   type="button"
                   onClick={() => setDays((d) => clampDays(d - 1))}
                   disabled={days <= minDays}
-                  aria-label="إنقاص يوم"
+                  aria-label={t("decreaseDay")}
                   className="flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-300 bg-white text-xl font-black text-[#003749] shadow-sm transition-colors hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   −
                 </button>
                 <span className="min-w-[64px] rounded-xl bg-[#003749] px-3 py-2 text-center text-sm font-extrabold tabular-nums text-white">
-                  {days} يوم
+                  {days} {t("dayUnit")}
                 </span>
                 <button
                   type="button"
                   onClick={() => setDays((d) => clampDays(d + 1))}
                   disabled={days >= MAX_DAYS}
-                  aria-label="زيادة يوم"
+                  aria-label={t("increaseDay")}
                   className="flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-300 bg-white text-xl font-black text-[#003749] shadow-sm transition-colors hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   +
@@ -457,11 +469,11 @@ export function BookingEditModal(props: BookingEditModalProps) {
 
             <div className="mt-4 grid grid-cols-2 gap-3">
               <div className="rounded-xl border border-neutral-100 bg-gradient-to-br from-neutral-50/80 to-white p-3">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">الاستلام</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">{t("pickupLabel")}</p>
                 <p className="mt-1 text-sm font-extrabold text-on-surface">{formatDateAr(effectivePickup)}</p>
               </div>
               <div className="rounded-xl border border-neutral-100 bg-gradient-to-br from-neutral-50/80 to-white p-3">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">العودة</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">{t("returnLabel")}</p>
                 <p className="mt-1 text-sm font-extrabold text-on-surface">{formatDateAr(returnDate)}</p>
               </div>
             </div>
@@ -471,43 +483,43 @@ export function BookingEditModal(props: BookingEditModalProps) {
           <div className="rounded-2xl border border-neutral-200 bg-white p-4">
             <dl className="space-y-2 text-sm">
               <div className="flex items-center justify-between">
-                <dt className="font-semibold text-on-surface-variant">الإجمالي الحالي</dt>
+                <dt className="font-semibold text-on-surface-variant">{t("currentTotal")}</dt>
                 <dd className="font-bold text-on-surface"><SarAmount amount={props.oldTotalInclTax} /></dd>
               </div>
               <div className="flex items-center justify-between">
-                <dt className="font-semibold text-on-surface-variant">بعد التعديل</dt>
+                <dt className="font-semibold text-on-surface-variant">{t("afterEdit")}</dt>
                 <dd className="font-extrabold text-[#003749]"><SarAmount amount={newTotal} /></dd>
               </div>
             </dl>
             <div className="mt-3 border-t border-neutral-100 pt-3">
               {Math.abs(diff) < 0.005 ? (
-                <p className="text-[13px] font-bold text-on-surface-variant">لا يوجد فرق في السعر.</p>
+                <p className="text-[13px] font-bold text-on-surface-variant">{t("noPriceDiff")}</p>
               ) : diff > 0 ? (
                 <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/90 p-3 text-[13px] font-bold leading-relaxed text-emerald-950">
                   <div className="flex items-center justify-between">
-                    <span>مبلغ إضافي مستحق</span>
+                    <span>{t("extraDue")}</span>
                     <span className="text-base font-black"><SarAmount amount={diff} /></span>
                   </div>
                   <p className="mt-1.5 text-[12px] font-semibold text-emerald-900/90">
                     {isPaid
-                      ? "بعد حفظ التعديل سيتم تحويلك لصفحة الدفع لسداد الفرق أونلاين."
-                      : "يُضاف الفرق إلى إجمالي الحجز ويُدفع عند إتمام الدفع."}
+                      ? t("extraDuePaidNote")
+                      : t("extraDueUnpaidNote")}
                   </p>
                 </div>
               ) : (
                 <div className="rounded-xl border border-sky-200/80 bg-sky-50/90 p-3 text-[13px] font-bold leading-relaxed text-sky-950">
                   <div className="flex items-center justify-between">
-                    <span>الفرق لصالحك</span>
+                    <span>{t("diffInYourFavour")}</span>
                     <span className="text-base font-black"><SarAmount amount={diff} /></span>
                   </div>
                   <p className="mt-1.5 text-[12px] font-semibold text-sky-900/90">
                     {isPaid
-                      ? `تُسجَّل مستحقات لك لدى الإدارة ويُرَدّ المبلغ إليك (نقداً في الفرع أو عبر ${
-                          props.paymentMethod
+                      ? t("refundDueNote", {
+                          method: props.paymentMethod
                             ? bookingPaymentMethodLabelAr(props.paymentMethod)
-                            : "نفس وسيلة الدفع"
-                        }).`
-                      : "يُخفَّض إجمالي الحجز وتدفع الإجمالي الجديد عند إتمام الدفع."}
+                            : t("sameMethod"),
+                        })
+                      : t("lowerTotalNote")}
                   </p>
                 </div>
               )}
@@ -529,7 +541,7 @@ export function BookingEditModal(props: BookingEditModalProps) {
             onClick={submit}
             className="inline-flex flex-1 items-center justify-center rounded-xl bg-[#003749] px-5 py-3 text-sm font-extrabold text-white shadow-md transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {pending ? "جاري الحفظ…" : "حفظ التعديل"}
+            {pending ? t("saving") : t("saveEdit")}
           </button>
           <button
             type="button"
@@ -537,7 +549,7 @@ export function BookingEditModal(props: BookingEditModalProps) {
             onClick={props.onClose}
             className="inline-flex items-center justify-center rounded-xl border-2 border-[#003749] bg-white px-5 py-3 text-sm font-extrabold text-[#003749] shadow-sm transition-colors hover:bg-[#003749]/5 disabled:opacity-60"
           >
-            إلغاء
+            {t("cancel")}
           </button>
         </div>
       </div>
