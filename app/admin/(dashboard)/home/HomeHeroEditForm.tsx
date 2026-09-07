@@ -1,15 +1,17 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { updateHomeHero } from "@/app/admin/home-hero-actions";
 import { AdminImageField } from "@/components/admin/AdminImageField";
+import type { HomeHeroColors } from "@/lib/home-hero-colors";
 import { MAX_HOME_HERO_SLIDES, type HomeHeroSlide } from "@/lib/site-settings";
 
 type Props = {
   currentSlides: HomeHeroSlide[];
+  currentColors: HomeHeroColors;
 };
 
-export function HomeHeroEditForm({ currentSlides }: Props) {
+export function HomeHeroEditForm({ currentSlides, currentColors }: Props) {
   const [state, formAction, pending] = useActionState(updateHomeHero, null);
 
   const slots = Array.from(
@@ -96,6 +98,48 @@ export function HomeHeroEditForm({ currentSlides }: Props) {
         </fieldset>
       ))}
 
+      <fieldset className="rounded-xl border border-outline-variant/40 p-4">
+        <legend className="px-2 text-sm font-extrabold text-[#003749]">ألوان نصوص الهيرو</legend>
+
+        <p className="text-sm text-on-surface-variant">
+          ألوان الكتابة فوق صورة الخلفية. لو غيّرت الصورة إلى صورة داكنة اجعل الألوان فاتحة حتى
+          تبقى الكتابة واضحة.
+        </p>
+
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <ColorField
+            label="العنوان الرئيسي"
+            name="titleColor"
+            defaultValue={currentColors.titleColor}
+          />
+          <ColorField
+            label="السطر الفرعي"
+            name="subtitleColor"
+            defaultValue={currentColors.subtitleColor}
+          />
+          <ColorField
+            label="النص العلوي (فوق العنوان)"
+            name="eyebrowTextColor"
+            defaultValue={currentColors.eyebrowTextColor}
+          />
+          <ColorField
+            label="الخطان الذهبيان حول النص العلوي"
+            name="eyebrowLineColor"
+            defaultValue={currentColors.eyebrowLineColor}
+          />
+          <ColorField
+            label="نص شارات الثقة"
+            name="trustTextColor"
+            defaultValue={currentColors.trustTextColor}
+          />
+          <ColorField
+            label="أيقونات شارات الثقة"
+            name="trustIconColor"
+            defaultValue={currentColors.trustIconColor}
+          />
+        </div>
+      </fieldset>
+
       <div className="flex flex-wrap gap-3">
         <button
           type="submit"
@@ -108,7 +152,7 @@ export function HomeHeroEditForm({ currentSlides }: Props) {
 
       {state?.ok ? (
         <p className="text-sm font-bold text-primary" role="status">
-          تم حفظ صور الهيرو بنجاح.
+          تم حفظ إعدادات الهيرو بنجاح.
         </p>
       ) : null}
       {state?.error ? (
@@ -117,5 +161,40 @@ export function HomeHeroEditForm({ currentSlides }: Props) {
         </p>
       ) : null}
     </form>
+  );
+}
+
+/** منتقي لون + خانة نص للكود السداسي — نفس نمط شارات العروض في `/admin/promo-badge`. */
+function ColorField({
+  label,
+  name,
+  defaultValue,
+}: {
+  label: string;
+  name: string;
+  defaultValue: string;
+}) {
+  const [value, setValue] = useState(defaultValue);
+
+  return (
+    <label className="block text-sm font-medium">
+      {label}
+      <div className="mt-1.5 flex items-center gap-2">
+        <input
+          type="color"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          className="h-10 w-14 shrink-0 cursor-pointer rounded-lg border border-outline-variant/40 bg-transparent p-1"
+        />
+        <input
+          type="text"
+          name={name}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          className="w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 font-mono uppercase text-on-surface outline-none ring-primary/30 focus:ring-2"
+          dir="ltr"
+        />
+      </div>
+    </label>
   );
 }

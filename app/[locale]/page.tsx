@@ -55,6 +55,7 @@ export default async function Home({
           hero={
             <Hero
               slides={hero.slides}
+              colors={hero.colors}
               cities={cities}
               tabFlags={tabFlags}
               initialRental={rentalTab}

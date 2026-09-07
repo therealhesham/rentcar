@@ -17,11 +17,11 @@ export default async function AdminHomeHeroPage() {
     <>
       <AdminPageHeader
         title="الصفحة الرئيسية — الهيرو"
-        description="تعديل صور خلفية الهيرو المتنقلة والنص البديل لها."
+        description="تعديل صور خلفية الهيرو المتنقلة وألوان نصوصه."
         backHref="/admin"
       />
 
-      <HomeHeroEditForm currentSlides={hero.slides} />
+      <HomeHeroEditForm currentSlides={hero.slides} currentColors={hero.colors} />
     </>
   );
 }

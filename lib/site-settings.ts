@@ -39,6 +39,11 @@ import {
   normalizePromoBadgeSettings,
   type PromoBadgeSettings,
 } from "@/lib/promo-badge";
+import {
+  DEFAULT_HOME_HERO_COLORS,
+  normalizeHomeHeroColors,
+  type HomeHeroColors,
+} from "@/lib/home-hero-colors";
 
 /* ─── Promo Banner (Carousel) ──────────────────────────────── */
 export const SITE_KEY_PROMO_BANNER_SLIDES = "promo_banner_slides";
@@ -101,6 +106,9 @@ export const SITE_KEY_HOME_HERO_IMAGE_ALT = "home_hero_image_alt";
 /** JSON: مصفوفة شرائح خلفية الهيرو المتنقلة. */
 export const SITE_KEY_HOME_HERO_SLIDES = "home_hero_slides_v1";
 
+/** JSON: ألوان نصوص الهيرو (انظر `lib/home-hero-colors.ts`). */
+export const SITE_KEY_HOME_HERO_COLORS = "home_hero_colors_v1";
+
 export const MAX_HOME_HERO_SLIDES = 5;
 
 const ALLOWED_DEFAULT_HERO_URLS = new Set([DEFAULT_HOME_HERO_IMAGE_URL]);
@@ -125,6 +133,7 @@ export type HomeHeroSettings = {
   imageAlt: string;
   /** شريحة واحدة على الأقل دائماً؛ أكثر من واحدة = تنقّل تلقائي. */
   slides: HomeHeroSlide[];
+  colors: HomeHeroColors;
 };
 
 /** يتجاهل أي شريحة برابط غير مسموح بدل رفض الإعداد كله. */
@@ -158,7 +167,18 @@ const HOME_HERO_SETTING_KEYS = [
   SITE_KEY_HOME_HERO_IMAGE_URL,
   SITE_KEY_HOME_HERO_IMAGE_ALT,
   SITE_KEY_HOME_HERO_SLIDES,
+  SITE_KEY_HOME_HERO_COLORS,
 ];
+
+/** JSON تالف أو مفقود = الألوان الافتراضية (ألوان التصميم الأصلي). */
+function parseHomeHeroColorsJson(raw: string | null | undefined): HomeHeroColors {
+  if (!raw?.trim()) return { ...DEFAULT_HOME_HERO_COLORS };
+  try {
+    return normalizeHomeHeroColors(JSON.parse(raw) as unknown);
+  } catch {
+    return { ...DEFAULT_HOME_HERO_COLORS };
+  }
+}
 
 const DEFAULT_HOME_HERO_SETTINGS: HomeHeroSettings = {
   imageUrl: DEFAULT_HOME_HERO_IMAGE_URL,
@@ -170,6 +190,7 @@ const DEFAULT_HOME_HERO_SETTINGS: HomeHeroSettings = {
       imageAlt: DEFAULT_HOME_HERO_IMAGE_ALT,
     },
   ],
+  colors: DEFAULT_HOME_HERO_COLORS,
 };
 
 export async function getHomeHeroSettings(): Promise<HomeHeroSettings> {
@@ -193,7 +214,9 @@ export async function getHomeHeroSettings(): Promise<HomeHeroSettings> {
       ? parsedSlides
       : [{ imageUrl: legacyImageUrl, mobileImageUrl: "", imageAlt: legacyImageAlt }];
 
-    return { imageUrl: slides[0].imageUrl, imageAlt: slides[0].imageAlt, slides };
+    const colors = parseHomeHeroColorsJson(settings.get(SITE_KEY_HOME_HERO_COLORS));
+
+    return { imageUrl: slides[0].imageUrl, imageAlt: slides[0].imageAlt, slides, colors };
   } catch (e: unknown) {
     const code =
       e && typeof e === "object" && "code" in e ? String((e as { code: string }).code) : "";

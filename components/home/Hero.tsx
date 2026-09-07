@@ -5,6 +5,7 @@ import {
   type BookingCityBranchesOption,
 } from "./BookingWidget";
 import type { BookingWidgetTabFlags } from "@/lib/booking-widget-tabs";
+import { DEFAULT_HOME_HERO_COLORS, type HomeHeroColors } from "@/lib/home-hero-colors";
 import type { HomeHeroSlide } from "@/lib/site-settings";
 import { HeroEntrance } from "./HomeMotion";
 import { HeroSlideshow } from "./HeroSlideshow";
@@ -12,13 +13,21 @@ import { HeroSlideshow } from "./HeroSlideshow";
 export type HeroProps = {
   /** صور الخلفية — أكثر من واحدة تتنقّل تلقائياً */
   slides: HomeHeroSlide[];
+  /** ألوان النصوص التي يضبطها المسؤول */
+  colors?: HomeHeroColors;
   cities: BookingCityBranchesOption[];
   tabFlags?: BookingWidgetTabFlags | null;
   /** تبويب الإيجار من `?rental=` — حتى يطابق الويدجت أسعار البطاقات بعد إعادة التحميل */
   initialRental?: string | null;
 };
 
-export function Hero({ slides, cities, tabFlags, initialRental }: HeroProps) {
+export function Hero({
+  slides,
+  colors = DEFAULT_HOME_HERO_COLORS,
+  cities,
+  tabFlags,
+  initialRental,
+}: HeroProps) {
   const t = useTranslations("Hero");
   const locale = useLocale();
   const isRtl = locale === "ar";
@@ -39,16 +48,36 @@ export function Hero({ slides, cities, tabFlags, initialRental }: HeroProps) {
       >
         <HeroEntrance>
           <div className="mb-4 flex items-center justify-center gap-3">
-            <span className="h-px w-10 bg-gradient-to-l from-[#c9a356] to-transparent sm:w-16" />
-            <span className="text-xs sm:text-[13.5px] font-black uppercase tracking-[0.24em] text-[#a8874f]">
+            <span
+              className="h-px w-10 sm:w-16"
+              style={{
+                backgroundImage: `linear-gradient(to left, ${colors.eyebrowLineColor}, transparent)`,
+              }}
+            />
+            <span
+              className="text-xs sm:text-[13.5px] font-black uppercase tracking-[0.24em]"
+              style={{ color: colors.eyebrowTextColor }}
+            >
               {t("description")}
             </span>
-            <span className="h-px w-10 bg-gradient-to-r from-[#c9a356] to-transparent sm:w-16" />
+            <span
+              className="h-px w-10 sm:w-16"
+              style={{
+                backgroundImage: `linear-gradient(to right, ${colors.eyebrowLineColor}, transparent)`,
+              }}
+            />
           </div>
-          <h1 className="text-balance text-3xl font-black tracking-tight text-[#003749] [text-shadow:0_1px_28px_rgba(255,255,255,0.9)] sm:text-5xl lg:text-6xl">
+          <h1
+            className="text-balance text-3xl font-black tracking-tight [text-shadow:0_1px_28px_rgba(255,255,255,0.9)] sm:text-5xl lg:text-6xl"
+            style={{ color: colors.titleColor }}
+          >
             {t("title")}
           </h1>
-          <p className="mx-auto mt-3 max-w-xl text-pretty text-sm font-semibold leading-relaxed text-[#0f3d47]/80 [text-shadow:0_1px_18px_rgba(255,255,255,0.9)] sm:mt-4 sm:text-lg">
+          {/* `CC` = شفافية ٨٠٪، نفس `/80` في التصميم الأصلي */}
+          <p
+            className="mx-auto mt-3 max-w-xl text-pretty text-sm font-semibold leading-relaxed [text-shadow:0_1px_18px_rgba(255,255,255,0.9)] sm:mt-4 sm:text-lg"
+            style={{ color: `${colors.subtitleColor}CC` }}
+          >
             {t("subtitle")}
           </p>
         </HeroEntrance>
@@ -85,9 +114,14 @@ export function Hero({ slides, cities, tabFlags, initialRental }: HeroProps) {
             ].map(({ icon: Icon, label }) => (
               <li
                 key={label}
-                className="flex items-center gap-2 rounded-full border border-white/60 bg-white/70 px-4 py-2 text-[12.5px] font-bold text-[#0f3d47] shadow-[0_4px_16px_-6px_rgba(15,61,71,0.15)] backdrop-blur-md sm:text-sm"
+                className="flex items-center gap-2 rounded-full border border-white/60 bg-white/70 px-4 py-2 text-[12.5px] font-bold shadow-[0_4px_16px_-6px_rgba(15,61,71,0.15)] backdrop-blur-md sm:text-sm"
+                style={{ color: colors.trustTextColor }}
               >
-                <Icon className="size-4 shrink-0 text-[#c9a356]" aria-hidden />
+                <Icon
+                  className="size-4 shrink-0"
+                  style={{ color: colors.trustIconColor }}
+                  aria-hidden
+                />
                 {label}
               </li>
             ))}

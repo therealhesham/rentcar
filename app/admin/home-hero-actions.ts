@@ -3,11 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { requireSuperAdminForAction } from "@/lib/admin-access";
 import { resolveUploadedImageUrl } from "@/lib/admin-image-resolve";
+import { HOME_HERO_COLOR_KEYS, normalizeHomeHeroColors } from "@/lib/home-hero-colors";
 import {
   DEFAULT_HOME_HERO_IMAGE_ALT,
   DEFAULT_HOME_HERO_IMAGE_URL,
   isAllowedHomeHeroImageUrl,
   MAX_HOME_HERO_SLIDES,
+  SITE_KEY_HOME_HERO_COLORS,
   SITE_KEY_HOME_HERO_IMAGE_ALT,
   SITE_KEY_HOME_HERO_IMAGE_URL,
   SITE_KEY_HOME_HERO_SLIDES,
@@ -93,8 +95,16 @@ export async function updateHomeHero(
     return { ok: false, error: "أضف صورة واحدة على الأقل لخلفية الهيرو." };
   }
 
+  // اللون المكتوب بصيغة خاطئة يسقط على الافتراضي داخل `normalizeHomeHeroColors`
+  const colors = normalizeHomeHeroColors(
+    Object.fromEntries(
+      HOME_HERO_COLOR_KEYS.map((key) => [key, String(formData.get(key) ?? "").trim()]),
+    ),
+  );
+
   try {
     await upsertSiteSetting(SITE_KEY_HOME_HERO_SLIDES, JSON.stringify(slides));
+    await upsertSiteSetting(SITE_KEY_HOME_HERO_COLORS, JSON.stringify(colors));
     // المفتاحان المفردان يبقيان محدَّثين بالشريحة الأولى للتوافق مع الإعداد القديم
     await upsertSiteSetting(SITE_KEY_HOME_HERO_IMAGE_URL, slides[0].imageUrl);
     await upsertSiteSetting(SITE_KEY_HOME_HERO_IMAGE_ALT, slides[0].imageAlt);
