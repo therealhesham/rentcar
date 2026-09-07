@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Tajawal } from "next/font/google";
 import { JsonLd } from "@/components/seo/JsonLd";
-import { NationalDaySplash } from "@/components/shared/NationalDaySplash";
 import { PageViewTracker } from "@/components/shared/PageViewTracker";
 import { SiteBrandingProvider } from "@/components/shared/SiteBrandingProvider";
 import { NextIntlClientProvider } from "next-intl";
@@ -54,7 +53,7 @@ export default async function LocaleLayout({
   const resolvedParams = await params;
   const locale = resolvedParams.locale;
 
-  if (!(routing.locales as readonly string[]).includes(locale)) {
+  if (!routing.locales.includes(locale as any)) {
     notFound();
   }
 
@@ -73,7 +72,6 @@ export default async function LocaleLayout({
       <body
         className={`${tajawal.className} min-h-full bg-surface text-on-surface antialiased`}
       >
-        <NationalDaySplash locale={locale} />
         <NextIntlClientProvider messages={messages}>
           <SiteBrandingProvider value={branding}>
             <JsonLd
