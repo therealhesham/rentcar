@@ -114,6 +114,8 @@ export function isAllowedHomeHeroImageUrl(url: string): boolean {
 
 export type HomeHeroSlide = {
   imageUrl: string;
+  /** صورة الجوال — فارغة تعني استخدام `imageUrl` نفسها على كل المقاسات. */
+  mobileImageUrl: string;
   imageAlt: string;
 };
 
@@ -139,11 +141,14 @@ function parseHomeHeroSlidesJson(raw: string | null | undefined): HomeHeroSlide[
   const slides: HomeHeroSlide[] = [];
   for (const item of parsed) {
     if (typeof item !== "object" || item === null) continue;
-    const record = item as { imageUrl?: unknown; imageAlt?: unknown };
+    const record = item as { imageUrl?: unknown; mobileImageUrl?: unknown; imageAlt?: unknown };
     const imageUrl = String(record.imageUrl ?? "").trim();
     if (!isAllowedHomeHeroImageUrl(imageUrl)) continue;
+    // صورة جوال برابط غير مسموح تسقط على صورة الكمبيوتر بدل إسقاط الشريحة كلها
+    const mobileCandidate = String(record.mobileImageUrl ?? "").trim();
+    const mobileImageUrl = isAllowedHomeHeroImageUrl(mobileCandidate) ? mobileCandidate : "";
     const imageAlt = String(record.imageAlt ?? "").trim() || DEFAULT_HOME_HERO_IMAGE_ALT;
-    slides.push({ imageUrl, imageAlt });
+    slides.push({ imageUrl, mobileImageUrl, imageAlt });
     if (slides.length >= MAX_HOME_HERO_SLIDES) break;
   }
   return slides;
@@ -158,7 +163,13 @@ const HOME_HERO_SETTING_KEYS = [
 const DEFAULT_HOME_HERO_SETTINGS: HomeHeroSettings = {
   imageUrl: DEFAULT_HOME_HERO_IMAGE_URL,
   imageAlt: DEFAULT_HOME_HERO_IMAGE_ALT,
-  slides: [{ imageUrl: DEFAULT_HOME_HERO_IMAGE_URL, imageAlt: DEFAULT_HOME_HERO_IMAGE_ALT }],
+  slides: [
+    {
+      imageUrl: DEFAULT_HOME_HERO_IMAGE_URL,
+      mobileImageUrl: "",
+      imageAlt: DEFAULT_HOME_HERO_IMAGE_ALT,
+    },
+  ],
 };
 
 export async function getHomeHeroSettings(): Promise<HomeHeroSettings> {
@@ -180,7 +191,7 @@ export async function getHomeHeroSettings(): Promise<HomeHeroSettings> {
     const parsedSlides = parseHomeHeroSlidesJson(settings.get(SITE_KEY_HOME_HERO_SLIDES));
     const slides = parsedSlides.length
       ? parsedSlides
-      : [{ imageUrl: legacyImageUrl, imageAlt: legacyImageAlt }];
+      : [{ imageUrl: legacyImageUrl, mobileImageUrl: "", imageAlt: legacyImageAlt }];
 
     return { imageUrl: slides[0].imageUrl, imageAlt: slides[0].imageAlt, slides };
   } catch (e: unknown) {

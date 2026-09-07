@@ -74,29 +74,57 @@ export function HeroSlideshow({ slides, isRtl }: Props) {
           exit={reduced ? { opacity: 0 } : { x: exitX, opacity: 0.5 }}
           transition={{ duration: reduced ? 0.35 : SLIDE_DURATION_S, ease: smoothEase }}
         >
-          <Image
-            src={slide.imageUrl}
-            alt={slide.imageAlt}
-            fill
-            priority={index === 0}
-            className="object-cover object-center"
-            sizes="100vw"
-          />
+          <SlideImage slide={slide} priority={index === 0} />
         </motion.div>
       </AnimatePresence>
 
       {/* تحميل مسبق للصورة التالية حتى لا تظهر فجوة بيضاء لحظة الانتقال */}
       {count > 1 ? (
         <div className="absolute inset-0 opacity-0">
-          <Image
-            src={slides[(index + 1) % count].imageUrl}
-            alt=""
-            fill
-            className="object-cover object-center"
-            sizes="100vw"
-          />
+          <SlideImage slide={slides[(index + 1) % count]} priority={false} />
         </div>
       ) : null}
+    </>
+  );
+}
+
+/**
+ * صورة الشريحة مع اتجاه فني للجوال: عنصران، كل واحد مخفي على المقاس الآخر.
+ * `sizes` يعطي المتصفح عرضاً وهمياً 1px للعنصر المخفي فيسحب أصغر نسخة من
+ * الـsrcset بدل تنزيل صورة كاملة لا تُعرض.
+ */
+function SlideImage({ slide, priority }: { slide: HomeHeroSlide; priority: boolean }) {
+  if (!slide.mobileImageUrl) {
+    return (
+      <Image
+        src={slide.imageUrl}
+        alt={slide.imageAlt}
+        fill
+        priority={priority}
+        className="object-cover object-center"
+        sizes="100vw"
+      />
+    );
+  }
+
+  return (
+    <>
+      <Image
+        src={slide.mobileImageUrl}
+        alt={slide.imageAlt}
+        fill
+        priority={priority}
+        className="object-cover object-center sm:hidden"
+        sizes="(max-width: 639px) 100vw, 1px"
+      />
+      <Image
+        src={slide.imageUrl}
+        alt={slide.imageAlt}
+        fill
+        priority={priority}
+        className="hidden object-cover object-center sm:block"
+        sizes="(max-width: 639px) 1px, 100vw"
+      />
     </>
   );
 }

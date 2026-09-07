@@ -23,6 +23,35 @@ async function upsertSiteSetting(key: string, value: string): Promise<void> {
   });
 }
 
+/**
+ * يحسم حقل صورة واحداً (كمبيوتر أو جوال) من حقول الفورم ذات اللاحقة `suffix`.
+ * الحقل الفارغ تماماً يعيد رابطاً فارغاً — الاستدعاء هو من يقرر معناه: شريحة
+ * مُتجاهَلة للكمبيوتر، أو سقوط على صورة الكمبيوتر للجوال.
+ */
+async function resolveHeroImageField(
+  formData: FormData,
+  suffix: string,
+): Promise<{ ok: true; imageUrl: string } | { ok: false; error: string }> {
+  const currentImage = String(formData.get(`currentImage_${suffix}`) ?? "").trim();
+  const galleryImageUrl = String(formData.get(`galleryImageUrl_${suffix}`) ?? "").trim();
+  const imageFile = formData.get(`imageFile_${suffix}`);
+  const hasUpload = imageFile instanceof File && imageFile.size > 0;
+
+  if (!hasUpload && !galleryImageUrl && !currentImage) {
+    return { ok: true, imageUrl: "" };
+  }
+
+  return resolveUploadedImageUrl({
+    imageFile,
+    galleryImageUrl,
+    currentImage,
+    fallbackDefault: DEFAULT_HOME_HERO_IMAGE_URL,
+    isAllowedUrl: isAllowedHomeHeroImageUrl,
+    folderSlug: "home",
+    folderLabel: "الصفحة الرئيسية (هيرو)",
+  });
+}
+
 export async function updateHomeHero(
   _prev: { ok: boolean; error?: string } | null,
   formData: FormData,
@@ -35,31 +64,29 @@ export async function updateHomeHero(
   for (let i = 0; i < MAX_HOME_HERO_SLIDES; i++) {
     if (String(formData.get(`remove_${i}`) ?? "") === "on") continue;
 
-    const currentImage = String(formData.get(`currentImage_${i}`) ?? "").trim();
-    const galleryImageUrl = String(formData.get(`galleryImageUrl_${i}`) ?? "").trim();
-    const imageFile = formData.get(`imageFile_${i}`);
-    const hasUpload = imageFile instanceof File && imageFile.size > 0;
-
+    const resolvedDesktop = await resolveHeroImageField(formData, `${i}`);
+    if (!resolvedDesktop.ok) {
+      return { ok: false, error: `الشريحة ${i + 1}: ${resolvedDesktop.error}` };
+    }
     // شريحة فارغة تماماً تُتجاهل بدل أن تسقط على الصورة الافتراضية
-    if (!hasUpload && !galleryImageUrl && !currentImage) continue;
+    if (!resolvedDesktop.imageUrl) continue;
 
-    const resolved = await resolveUploadedImageUrl({
-      imageFile,
-      galleryImageUrl,
-      currentImage,
-      fallbackDefault: DEFAULT_HOME_HERO_IMAGE_URL,
-      isAllowedUrl: isAllowedHomeHeroImageUrl,
-      folderSlug: "home",
-      folderLabel: "الصفحة الرئيسية (هيرو)",
-    });
-    if (!resolved.ok) {
-      return { ok: false, error: `الشريحة ${i + 1}: ${resolved.error}` };
+    const removeMobile = String(formData.get(`removeMobile_${i}`) ?? "") === "on";
+    const resolvedMobile = removeMobile
+      ? ({ ok: true, imageUrl: "" } as const)
+      : await resolveHeroImageField(formData, `mobile_${i}`);
+    if (!resolvedMobile.ok) {
+      return { ok: false, error: `الشريحة ${i + 1} (صورة الجوال): ${resolvedMobile.error}` };
     }
 
     const imageAlt =
       String(formData.get(`imageAlt_${i}`) ?? "").trim() || DEFAULT_HOME_HERO_IMAGE_ALT;
 
-    slides.push({ imageUrl: resolved.imageUrl, imageAlt });
+    slides.push({
+      imageUrl: resolvedDesktop.imageUrl,
+      mobileImageUrl: resolvedMobile.imageUrl,
+      imageAlt,
+    });
   }
 
   if (slides.length === 0) {
