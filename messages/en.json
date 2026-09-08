@@ -546,7 +546,11 @@
     "totalAmount": "Total amount",
     "dueNowBalance": "Due now (extension balance)",
     "totalsNote": "The amount shown includes VAT. Nothing will be charged until you confirm the payment.",
-    "metaDescription": "Choose a payment method and complete your car booking."
+    "metaDescription": "Choose a payment method and complete your car booking.",
+    "returnCancelTitle": "Payment cancelled",
+    "returnCancelBody": "Your booking is saved and nothing has been charged. You can continue with the same method or choose another one.",
+    "returnFailureTitle": "Payment could not be completed",
+    "returnFailureBody": "The transaction was not completed and nothing has been charged. Please try again or choose another payment method."
   },
   "Checkout": {
     "deliveryTo": "Delivery — {address}",

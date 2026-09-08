@@ -30,10 +30,16 @@ export async function generateMetadata() {
 
 export default async function FleetPaymentPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string; locale: string }>;
+  searchParams?: Promise<{ status?: string }>;
 }) {
   const { id: rawId, locale } = await params;
+  // تابي/جيديا تُعيدان العميل بـ?status=success|cancel|failure — بدون قراءته كان
+  // الملغي والمرفوض يريان صفحة اختيار الدفع كأن شيئاً لم يحدث.
+  const sp = searchParams ? await searchParams : {};
+  const returnStatus = (sp.status ?? "").trim().toLowerCase();
   const id = Number(rawId);
   if (!Number.isInteger(id) || id < 1) notFound();
 
@@ -87,6 +93,7 @@ export default async function FleetPaymentPage({
           paymentIconUrls={paymentIconUrls}
           tabbyPromo={tabbyPromo}
           tabbyEligibility={tabbyEligibility}
+          returnStatus={returnStatus}
         />
       </div>
       <SiteFooter />

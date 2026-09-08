@@ -11,6 +11,8 @@ import {
   Shield,
   Store,
   Wallet,
+  XCircle,
+  Info,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -58,6 +60,8 @@ type Props = {
   tabbyPromo?: { publicKey: string; merchantCode: string } | null;
   /** نتيجة فحص الأهلية المسبق (pre-scoring) — null لو لم يُفحص (تابي غير مهيّأة مثلاً) */
   tabbyEligibility?: { status: "eligible" | "rejected" | "unknown"; rejectionReason?: string } | null;
+  /** `?status=` من رابط العودة من البوابة: success | cancel | failure. */
+  returnStatus?: string;
 };
 
 export type CheckoutPaymentMethod = CustomerCheckoutPaymentMethod;
@@ -228,6 +232,7 @@ export function PaymentClient({
   paymentIconUrls,
   tabbyPromo,
   tabbyEligibility,
+  returnStatus,
 }: Props) {
   const t = useTranslations("Payment");
   const locale = useLocale();
@@ -476,6 +481,31 @@ export function PaymentClient({
                     : t("introChooseMethod")}
         </p>
       </div>
+
+      {(returnStatus === "cancel" || returnStatus === "failure") && !checkoutComplete ? (
+        <div
+          role="status"
+          className={`mb-6 flex items-start gap-3 rounded-2xl border px-5 py-4 ${
+            returnStatus === "failure"
+              ? "border-red-200 bg-red-50 text-red-900"
+              : "border-sky-200 bg-sky-50 text-sky-900"
+          }`}
+        >
+          {returnStatus === "failure" ? (
+            <XCircle className="mt-0.5 size-5 shrink-0" aria-hidden />
+          ) : (
+            <Info className="mt-0.5 size-5 shrink-0" aria-hidden />
+          )}
+          <div>
+            <p className="text-sm font-extrabold">
+              {returnStatus === "failure" ? t("returnFailureTitle") : t("returnCancelTitle")}
+            </p>
+            <p className="mt-1 text-xs leading-relaxed opacity-90">
+              {returnStatus === "failure" ? t("returnFailureBody") : t("returnCancelBody")}
+            </p>
+          </div>
+        </div>
+      ) : null}
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] xl:gap-12">
         <section className="order-2 space-y-6 lg:order-1">
