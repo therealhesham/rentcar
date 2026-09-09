@@ -878,6 +878,17 @@ model BookingCheckoutDraft {
   @@index([createdAt, alertSentAt])
 }
 
+model MobileAppSetting {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique @db.VarChar(64)
+  value     String   @db.Text
+  updatedAt DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  @@index([key])
+}
+
+
 /// رمز تحقق لتسجيل دخول العميل (منفصل عن رمز إتمام الحجز لتجنب التعارض).
 model CustomerLoginOtp {
   id             Int      @id @default(autoincrement())
