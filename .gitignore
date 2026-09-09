@@ -54,3 +54,27 @@ next-env.d.ts
 /data/GeoLite2-City.mmdb
 /data/.geolite-tmp/
 reports/checkout-funnel-report.html
+screens/canceleld ar .png
+screens/cancelled eng.png
+screens/cart ar.png
+screens/cart eng .png
+screens/cehck out ara.png
+screens/check out eng.png
+screens/failure ar.png
+screens/failure eng.png
+screens/fleet ar.png
+screens/fleet eng.png
+screens/success ara.png
+screens/success eng.png
+tabby-submission/01-product-page-AR.png
+tabby-submission/01-product-page-EN.png
+tabby-submission/02-cart-page-AR.png
+tabby-submission/02-cart-page-EN.png
+tabby-submission/03-checkout-page-AR.png
+tabby-submission/03-checkout-page-EN.png
+tabby-submission/04-after-successful-payment-AR.png
+tabby-submission/04-after-successful-payment-EN.png
+tabby-submission/05-after-cancelled-payment-AR.png
+tabby-submission/05-after-cancelled-payment-EN.png
+tabby-submission/06-after-rejected-payment-AR.png
+tabby-submission/06-after-rejected-payment-EN.png
