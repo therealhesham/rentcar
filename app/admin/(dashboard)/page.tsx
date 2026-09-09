@@ -110,6 +110,10 @@ export default async function AdminDashboardPage(props: {
         OR: [
           { fullName: { contains: qParam } },
           { phone: { contains: qParam } },
+          { nationalIdNumber: { contains: qParam } },
+          { passportNumber: { contains: qParam } },
+          { customer: { nationalIdNumber: { contains: qParam } } },
+          { customer: { passportNumber: { contains: qParam } } },
           ...(Number.isInteger(Number(qParam)) ? [{ id: Number(qParam) }] : []),
         ],
       }
@@ -437,7 +441,7 @@ export default async function AdminDashboardPage(props: {
                 type="search"
                 name="q"
                 defaultValue={qParam}
-                placeholder="بحث برقم الحجز، الجوال..."
+                placeholder="بحث برقم الحجز، الجوال، الهوية..."
                 className="w-full rounded-lg border border-outline-variant/40 bg-white py-1.5 pe-2 ps-8 text-[11px] font-medium outline-none transition-all focus:border-primary focus:ring-1 focus:ring-primary"
               />
             </div>

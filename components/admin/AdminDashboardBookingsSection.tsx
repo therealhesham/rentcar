@@ -209,6 +209,16 @@ export function AdminDashboardBookingsSection({
                     {request.phone}
                   </span>
                 </p>
+                {(request.nationalIdNumber || request.passportNumber) ? (
+                  <p className="mt-0.5 font-mono text-[11px] text-on-surface-variant" dir="ltr">
+                    <span className="me-1 opacity-60">
+                      {request.nationalIdNumber
+                        ? (request.idDocumentKind === "CITIZEN" ? "هوية" : request.idDocumentKind === "RESIDENT" ? "إقامة" : "هوية")
+                        : "جواز"}:
+                    </span>
+                    {request.nationalIdNumber ?? request.passportNumber}
+                  </p>
+                ) : null}
               </div>
               <Link
                 href={`/admin/bookings/${request.id}`}
@@ -319,6 +329,19 @@ export function AdminDashboardBookingsSection({
                           <span className="mt-0.5 block tabular-nums text-xs text-on-surface-variant" dir="ltr">
                             {request.phone}
                           </span>
+                          {request.nationalIdNumber ? (
+                            <span className="mt-0.5 block font-mono text-[10px] text-on-surface-variant" dir="ltr">
+                              <span className="me-1 opacity-60">
+                                {request.idDocumentKind === "CITIZEN" ? "هوية" : request.idDocumentKind === "RESIDENT" ? "إقامة" : request.idDocumentKind === "VISITOR" ? "جواز" : "هوية"}:
+                              </span>
+                              {request.nationalIdNumber}
+                            </span>
+                          ) : request.passportNumber ? (
+                            <span className="mt-0.5 block font-mono text-[10px] text-on-surface-variant" dir="ltr">
+                              <span className="me-1 opacity-60">جواز:</span>
+                              {request.passportNumber}
+                            </span>
+                          ) : null}
                         </Link>
                       </td>
                       <td className="px-4 py-3 align-top text-on-surface-variant">
