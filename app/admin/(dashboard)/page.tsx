@@ -40,6 +40,7 @@ import { requireAdminPage } from "@/lib/admin-page";
 import { missedPickupCondition } from "@/lib/admin-missed-bookings";
 import { resolveBookingRentalPricePerDayExclTax } from "@/lib/booking-pricing-snapshot";
 import { bookingOccupiedUntil } from "@/lib/direct-booking";
+import { customerKycSelect, resolveBookingKycForDisplay } from "@/lib/booking-kyc-display";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -201,6 +202,7 @@ export default async function AdminDashboardPage(props: {
         take: 100,
         include: {
           carModel: { include: { brand: true } },
+          customer: { select: customerKycSelect },
           pickupBranch: { select: { slug: true, name: true } },
           returnBranch: { select: { slug: true, name: true } },
         },
@@ -234,65 +236,66 @@ export default async function AdminDashboardPage(props: {
 
   const fleetUnits = fleetRows.reduce((sum, row) => sum + row.quantity, 0);
 
-  const dashboardRows: DashboardBookingRow[] = bookingRequests.map((request) => ({
-    id: request.id,
-    kind: request.kind as "INQUIRY" | "DIRECT",
-    fullName: request.fullName,
-    phone: request.phone,
-    ageRange: request.ageRange,
-    carType: request.carType,
-    branch:
-      request.returnBranch?.slug ?? request.pickupBranch?.slug ?? "jeddah",
-    pickupMode: request.pickupMode,
-    deliveryLat: request.deliveryLat,
-    deliveryLng: request.deliveryLng,
-    deliveryAddress:
-      (request as { deliveryAddress?: string | null }).deliveryAddress ?? null,
-    pickupIso: request.pickupDate.toISOString(),
-    dropoffIso: bookingOccupiedUntil({
-      pickupDate: request.pickupDate,
+  const dashboardRows: DashboardBookingRow[] = bookingRequests.map((request) => {
+    const kyc = resolveBookingKycForDisplay(request, request.customer);
+    return {
+      id: request.id,
+      kind: request.kind as "INQUIRY" | "DIRECT",
+      fullName: request.fullName,
+      phone: request.phone,
+      ageRange: request.ageRange,
+      carType: request.carType,
+      branch:
+        request.returnBranch?.slug ?? request.pickupBranch?.slug ?? "jeddah",
+      pickupMode: request.pickupMode,
+      deliveryLat: request.deliveryLat,
+      deliveryLng: request.deliveryLng,
+      deliveryAddress:
+        (request as { deliveryAddress?: string | null }).deliveryAddress ?? null,
+      pickupIso: request.pickupDate.toISOString(),
+      dropoffIso: bookingOccupiedUntil({
+        pickupDate: request.pickupDate,
+        numberOfDays: request.numberOfDays,
+        addonsJson: request.addonsJson,
+      }).toISOString(),
       numberOfDays: request.numberOfDays,
-      addonsJson: request.addonsJson,
-    }).toISOString(),
-    numberOfDays: request.numberOfDays,
-    fixedDuration: request.rentalPeriodKind?.trim().toUpperCase() === "MONTHLY",
-    isDailyRental: request.rentalPeriodKind?.trim().toUpperCase() === "DAILY",
-    rentalPricePerDayExclTax: request.carModel
-      ? resolveBookingRentalPricePerDayExclTax(request.carModel.price, request.addonsJson)
-      : null,
-    termsAccepted: request.termsAccepted,
-    status: request.status,
-    carModelId: request.carModelId,
-    carModelLabel: request.carModel
-      ? `${request.carModel.brand.name} ${request.carModel.name}`
-      : null,
-    addonsJson: request.addonsJson ?? null,
-    paymentStatus: request.paymentStatus ?? null,
-    paidAt: request.paidAt ? request.paidAt.toISOString() : null,
-    paymentMethod: request.paymentMethod ?? null,
-    paymentGatewayRef: request.paymentGatewayRef ?? null,
-    isHidden: request.isHidden,
-    idDocumentKind: request.idDocumentKind ?? null,
-    nationalIdNumber: request.nationalIdNumber ?? null,
-    passportNumber: request.passportNumber ?? null,
-    licenseNumber: request.licenseNumber ?? null,
-    licenseExpiryDate: request.licenseExpiryDate
-      ? request.licenseExpiryDate.toISOString().slice(0, 10)
-      : null,
-    idCardImageUrl: request.idCardImageUrl ?? null,
-    driverLicenseImageUrl: request.driverLicenseImageUrl ?? null,
-    cancelledAt: request.cancelledAt ? request.cancelledAt.toISOString() : null,
-    cancellationDeductedDays: request.cancellationDeductedDays ?? null,
-    cancellationRefundAmountSar: request.cancellationRefundAmountSar ?? null,
-    cancellationRefundExternalRef: request.cancellationRefundExternalRef ?? null,
-    balanceDueAtBranchSar: request.balanceDueAtBranchSar ?? null,
-    vehiclePlateNumber: request.vehiclePlateNumber ?? null,
+      fixedDuration: request.rentalPeriodKind?.trim().toUpperCase() === "MONTHLY",
+      isDailyRental: request.rentalPeriodKind?.trim().toUpperCase() === "DAILY",
+      rentalPricePerDayExclTax: request.carModel
+        ? resolveBookingRentalPricePerDayExclTax(request.carModel.price, request.addonsJson)
+        : null,
+      termsAccepted: request.termsAccepted,
+      status: request.status,
+      carModelId: request.carModelId,
+      carModelLabel: request.carModel
+        ? `${request.carModel.brand.name} ${request.carModel.name}`
+        : null,
+      addonsJson: request.addonsJson ?? null,
+      paymentStatus: request.paymentStatus ?? null,
+      paidAt: request.paidAt ? request.paidAt.toISOString() : null,
+      paymentMethod: request.paymentMethod ?? null,
+      paymentGatewayRef: request.paymentGatewayRef ?? null,
+      isHidden: request.isHidden,
+      idDocumentKind: kyc.idDocumentKind,
+      nationalIdNumber: kyc.nationalIdNumber,
+      passportNumber: kyc.passportNumber,
+      licenseNumber: kyc.licenseNumber,
+      licenseExpiryDate: kyc.licenseExpiryDate,
+      idCardImageUrl: kyc.idCardImageUrl,
+      driverLicenseImageUrl: kyc.driverLicenseImageUrl,
+      cancelledAt: request.cancelledAt ? request.cancelledAt.toISOString() : null,
+      cancellationDeductedDays: request.cancellationDeductedDays ?? null,
+      cancellationRefundAmountSar: request.cancellationRefundAmountSar ?? null,
+      cancellationRefundExternalRef: request.cancellationRefundExternalRef ?? null,
+      balanceDueAtBranchSar: request.balanceDueAtBranchSar ?? null,
+      vehiclePlateNumber: request.vehiclePlateNumber ?? null,
     pickupBranchName: request.pickupBranch?.name ?? null,
     returnBranchName: request.returnBranch?.name ?? null,
     createdAtLabel: new Date(request.createdAt).toLocaleString("ar-SA", { timeZone: "Asia/Riyadh" }),
     createdAtIso: request.createdAt.toISOString(),
     pickupDateLabel: new Date(request.pickupDate).toLocaleDateString("ar-SA", { timeZone: "Asia/Riyadh" }),
-  }));
+    };
+  });
 
   let cardTitle = "آخر الحجوزات";
   let cardDescription = "أحدث 100 حجز. للتفاصيل الكاملة افتح صفحة الحجز.";

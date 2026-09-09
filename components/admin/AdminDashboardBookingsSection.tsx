@@ -16,6 +16,39 @@ function riyadhDayStart(d: Date): Date {
   return new Date(`${RIYADH_YMD_FMT.format(d)}T00:00:00.000Z`);
 }
 
+function renderIdentityInfo(request: DashboardBookingRow, isBlock = false) {
+  const { nationalIdNumber, passportNumber, idDocumentKind } = request;
+  if (!nationalIdNumber && !passportNumber) return null;
+
+  let label = "هوية";
+  if (idDocumentKind === "CITIZEN") {
+    label = "هوية";
+  } else if (idDocumentKind === "RESIDENT") {
+    label = "إقامة";
+  } else if (idDocumentKind === "VISITOR") {
+    label = "جواز";
+  } else if (nationalIdNumber?.startsWith("2")) {
+    label = "إقامة";
+  } else if (nationalIdNumber?.startsWith("1")) {
+    label = "هوية";
+  } else if (passportNumber && !nationalIdNumber) {
+    label = "جواز";
+  }
+
+  const val = nationalIdNumber ?? passportNumber;
+  const Tag = isBlock ? "span" : "p";
+  const displayClass = isBlock
+    ? "mt-0.5 block font-mono text-[10px] text-on-surface-variant"
+    : "mt-0.5 font-mono text-[11px] text-on-surface-variant";
+
+  return (
+    <Tag className={displayClass} dir="ltr">
+      <span className="me-1 opacity-60">{label}:</span>
+      {val}
+    </Tag>
+  );
+}
+
 export type DashboardBookingRow = {
   id: number;
   kind: "INQUIRY" | "DIRECT";
@@ -209,16 +242,7 @@ export function AdminDashboardBookingsSection({
                     {request.phone}
                   </span>
                 </p>
-                {(request.nationalIdNumber || request.passportNumber) ? (
-                  <p className="mt-0.5 font-mono text-[11px] text-on-surface-variant" dir="ltr">
-                    <span className="me-1 opacity-60">
-                      {request.nationalIdNumber
-                        ? (request.idDocumentKind === "CITIZEN" ? "هوية" : request.idDocumentKind === "RESIDENT" ? "إقامة" : "هوية")
-                        : "جواز"}:
-                    </span>
-                    {request.nationalIdNumber ?? request.passportNumber}
-                  </p>
-                ) : null}
+                {renderIdentityInfo(request, false)}
               </div>
               <Link
                 href={`/admin/bookings/${request.id}`}
@@ -329,19 +353,7 @@ export function AdminDashboardBookingsSection({
                           <span className="mt-0.5 block tabular-nums text-xs text-on-surface-variant" dir="ltr">
                             {request.phone}
                           </span>
-                          {request.nationalIdNumber ? (
-                            <span className="mt-0.5 block font-mono text-[10px] text-on-surface-variant" dir="ltr">
-                              <span className="me-1 opacity-60">
-                                {request.idDocumentKind === "CITIZEN" ? "هوية" : request.idDocumentKind === "RESIDENT" ? "إقامة" : request.idDocumentKind === "VISITOR" ? "جواز" : "هوية"}:
-                              </span>
-                              {request.nationalIdNumber}
-                            </span>
-                          ) : request.passportNumber ? (
-                            <span className="mt-0.5 block font-mono text-[10px] text-on-surface-variant" dir="ltr">
-                              <span className="me-1 opacity-60">جواز:</span>
-                              {request.passportNumber}
-                            </span>
-                          ) : null}
+                          {renderIdentityInfo(request, true)}
                         </Link>
                       </td>
                       <td className="px-4 py-3 align-top text-on-surface-variant">
