@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import {
   createDirectBooking,
   parseCommonBookingFieldsFromFormData,
+  assertNoActiveBookingForPhone,
 } from "@/lib/direct-booking";
 import { branchIdsFromReturnSlug } from "@/lib/booking-branches";
 import { prisma } from "@/lib/prisma";
@@ -37,6 +38,10 @@ export async function submitBookingRequest(
   if (!branchIds.returnBranchId) {
     return { ok: false, error: "الفرع غير متاح." };
   }
+
+  // منع العميل من إرسال استفسار جديد إذا كان لديه حجز نشط برقم جواله.
+  const activeCheck = await assertNoActiveBookingForPhone(data.phone);
+  if (!activeCheck.ok) return activeCheck;
 
   let createdId: number;
   try {

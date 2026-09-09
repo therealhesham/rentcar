@@ -181,17 +181,17 @@ function isBranchSlugFormat(branch: string): boolean {
 
 type DeliveryParsed =
   | {
-      pickupMode: "BRANCH";
-      deliveryLat: null;
-      deliveryLng: null;
-      deliveryAddress: null;
-    }
+    pickupMode: "BRANCH";
+    deliveryLat: null;
+    deliveryLng: null;
+    deliveryAddress: null;
+  }
   | {
-      pickupMode: "DELIVERY";
-      deliveryLat: number | null;
-      deliveryLng: number | null;
-      deliveryAddress: string | null;
-    };
+    pickupMode: "DELIVERY";
+    deliveryLat: number | null;
+    deliveryLng: number | null;
+    deliveryAddress: string | null;
+  };
 
 function normalizeDeliveryAddressInput(raw: unknown): string {
   return String(raw ?? "")
@@ -828,8 +828,8 @@ export type CreateDirectBookingInput = DirectBookingCommon & {
   excludeBlockingBookingRequestId?: number | null;
   /** تسجيل دفع فوري من المكتب (إدارة) عند إنشاء الحجز. */
   officePayment?:
-    | { recordNow: false }
-    | { recordNow: true; method: string };
+  | { recordNow: false }
+  | { recordNow: true; method: string };
 };
 
 export function parsePickupCitySlugFromJson(
@@ -1042,7 +1042,7 @@ export async function parseDirectBookingKycFromJson(
       idDocumentKind,
       nationalIdNumber:
         idDocumentKind === DIRECT_BOOKING_ID_KIND_CITIZEN ||
-        idDocumentKind === DIRECT_BOOKING_ID_KIND_RESIDENT
+          idDocumentKind === DIRECT_BOOKING_ID_KIND_RESIDENT
           ? nationalIdNumber
           : null,
       passportNumber:
@@ -1216,9 +1216,9 @@ export async function assertBranchesAndPickupHoursForDirectBooking(
       pickupSlug === branchSlug
         ? returnBranchRow
         : await prisma.branch.findFirst({
-            where: { slug: pickupSlug, isActive: true },
-            select: { id: true, name: true, openingHoursJson: true },
-          });
+          where: { slug: pickupSlug, isActive: true },
+          select: { id: true, name: true, openingHoursJson: true },
+        });
     if (!pickupRow) {
       return { ok: false, error: "فرع الاستلام غير متاح أو غير مفعّل." };
     }
@@ -1252,8 +1252,8 @@ export async function enforceEditLockedIdentityOnInput(
   const carModelId = input.carModelId;
   let customerId: number | null =
     input.customerId != null &&
-    Number.isInteger(input.customerId) &&
-    input.customerId > 0
+      Number.isInteger(input.customerId) &&
+      input.customerId > 0
       ? input.customerId
       : null;
 
@@ -1323,6 +1323,45 @@ export async function enforceEditLockedIdentityOnInput(
 }
 
 /**
+ * الحالات التي تُعدّ نهائية وتسمح بفتح حجز جديد.
+ * أي حالة خارج هذه القائمة تعني أن العميل لديه حجز نشط فعلاً.
+ */
+const TERMINAL_BOOKING_STATUSES = new Set([
+  "CANCELLED",
+  "REJECTED",
+  "RETURNED",
+  "COMPLETED",
+  "PICKED_UP", // استلم السيارة — مسافر فعلاً، مسموح بحجز ثانٍ
+]);
+
+/**
+ * يرفض الإنشاء إذا كان رقم الجوال لديه حجز نشط (غير مؤرشف وغير منتهٍ).
+ * يُستدعى من `createDirectBooking` و`submitBookingRequest`.
+ */
+export async function assertNoActiveBookingForPhone(
+  phone: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const activeBooking = await prisma.bookingRequest.findFirst({
+    where: {
+      phone,
+      isHidden: false,
+      status: { notIn: [...TERMINAL_BOOKING_STATUSES] },
+    },
+    select: { id: true, status: true },
+  });
+
+  if (activeBooking) {
+    return {
+      ok: false,
+      error:
+        "لديك حجز نشط بالفعل برقم هذا الجوال. يُرجى إكمال حجزك الحالي أو الانتظار قبل إنشاء حجز جديد.",
+    };
+  }
+
+  return { ok: true };
+}
+
+/**
  * إنشاء حجز مباشر: نفس احتساب التوفر داخل معاملة Serializable مع إعادة المحاولة عند تعارض P2034.
  */
 export async function createDirectBooking(
@@ -1366,6 +1405,12 @@ export async function createDirectBooking(
   const branchAssert = await assertBranchesAndPickupHoursForDirectBooking(prepared);
   if (!branchAssert.ok) {
     return branchAssert;
+  }
+
+  // منع العميل من فتح حجز جديد وعنده حجز نشط — الحجوزات الإدارية (officePayment) مُستثناة.
+  if (!officePayment) {
+    const activeCheck = await assertNoActiveBookingForPhone(common.phone);
+    if (!activeCheck.ok) return activeCheck;
   }
 
   const returnBranchSlug = common.returnBranchSlug.trim().toLowerCase();
@@ -1509,12 +1554,12 @@ export async function createDirectBooking(
   // نعرف هل نزل الحجز تحتها فعلاً فنسجّله للمحاسبة.
   const shadowFloorOutcome = bypassMinPrice
     ? applyPriceFloorPerDay(
-        toPerDay(discountedPeriodAmountExclTax),
-        toPerDay(basePeriodAmountExclTax),
-        priceFloor,
-        periodKind,
-        days,
-      )
+      toPerDay(discountedPeriodAmountExclTax),
+      toPerDay(basePeriodAmountExclTax),
+      priceFloor,
+      periodKind,
+      days,
+    )
     : null;
 
   // لقطة الخصم التلقائي = الجزء الذي حقّقه وحده (السعر الأساسي ← ما بعده)، بمعزل
@@ -1530,10 +1575,10 @@ export async function createDirectBooking(
     rentalDiscountSnap =
       actualDiscountPerDay > 0
         ? {
-            originalPricePerDayExclTax: perDayBase,
-            discountedPricePerDayExclTax: Math.round(perDayAfterRental * 100) / 100,
-            discountPerDayExclTax: actualDiscountPerDay,
-          }
+          originalPricePerDayExclTax: perDayBase,
+          discountedPricePerDayExclTax: Math.round(perDayAfterRental * 100) / 100,
+          discountPerDayExclTax: actualDiscountPerDay,
+        }
         : null;
   }
 
@@ -2043,12 +2088,12 @@ export async function updateBookingRequestByAdmin(
   input: AdminBookingUpdateInput,
 ): Promise<
   | {
-      ok: true;
-      /** مستحقات جديدة للعميل نتجت عن التعديل — تُسوَّى من قسم «مستحقات للعميل». */
-      creditForCustomerSar?: number;
-      /** بيانات قبل/بعد لتسجيلها في سجل الحجز. */
-      changes?: { numberOfDays: [number, number]; snapshotTotalAmountSar?: number | null };
-    }
+    ok: true;
+    /** مستحقات جديدة للعميل نتجت عن التعديل — تُسوَّى من قسم «مستحقات للعميل». */
+    creditForCustomerSar?: number;
+    /** بيانات قبل/بعد لتسجيلها في سجل الحجز. */
+    changes?: { numberOfDays: [number, number]; snapshotTotalAmountSar?: number | null };
+  }
   | { ok: false; error: string }
 > {
   const statusTrim = input.status.trim();
@@ -2171,10 +2216,10 @@ export async function updateBookingRequestByAdmin(
       );
       const branchMonthly = isMonthly
         ? await resolveBranchMonthlyPriceForModel(
-            newModel.id,
-            branchIds.returnBranchId,
-            newModel.priceMonthlyExclTax,
-          )
+          newModel.id,
+          branchIds.returnBranchId,
+          newModel.priceMonthlyExclTax,
+        )
         : null;
       if (isMonthly && (branchMonthly == null || branchMonthly <= 0)) {
         return {
@@ -2442,12 +2487,12 @@ export async function updateBookingRequestByAdmin(
             // تمريرها (ولو null) يعيد ضبط حقول التسوية — القيمة الجديدة مستحقات قائمة.
             ...(updatedRefundDueToCustomerSar !== undefined
               ? {
-                  refundDueToCustomerSar: updatedRefundDueToCustomerSar,
-                  refundDueSettledAt: null,
-                  refundDueSettledMethod: null,
-                  refundDueSettledRef: null,
-                  refundDueSettledBy: null,
-                }
+                refundDueToCustomerSar: updatedRefundDueToCustomerSar,
+                refundDueSettledAt: null,
+                refundDueSettledMethod: null,
+                refundDueSettledRef: null,
+                refundDueSettledBy: null,
+              }
               : {}),
           },
         });
@@ -2674,12 +2719,12 @@ export async function updateDirectBookingDates(input: {
               : {}),
             ...(input.refundDueToCustomerSar !== undefined
               ? {
-                  refundDueToCustomerSar: input.refundDueToCustomerSar,
-                  refundDueSettledAt: null,
-                  refundDueSettledMethod: null,
-                  refundDueSettledRef: null,
-                  refundDueSettledBy: null,
-                }
+                refundDueToCustomerSar: input.refundDueToCustomerSar,
+                refundDueSettledAt: null,
+                refundDueSettledMethod: null,
+                refundDueSettledRef: null,
+                refundDueSettledBy: null,
+              }
               : {}),
           },
         });

@@ -6,7 +6,10 @@ import {
   sendBookingCheckoutOtpFromPublicRequest,
 } from "@/lib/booking-checkout-otp";
 import { parseCreateDirectBookingInputFromCheckoutJson } from "@/lib/booking-direct-checkout-parse";
-import { assertBranchesAndPickupHoursForDirectBooking } from "@/lib/direct-booking";
+import {
+  assertBranchesAndPickupHoursForDirectBooking,
+  assertNoActiveBookingForPhone,
+} from "@/lib/direct-booking";
 import { e164ToLocalNine } from "@/lib/normalize-saudi-phone";
 import {
   BOOKING_CHECKOUT_DRAFT_TTL_MS,
@@ -44,6 +47,12 @@ export async function POST(request: Request) {
   const parsed = await parseCreateDirectBookingInputFromCheckoutJson(obj, sessionUserId);
   if (!parsed.ok) {
     return NextResponse.json({ ok: false, error: parsed.error }, { status: 400 });
+  }
+
+  // منع العميل من بدء حجز جديد إذا كان لديه حجز نشط برقم جواله.
+  const activeCheck = await assertNoActiveBookingForPhone(parsed.input.phone);
+  if (!activeCheck.ok) {
+    return NextResponse.json({ ok: false, error: activeCheck.error }, { status: 409 });
   }
 
   const branchHours = await assertBranchesAndPickupHoursForDirectBooking(parsed.input);
