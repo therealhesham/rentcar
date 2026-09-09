@@ -13,7 +13,7 @@ import {
   type PromoModalSlide,
 } from "@/lib/site-settings";
 
-const MAX_SLIDES = 5;
+const MAX_SLIDES = 100;
 
 export async function updatePromoModal(
   _prev: { ok: boolean; error?: string } | null,
@@ -26,9 +26,9 @@ export async function updatePromoModal(
 
   for (let i = 0; i < MAX_SLIDES; i++) {
     const currentImage = String(formData.get(`currentImage_${i}`) ?? "").trim();
-    const galleryUrl   = String(formData.get(`galleryImageUrl_${i}`) ?? "").trim();
-    const imageFile    = formData.get(`imageFile_${i}`);
-    const linkUrl      = String(formData.get(`linkUrl_${i}`) ?? "").trim();
+    const galleryUrl = String(formData.get(`galleryImageUrl_${i}`) ?? "").trim();
+    const imageFile = formData.get(`imageFile_${i}`);
+    const linkUrl = String(formData.get(`linkUrl_${i}`) ?? "").trim();
 
     const resolved = await resolvePromoSlideImage({
       imageFile,

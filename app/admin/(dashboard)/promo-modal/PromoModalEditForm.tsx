@@ -9,7 +9,7 @@ import {
   type PromoModalSettings,
 } from "@/lib/site-settings";
 
-const MAX_SLIDES = 5;
+const MAX_SLIDES = 20;
 
 type Props = {
   settings: PromoModalSettings;
@@ -33,7 +33,7 @@ export function PromoModalEditForm({ settings }: Props) {
         <p className="mt-2 text-sm text-on-surface-variant">
           عند التفعيل تفتح النافذة تلقائياً بعد لحظة من دخول الصفحة الرئيسية. لا تظهر
           للزائر نفسه مرة أخرى قبل انقضاء فترة التهدئة، وعند ظهورها التالي تعرض الصورة
-          التي تلي الأخيرة بالتناوب.
+          التي تلي الأخيرة بالتناوب (النافذة الآن كاروزال يعرض كل الصور).
         </p>
       </div>
 
@@ -71,7 +71,7 @@ export function PromoModalEditForm({ settings }: Props) {
       <div>
         <h2 className="text-lg font-extrabold tracking-tight">صور النافذة</h2>
         <p className="mt-2 text-sm text-on-surface-variant">
-          يمكنك إضافة حتى {MAX_SLIDES} صور. الخانات الفارغة (بلا صورة) تُتجاهل تلقائياً.
+          يمكنك إضافة حتى {MAX_SLIDES} صورة. الخانات الفارغة (بلا صورة) تُتجاهل تلقائياً.
         </p>
       </div>
 
