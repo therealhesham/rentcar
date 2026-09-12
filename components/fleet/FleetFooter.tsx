@@ -5,21 +5,21 @@ export function FleetFooter() {
     <footer className="mt-auto w-full bg-[#F6F3F2] dark:bg-stone-900">
       <div className="mx-auto grid w-full max-w-screen-2xl grid-cols-1 gap-12 px-12 py-16 md:grid-cols-4">
         <div className="md:col-span-2">
-          <div className="mb-6 text-xl font-bold text-primary">Rawaes</div>
+          <div className="mb-6 text-xl font-bold text-[#B45A0A]">Rawaes</div>
           <p className="mb-8 max-w-xs leading-relaxed text-stone-500 dark:text-stone-400">
             نعيد تعريف تجربة التأجير الفاخر بعناية في الاختيار وخدمة لا تُضاهى منذ
             2024.
           </p>
           <div className="flex gap-4">
             <a
-              className="editorial-shadow flex h-10 w-10 items-center justify-center rounded-full bg-white text-primary transition-transform hover:-translate-y-1 dark:bg-stone-800"
+              className="editorial-shadow flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#B45A0A] transition-transform hover:-translate-y-1 dark:bg-stone-800"
               href="#"
               aria-label="مشاركة"
             >
               <Share2 className="size-5" strokeWidth={1.75} aria-hidden />
             </a>
             <a
-              className="editorial-shadow flex h-10 w-10 items-center justify-center rounded-full bg-white text-primary transition-transform hover:-translate-y-1 dark:bg-stone-800"
+              className="editorial-shadow flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#B45A0A] transition-transform hover:-translate-y-1 dark:bg-stone-800"
               href="#"
               aria-label="بريد"
             >
@@ -28,7 +28,7 @@ export function FleetFooter() {
           </div>
         </div>
         <div>
-          <h4 className="mb-6 text-sm font-bold uppercase tracking-widest text-primary">
+          <h4 className="mb-6 text-sm font-bold uppercase tracking-widest text-[#B45A0A]">
             دليل الأسطول
           </h4>
           <ul className="space-y-4">
@@ -67,7 +67,7 @@ export function FleetFooter() {
           </ul>
         </div>
         <div>
-          <h4 className="mb-6 text-sm font-bold uppercase tracking-widest text-primary">
+          <h4 className="mb-6 text-sm font-bold uppercase tracking-widest text-[#B45A0A]">
             الدعم
           </h4>
           <ul className="space-y-4">

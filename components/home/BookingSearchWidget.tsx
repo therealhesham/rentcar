@@ -144,8 +144,8 @@ export type { BookingBranchOption, BookingCityBranchesOption } from "@/lib/booki
 
 export type BookingSearchWidgetVariant = "search" | "checkout";
 
-const GOLD = "#dbb878";
-const GOLD_DARK = "#c9a356";
+const ACCENT = "#f5821f";
+const ACCENT_DARK = "#d9690a";
 const TEAL = "#003749";
 
 /** مهلة قصيرة بعد آخر تعديل قبل تشغيل البحث التلقائي */
@@ -1126,13 +1126,13 @@ export function BookingSearchWidget({
           transition: background 0.18s, border-color 0.18s, box-shadow 0.18s;
         }
         .field-trigger:hover {
-          background: #fffdf8;
+          background: #ffffff;
           border-color: rgba(219,184,120,0.55);
         }
         .field-trigger[aria-expanded="true"] {
-          border-color: #dbb878;
+          border-color: #f5821f;
           box-shadow: 0 0 0 3px rgba(219,184,120,0.18);
-          background: #fffef9;
+          background: #ffffff;
         }
         .cta-btn {
           animation: pulseGlow 2.5s ease-in-out infinite;
@@ -1176,7 +1176,7 @@ export function BookingSearchWidget({
         @media (max-width: 1279.98px) {
           .search-pill .field-trigger {
             background-color: #ffffff;
-            border: 1px solid #efe7d6;
+            border: 1px solid #e2e8f0;
             border-radius: 1rem;
             box-shadow:
               0 1px 2px rgba(0, 55, 73, 0.04),
@@ -1191,14 +1191,14 @@ export function BookingSearchWidget({
           .search-pill .field-trigger:active {
             transform: scale(0.98);
             box-shadow: 0 1px 2px rgba(0, 55, 73, 0.05);
-            background-color: #fffdf8;
+            background-color: #ffffff;
           }
           .search-pill .field-trigger[aria-expanded="true"] {
-            border-color: #dbb878;
+            border-color: #f5821f;
             box-shadow:
               0 0 0 3px rgba(219, 184, 120, 0.16),
               0 10px 24px -12px rgba(219, 184, 120, 0.45);
-            background-color: #fffef9;
+            background-color: #ffffff;
           }
           .search-pill .field-trigger:disabled {
             box-shadow: none;
@@ -1232,13 +1232,13 @@ export function BookingSearchWidget({
           }
           .search-pill .field-trigger:hover {
             background-color: #faf6ec;
-            border-color: #ebe4d3;
+            border-color: #e2e8f0;
             box-shadow: none;
           }
           .search-pill .field-trigger[aria-expanded="true"] {
             background-color: #fbf7ea;
-            border-color: #ebe4d3;
-            box-shadow: inset 0 -2px 0 0 #dbb878;
+            border-color: #e2e8f0;
+            box-shadow: inset 0 -2px 0 0 #f5821f;
           }
           /* Slightly more breathing room inside each segment */
           .search-pill .pill-cell {
@@ -1263,7 +1263,7 @@ export function BookingSearchWidget({
         } ${
           combinedPanel
             ? ""
-            : "rounded-[1.75rem] bg-gradient-to-br from-[#fdfbf6] via-white to-[#fbf6ea] p-1 shadow-[0_36px_88px_-24px_rgba(0,55,73,0.22),0_12px_28px_-8px_rgba(0,55,73,0.08)] ring-1 ring-[#dbb878]/20 sm:p-2"
+            : "rounded-[1.75rem] bg-gradient-to-br from-[#f7fafc] via-white to-[#fbf6ea] p-1 shadow-[0_36px_88px_-24px_rgba(0,55,73,0.22),0_12px_28px_-8px_rgba(0,55,73,0.08)] ring-1 ring-[#f5821f]/20 sm:p-2"
         } ${mounted ? "" : "opacity-0"}`}
       >
         {/* Decorative gold hairline at the very top — adds a luxury accent */}
@@ -1271,7 +1271,7 @@ export function BookingSearchWidget({
           <>
             <span
               aria-hidden
-              className="pointer-events-none absolute inset-x-[18%] top-0 h-px bg-gradient-to-r from-transparent via-[#dbb878]/60 to-transparent"
+              className="pointer-events-none absolute inset-x-[18%] top-0 h-px bg-gradient-to-r from-transparent via-[#f5821f]/60 to-transparent"
             />
             {/* Soft inner glow at the top edge */}
             <span
@@ -1340,7 +1340,7 @@ export function BookingSearchWidget({
               <div
                 role="tablist"
                 aria-label="طريقة الاستلام"
-                className="flex items-center gap-0.5 self-start rounded-full border border-[#ebe4d3] bg-white/90 p-0.5 shadow-[0_1px_4px_-1px_rgba(0,55,73,0.08)] sm:self-auto"
+                className="flex items-center gap-0.5 self-start rounded-full border border-[#e2e8f0] bg-white/90 p-0.5 shadow-[0_1px_4px_-1px_rgba(0,55,73,0.08)] sm:self-auto"
               >
                 {tabFlagsEff.modePickup ? (
                   <ModeChip
@@ -1370,7 +1370,7 @@ export function BookingSearchWidget({
           {isFreshRebookFlow ? (
             <div className="space-y-4">
               {freshRebookLocationSummaryAr ? (
-                <div className="rounded-2xl border border-[#dbb878]/30 bg-gradient-to-br from-[#fffdf9] via-white to-[#fdfbf6] px-4 py-3.5 shadow-sm ring-1 ring-[#dbb878]/10">
+                <div className="rounded-2xl border border-[#f5821f]/30 bg-gradient-to-br from-[#ffffff] via-white to-[#f7fafc] px-4 py-3.5 shadow-sm ring-1 ring-[#f5821f]/10">
                   <p className="mb-1.5 text-[10px] font-black uppercase tracking-wider text-[#003749]/45">
                     {t("pickupLocation")}
                   </p>
@@ -1387,19 +1387,19 @@ export function BookingSearchWidget({
                     aria-expanded={dateRangeOpen && dateRangeAnchor === "pickup"}
                     aria-haspopup="dialog"
                     onClick={() => toggleDateRange("pickup")}
-                    className={`field-trigger relative flex w-full flex-col gap-1 rounded-xl border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start focus:outline-none ${dateRangeOpen && dateRangeAnchor === "pickup" ? "ring-2 ring-[#dbb878]/40" : ""}`}
+                    className={`field-trigger relative flex w-full flex-col gap-1 rounded-xl border border-[#e2e8f0]/80 bg-[#f7fafc] p-3.5 pe-9 text-start focus:outline-none ${dateRangeOpen && dateRangeAnchor === "pickup" ? "ring-2 ring-[#f5821f]/40" : ""}`}
                   >
                     <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
-                      <CalendarClock className="size-3 text-[#dbb878]" aria-hidden />
+                      <CalendarClock className="size-3 text-[#f5821f]" aria-hidden />
                       {t("pickupDate")}
                     </span>
                     {pickupDateDraft ? (
                       <span className="text-[13px] font-bold text-[#0f1923]">{pickupDateDraft}</span>
                     ) : (
-                      <span className="text-[13px] font-medium text-[#aaa08e]">{t("selectDate")}</span>
+                      <span className="text-[13px] font-medium text-[#94a3b8]">{t("selectDate")}</span>
                     )}
                     <ChevronDown
-                      className={`absolute end-3 top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${dateRangeOpen && dateRangeAnchor === "pickup" ? "rotate-180" : ""}`}
+                      className={`absolute end-3 top-1/2 size-3.5 -translate-y-1/2 text-[#f5821f] transition-transform ${dateRangeOpen && dateRangeAnchor === "pickup" ? "rotate-180" : ""}`}
                       aria-hidden
                     />
                   </button>
@@ -1415,17 +1415,17 @@ export function BookingSearchWidget({
                       setDateRangeOpen(false);
                       setDropoffTimeOpen(false);
                     }}
-                    className="field-trigger relative flex w-full flex-col gap-1 rounded-xl border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-right focus:outline-none"
+                    className="field-trigger relative flex w-full flex-col gap-1 rounded-xl border border-[#e2e8f0]/80 bg-[#f7fafc] p-3.5 pe-9 text-right focus:outline-none"
                   >
                     <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
-                      <Clock className="size-3 text-[#dbb878]" aria-hidden />
+                      <Clock className="size-3 text-[#f5821f]" aria-hidden />
                       {t("pickUpTime")}
                     </span>
                     <span className="text-[13px] font-bold text-[#0f1923]" dir="ltr">
                       {pickupTimeDraft}
                     </span>
                     <ChevronDown
-                      className={`absolute end-3 top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${pickupTimeOpen ? "rotate-180" : ""}`}
+                      className={`absolute end-3 top-1/2 size-3.5 -translate-y-1/2 text-[#f5821f] transition-transform ${pickupTimeOpen ? "rotate-180" : ""}`}
                       aria-hidden
                     />
                   </button>
@@ -1459,19 +1459,19 @@ export function BookingSearchWidget({
                     aria-expanded={dateRangeOpen && dateRangeAnchor === "dropoff"}
                     aria-haspopup="dialog"
                     onClick={() => toggleDateRange("dropoff")}
-                    className={`field-trigger relative flex w-full flex-col gap-1 rounded-xl border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start focus:outline-none ${dateRangeOpen && dateRangeAnchor === "dropoff" ? "ring-2 ring-[#dbb878]/40" : ""}`}
+                    className={`field-trigger relative flex w-full flex-col gap-1 rounded-xl border border-[#e2e8f0]/80 bg-[#f7fafc] p-3.5 pe-9 text-start focus:outline-none ${dateRangeOpen && dateRangeAnchor === "dropoff" ? "ring-2 ring-[#f5821f]/40" : ""}`}
                   >
                     <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
-                      <CalendarRange className="size-3 text-[#dbb878]" aria-hidden />
+                      <CalendarRange className="size-3 text-[#f5821f]" aria-hidden />
                       {t("returnDate")}
                     </span>
                     {dropoffDateDraft ? (
                       <span className="text-[13px] font-bold text-[#0f1923]">{dropoffDateDraft}</span>
                     ) : (
-                      <span className="text-[13px] font-medium text-[#aaa08e]">{t("selectDate")}</span>
+                      <span className="text-[13px] font-medium text-[#94a3b8]">{t("selectDate")}</span>
                     )}
                     <ChevronDown
-                      className={`absolute end-3 top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${dateRangeOpen && dateRangeAnchor === "dropoff" ? "rotate-180" : ""}`}
+                      className={`absolute end-3 top-1/2 size-3.5 -translate-y-1/2 text-[#f5821f] transition-transform ${dateRangeOpen && dateRangeAnchor === "dropoff" ? "rotate-180" : ""}`}
                       aria-hidden
                     />
                   </button>
@@ -1507,17 +1507,17 @@ export function BookingSearchWidget({
                       setDateRangeOpen(false);
                       setPickupTimeOpen(false);
                     }}
-                    className="field-trigger relative flex w-full flex-col gap-1 rounded-xl border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start focus:outline-none"
+                    className="field-trigger relative flex w-full flex-col gap-1 rounded-xl border border-[#e2e8f0]/80 bg-[#f7fafc] p-3.5 pe-9 text-start focus:outline-none"
                   >
                     <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
-                      <Clock className="size-3 text-[#dbb878]" aria-hidden />
+                      <Clock className="size-3 text-[#f5821f]" aria-hidden />
                       {t("deliveryTime")}
                     </span>
                     <span className="text-[13px] font-bold text-[#0f1923]" dir="ltr">
                       {dropoffTimeDraft}
                     </span>
                     <ChevronDown
-                      className={`absolute end-3 top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${dropoffTimeOpen ? "rotate-180" : ""}`}
+                      className={`absolute end-3 top-1/2 size-3.5 -translate-y-1/2 text-[#f5821f] transition-transform ${dropoffTimeOpen ? "rotate-180" : ""}`}
                       aria-hidden
                     />
                   </button>
@@ -1537,11 +1537,11 @@ export function BookingSearchWidget({
             </div>
           ) : rental === "corporate" ? (
             <div
-              className="flex flex-col gap-3 rounded-xl border border-[#ebe4d3]/70 bg-[#fdfbf6] p-4"
+              className="flex flex-col gap-3 rounded-xl border border-[#e2e8f0]/70 bg-[#f7fafc] p-4"
               role="group"
               aria-label={t("corporateSection.corporateBookingDetails")}
             >
-              <p className="text-[11px] font-bold leading-relaxed text-[#6b5a3b]">
+              <p className="text-[11px] font-bold leading-relaxed text-[#334155]">
                 {t("corporateSection.fillDetails")}
               </p>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -1560,7 +1560,7 @@ export function BookingSearchWidget({
                     autoComplete="organization"
                     required
                     maxLength={255}
-                    className="mt-0.5 w-full rounded-lg border border-[#ebe4d3]/70 bg-white/90 px-2.5 py-2 text-[13px] font-semibold text-[#0f1923] outline-none focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25"
+                    className="mt-0.5 w-full rounded-lg border border-[#e2e8f0]/70 bg-white/90 px-2.5 py-2 text-[13px] font-semibold text-[#0f1923] outline-none focus-visible:border-[#f5821f] focus-visible:ring-2 focus-visible:ring-[#f5821f]/25"
                     placeholder={t("corporateSection.companyNamePlaceholder")}
                   />
                 </div>
@@ -1582,7 +1582,7 @@ export function BookingSearchWidget({
                     required
                     maxLength={255}
                     dir="ltr"
-                    className="mt-0.5 w-full rounded-lg border border-[#ebe4d3]/70 bg-white/90 px-2.5 py-2 text-[13px] font-semibold text-[#0f1923] outline-none focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25"
+                    className="mt-0.5 w-full rounded-lg border border-[#e2e8f0]/70 bg-white/90 px-2.5 py-2 text-[13px] font-semibold text-[#0f1923] outline-none focus-visible:border-[#f5821f] focus-visible:ring-2 focus-visible:ring-[#f5821f]/25"
                     placeholder="info@company.com"
                   />
                 </div>
@@ -1601,7 +1601,7 @@ export function BookingSearchWidget({
                     required
                     maxLength={64}
                     dir="ltr"
-                    className="mt-0.5 w-full rounded-lg border border-[#ebe4d3]/70 bg-white/90 px-2.5 py-2 text-[13px] font-semibold text-[#0f1923] outline-none focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25"
+                    className="mt-0.5 w-full rounded-lg border border-[#e2e8f0]/70 bg-white/90 px-2.5 py-2 text-[13px] font-semibold text-[#0f1923] outline-none focus-visible:border-[#f5821f] focus-visible:ring-2 focus-visible:ring-[#f5821f]/25"
                     placeholder={t("corporateSection.taxNumberPlaceholder")}
                   />
                 </div>
@@ -1623,7 +1623,7 @@ export function BookingSearchWidget({
                     required
                     maxLength={32}
                     dir="ltr"
-                    className="mt-0.5 w-full rounded-lg border border-[#ebe4d3]/70 bg-white/90 px-2.5 py-2 text-[13px] font-semibold text-[#0f1923] outline-none focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25"
+                    className="mt-0.5 w-full rounded-lg border border-[#e2e8f0]/70 bg-white/90 px-2.5 py-2 text-[13px] font-semibold text-[#0f1923] outline-none focus-visible:border-[#f5821f] focus-visible:ring-2 focus-visible:ring-[#f5821f]/25"
                     placeholder="05xxxxxxxx"
                   />
                 </div>
@@ -1644,10 +1644,10 @@ export function BookingSearchWidget({
                   rows={4}
                   maxLength={8000}
                   dir={isRtl ? "rtl" : "ltr"}
-                  className="mt-0.5 w-full resize-y rounded-lg border border-[#ebe4d3]/70 bg-white/90 px-2.5 py-2 text-[13px] font-medium text-[#0f1923] outline-none focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25"
+                  className="mt-0.5 w-full resize-y rounded-lg border border-[#e2e8f0]/70 bg-white/90 px-2.5 py-2 text-[13px] font-medium text-[#0f1923] outline-none focus-visible:border-[#f5821f] focus-visible:ring-2 focus-visible:ring-[#f5821f]/25"
                   placeholder={t("corporateSection.requestDetailsPlaceholder")}
                 />
-                <p className="mt-1 text-[9px] font-medium text-[#8a7752]/90">
+                <p className="mt-1 text-[9px] font-medium text-[#475569]/90">
                   {t("corporateSection.requestDetailsHelp")}
                 </p>
               </div>
@@ -1665,17 +1665,17 @@ export function BookingSearchWidget({
                       <h3 className="text-xl font-bold mt-2 relative z-10">{t("corporateSection.requestReceivedTitle")}</h3>
                     </div>
                     
-                    <div className="flex flex-col items-center gap-4 p-8 text-center bg-[#fdfbf6]">
+                    <div className="flex flex-col items-center gap-4 p-8 text-center bg-[#f7fafc]">
                       <p className="text-[15px] font-semibold leading-relaxed text-[#003749]">
                         {t("corporateSection.requestReceivedSuccess")}
                       </p>
-                      <p className="text-[13px] font-medium text-[#6b5a3b] max-w-[250px]">
+                      <p className="text-[13px] font-medium text-[#334155] max-w-[250px]">
                         {t("corporateSection.requestReceivedMessage")}
                       </p>
                       <button
                         type="button"
                         onClick={() => setCorpSuccess(false)}
-                        className="mt-2 w-full rounded-xl bg-[#dbb878] px-5 py-3 text-[14px] font-bold text-white shadow-md transition-all hover:bg-[#c9a356] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#dbb878]/50"
+                        className="mt-2 w-full rounded-xl bg-[#f5821f] px-5 py-3 text-[14px] font-bold text-white shadow-md transition-all hover:bg-[#d9690a] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#f5821f]/50"
                       >
                         {t("corporateSection.okayUnderstood")}
                       </button>
@@ -1701,7 +1701,7 @@ export function BookingSearchWidget({
                   {mode === "pickup" ? t("pickupLocation") : t("deliveryAndReturnLocation")}
                 </p>
                 {mode === "pickup" ? (
-                  <div className="rounded-xl border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3">
+                  <div className="rounded-xl border border-[#e2e8f0]/80 bg-[#f7fafc] p-3">
                     <PickupReturnBranchFields {...pickupBranchFieldsProps} />
                   </div>
                 ) : (
@@ -1709,14 +1709,14 @@ export function BookingSearchWidget({
                     <div className="flex flex-col gap-2">
                       <p className="flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[10px] font-bold uppercase tracking-wide text-[#003749]/55">
                         <span className="flex items-center gap-1">
-                          <MapPin className="size-3.5 text-[#dbb878]" aria-hidden />
+                          <MapPin className="size-3.5 text-[#f5821f]" aria-hidden />
                           {deliveryLocationLabel}
                         </span>
                       </p>
                       <button
                         type="button"
                         onClick={() => setMapOpen(true)}
-                        className="group flex w-full items-center justify-between gap-2 rounded-lg border border-dashed border-[#c9a356]/55 bg-white/60 px-2.5 py-2 text-start text-[13px] font-semibold text-[#0f1923] outline-none transition-[border-color,background-color,box-shadow] hover:border-[#dbb878] hover:bg-[#fffdf8] focus-visible:ring-2 focus-visible:ring-[#dbb878]/35"
+                        className="group flex w-full items-center justify-between gap-2 rounded-lg border border-dashed border-[#d9690a]/55 bg-white/60 px-2.5 py-2 text-start text-[13px] font-semibold text-[#0f1923] outline-none transition-[border-color,background-color,box-shadow] hover:border-[#f5821f] hover:bg-[#ffffff] focus-visible:ring-2 focus-visible:ring-[#f5821f]/35"
                       >
                         {deliverySelected ? (
                           <span className="flex min-w-0 items-center gap-2 text-[#0f3d47]">
@@ -1728,12 +1728,12 @@ export function BookingSearchWidget({
                             </span>
                           </span>
                         ) : (
-                          <span className="text-[#6b5a3b]">{t("selectOnMap")}</span>
+                          <span className="text-[#334155]">{t("selectOnMap")}</span>
                         )}
-                        <MapPin className="size-4 shrink-0 text-[#dbb878] opacity-70 transition-opacity group-hover:opacity-100" aria-hidden />
+                        <MapPin className="size-4 shrink-0 text-[#f5821f] opacity-70 transition-opacity group-hover:opacity-100" aria-hidden />
                       </button>
                     </div>
-                    <div className="rounded-xl border border-[#ebe4d3]/60 bg-white/50 p-3">
+                    <div className="rounded-xl border border-[#e2e8f0]/60 bg-white/50 p-3">
                       <p className="mb-1.5 text-[10px] font-black uppercase tracking-wide text-[#003749]/55">
                         {t("returnBranch")}
                       </p>
@@ -1774,15 +1774,15 @@ export function BookingSearchWidget({
                       closeSchedulePopovers();
                     }
                   }}
-                  className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl xl:rounded-none xl:border-0 xl:border-e xl:border-[#ebe4d3] focus:outline-none cursor-pointer"
+                  className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#e2e8f0]/80 bg-[#f7fafc] p-3.5 pe-9 text-start rounded-xl xl:rounded-none xl:border-0 xl:border-e xl:border-[#e2e8f0] focus:outline-none cursor-pointer"
                 >
                   <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
-                    <MapPin className="size-3 text-[#dbb878]" aria-hidden />
+                    <MapPin className="size-3 text-[#f5821f]" aria-hidden />
                     {mode === "pickup" ? t("pickupLocation") : t("branch")}
                   </span>
                   <span className="flex items-center gap-2 truncate text-[13px] font-bold text-[#0f1923]">
                     <span className="truncate">
-                      {branchLabel(pickupBranchEffective) || <span className="font-medium text-[#aaa08e]">{dateCities.length === 0 ? t("noBranches") : t("selectBranch")}</span>}
+                      {branchLabel(pickupBranchEffective) || <span className="font-medium text-[#94a3b8]">{dateCities.length === 0 ? t("noBranches") : t("selectBranch")}</span>}
                     </span>
                     {pickupBranchEffective && branchMapUrl(pickupBranchEffective) && (
                       <button
@@ -1792,14 +1792,14 @@ export function BookingSearchWidget({
                           const url = branchMapUrl(pickupBranchEffective);
                           if (url) window.open(url, "_blank", "noopener,noreferrer");
                         }}
-                        className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-[#dbb878]/10 text-[#dbb878] hover:bg-[#dbb878] hover:text-white transition-colors focus:outline-none"
+                        className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-[#f5821f]/10 text-[#f5821f] hover:bg-[#f5821f] hover:text-white transition-colors focus:outline-none"
                         title={isRtl ? "عرض الموقع على الخريطة" : "View on map"}
                       >
                         <MapPin className="size-3" />
                       </button>
                     )}
                   </span>
-                  <ChevronDown className={`absolute end-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${pickupLocOpen ? "rotate-180" : ""}`} aria-hidden />
+                  <ChevronDown className={`absolute end-3 top-1/2 -translate-y-1/2 size-3.5 text-[#f5821f] transition-transform ${pickupLocOpen ? "rotate-180" : ""}`} aria-hidden />
                 </div>
                 <LocationPickerPopover
                   isOpen={pickupLocOpen}
@@ -1837,10 +1837,10 @@ export function BookingSearchWidget({
                   <button
                     type="button"
                     onClick={() => setMapOpen(true)}
-                    className="field-trigger relative flex h-full w-full flex-col justify-center gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 text-start rounded-xl xl:rounded-none xl:border-0 xl:border-e xl:border-[#ebe4d3] focus:outline-none overflow-hidden"
+                    className="field-trigger relative flex h-full w-full flex-col justify-center gap-1 border border-[#e2e8f0]/80 bg-[#f7fafc] p-3.5 text-start rounded-xl xl:rounded-none xl:border-0 xl:border-e xl:border-[#e2e8f0] focus:outline-none overflow-hidden"
                   >
                     <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
-                      <MapPin className="size-3 shrink-0 text-[#dbb878]" aria-hidden />
+                      <MapPin className="size-3 shrink-0 text-[#f5821f]" aria-hidden />
                       <span className="truncate">{deliveryLocationLabel}</span>
                     </span>
                     {deliverySelected ? (
@@ -1853,7 +1853,7 @@ export function BookingSearchWidget({
                         </span>
                       </span>
                     ) : (
-                      <span className="truncate w-full text-[13px] font-medium text-[#aaa08e]">{t("selectOnMap")}</span>
+                      <span className="truncate w-full text-[13px] font-medium text-[#94a3b8]">{t("selectOnMap")}</span>
                     )}
                   </button>
                 </div>
@@ -1877,15 +1877,15 @@ export function BookingSearchWidget({
                         closeSchedulePopovers();
                       }
                     }}
-                    className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl xl:rounded-none xl:border-0 xl:border-e xl:border-[#ebe4d3] focus:outline-none cursor-pointer"
+                    className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#e2e8f0]/80 bg-[#f7fafc] p-3.5 pe-9 text-start rounded-xl xl:rounded-none xl:border-0 xl:border-e xl:border-[#e2e8f0] focus:outline-none cursor-pointer"
                   >
                     <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
-                      <MapPin className="size-3 text-[#dbb878]" aria-hidden />
+                      <MapPin className="size-3 text-[#f5821f]" aria-hidden />
                       {t("returnLocation")}
                     </span>
                     <span className="flex items-center gap-2 truncate text-[13px] font-bold text-[#0f1923]">
                       <span className="truncate">
-                        {branchLabel(returnBranchEffective) || <span className="font-medium text-[#aaa08e]">{t("selectBranch")}</span>}
+                        {branchLabel(returnBranchEffective) || <span className="font-medium text-[#94a3b8]">{t("selectBranch")}</span>}
                       </span>
                       {returnBranchEffective && branchMapUrl(returnBranchEffective) && (
                         <button
@@ -1895,14 +1895,14 @@ export function BookingSearchWidget({
                             const url = branchMapUrl(returnBranchEffective);
                             if (url) window.open(url, "_blank", "noopener,noreferrer");
                           }}
-                          className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-[#dbb878]/10 text-[#dbb878] hover:bg-[#dbb878] hover:text-white transition-colors focus:outline-none"
+                          className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-[#f5821f]/10 text-[#f5821f] hover:bg-[#f5821f] hover:text-white transition-colors focus:outline-none"
                           title={isRtl ? "عرض الموقع على الخريطة" : "View on map"}
                         >
                           <MapPin className="size-3" />
                         </button>
                       )}
                     </span>
-                    <ChevronDown className={`absolute end-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${returnLocOpen ? "rotate-180" : ""}`} aria-hidden />
+                    <ChevronDown className={`absolute end-3 top-1/2 -translate-y-1/2 size-3.5 text-[#f5821f] transition-transform ${returnLocOpen ? "rotate-180" : ""}`} aria-hidden />
                   </div>
                   <LocationPickerPopover
                     isOpen={returnLocOpen}
@@ -1930,13 +1930,13 @@ export function BookingSearchWidget({
 
               {/* show "return different" toggle inside the bar */}
               {!returnLocationDifferent && (
-                <div className="flex w-full items-center rounded-2xl border border-[#efe7d6] bg-white px-3 py-1.5 shadow-[0_1px_2px_rgba(0,55,73,0.04),0_6px_16px_-10px_rgba(0,55,73,0.14)] xl:w-auto xl:rounded-none xl:border-0 xl:border-e xl:border-[#ebe4d3] xl:bg-transparent xl:py-0 xl:shadow-none">
-                  <label className="flex cursor-pointer items-center gap-2 py-2 text-[11px] font-semibold text-[#6b5a3b] whitespace-nowrap">
+                <div className="flex w-full items-center rounded-2xl border border-[#e2e8f0] bg-white px-3 py-1.5 shadow-[0_1px_2px_rgba(0,55,73,0.04),0_6px_16px_-10px_rgba(0,55,73,0.14)] xl:w-auto xl:rounded-none xl:border-0 xl:border-e xl:border-[#e2e8f0] xl:bg-transparent xl:py-0 xl:shadow-none">
+                  <label className="flex cursor-pointer items-center gap-2 py-2 text-[11px] font-semibold text-[#334155] whitespace-nowrap">
                     <input
                       type="checkbox"
                       checked={returnLocationDifferent}
                       onChange={(ev) => handleReturnLocationDifferentChange(ev.target.checked)}
-                      className="size-3.5 shrink-0 cursor-pointer rounded border-[#c9a356]/60 text-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/35"
+                      className="size-3.5 shrink-0 cursor-pointer rounded border-[#d9690a]/60 text-[#f5821f] focus-visible:ring-2 focus-visible:ring-[#f5821f]/35"
                     />
                     {t("returnDifferent")}
                   </label>
@@ -1964,19 +1964,19 @@ export function BookingSearchWidget({
                     setDropoffTimeOpen(false);
                     setPickupDateOpen((v) => !v);
                   }}
-                  className={`field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl xl:rounded-none xl:border-0 xl:border-e xl:border-[#ebe4d3] focus:outline-none ${rental === "daily" && dateRangeOpen && dateRangeAnchor === "pickup" ? "ring-2 ring-[#dbb878]/40" : ""}`}
+                  className={`field-trigger relative flex h-full w-full flex-col gap-1 border border-[#e2e8f0]/80 bg-[#f7fafc] p-3.5 pe-9 text-start rounded-xl xl:rounded-none xl:border-0 xl:border-e xl:border-[#e2e8f0] focus:outline-none ${rental === "daily" && dateRangeOpen && dateRangeAnchor === "pickup" ? "ring-2 ring-[#f5821f]/40" : ""}`}
                 >
                   <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
-                    <CalendarClock className="size-3 text-[#dbb878]" aria-hidden />
+                    <CalendarClock className="size-3 text-[#f5821f]" aria-hidden />
                     {t("pickupDate")}
                   </span>
                   {pickupDateDraft ? (
                     <span className="text-[13px] font-bold text-[#0f1923]">{pickupDateDraft}</span>
                   ) : (
-                    <span className="text-[13px] font-medium text-[#aaa08e]">{t("selectDate")}</span>
+                    <span className="text-[13px] font-medium text-[#94a3b8]">{t("selectDate")}</span>
                   )}
                   <ChevronDown
-                    className={`absolute end-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${(rental === "daily" ? dateRangeOpen && dateRangeAnchor === "pickup" : pickupDateOpen) ? "rotate-180" : ""}`}
+                    className={`absolute end-3 top-1/2 -translate-y-1/2 size-3.5 text-[#f5821f] transition-transform ${(rental === "daily" ? dateRangeOpen && dateRangeAnchor === "pickup" : pickupDateOpen) ? "rotate-180" : ""}`}
                     aria-hidden
                   />
                 </button>
@@ -2017,17 +2017,17 @@ export function BookingSearchWidget({
                     setPickupLocOpen(false);
                     setReturnLocOpen(false);
                   }}
-                  className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl xl:rounded-none xl:border-0 xl:border-e xl:border-[#ebe4d3] focus:outline-none"
+                  className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#e2e8f0]/80 bg-[#f7fafc] p-3.5 pe-9 text-start rounded-xl xl:rounded-none xl:border-0 xl:border-e xl:border-[#e2e8f0] focus:outline-none"
                 >
                   <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
-                    <Clock className="size-3 text-[#dbb878]" aria-hidden />
+                    <Clock className="size-3 text-[#f5821f]" aria-hidden />
                     {t("pickUpTime")}
                   </span>
                   <span className="text-[13px] font-bold text-[#0f1923]" dir="ltr">
                     {pickupTimeDraft}
                   </span>
                   <ChevronDown
-                    className={`absolute end-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${pickupTimeOpen ? "rotate-180" : ""}`}
+                    className={`absolute end-3 top-1/2 -translate-y-1/2 size-3.5 text-[#f5821f] transition-transform ${pickupTimeOpen ? "rotate-180" : ""}`}
                     aria-hidden
                   />
                 </button>
@@ -2070,22 +2070,22 @@ export function BookingSearchWidget({
                     if (rental !== "daily") return;
                     toggleDateRange("dropoff");
                   }}
-                  className={`field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl xl:rounded-none xl:border-0 xl:border-e xl:border-[#ebe4d3] focus:outline-none disabled:opacity-60 ${rental === "daily" && dateRangeOpen && dateRangeAnchor === "dropoff" ? "ring-2 ring-[#dbb878]/40" : ""}`}
+                  className={`field-trigger relative flex h-full w-full flex-col gap-1 border border-[#e2e8f0]/80 bg-[#f7fafc] p-3.5 pe-9 text-start rounded-xl xl:rounded-none xl:border-0 xl:border-e xl:border-[#e2e8f0] focus:outline-none disabled:opacity-60 ${rental === "daily" && dateRangeOpen && dateRangeAnchor === "dropoff" ? "ring-2 ring-[#f5821f]/40" : ""}`}
                 >
                   <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
-                    <CalendarRange className="size-3 text-[#dbb878]" aria-hidden />
+                    <CalendarRange className="size-3 text-[#f5821f]" aria-hidden />
                     {t("returnDate")}
                     {rental !== "daily" ? (
-                      <span className="text-[9px] font-medium text-[#8a7752]/70"></span>
+                      <span className="text-[9px] font-medium text-[#475569]/70"></span>
                     ) : null}
                   </span>
                   {dropoffDateDraft ? (
                     <span className="text-[13px] font-bold text-[#0f1923]">{dropoffDateDraft}</span>
                   ) : (
-                    <span className="text-[13px] font-medium text-[#aaa08e]">{t("selectDate")}</span>
+                    <span className="text-[13px] font-medium text-[#94a3b8]">{t("selectDate")}</span>
                   )}
                   <ChevronDown
-                    className={`absolute end-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${dateRangeOpen && dateRangeAnchor === "dropoff" ? "rotate-180" : ""}`}
+                    className={`absolute end-3 top-1/2 -translate-y-1/2 size-3.5 text-[#f5821f] transition-transform ${dateRangeOpen && dateRangeAnchor === "dropoff" ? "rotate-180" : ""}`}
                     aria-hidden
                   />
                 </button>
@@ -2130,17 +2130,17 @@ export function BookingSearchWidget({
                     setPickupLocOpen(false);
                     setReturnLocOpen(false);
                   }}
-                  className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 pe-9 text-start rounded-xl xl:rounded-none xl:border-0 xl:border-e xl:border-[#ebe4d3] focus:outline-none disabled:opacity-60"
+                  className="field-trigger relative flex h-full w-full flex-col gap-1 border border-[#e2e8f0]/80 bg-[#f7fafc] p-3.5 pe-9 text-start rounded-xl xl:rounded-none xl:border-0 xl:border-e xl:border-[#e2e8f0] focus:outline-none disabled:opacity-60"
                 >
                   <span className="flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55 truncate">
-                    <Clock className="size-3 text-[#dbb878]" aria-hidden />
+                    <Clock className="size-3 text-[#f5821f]" aria-hidden />
                     {t("deliveryTime")}
                   </span>
                   <span className="text-[13px] font-bold text-[#0f1923]" dir="ltr">
                     {dropoffTimeDraft}
                   </span>
                   <ChevronDown
-                    className={`absolute end-3 top-1/2 -translate-y-1/2 size-3.5 text-[#dbb878] transition-transform ${dropoffTimeOpen ? "rotate-180" : ""}`}
+                    className={`absolute end-3 top-1/2 -translate-y-1/2 size-3.5 text-[#f5821f] transition-transform ${dropoffTimeOpen ? "rotate-180" : ""}`}
                     aria-hidden
                   />
                 </button>
@@ -2165,7 +2165,7 @@ export function BookingSearchWidget({
                   type="submit"
                   disabled={isSearchPending || dateCities.length === 0}
                   className="cta-btn group relative mt-1 flex min-h-[52px] w-full items-center justify-center gap-2 overflow-hidden rounded-2xl px-5 py-4 text-white disabled:pointer-events-none disabled:opacity-45 xl:mt-0 xl:min-h-0 xl:rounded-none xl:rounded-l-full xl:px-9 xl:py-4 xl:text-[15px]"
-                  style={{ background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)` }}
+                  style={{ background: `linear-gradient(135deg, ${ACCENT} 0%, ${ACCENT_DARK} 100%)` }}
                 >
                   <span
                     className="cta-shimmer pointer-events-none absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0"
@@ -2214,23 +2214,23 @@ export function BookingSearchWidget({
                       <span
                         className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-[12px] font-bold text-white shadow-[0_2px_8px_-2px_rgba(219,184,120,0.5)]"
                         style={{
-                          background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)`,
+                          background: `linear-gradient(135deg, ${ACCENT} 0%, ${ACCENT_DARK} 100%)`,
                         }}
                       >
                         <CalendarDays className="size-3" aria-hidden />
                         <span className="tabular-nums">{durationBadgeLabel}</span>
                       </span>
-                      <span className="text-[11px] font-medium text-[#6b5a3b]">مدة الحجز</span>
+                      <span className="text-[11px] font-medium text-[#334155]">مدة الحجز</span>
                     </div>
                   ) : (
-                    <span className="text-[11px] text-[#aaa08e]">حدّد التواريخ لعرض المدة</span>
+                    <span className="text-[11px] text-[#94a3b8]">حدّد التواريخ لعرض المدة</span>
                   )}
                   <button
                     type="submit"
                     disabled={isSearchPending}
                     className="cta-btn group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-white disabled:pointer-events-none disabled:opacity-45 sm:w-auto"
                     style={{
-                      background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)`,
+                      background: `linear-gradient(135deg, ${ACCENT} 0%, ${ACCENT_DARK} 100%)`,
                     }}
                   >
                     <span
@@ -2255,14 +2255,14 @@ export function BookingSearchWidget({
                 </div>
               ) : rental === "corporate" ? (
                 <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <span className="text-[11px] font-medium leading-snug text-[#6b5a3b]">
+                  <span className="text-[11px] font-medium leading-snug text-[#334155]">
                     {t("corporateSection.fleetSearchNotCalculated")}
                   </span>
                   <button
                     type="submit"
                     disabled={corpPending}
                     className="cta-btn group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-white disabled:pointer-events-none disabled:opacity-45 sm:w-auto"
-                    style={{ background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)` }}
+                    style={{ background: `linear-gradient(135deg, ${ACCENT} 0%, ${ACCENT_DARK} 100%)` }}
                   >
                     <span className="cta-shimmer pointer-events-none absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0" aria-hidden />
                     <Send className="size-4 shrink-0" aria-hidden />
@@ -2275,15 +2275,15 @@ export function BookingSearchWidget({
                 <div className="flex items-center gap-2">
                   <span
                     className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-[12px] font-bold text-white shadow-[0_2px_8px_-2px_rgba(219,184,120,0.5)]"
-                    style={{ background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)` }}
+                    style={{ background: `linear-gradient(135deg, ${ACCENT} 0%, ${ACCENT_DARK} 100%)` }}
                   >
                     <CalendarDays className="size-3" aria-hidden />
                     <span className="tabular-nums">{durationBadgeLabel}</span>
                   </span>
-                  <span className="text-[11px] font-medium text-[#6b5a3b]">مدة الحجز</span>
+                  <span className="text-[11px] font-medium text-[#334155]">مدة الحجز</span>
                 </div>
               ) : rental === "monthly_packages" ? (
-                <span className="flex items-center gap-1.5 text-[11px] text-[#aaa08e]">
+                <span className="flex items-center gap-1.5 text-[11px] text-[#94a3b8]">
                   تُشتق مدة البحث من يوم بدء الباقة ومدة الاشتراك أعلاه
                 </span>
               ) : null}
@@ -2292,14 +2292,14 @@ export function BookingSearchWidget({
 
           {/* Bottom info row — hidden in the default home search case */}
           {rental === "corporate" || isCheckout ? (
-            <div className="mt-2 flex flex-col gap-2 border-t border-[#ebe4d3]/60 pt-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-              <p className="text-[10px] leading-relaxed text-[#aaa08e]">
+            <div className="mt-2 flex flex-col gap-2 border-t border-[#e2e8f0]/60 pt-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+              <p className="text-[10px] leading-relaxed text-[#94a3b8]">
                 {rental === "corporate"
                   ? t("corporateSection.dataUsedForCommunicationOnly")
                   : "يُحدّث السعر والتوفر بعد تطبيق التواريخ على هذا الحجز"}
               </p>
               {rental === "corporate" ? (
-                <span className="text-[10.5px] font-bold text-[#6b5a3b]">
+                <span className="text-[10.5px] font-bold text-[#334155]">
                   {t("corporateSection.salesTeamMonitors")}
                 </span>
               ) : null}
@@ -2384,7 +2384,7 @@ function QuietTab({
       role="tab"
       aria-selected={active}
       onClick={onClick}
-      className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-1.5 text-[12px] font-bold outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-[#dbb878]/40 sm:px-4 sm:py-2 sm:text-[12.5px] ${
+      className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-1.5 text-[12px] font-bold outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-[#f5821f]/40 sm:px-4 sm:py-2 sm:text-[12.5px] ${
         active ? "" : "hover:bg-[#003749]/[0.05] hover:text-[#003749]"
       }`}
       style={
@@ -2424,7 +2424,7 @@ function ModeChip({
       role="tab"
       aria-selected={active}
       onClick={onClick}
-      className="flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-bold outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-[#dbb878]/40"
+      className="flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-bold outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-[#f5821f]/40"
       style={
         active
           ? {
@@ -2470,14 +2470,14 @@ function FieldCard({
       htmlFor={controlHtmlFor}
       className={`${titleClass} cursor-pointer`}
     >
-      <span className="text-[#dbb878]" aria-hidden>
+      <span className="text-[#f5821f]" aria-hidden>
         {icon}
       </span>
       {label}
     </label>
   ) : (
     <span id={groupLabelId} className={titleClass}>
-      <span className="text-[#dbb878]" aria-hidden>
+      <span className="text-[#f5821f]" aria-hidden>
         {icon}
       </span>
       {label}
@@ -2489,12 +2489,12 @@ function FieldCard({
       <div
         role="group"
         aria-labelledby={groupLabelId}
-        className="booking-field-card flex h-full min-h-[3.25rem] items-center gap-3 rounded-xl border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3"
+        className="booking-field-card flex h-full min-h-[3.25rem] items-center gap-3 rounded-xl border border-[#e2e8f0]/80 bg-[#f7fafc] p-3"
       >
         <span className="flex shrink-0 flex-col justify-center gap-0.5">
           {titleNode}
           {hint ? (
-            <span className="text-[9px] font-medium leading-snug text-[#8a7752]/90">{hint}</span>
+            <span className="text-[9px] font-medium leading-snug text-[#475569]/90">{hint}</span>
           ) : null}
         </span>
         <div className="min-w-0 flex-1">{children}</div>
@@ -2506,12 +2506,12 @@ function FieldCard({
     <div
       role="group"
       aria-labelledby={groupLabelId}
-      className="booking-field-card flex flex-col gap-1.5 rounded-xl border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3"
+      className="booking-field-card flex flex-col gap-1.5 rounded-xl border border-[#e2e8f0]/80 bg-[#f7fafc] p-3"
     >
       <span className="flex flex-col gap-0.5">
         {titleNode}
         {hint ? (
-          <span className="text-[9px] font-medium leading-snug text-[#8a7752]/90">{hint}</span>
+          <span className="text-[9px] font-medium leading-snug text-[#475569]/90">{hint}</span>
         ) : null}
       </span>
       <div className="min-h-[1.25rem]">{children}</div>

@@ -52,7 +52,7 @@ export function RentalTermsModal({ open, onClose, terms, loading }: Props) {
         className="relative flex max-h-[85vh] w-full max-w-[640px] flex-col overflow-hidden rounded-3xl bg-white shadow-[0_32px_80px_-24px_rgba(15,61,71,0.35)] ring-1 ring-black/[0.06]"
         dir={isEn ? "ltr" : "rtl"}
       >
-        <div className="flex items-center gap-3 border-b border-[#ebe4d3] px-6 py-5 sm:px-8">
+        <div className="flex items-center gap-3 border-b border-[#e2e8f0] px-6 py-5 sm:px-8">
           <div
             className="flex size-11 shrink-0 items-center justify-center rounded-2xl shadow-inner"
             style={{
@@ -71,7 +71,7 @@ export function RentalTermsModal({ open, onClose, terms, loading }: Props) {
           <button
             type="button"
             onClick={onClose}
-            className="ms-auto rounded-full p-1.5 text-[#aaa08e] transition-colors hover:bg-[#fdfbf6] hover:text-[#003749]"
+            className="ms-auto rounded-full p-1.5 text-[#94a3b8] transition-colors hover:bg-[#f7fafc] hover:text-[#003749]"
             aria-label={isEn ? "Close" : "إغلاق"}
           >
             <X className="size-5" aria-hidden />
@@ -82,12 +82,12 @@ export function RentalTermsModal({ open, onClose, terms, loading }: Props) {
           {loading ? (
             <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
               <div className="h-7 w-7 animate-spin rounded-full border-2 border-[#003749] border-t-transparent" />
-              <p className="text-xs font-bold text-[#8a7752]">
+              <p className="text-xs font-bold text-[#475569]">
                 {isEn ? "Loading terms..." : "جاري تحميل الشروط والأحكام..."}
               </p>
             </div>
           ) : terms.length === 0 ? (
-            <p className="text-center text-[14px] font-semibold text-[#aaa08e]">
+            <p className="text-center text-[14px] font-semibold text-[#94a3b8]">
               {isEn
                 ? "Terms and conditions are not available at the moment."
                 : "الشروط والأحكام غير متوفرة حالياً."}
@@ -97,7 +97,7 @@ export function RentalTermsModal({ open, onClose, terms, loading }: Props) {
               {terms.map((term, i) => (
                 <li key={term.id}>
                   <h3 className="mb-2 flex items-baseline gap-2 text-[15px] font-extrabold text-[#003749]">
-                    <span className="text-[#c9a356]">{i + 1}.</span>
+                    <span className="text-[#d9690a]">{i + 1}.</span>
                     {term.title}
                   </h3>
                   <p className="whitespace-pre-line text-[13.5px] font-medium leading-relaxed text-[#4b5563]">

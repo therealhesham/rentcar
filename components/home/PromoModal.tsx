@@ -233,7 +233,7 @@ export function PromoModal({ slides, cooldownMinutes, locale }: Props) {
               type="button"
               onClick={dismiss}
               aria-label={closeLabel}
-              className="absolute -top-3 rounded-full bg-white p-2 text-[#003749] shadow-lg transition hover:bg-[#dbb878] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#dbb878] ltr:-right-3 rtl:-left-3"
+              className="absolute -top-3 rounded-full bg-white p-2 text-[#003749] shadow-lg transition hover:bg-[#f5821f] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f5821f] ltr:-right-3 rtl:-left-3"
             >
               <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" aria-hidden>
                 <path d="M18 6L6 18M6 6l12 12" />

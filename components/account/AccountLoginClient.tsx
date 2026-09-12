@@ -14,7 +14,7 @@ import { BOOKING_OTP_LENGTH, BOOKING_OTP_REGEX } from "@/lib/booking-otp-constan
 import type { BookingOtpChannel } from "@/lib/site-settings";
 
 const TEAL = "#003749";
-const GOLD = "#dbb878";
+const ACCENT = "#f5821f";
 
 type Props = {
   /** بعد تسجيل الدخول (مثلاً صفحة دفع حجز). */
@@ -235,15 +235,15 @@ export function AccountLoginClient({ returnTo = "/account" }: Props) {
     (otpChannel === "SMS" || otpChannel === "EMAIL" || otpChannel === "WHATSAPP");
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#fdfbf6] text-on-surface">
+    <div className="flex min-h-screen flex-col bg-[#f7fafc] text-on-surface">
       <SiteNav active="home" />
       <div className="flex flex-1 flex-col items-center justify-center px-4 pb-16 pt-28">
         <div
-          className="w-full max-w-md overflow-hidden rounded-3xl border border-[#ebe4d3] bg-white p-8 shadow-[0_24px_60px_-20px_rgba(15,61,71,0.12)]"
+          className="w-full max-w-md overflow-hidden rounded-3xl border border-[#e2e8f0] bg-white p-8 shadow-[0_24px_60px_-20px_rgba(15,61,71,0.12)]"
           style={{ color: TEAL }}
         >
           <h1 className="mb-1 text-2xl font-extrabold text-[#003749]">{t("loginTitle")}</h1>
-          <p className="mb-8 text-sm font-semibold leading-relaxed text-[#6b5a3b]">
+          <p className="mb-8 text-sm font-semibold leading-relaxed text-[#334155]">
             {useOtpOnly
               ? otpChannel === "EMAIL"
                 ? t("loginSubtitleEmail")
@@ -254,7 +254,7 @@ export function AccountLoginClient({ returnTo = "/account" }: Props) {
           </p>
 
           {!cfgLoaded ? (
-            <div className="flex items-center justify-center gap-2 py-12 text-sm font-bold text-[#aaa08e]">
+            <div className="flex items-center justify-center gap-2 py-12 text-sm font-bold text-[#94a3b8]">
               <Loader2 className="size-5 animate-spin" aria-hidden />
               {t("loading")}
             </div>
@@ -275,7 +275,7 @@ export function AccountLoginClient({ returnTo = "/account" }: Props) {
                         onChange={(ev) => setIdentifier(ev.target.value)}
                         autoComplete="email"
                         placeholder="name@example.com"
-                        className="w-full rounded-xl border border-[#ebe4d3] bg-white px-4 py-3.5 text-[15px] font-semibold text-[#003749] outline-none transition-shadow focus:border-[#dbb878] focus:ring-2 focus:ring-[#dbb878]/40"
+                        className="w-full rounded-xl border border-[#e2e8f0] bg-white px-4 py-3.5 text-[15px] font-semibold text-[#003749] outline-none transition-shadow focus:border-[#f5821f] focus:ring-2 focus:ring-[#f5821f]/40"
                         dir="ltr"
                       />
                     </label>
@@ -284,7 +284,7 @@ export function AccountLoginClient({ returnTo = "/account" }: Props) {
                       <span className="mb-1.5 block text-[13px] font-extrabold text-[#003749]">
                         {t("phone")}
                       </span>
-                      <div className="flex overflow-hidden rounded-xl border border-[#ebe4d3] transition-shadow focus-within:border-[#dbb878] focus-within:ring-2 focus-within:ring-[#dbb878]/40">
+                      <div className="flex overflow-hidden rounded-xl border border-[#e2e8f0] transition-shadow focus-within:border-[#f5821f] focus-within:ring-2 focus-within:ring-[#f5821f]/40">
                       <input
                           type="tel"
                           inputMode="numeric"
@@ -300,14 +300,14 @@ export function AccountLoginClient({ returnTo = "/account" }: Props) {
                           dir="ltr"
                         />
                         <span
-                          className="flex items-center border-e border-[#ebe4d3] bg-[#fdfbf6] px-3 text-[13px] font-extrabold tabular-nums text-[#003749]"
+                          className="flex items-center border-e border-[#e2e8f0] bg-[#f7fafc] px-3 text-[13px] font-extrabold tabular-nums text-[#003749]"
                           dir="ltr"
                         >
                           +966
                         </span>
                   
                       </div>
-                      <span className="mt-1.5 block text-[11px] font-semibold text-[#8a7752]">
+                      <span className="mt-1.5 block text-[11px] font-semibold text-[#475569]">
                         {t("phoneHint")}
                       </span>
                     </label>
@@ -318,7 +318,7 @@ export function AccountLoginClient({ returnTo = "/account" }: Props) {
                     disabled={otpSendBusy || otpCooldownSec > 0}
                     className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-[15px] font-extrabold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-45"
                     style={{
-                      background: `linear-gradient(135deg, ${GOLD} 0%, #c9a356 100%)`,
+                      background: `linear-gradient(135deg, ${ACCENT} 0%, #d9690a 100%)`,
                       boxShadow: "0 8px 24px -6px rgba(219,184,120,0.45)",
                     }}
                   >
@@ -360,13 +360,13 @@ export function AccountLoginClient({ returnTo = "/account" }: Props) {
                       type="button"
                       onClick={() => void handleResendOtp()}
                       disabled={otpSendBusy || otpCooldownSec > 0}
-                      className="text-[13px] font-extrabold text-[#003749] underline decoration-[#dbb878] underline-offset-2 disabled:opacity-40"
+                      className="text-[13px] font-extrabold text-[#003749] underline decoration-[#f5821f] underline-offset-2 disabled:opacity-40"
                     >
                       {otpCooldownSec > 0 ? t("resendAfter", { sec: otpCooldownSec }) : t("resend")}
                     </button>
                     <button
                       type="button"
-                      className="text-[13px] font-bold text-[#8a7752] hover:text-[#003749]"
+                      className="text-[13px] font-bold text-[#475569] hover:text-[#003749]"
                       onClick={() => {
                         setOtpStep("identifier");
                         setOtp("");
@@ -401,7 +401,7 @@ export function AccountLoginClient({ returnTo = "/account" }: Props) {
                   type="email"
                   required
                   autoComplete="email"
-                  className="mt-1.5 w-full rounded-xl border border-[#ebe4d3] bg-white px-4 py-3.5 text-on-surface outline-none focus:border-[#dbb878] focus:ring-2 focus:ring-[#dbb878]/40"
+                  className="mt-1.5 w-full rounded-xl border border-[#e2e8f0] bg-white px-4 py-3.5 text-on-surface outline-none focus:border-[#f5821f] focus:ring-2 focus:ring-[#f5821f]/40"
                   dir="ltr"
                 />
               </label>
@@ -412,7 +412,7 @@ export function AccountLoginClient({ returnTo = "/account" }: Props) {
                   type="password"
                   required
                   autoComplete="current-password"
-                  className="mt-1.5 w-full rounded-xl border border-[#ebe4d3] bg-white px-4 py-3.5 outline-none focus:border-[#dbb878] focus:ring-2 focus:ring-[#dbb878]/40"
+                  className="mt-1.5 w-full rounded-xl border border-[#e2e8f0] bg-white px-4 py-3.5 outline-none focus:border-[#f5821f] focus:ring-2 focus:ring-[#f5821f]/40"
                 />
               </label>
               {state?.error ? (
@@ -430,14 +430,14 @@ export function AccountLoginClient({ returnTo = "/account" }: Props) {
             </form>
           )}
 
-          <p className="mt-8 text-center text-sm font-semibold text-[#6b5a3b]">
+          <p className="mt-8 text-center text-sm font-semibold text-[#334155]">
             {t("noAccount")}{" "}
             <Link href="/account/register" className="font-extrabold text-[#003749] underline underline-offset-2">
               {t("createAccount")}
             </Link>
           </p>
           <p className="mt-3 text-center text-sm">
-            <Link href="/" className="font-semibold text-[#8a7752] hover:text-[#003749]">
+            <Link href="/" className="font-semibold text-[#475569] hover:text-[#003749]">
               {t("backHome")}
             </Link>
           </p>

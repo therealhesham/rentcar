@@ -70,30 +70,30 @@ export function ServicesSection() {
 
     const card = (
       <>
-        <div className="absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-gradient-to-r from-[#dbb878] to-[#c9a356] transition-transform duration-500 ease-out group-hover:scale-x-100" />
+        <div className="absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-gradient-to-r from-[#f5821f] to-[#d9690a] transition-transform duration-500 ease-out group-hover:scale-x-100" />
 
         <div className="mb-5 flex items-center justify-between sm:mb-8">
-          <div className="relative flex size-12 items-center justify-center rounded-xl bg-[#fdfbf6] shadow-sm ring-1 ring-[#ebe4d3] transition-all duration-500 group-hover:scale-110 group-hover:shadow-md sm:size-16 sm:rounded-2xl">
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#dbb878]/10 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-            <Icon className="relative z-10 size-6 text-[#003749] transition-colors duration-300 group-hover:text-[#dbb878] sm:size-7" />
+          <div className="relative flex size-12 items-center justify-center rounded-xl bg-[#f7fafc] shadow-sm ring-1 ring-[#e2e8f0] transition-all duration-500 group-hover:scale-110 group-hover:shadow-md sm:size-16 sm:rounded-2xl">
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#f5821f]/10 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+            <Icon className="relative z-10 size-6 text-[#003749] transition-colors duration-300 group-hover:text-[#f5821f] sm:size-7" />
           </div>
-          {/* <div className="text-3xl font-black text-[#003749]/[0.03] transition-colors duration-500 group-hover:text-[#dbb878]/10 sm:text-4xl">
+          {/* <div className="text-3xl font-black text-[#003749]/[0.03] transition-colors duration-500 group-hover:text-[#f5821f]/10 sm:text-4xl">
             0{index + 1}
           </div> */}
         </div>
 
         <div className="flex-1">
-          <h3 className="mb-3 text-lg font-extrabold text-[#003749] transition-colors duration-300 group-hover:text-[#6b5a3b] sm:mb-4 sm:text-xl">
+          <h3 className="mb-3 text-lg font-extrabold text-[#003749] transition-colors duration-300 group-hover:text-[#334155] sm:mb-4 sm:text-xl">
             {title}
           </h3>
-          <p className="text-[14.5px] font-medium leading-[1.8] text-[#8a7752]">
+          <p className="text-[14.5px] font-medium leading-[1.8] text-[#475569]">
             {description}
           </p>
         </div>
       </>
     );
 
-    const baseClass = `group relative flex flex-col overflow-hidden rounded-2xl border border-[#ebe4d3]/60 bg-white/80 p-5 shadow-[0_8px_24px_-12px_rgba(15,61,71,0.08)] backdrop-blur-md transition-all duration-500 hover:-translate-y-1.5 hover:border-[#dbb878]/40 hover:bg-white hover:shadow-[0_20px_40px_-12px_rgba(219,184,120,0.15)] sm:rounded-[2rem] sm:p-8 ${colSpanClass}`;
+    const baseClass = `group relative flex flex-col overflow-hidden rounded-2xl border border-[#e2e8f0]/60 bg-white/80 p-5 shadow-[0_8px_24px_-12px_rgba(15,61,71,0.08)] backdrop-blur-md transition-all duration-500 hover:-translate-y-1.5 hover:border-[#f5821f]/40 hover:bg-white hover:shadow-[0_20px_40px_-12px_rgba(219,184,120,0.15)] sm:rounded-[2rem] sm:p-8 ${colSpanClass}`;
 
     if (reduced) {
       return (
@@ -117,11 +117,11 @@ export function ServicesSection() {
   const header = (
     <div className="mb-10 flex flex-col items-center justify-center px-1 text-center sm:mb-16">
       <div className="mb-4 flex items-center justify-center gap-3">
-        <span className="h-[1.5px] w-12 rounded-full bg-gradient-to-l from-[#dbb878] to-transparent" />
-        <span className="text-xs sm:text-[14px] font-black uppercase tracking-[0.2em] text-[#dbb878]">
+        <span className="h-[1.5px] w-12 rounded-full bg-gradient-to-l from-[#f5821f] to-transparent" />
+        <span className="text-xs sm:text-[14px] font-black uppercase tracking-[0.2em] text-[#f5821f]">
           {t("addedValue")}
         </span>
-        <span className="h-[1.5px] w-12 rounded-full bg-gradient-to-r from-[#dbb878] to-transparent" />
+        <span className="h-[1.5px] w-12 rounded-full bg-gradient-to-r from-[#f5821f] to-transparent" />
       </div>
       <h2 className="text-2xl font-extrabold tracking-tight text-[#003749] sm:text-4xl lg:text-5xl">
         {t("title")}
@@ -164,7 +164,7 @@ export function ServicesSection() {
   );
 
   return (
-    <section className="relative overflow-hidden bg-[#fdfbf6] px-4 py-12 sm:px-8 sm:py-28" dir={locale === 'ar' ? 'rtl' : 'ltr'}>
+    <section className="relative overflow-hidden bg-[#f7fafc] px-4 py-12 sm:px-8 sm:py-28" dir={locale === 'ar' ? 'rtl' : 'ltr'}>
       <div
         className="absolute inset-0 opacity-[0.02]"
         style={{
@@ -173,7 +173,7 @@ export function ServicesSection() {
           backgroundSize: "24px 24px",
         }}
       />
-      <div className="absolute -start-[20rem] top-0 h-[40rem] w-[40rem] rounded-full bg-gradient-to-tr from-[#dbb878]/10 to-transparent blur-3xl" />
+      <div className="absolute -start-[20rem] top-0 h-[40rem] w-[40rem] rounded-full bg-gradient-to-tr from-[#f5821f]/10 to-transparent blur-3xl" />
       <div className="absolute -end-[20rem] bottom-0 h-[40rem] w-[40rem] rounded-full bg-gradient-to-bl from-[#003749]/5 to-transparent blur-3xl" />
 
       {inner}

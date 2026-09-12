@@ -47,10 +47,10 @@ export function PickupReturnBranchFields({
     ? "mb-1.5 text-[10px] font-black uppercase tracking-wide text-[#003749]/45"
     : "mb-1.5 text-[10px] font-black uppercase tracking-wide text-[#003749]/55";
   const returnBoxClass = dense
-    ? "rounded-xl border border-[#ebe4d3]/60 bg-white/50 p-3"
-    : "rounded-lg border border-[#ebe4d3]/70 bg-white/40 p-2.5";
+    ? "rounded-xl border border-[#e2e8f0]/60 bg-white/50 p-3"
+    : "rounded-lg border border-[#e2e8f0]/70 bg-white/40 p-2.5";
   const selectClass = dense
-    ? "w-full min-w-0 cursor-pointer appearance-none rounded-lg border border-[#ebe4d3]/70 bg-white/80 py-2 pe-8 ps-2.5 text-[14px] font-semibold text-[#0f1923] outline-none transition-[border-color,box-shadow] focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25 disabled:cursor-not-allowed disabled:opacity-50"
+    ? "w-full min-w-0 cursor-pointer appearance-none rounded-lg border border-[#e2e8f0]/70 bg-white/80 py-2 pe-8 ps-2.5 text-[14px] font-semibold text-[#0f1923] outline-none transition-[border-color,box-shadow] focus-visible:border-[#f5821f] focus-visible:ring-2 focus-visible:ring-[#f5821f]/25 disabled:cursor-not-allowed disabled:opacity-50"
     : undefined;
   const labelClass = dense
     ? "shrink-0 self-center text-[10px] font-bold uppercase tracking-wide text-[#003749]/45"
@@ -86,7 +86,7 @@ export function PickupReturnBranchFields({
           type="checkbox"
           checked={returnLocationDifferent}
           onChange={(ev) => onReturnLocationDifferentChange(ev.target.checked)}
-          className="size-4 shrink-0 cursor-pointer rounded border-[#c9a356]/60 text-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/35"
+          className="size-4 shrink-0 cursor-pointer rounded border-[#d9690a]/60 text-[#f5821f] focus-visible:ring-2 focus-visible:ring-[#f5821f]/35"
         />
         موقع الإرجاع مختلف
       </label>

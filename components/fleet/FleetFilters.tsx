@@ -32,7 +32,7 @@ type FleetFiltersProps = {
 };
 
 const EMBEDDED_FIELD_CLASS =
-  "w-full rounded-xl border border-[#ebe4d3]/80 bg-[#fdfbf6] py-3 ps-4 text-[13px] text-[#3d3428] focus:ring-2 focus:ring-[#dbb878]/35 disabled:opacity-60";
+  "w-full rounded-xl border border-[#e2e8f0]/80 bg-[#f7fafc] py-3 ps-4 text-[13px] text-[#3d3428] focus:ring-2 focus:ring-[#f5821f]/35 disabled:opacity-60";
 
 export function FleetFilters({
   categories,
@@ -135,8 +135,8 @@ export function FleetFilters({
   const atMaxBound = sliderPrice >= priceBounds.max;
 
   const labelClass = embedded
-    ? "ms-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#6b5a3b]"
-    : "ms-1 text-xs font-bold uppercase tracking-widest text-primary";
+    ? "ms-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#334155]"
+    : "ms-1 text-xs font-bold uppercase tracking-widest text-[#B45A0A]";
 
   const filtersGrid = (
     <div className={`grid grid-cols-1 ${embedded ? "gap-4 md:gap-5" : "gap-8"} md:grid-cols-3`}>
@@ -149,7 +149,7 @@ export function FleetFilters({
               </label>
               <select
                 id="fleet-filter-category"
-                className={embedded ? EMBEDDED_FIELD_CLASS : "w-full rounded-lg border-none bg-surface py-3 ps-4 text-on-surface-variant focus:ring-1 focus:ring-primary-container disabled:opacity-60"}
+                className={embedded ? EMBEDDED_FIELD_CLASS : "w-full rounded-lg border-none bg-surface py-3 ps-4 text-on-surface-variant focus:ring-1 focus:ring-[#F5821F]-container disabled:opacity-60"}
                 value={appliedCategory}
                 disabled={isPending}
                 onChange={(e) => pushFilters({ category: e.target.value })}
@@ -172,7 +172,7 @@ export function FleetFilters({
               </label>
               <select
                 id="fleet-filter-brand"
-                className={embedded ? EMBEDDED_FIELD_CLASS : "w-full rounded-lg border-none bg-surface py-3 ps-4 text-on-surface-variant focus:ring-1 focus:ring-primary-container disabled:opacity-60"}
+                className={embedded ? EMBEDDED_FIELD_CLASS : "w-full rounded-lg border-none bg-surface py-3 ps-4 text-on-surface-variant focus:ring-1 focus:ring-[#F5821F]-container disabled:opacity-60"}
                 value={appliedBrandId}
                 disabled={isPending}
                 onChange={(e) => pushFilters({ brandId: e.target.value })}
@@ -198,7 +198,7 @@ export function FleetFilters({
                   <span
                     className={
                       embedded
-                        ? "text-[10px] font-semibold text-[#aaa08e]"
+                        ? "text-[10px] font-semibold text-[#94a3b8]"
                         : "text-[10px] font-semibold text-on-surface-variant"
                     }
                   >
@@ -210,7 +210,7 @@ export function FleetFilters({
                 <span
                   className={
                     embedded
-                      ? "text-[10px] font-semibold text-[#aaa08e]"
+                      ? "text-[10px] font-semibold text-[#94a3b8]"
                       : "text-[10px] font-semibold text-on-surface-variant"
                   }
                 >
@@ -221,7 +221,7 @@ export function FleetFilters({
                   amountClassName={
                     embedded
                       ? "text-base font-extrabold tabular-nums text-[#003749]"
-                      : "text-base font-extrabold tabular-nums text-primary"
+                      : "text-base font-extrabold tabular-nums text-[#B45A0A]"
                   }
                 >
                   {atMaxBound ? `${formatPrice(priceBounds.max)}+` : formatPrice(sliderPrice)}
@@ -236,7 +236,7 @@ export function FleetFilters({
                 </span>
                 <input
                   id="fleet-filter-max-price"
-                  className={`h-2 min-w-0 flex-1 cursor-pointer ${embedded ? "accent-[#dbb878]" : "accent-primary"}`}
+                  className="h-2 min-w-0 flex-1 cursor-pointer accent-[#f5821f]"
                   type="range"
                   min={priceBounds.min}
                   max={priceBounds.max}
@@ -263,8 +263,8 @@ export function FleetFilters({
 
   if (embedded) {
     return (
-      <div className="border-t border-[#f0ebe4] bg-gradient-to-b from-[#fdfbf6]/70 to-white px-3 py-4 sm:px-5 sm:py-5">
-        <p className="mb-3 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-[#6b5a3b] sm:mb-4">
+      <div className="border-t border-[#f1f5f9] bg-gradient-to-b from-[#f7fafc]/70 to-white px-3 py-4 sm:px-5 sm:py-5">
+        <p className="mb-3 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-[#334155] sm:mb-4">
           {t("filterResults")}
         </p>
         {filtersGrid}

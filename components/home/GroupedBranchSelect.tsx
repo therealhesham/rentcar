@@ -6,7 +6,7 @@ import type { BookingCityBranchesOption } from "@/lib/booking-location-options";
 import { citySlugForBranchSlug } from "@/lib/fleet-search-url-hydrate";
 
 const DEFAULT_SELECT_CLASS =
-  "w-full min-w-0 cursor-pointer appearance-none rounded-lg border border-[#ebe4d3]/70 bg-white/70 py-2 pe-8 ps-2.5 text-[13px] font-semibold text-[#0f1923] outline-none transition-[border-color,box-shadow,background-color] hover:bg-white focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25 disabled:cursor-not-allowed disabled:opacity-45";
+  "w-full min-w-0 cursor-pointer appearance-none rounded-lg border border-[#e2e8f0]/70 bg-white/70 py-2 pe-8 ps-2.5 text-[13px] font-semibold text-[#0f1923] outline-none transition-[border-color,box-shadow,background-color] hover:bg-white focus-visible:border-[#f5821f] focus-visible:ring-2 focus-visible:ring-[#f5821f]/25 disabled:cursor-not-allowed disabled:opacity-45";
 
 type Props = {
   id: string;

@@ -23,7 +23,7 @@ const pillars = [
     icon: (
       <svg viewBox="0 0 40 40" fill="none" className="h-10 w-10" aria-hidden>
         <circle cx="20" cy="20" r="19" stroke="#003749" strokeWidth="2" />
-        <circle cx="20" cy="20" r="10" stroke="#dbb878" strokeWidth="2" />
+        <circle cx="20" cy="20" r="10" stroke="#f5821f" strokeWidth="2" />
         <circle cx="20" cy="20" r="3" fill="#003749" />
       </svg>
     ),
@@ -38,7 +38,7 @@ const pillars = [
           strokeWidth="2"
           fill="none"
         />
-        <circle cx="20" cy="19" r="4" fill="#dbb878" />
+        <circle cx="20" cy="19" r="4" fill="#f5821f" />
       </svg>
     ),
   },
@@ -47,7 +47,7 @@ const pillars = [
     icon: (
       <svg viewBox="0 0 40 40" fill="none" className="h-10 w-10" aria-hidden>
         <rect x="4" y="4" width="32" height="32" rx="8" stroke="#003749" strokeWidth="2" />
-        <path d="M13 20l5 5 9-10" stroke="#dbb878" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M13 20l5 5 9-10" stroke="#f5821f" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     ),
   },
@@ -56,7 +56,7 @@ const pillars = [
     icon: (
       <svg viewBox="0 0 40 40" fill="none" className="h-10 w-10" aria-hidden>
         <path d="M8 32 L8 20 L16 20 L16 32" stroke="#003749" strokeWidth="2" strokeLinecap="round" />
-        <path d="M18 32 L18 14 L26 14 L26 32" stroke="#dbb878" strokeWidth="2" strokeLinecap="round" />
+        <path d="M18 32 L18 14 L26 14 L26 32" stroke="#f5821f" strokeWidth="2" strokeLinecap="round" />
         <path d="M28 32 L28 8 L36 8 L36 32" stroke="#003749" strokeWidth="2" strokeLinecap="round" />
       </svg>
     ),
@@ -142,7 +142,7 @@ export default async function AboutPage({ params }: { params: Promise<{ locale: 
           </p>
         </div>
         {/* شريط ذهبي سفلي */}
-        <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-[#dbb878]" aria-hidden />
+        <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-[#f5821f]" aria-hidden />
       </header>
 
       {/* ─── أعمدة الهوية (رؤية / رسالة / قيم / ميادين) ─── */}
@@ -151,7 +151,7 @@ export default async function AboutPage({ params }: { params: Promise<{ locale: 
           {pillars.map((p) => (
             <div
               key={p.key}
-              className="flex flex-col gap-4 rounded-2xl border border-[#dbb878]/40 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
+              className="flex flex-col gap-4 rounded-2xl border border-[#f5821f]/40 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
             >
               <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-[#003749]/5">
                 {p.icon}
@@ -227,7 +227,7 @@ export default async function AboutPage({ params }: { params: Promise<{ locale: 
             {branches.map((branch) => (
               <article
                 key={branch.id}
-                className="flex flex-col gap-3 rounded-2xl border border-[#dbb878]/50 bg-[#fdf3e0] p-5 shadow-[0_8px_24px_rgba(119,89,39,0.08)] transition-shadow hover:shadow-[0_14px_36px_rgba(119,89,39,0.14)]"
+                className="flex flex-col gap-3 rounded-2xl border border-[#f5821f]/50 bg-[#fdf3e0] p-5 shadow-[0_8px_24px_rgba(119,89,39,0.08)] transition-shadow hover:shadow-[0_14px_36px_rgba(119,89,39,0.14)]"
               >
                 <header className="text-center">
                   <h3 className="text-sm font-extrabold text-[#003749]">{branch.name}</h3>
@@ -262,7 +262,7 @@ export default async function AboutPage({ params }: { params: Promise<{ locale: 
                   href={resolveBranchMapUrl(branch.slug, branch.name, branch.mapUrl)}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-xs font-bold text-[#775927] underline underline-offset-4 transition-opacity hover:opacity-80"
+                  className="text-xs font-bold text-[#b45a0a] underline underline-offset-4 transition-opacity hover:opacity-80"
                 >
                   {t("branchLocation")}
                 </a>

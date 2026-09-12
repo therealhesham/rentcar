@@ -196,21 +196,21 @@ export function DateTimePickerPopover({
       role="dialog"
       aria-label={`${t("select")} ${label}`}
       style={panelStyle}
-      className="datetime-popover flex flex-col overflow-hidden rounded-2xl border border-[#ebe4d3] bg-white shadow-[0_20px_60px_-10px_rgba(0,55,73,0.22),0_4px_16px_-4px_rgba(0,55,73,0.12)]"
+      className="datetime-popover flex flex-col overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-[0_20px_60px_-10px_rgba(0,55,73,0.22),0_4px_16px_-4px_rgba(0,55,73,0.12)]"
       dir="rtl"
     >
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-[#f0ebe4] bg-gradient-to-l from-[#fdfbf6] to-[#f9f5ee] px-4 py-3">
+      <div className="flex items-center justify-between border-b border-[#f1f5f9] bg-gradient-to-l from-[#f7fafc] to-[#f7fafc] px-4 py-3">
         <div className="flex items-center gap-2">
-          <span className="flex size-7 items-center justify-center rounded-full bg-[#dbb878]/15">
-            <Calendar className="size-3.5 text-[#dbb878]" />
+          <span className="flex size-7 items-center justify-center rounded-full bg-[#f5821f]/15">
+            <Calendar className="size-3.5 text-[#f5821f]" />
           </span>
           <span className="text-[13px] font-bold text-[#003749]">{t("select")} {label}</span>
         </div>
         <button
           type="button"
           onClick={onClose}
-          className="flex size-7 items-center justify-center rounded-full text-[#8a7752] transition-colors hover:bg-[#f0ebe4] hover:text-[#003749]"
+          className="flex size-7 items-center justify-center rounded-full text-[#475569] transition-colors hover:bg-[#f1f5f9] hover:text-[#003749]"
           aria-label="إغلاق"
         >
           <X className="size-4" />
@@ -225,7 +225,7 @@ export function DateTimePickerPopover({
             <button
               type="button"
               onClick={prevMonth}
-              className="flex size-7 items-center justify-center rounded-full text-[#8a7752] transition-colors hover:bg-[#f0ebe4] hover:text-[#003749]"
+              className="flex size-7 items-center justify-center rounded-full text-[#475569] transition-colors hover:bg-[#f1f5f9] hover:text-[#003749]"
             >
               <ChevronRight className="size-4" />
             </button>
@@ -235,7 +235,7 @@ export function DateTimePickerPopover({
             <button
               type="button"
               onClick={nextMonth}
-              className="flex size-7 items-center justify-center rounded-full text-[#8a7752] transition-colors hover:bg-[#f0ebe4] hover:text-[#003749]"
+              className="flex size-7 items-center justify-center rounded-full text-[#475569] transition-colors hover:bg-[#f1f5f9] hover:text-[#003749]"
             >
               <ChevronLeft className="size-4" />
             </button>
@@ -243,7 +243,7 @@ export function DateTimePickerPopover({
           {/* Day headers */}
           <div className="mb-1 grid grid-cols-7 gap-0.5 text-center">
             {DAYS_AR.map((d) => (
-              <span key={d} className="py-0.5 text-[10px] font-bold text-[#8a7752]">{d}</span>
+              <span key={d} className="py-0.5 text-[10px] font-bold text-[#475569]">{d}</span>
             ))}
           </div>
           {/* Calendar cells */}
@@ -261,11 +261,11 @@ export function DateTimePickerPopover({
                     ${!cell.currMonth ? "opacity-0 pointer-events-none" : ""}
                     ${cell.disabled && cell.currMonth ? "cursor-not-allowed text-[#ddd] opacity-50" : ""}
                     ${isSelected && !cell.disabled
-                      ? "bg-gradient-to-br from-[#dbb878] to-[#c9a356] text-white shadow-[0_2px_8px_-2px_rgba(219,184,120,0.6)]"
+                      ? "bg-gradient-to-br from-[#f5821f] to-[#d9690a] text-white shadow-[0_2px_8px_-2px_rgba(219,184,120,0.6)]"
                       : isToday && !cell.disabled
-                        ? "border border-[#dbb878]/60 text-[#003749]"
+                        ? "border border-[#f5821f]/60 text-[#003749]"
                         : !cell.disabled && cell.currMonth
-                          ? "text-[#3a2f1e] hover:bg-[#fdfbf6]"
+                          ? "text-[#1e293b] hover:bg-[#f7fafc]"
                           : ""
                     }`}
                 >
@@ -278,9 +278,9 @@ export function DateTimePickerPopover({
 
         {/* Time picker */}
         {!timeReadOnly && (
-          <div className="flex w-[90px] shrink-0 flex-col border-r border-[#f0ebe4]">
-            <div className="flex items-center justify-center gap-1 border-b border-[#f0ebe4] bg-[#fdfbf6] py-2.5">
-              <Clock className="size-3 text-[#dbb878]" />
+          <div className="flex w-[90px] shrink-0 flex-col border-r border-[#f1f5f9]">
+            <div className="flex items-center justify-center gap-1 border-b border-[#f1f5f9] bg-[#f7fafc] py-2.5">
+              <Clock className="size-3 text-[#f5821f]" />
               <span className="text-[11px] font-bold text-[#003749]">الوقت</span>
             </div>
             <div
@@ -298,8 +298,8 @@ export function DateTimePickerPopover({
                     onClick={() => setSelectedTime(t)}
                     className={`flex w-full items-center justify-center py-2 text-[12px] font-semibold tabular-nums transition-all
                       ${isActive
-                        ? "bg-gradient-to-r from-[#dbb878] to-[#c9a356] text-white"
-                        : "text-[#3a2f1e] hover:bg-[#fdfbf6]"
+                        ? "bg-gradient-to-r from-[#f5821f] to-[#d9690a] text-white"
+                        : "text-[#1e293b] hover:bg-[#f7fafc]"
                       }`}
                   >
                     {t}
@@ -310,24 +310,24 @@ export function DateTimePickerPopover({
           </div>
         )}
         {timeReadOnly && (
-          <div className="flex w-[90px] shrink-0 flex-col items-center justify-center border-r border-[#f0ebe4] bg-[#fdfbf6]">
-            <Clock className="size-5 text-[#dbb878]/40 mb-1" />
-            <span className="text-center text-[11px] font-semibold text-[#aaa08e] px-2">الوقت محدد آلياً</span>
+          <div className="flex w-[90px] shrink-0 flex-col items-center justify-center border-r border-[#f1f5f9] bg-[#f7fafc]">
+            <Clock className="size-5 text-[#f5821f]/40 mb-1" />
+            <span className="text-center text-[11px] font-semibold text-[#94a3b8] px-2">الوقت محدد آلياً</span>
           </div>
         )}
       </div>
 
       {/* Footer / confirm */}
-      <div className="border-t border-[#f0ebe4] bg-[#fdfbf6] px-4 py-3 flex items-center justify-between gap-3">
+      <div className="border-t border-[#f1f5f9] bg-[#f7fafc] px-4 py-3 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-[12px] font-bold text-[#003749]">
           {selectedYmd ? (
             <>
               <span>{ymdToDdMmYy(selectedYmd)}</span>
-              {!timeReadOnly && <span className="text-[#dbb878]">•</span>}
+              {!timeReadOnly && <span className="text-[#f5821f]">•</span>}
               {!timeReadOnly && <span dir="ltr">{selectedTime}</span>}
             </>
           ) : (
-            <span className="text-[#aaa08e]">لم يُحدد بعد</span>
+            <span className="text-[#94a3b8]">لم يُحدد بعد</span>
           )}
         </div>
         <button
@@ -335,7 +335,7 @@ export function DateTimePickerPopover({
           disabled={!selectedYmd}
           onClick={handleConfirm}
           className="rounded-xl px-4 py-1.5 text-[12px] font-extrabold text-white transition-all disabled:opacity-40"
-          style={{ background: "linear-gradient(135deg, #dbb878 0%, #c9a356 100%)" }}
+          style={{ background: "linear-gradient(135deg, #f5821f 0%, #d9690a 100%)" }}
         >
           تأكيد
         </button>

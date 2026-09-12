@@ -153,10 +153,10 @@ function yearHasSelectableDay(year: number, minYmd?: string, maxYmd?: string): b
 }
 
 const navBtnClass =
-  "flex size-6 shrink-0 items-center justify-center rounded-md border border-[#ebe4d3]/90 bg-white text-[#003749] outline-none transition-all hover:border-[#dbb878]/60 hover:bg-[#fffdf8] focus-visible:ring-1 focus-visible:ring-[#dbb878]/40 disabled:pointer-events-none disabled:opacity-40";
+  "flex size-6 shrink-0 items-center justify-center rounded-md border border-[#e2e8f0]/90 bg-white text-[#003749] outline-none transition-all hover:border-[#f5821f]/60 hover:bg-[#ffffff] focus-visible:ring-1 focus-visible:ring-[#f5821f]/40 disabled:pointer-events-none disabled:opacity-40";
 
 const chipBtnClass =
-  "inline-flex min-h-6 min-w-0 flex-1 items-center justify-center rounded px-1.5 py-0.5 text-[10px] font-extrabold outline-none transition-all focus-visible:ring-1 focus-visible:ring-[#dbb878]/40";
+  "inline-flex min-h-6 min-w-0 flex-1 items-center justify-center rounded px-1.5 py-0.5 text-[10px] font-extrabold outline-none transition-all focus-visible:ring-1 focus-visible:ring-[#f5821f]/40";
 
 function ViewPills({
   calView,
@@ -167,7 +167,7 @@ function ViewPills({
 }) {
   return (
     <div
-      className="mb-1.5 flex gap-px rounded-md bg-[#f0ebe3]/80 p-px ring-1 ring-[#ebe4d3]/60"
+      className="mb-1.5 flex gap-px rounded-md bg-[#f0ebe3]/80 p-px ring-1 ring-[#e2e8f0]/60"
       role="tablist"
       aria-label="مستوى التقويم"
     >
@@ -181,7 +181,7 @@ function ViewPills({
           className={`${chipBtnClass} ${
             calView === id
               ? "bg-[#003749] text-white shadow-sm"
-              : "text-[#6b5a3b] hover:bg-white/90 hover:text-[#003749]"
+              : "text-[#334155] hover:bg-white/90 hover:text-[#003749]"
           }`}
         >
           {label}
@@ -203,21 +203,21 @@ function PanelFooter({
   const label = formatYmdDisplayAr(nativeYmd, true);
   return (
     <div
-      className="mt-1.5 flex items-center justify-between gap-1 border-t border-[#ebe4d3]/70 pt-1.5"
+      className="mt-1.5 flex items-center justify-between gap-1 border-t border-[#e2e8f0]/70 pt-1.5"
       dir="rtl"
     >
       {label ? (
-        <p className="min-w-0 truncate text-[9px] font-semibold text-[#6b5a3b]">
+        <p className="min-w-0 truncate text-[9px] font-semibold text-[#334155]">
           <span className="font-extrabold text-[#003749]">{label}</span>
         </p>
       ) : (
-        <p className="text-[9px] font-medium text-[#aaa08e]">—</p>
+        <p className="text-[9px] font-medium text-[#94a3b8]">—</p>
       )}
       {todayEnabled ? (
         <button
           type="button"
           onClick={onToday}
-          className="shrink-0 text-[9px] font-extrabold text-[#003749] underline decoration-[#dbb878]/70 underline-offset-2 hover:text-[#dbb878]"
+          className="shrink-0 text-[9px] font-extrabold text-[#003749] underline decoration-[#f5821f]/70 underline-offset-2 hover:text-[#f5821f]"
         >
           اليوم
         </button>
@@ -368,7 +368,7 @@ export function DdMmYyDateWithPicker({
   for (let y = yearEnd; y >= yearStart; y--) yearOptions.push(y);
 
   const headerPickerBtn =
-    "inline-flex items-center justify-center gap-px rounded-md border border-[#ebe4d3]/90 bg-white px-1.5 py-0.5 text-[10px] font-extrabold text-[#003749] outline-none transition-all hover:border-[#dbb878]/55 hover:bg-[#fffdf8] focus-visible:ring-1 focus-visible:ring-[#dbb878]/40";
+    "inline-flex items-center justify-center gap-px rounded-md border border-[#e2e8f0]/90 bg-white px-1.5 py-0.5 text-[10px] font-extrabold text-[#003749] outline-none transition-all hover:border-[#f5821f]/55 hover:bg-[#ffffff] focus-visible:ring-1 focus-visible:ring-[#f5821f]/40";
 
   const today = new Date();
   const todayYmd = toYmd(today.getFullYear(), today.getMonth(), today.getDate());
@@ -397,7 +397,7 @@ export function DdMmYyDateWithPicker({
               onClick={() => setCalView("month")}
             >
               <span>{monthNameAr(vm, true)}</span>
-              <ChevronDown className="size-2.5 shrink-0 text-[#dbb878]" aria-hidden />
+              <ChevronDown className="size-2.5 shrink-0 text-[#f5821f]" aria-hidden />
             </button>
             <button
               type="button"
@@ -407,7 +407,7 @@ export function DdMmYyDateWithPicker({
               onClick={() => setCalView("year")}
             >
               <span>{vy}</span>
-              <ChevronDown className="size-2.5 shrink-0 text-[#dbb878]" aria-hidden />
+              <ChevronDown className="size-2.5 shrink-0 text-[#f5821f]" aria-hidden />
             </button>
           </div>
           <button
@@ -445,11 +445,11 @@ export function DdMmYyDateWithPicker({
                 onClick={() => handleSelectDay(ymd)}
                 aria-label={formatYmdDisplayAr(ymd) ?? ymd}
                 aria-current={selected ? "date" : undefined}
-                className={`flex h-6 w-full items-center justify-center rounded-md text-[10px] font-extrabold tabular-nums outline-none transition-all focus-visible:ring-1 focus-visible:ring-[#dbb878]/45 disabled:cursor-not-allowed disabled:opacity-30 ${
+                className={`flex h-6 w-full items-center justify-center rounded-md text-[10px] font-extrabold tabular-nums outline-none transition-all focus-visible:ring-1 focus-visible:ring-[#f5821f]/45 disabled:cursor-not-allowed disabled:opacity-30 ${
                   selected
-                    ? "bg-gradient-to-br from-[#003749] to-[#0a4d63] text-white shadow-sm ring-1 ring-[#dbb878]/40"
+                    ? "bg-gradient-to-br from-[#003749] to-[#0a4d63] text-white shadow-sm ring-1 ring-[#f5821f]/40"
                     : isToday
-                      ? "bg-[#dbb878]/15 text-[#003749] ring-1 ring-[#dbb878]/50 hover:bg-[#dbb878]/25"
+                      ? "bg-[#f5821f]/15 text-[#003749] ring-1 ring-[#f5821f]/50 hover:bg-[#f5821f]/25"
                       : "text-[#0f1923] hover:bg-white hover:shadow-sm"
                 }`}
               >
@@ -463,11 +463,11 @@ export function DdMmYyDateWithPicker({
   } else if (calView === "month") {
     panelBody = (
       <>
-        <p className="mb-1 text-center text-[10px] font-bold text-[#8a7752]" dir="rtl">
+        <p className="mb-1 text-center text-[10px] font-bold text-[#475569]" dir="rtl">
           سنة{" "}
           <button
             type="button"
-            className="font-extrabold text-[#003749] underline decoration-[#dbb878]/60 underline-offset-2"
+            className="font-extrabold text-[#003749] underline decoration-[#f5821f]/60 underline-offset-2"
             onClick={() => setCalView("year")}
           >
             {vy}
@@ -488,12 +488,12 @@ export function DdMmYyDateWithPicker({
                   setPanelView(new Date(vy, m, 1));
                   setCalView("day");
                 }}
-                className={`rounded-md px-1 py-1.5 text-[10px] font-extrabold outline-none transition-all focus-visible:ring-1 focus-visible:ring-[#dbb878]/45 disabled:cursor-not-allowed disabled:opacity-30 ${
+                className={`rounded-md px-1 py-1.5 text-[10px] font-extrabold outline-none transition-all focus-visible:ring-1 focus-visible:ring-[#f5821f]/45 disabled:cursor-not-allowed disabled:opacity-30 ${
                   isCurrent
                     ? "bg-[#003749] text-white shadow-sm"
                     : isSelectedMonth
-                      ? "border-2 border-[#dbb878] bg-[#fffdf8] text-[#003749]"
-                      : "border border-[#ebe4d3]/80 bg-white text-[#003749] hover:border-[#dbb878]/50 hover:shadow-sm"
+                      ? "border-2 border-[#f5821f] bg-[#ffffff] text-[#003749]"
+                      : "border border-[#e2e8f0]/80 bg-white text-[#003749] hover:border-[#f5821f]/50 hover:shadow-sm"
                 }`}
               >
                 {monthNameAr(m, true)}
@@ -507,7 +507,7 @@ export function DdMmYyDateWithPicker({
     panelBody = (
       <div
         ref={yearScrollRef}
-        className="max-h-[132px] overflow-y-auto overscroll-contain rounded-md border border-[#ebe4d3]/70 bg-white/60 p-0.5 shadow-inner"
+        className="max-h-[132px] overflow-y-auto overscroll-contain rounded-md border border-[#e2e8f0]/70 bg-white/60 p-0.5 shadow-inner"
         dir="ltr"
       >
         <div className="grid grid-cols-4 gap-px">
@@ -525,12 +525,12 @@ export function DdMmYyDateWithPicker({
                   setPanelView(new Date(y, vm, 1));
                   setCalView("month");
                 }}
-                className={`rounded-md py-1 text-[11px] font-extrabold tabular-nums outline-none transition-all focus-visible:ring-1 focus-visible:ring-[#dbb878]/45 disabled:cursor-not-allowed disabled:opacity-30 ${
+                className={`rounded-md py-1 text-[11px] font-extrabold tabular-nums outline-none transition-all focus-visible:ring-1 focus-visible:ring-[#f5821f]/45 disabled:cursor-not-allowed disabled:opacity-30 ${
                   isCurrent
                     ? "bg-[#003749] text-white shadow-sm"
                     : isSelectedYear
-                      ? "border-2 border-[#dbb878] bg-[#fffdf8] text-[#003749]"
-                      : "bg-white text-[#003749] hover:bg-[#fffdf8] hover:ring-1 hover:ring-[#dbb878]/40"
+                      ? "border-2 border-[#f5821f] bg-[#ffffff] text-[#003749]"
+                      : "bg-white text-[#003749] hover:bg-[#ffffff] hover:ring-1 hover:ring-[#f5821f]/40"
                 }`}
               >
                 {y}
@@ -560,7 +560,7 @@ export function DdMmYyDateWithPicker({
               aria-label={calendarButtonLabel}
               style={panelStyle}
               onMouseDown={(e) => e.preventDefault()}
-              className="w-[252px] max-w-[calc(100vw-1rem)] rounded-lg border border-[#ebe4d3]/90 bg-gradient-to-b from-[#fffdf8] to-[#fdfbf6] p-2 shadow-[0_20px_48px_-18px_rgba(15,61,71,0.18)] ring-1 ring-[#dbb878]/12"
+              className="w-[252px] max-w-[calc(100vw-1rem)] rounded-lg border border-[#e2e8f0]/90 bg-gradient-to-b from-[#ffffff] to-[#f7fafc] p-2 shadow-[0_20px_48px_-18px_rgba(15,61,71,0.18)] ring-1 ring-[#f5821f]/12"
             >
               <ViewPills calView={calView} onChange={setCalView} />
 
@@ -588,10 +588,10 @@ export function DdMmYyDateWithPicker({
         ref={anchorRef}
         className={`flex items-stretch overflow-hidden rounded-lg border bg-white shadow-sm transition-[border-color,box-shadow] ${
           open
-            ? "border-[#dbb878]/70 ring-2 ring-[#dbb878]/25"
+            ? "border-[#f5821f]/70 ring-2 ring-[#f5821f]/25"
             : hasValidSelection
-              ? "border-[#ebe4d3]/90"
-              : "border-[#ebe4d3]/90 focus-within:border-[#dbb878]/50 focus-within:ring-2 focus-within:ring-[#dbb878]/20"
+              ? "border-[#e2e8f0]/90"
+              : "border-[#e2e8f0]/90 focus-within:border-[#f5821f]/50 focus-within:ring-2 focus-within:ring-[#f5821f]/20"
         } ${rowClassName}`.trim()}
       >
         <div className="relative min-w-0 flex-1">
@@ -610,7 +610,7 @@ export function DdMmYyDateWithPicker({
             readOnly={readOnly}
             dir="ltr"
             aria-describedby={hasValidSelection ? `${id}-picked` : undefined}
-            className={`min-w-0 w-full border-0 bg-transparent px-2 py-1.5 text-[12px] font-semibold tabular-nums text-[#003749] outline-none placeholder:text-[#aaa08e]/80 disabled:cursor-not-allowed disabled:opacity-60 read-only:opacity-90 ${inputClassName}`.trim()}
+            className={`min-w-0 w-full border-0 bg-transparent px-2 py-1.5 text-[12px] font-semibold tabular-nums text-[#003749] outline-none placeholder:text-[#94a3b8]/80 disabled:cursor-not-allowed disabled:opacity-60 read-only:opacity-90 ${inputClassName}`.trim()}
           />
           {hasValidSelection ? (
             <span id={`${id}-picked`} className="sr-only">
@@ -630,11 +630,11 @@ export function DdMmYyDateWithPicker({
           title={calendarButtonLabel}
           aria-expanded={open}
           aria-controls={open ? panelId : undefined}
-          className={`flex shrink-0 items-center justify-center border-s border-[#ebe4d3]/80 px-2 outline-none transition-colors focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[#dbb878]/40 disabled:pointer-events-none disabled:opacity-45 ${
-            open ? "bg-[#dbb878]/15 text-[#003749]" : "bg-[#fdfbf6] text-[#003749] hover:bg-[#dbb878]/10"
+          className={`flex shrink-0 items-center justify-center border-s border-[#e2e8f0]/80 px-2 outline-none transition-colors focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[#f5821f]/40 disabled:pointer-events-none disabled:opacity-45 ${
+            open ? "bg-[#f5821f]/15 text-[#003749]" : "bg-[#f7fafc] text-[#003749] hover:bg-[#f5821f]/10"
           } ${buttonClassName}`.trim()}
         >
-          <CalendarDays className={`size-3.5 ${open ? "text-[#c9a356]" : ""}`} aria-hidden />
+          <CalendarDays className={`size-3.5 ${open ? "text-[#d9690a]" : ""}`} aria-hidden />
         </button>
       </div>
       {portal}

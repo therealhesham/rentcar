@@ -156,11 +156,11 @@ export function OtpPinInput({
             aria-label={`${ariaLabel} — رقم ${index + 1}`}
             className={`size-12 sm:size-14 rounded-xl border-2 bg-white text-center text-[22px] font-extrabold tabular-nums text-[#003749] outline-none transition-[border-color,box-shadow,transform] sm:text-[26px] ${
               disabled
-                ? "cursor-not-allowed border-[#ebe4d3]/80 bg-[#f9f7f3] opacity-60"
+                ? "cursor-not-allowed border-[#e2e8f0]/80 bg-[#f9f7f3] opacity-60"
                 : digit
-                  ? "border-[#dbb878] shadow-[0_0_0_3px_rgba(219,184,120,0.2)]"
-                  : "border-[#ebe4d3] hover:border-[#dbb878]/50"
-            } focus:border-[#dbb878] focus:shadow-[0_0_0_4px_rgba(219,184,120,0.28)] focus:scale-[1.02]`}
+                  ? "border-[#f5821f] shadow-[0_0_0_3px_rgba(219,184,120,0.2)]"
+                  : "border-[#e2e8f0] hover:border-[#f5821f]/50"
+            } focus:border-[#f5821f] focus:shadow-[0_0_0_4px_rgba(219,184,120,0.28)] focus:scale-[1.02]`}
             onChange={(ev) => handleDigitChange(index, ev.target.value)}
             onKeyDown={(ev) => handleKeyDown(index, ev)}
             onPaste={handlePaste}

@@ -100,8 +100,8 @@ function getSiteLinks(t: any) {
 
 /** خلفية تيل داكنة + شريط ذهبي سفلي (معايير فوتر الموقع) */
 const FOOTER_BG = "#003749";
-const FOOTER_ACCENT = "#d4b896";
-const FOOTER_GOLD = "#dbb878";
+const FOOTER_ACCENT = "#f0a15c";
+const FOOTER_GOLD = "#f5821f";
 
 function isLinkActive(pathname: string, href: string) {
   if (href === "#" || href.startsWith("#")) return false;
@@ -145,7 +145,7 @@ export function SiteFooter() {
   return (
     <footer className="w-full text-white" style={{ backgroundColor: FOOTER_BG }}>
       <div
-        className="h-[3px] w-full bg-gradient-to-r from-transparent via-[#dbb878] to-transparent"
+        className="h-[3px] w-full bg-gradient-to-r from-transparent via-[#f5821f] to-transparent"
         aria-hidden
       />
       <div className="mx-auto grid max-w-screen-xl grid-cols-1 gap-10 px-5 py-10 text-center sm:px-8 sm:py-14 md:grid-cols-3 md:text-right">
@@ -172,7 +172,7 @@ export function SiteFooter() {
                     <button
                       type="button"
                       onClick={handleOpenTerms}
-                      className="text-base text-white transition-colors hover:text-[#dbb878] cursor-pointer"
+                      className="text-base text-white transition-colors hover:text-[#f5821f] cursor-pointer"
                     >
                       {link.label}
                     </button>
@@ -185,7 +185,7 @@ export function SiteFooter() {
                     href={link.href}
                     className={`text-base transition-colors ${active
                       ? "font-bold"
-                      : "text-white hover:text-[#dbb878]"
+                      : "text-white hover:text-[#f5821f]"
                       }`}
                     style={
                       active
@@ -217,7 +217,7 @@ export function SiteFooter() {
                     rel="noopener noreferrer"
                     aria-label={s.label || s.platform}
                     title={s.label || s.platform}
-                    className="text-neutral-900 transition-all hover:-translate-y-0.5 hover:text-[#a8874f]"
+                    className="text-neutral-900 transition-all hover:-translate-y-0.5 hover:text-[#b45a0a]"
                   >
                     <IconComponent className="h-5 w-5" />
                   </a>

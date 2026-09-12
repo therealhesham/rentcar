@@ -25,8 +25,8 @@ import {
   isDateTimeWithinBranchSchedule,
 } from "@/lib/branch-opening-hours";
 
-const GOLD = "#dbb878";
-const GOLD_DARK = "#c9a356";
+const ACCENT = "#f5821f";
+const ACCENT_DARK = "#d9690a";
 const TEAL = "#003749";
 
 type Props = {
@@ -317,9 +317,9 @@ export function FleetBookNowHintModal({
 
   if (!open || typeof document === "undefined") return null;
 
-  const fieldTriggerBase = `field-trigger relative flex w-full flex-col gap-1 rounded-xl border border-[#ebe4d3]/80 bg-[#fdfbf6] p-3.5 ${
+  const fieldTriggerBase = `field-trigger relative flex w-full flex-col gap-1 rounded-xl border border-[#e2e8f0]/80 bg-[#f7fafc] p-3.5 ${
     isRTL ? "pe-9 text-right" : "ps-9 text-left"
-  } outline-none transition-[border-color,box-shadow,background-color] hover:border-[#dbb878]/55 hover:bg-[#fffdf8] focus-visible:border-[#dbb878] focus-visible:ring-2 focus-visible:ring-[#dbb878]/25`;
+  } outline-none transition-[border-color,box-shadow,background-color] hover:border-[#f5821f]/55 hover:bg-[#ffffff] focus-visible:border-[#f5821f] focus-visible:ring-2 focus-visible:ring-[#f5821f]/25`;
 
   const closeLabel = isRTL ? "إغلاق" : "Close";
 
@@ -343,7 +343,7 @@ export function FleetBookNowHintModal({
         <button
           type="button"
           onClick={onClose}
-          className="absolute end-4 top-4 z-10 rounded-full bg-white/80 p-1.5 text-[#aaa08e] backdrop-blur-sm transition-colors hover:bg-[#fdfbf6] hover:text-[#003749]"
+          className="absolute end-4 top-4 z-10 rounded-full bg-white/80 p-1.5 text-[#94a3b8] backdrop-blur-sm transition-colors hover:bg-[#f7fafc] hover:text-[#003749]"
           aria-label={closeLabel}
         >
           <X className="size-5" aria-hidden />
@@ -389,15 +389,15 @@ export function FleetBookNowHintModal({
                   setPickupTimeOpen(false);
                   setDropoffTimeOpen(false);
                 }}
-                className={`${fieldTriggerBase} ${pickupLocOpen ? "border-[#dbb878] ring-2 ring-[#dbb878]/30" : ""}`}
+                className={`${fieldTriggerBase} ${pickupLocOpen ? "border-[#f5821f] ring-2 ring-[#f5821f]/30" : ""}`}
               >
                 <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
-                  <MapPin className="size-3 text-[#dbb878]" aria-hidden />
+                  <MapPin className="size-3 text-[#f5821f]" aria-hidden />
                   {isRTL ? "موقع الاستلام" : "Pickup Location"}
                 </span>
                 <span className="truncate text-[13px] font-bold text-[#0f1923]">
                   {branchLabel(branchValue) || (
-                    <span className="font-medium text-[#aaa08e]">
+                    <span className="font-medium text-[#94a3b8]">
                       {hasBranches
                         ? isRTL
                           ? "اختر الفرع"
@@ -409,7 +409,7 @@ export function FleetBookNowHintModal({
                   )}
                 </span>
                 <ChevronDown
-                  className={`absolute ${isRTL ? "left-3" : "right-3"} top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${pickupLocOpen ? "rotate-180" : ""}`}
+                  className={`absolute ${isRTL ? "left-3" : "right-3"} top-1/2 size-3.5 -translate-y-1/2 text-[#f5821f] transition-transform ${pickupLocOpen ? "rotate-180" : ""}`}
                   aria-hidden
                 />
               </button>
@@ -436,21 +436,21 @@ export function FleetBookNowHintModal({
                   aria-expanded={dateRangeOpen && dateRangeAnchor === "pickup"}
                   aria-haspopup="dialog"
                   onClick={() => toggleDateRange("pickup")}
-                  className={`${fieldTriggerBase} ${dateRangeOpen && dateRangeAnchor === "pickup" ? "border-[#dbb878] ring-2 ring-[#dbb878]/30" : ""}`}
+                  className={`${fieldTriggerBase} ${dateRangeOpen && dateRangeAnchor === "pickup" ? "border-[#f5821f] ring-2 ring-[#f5821f]/30" : ""}`}
                 >
                   <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
-                    <CalendarClock className="size-3 text-[#dbb878]" aria-hidden />
+                    <CalendarClock className="size-3 text-[#f5821f]" aria-hidden />
                     {isRTL ? "تاريخ الاستلام" : "Pickup Date"}
                   </span>
                   {pickupDateDraft ? (
                     <span className="text-[13px] font-bold text-[#0f1923]">{pickupDateDraft}</span>
                   ) : (
-                    <span className="text-[13px] font-medium text-[#aaa08e]">
+                    <span className="text-[13px] font-medium text-[#94a3b8]">
                       {isRTL ? "اختر التاريخ" : "Select Date"}
                     </span>
                   )}
                   <ChevronDown
-                    className={`absolute ${isRTL ? "left-3" : "right-3"} top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${dateRangeOpen && dateRangeAnchor === "pickup" ? "rotate-180" : ""}`}
+                    className={`absolute ${isRTL ? "left-3" : "right-3"} top-1/2 size-3.5 -translate-y-1/2 text-[#f5821f] transition-transform ${dateRangeOpen && dateRangeAnchor === "pickup" ? "rotate-180" : ""}`}
                     aria-hidden
                   />
                 </button>
@@ -468,17 +468,17 @@ export function FleetBookNowHintModal({
                     setDateRangeOpen(false);
                     setDropoffTimeOpen(false);
                   }}
-                  className={`${fieldTriggerBase} ${pickupTimeOpen ? "border-[#dbb878] ring-2 ring-[#dbb878]/30" : ""}`}
+                  className={`${fieldTriggerBase} ${pickupTimeOpen ? "border-[#f5821f] ring-2 ring-[#f5821f]/30" : ""}`}
                 >
                   <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
-                    <Clock className="size-3 text-[#dbb878]" aria-hidden />
+                    <Clock className="size-3 text-[#f5821f]" aria-hidden />
                     {isRTL ? "وقت الاستلام" : "Pickup Time"}
                   </span>
                   <span className="text-[13px] font-bold text-[#0f1923]" dir="ltr">
                     {pickupTimeDraft}
                   </span>
                   <ChevronDown
-                    className={`absolute ${isRTL ? "left-3" : "right-3"} top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${pickupTimeOpen ? "rotate-180" : ""}`}
+                    className={`absolute ${isRTL ? "left-3" : "right-3"} top-1/2 size-3.5 -translate-y-1/2 text-[#f5821f] transition-transform ${pickupTimeOpen ? "rotate-180" : ""}`}
                     aria-hidden
                   />
                 </button>
@@ -499,21 +499,21 @@ export function FleetBookNowHintModal({
                   aria-expanded={dateRangeOpen && dateRangeAnchor === "dropoff"}
                   aria-haspopup="dialog"
                   onClick={() => toggleDateRange("dropoff")}
-                  className={`${fieldTriggerBase} ${dateRangeOpen && dateRangeAnchor === "dropoff" ? "border-[#dbb878] ring-2 ring-[#dbb878]/30" : ""}`}
+                  className={`${fieldTriggerBase} ${dateRangeOpen && dateRangeAnchor === "dropoff" ? "border-[#f5821f] ring-2 ring-[#f5821f]/30" : ""}`}
                 >
                   <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
-                    <CalendarRange className="size-3 text-[#dbb878]" aria-hidden />
+                    <CalendarRange className="size-3 text-[#f5821f]" aria-hidden />
                     {isRTL ? "تاريخ التسليم" : "Return Date"}
                   </span>
                   {dropoffDateDraft ? (
                     <span className="text-[13px] font-bold text-[#0f1923]">{dropoffDateDraft}</span>
                   ) : (
-                    <span className="text-[13px] font-medium text-[#aaa08e]">
+                    <span className="text-[13px] font-medium text-[#94a3b8]">
                       {isRTL ? "اختر التاريخ" : "Select Date"}
                     </span>
                   )}
                   <ChevronDown
-                    className={`absolute ${isRTL ? "left-3" : "right-3"} top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${dateRangeOpen && dateRangeAnchor === "dropoff" ? "rotate-180" : ""}`}
+                    className={`absolute ${isRTL ? "left-3" : "right-3"} top-1/2 size-3.5 -translate-y-1/2 text-[#f5821f] transition-transform ${dateRangeOpen && dateRangeAnchor === "dropoff" ? "rotate-180" : ""}`}
                     aria-hidden
                   />
                 </button>
@@ -545,17 +545,17 @@ export function FleetBookNowHintModal({
                     setDateRangeOpen(false);
                     setPickupTimeOpen(false);
                   }}
-                  className={`${fieldTriggerBase} ${dropoffTimeOpen ? "border-[#dbb878] ring-2 ring-[#dbb878]/30" : ""}`}
+                  className={`${fieldTriggerBase} ${dropoffTimeOpen ? "border-[#f5821f] ring-2 ring-[#f5821f]/30" : ""}`}
                 >
                   <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#003749]/55">
-                    <Clock className="size-3 text-[#dbb878]" aria-hidden />
+                    <Clock className="size-3 text-[#f5821f]" aria-hidden />
                     {isRTL ? "وقت التسليم" : "Return Time"}
                   </span>
                   <span className="text-[13px] font-bold text-[#0f1923]" dir="ltr">
                     {dropoffTimeDraft}
                   </span>
                   <ChevronDown
-                    className={`absolute ${isRTL ? "left-3" : "right-3"} top-1/2 size-3.5 -translate-y-1/2 text-[#dbb878] transition-transform ${dropoffTimeOpen ? "rotate-180" : ""}`}
+                    className={`absolute ${isRTL ? "left-3" : "right-3"} top-1/2 size-3.5 -translate-y-1/2 text-[#f5821f] transition-transform ${dropoffTimeOpen ? "rotate-180" : ""}`}
                     aria-hidden
                   />
                 </button>
@@ -582,7 +582,7 @@ export function FleetBookNowHintModal({
                 type="submit"
                 className="w-full rounded-2xl py-3.5 text-[15px] font-extrabold text-white shadow-[0_10px_28px_-10px_rgba(201,163,86,0.55)] transition-[transform,box-shadow] hover:-translate-y-0.5 active:translate-y-0"
                 style={{
-                  background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)`,
+                  background: `linear-gradient(135deg, ${ACCENT} 0%, ${ACCENT_DARK} 100%)`,
                 }}
               >
                 {isRTL ? "متابعة الحجز" : "Continue Booking"}
@@ -594,7 +594,7 @@ export function FleetBookNowHintModal({
             <button
               type="button"
               onClick={onClose}
-              className="w-full rounded-2xl border-2 border-[#003749]/18 bg-white py-3.5 text-[14px] font-extrabold text-[#003749] transition-colors hover:border-[#dbb878]/45 hover:bg-[#fdfbf6]"
+              className="w-full rounded-2xl border-2 border-[#003749]/18 bg-white py-3.5 text-[14px] font-extrabold text-[#003749] transition-colors hover:border-[#f5821f]/45 hover:bg-[#f7fafc]"
             >
               {isRTL ? "إلغاء" : "Cancel"}
             </button>

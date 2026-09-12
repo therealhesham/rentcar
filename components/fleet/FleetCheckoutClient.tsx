@@ -74,8 +74,8 @@ import {
 } from "@/lib/booking-search-shared";
 import { getDistanceKM } from "@/lib/geo-distance";
 
-const GOLD = "#dbb878";
-const GOLD_DARK = "#c9a356";
+const ACCENT = "#f5821f";
+const ACCENT_DARK = "#d9690a";
 const TEAL = "#003749";
 
 function AddonVisual({ iconKey }: { iconKey: string | null }) {
@@ -1280,7 +1280,7 @@ export function FleetCheckoutClient({
         : null;
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#fdfbf6] text-on-surface pb-[76px] lg:pb-0">
+    <div className="flex min-h-screen flex-col bg-[#f7fafc] text-on-surface pb-[76px] lg:pb-0">
       <SiteNav active="fleet" />
       <div className={`pt-24 pb-20 transition-opacity duration-500 ease-out ${mounted ? 'opacity-100' : 'opacity-0'}`}>
         <main className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
@@ -1289,7 +1289,7 @@ export function FleetCheckoutClient({
 
           <div className="mb-10 space-y-3">
             {/* {sp.get("rebook") === "1" ? (
-              <div className="rounded-2xl border border-[#dbb878]/40 bg-[#fffdf9] px-4 py-3 text-center text-[13px] font-semibold leading-relaxed text-[#5c4d2e]">
+              <div className="rounded-2xl border border-[#f5821f]/40 bg-[#ffffff] px-4 py-3 text-center text-[13px] font-semibold leading-relaxed text-[#5c4d2e]">
                 {isFreshRebookCheckoutBanner ? (
                   <>
                     حدّدوا <span className="text-[#003749]">تاريخ ووقت الاستلام والتسليم</span> في التقويم أدناه، ثم
@@ -1303,13 +1303,13 @@ export function FleetCheckoutClient({
                 )}
               </div>
             ) : trip.pickupIso ? (
-              <p className="text-center text-[13px] font-semibold leading-relaxed text-[#6b5a3b]">
+              <p className="text-center text-[13px] font-semibold leading-relaxed text-[#334155]">
                 لتغيير التواريخ أو الفروع: عدّلوا الحقول أدناه ثم «تطبيق التواريخ على الحجز».
               </p>
             ) : null} */}
             <div
               ref={tripEditorRef}
-              className="rounded-2xl border border-[#ebe4d3] bg-white/70 scroll-mt-24"
+              className="rounded-2xl border border-[#e2e8f0] bg-white/70 scroll-mt-24"
             >
               <button
                 type="button"
@@ -1323,7 +1323,7 @@ export function FleetCheckoutClient({
                     {t("editDatesOrBranch")}
                   </span>
                   {trip.pickupIso ? (
-                    <span className="mt-0.5 block truncate text-[12px] font-semibold text-[#6b5a3b]">
+                    <span className="mt-0.5 block truncate text-[12px] font-semibold text-[#334155]">
                       {pu.date} {pu.time} ← {du.date} {du.time}
                     </span>
                   ) : (
@@ -1333,14 +1333,14 @@ export function FleetCheckoutClient({
                   )}
                 </span>
                 <ChevronDown
-                  className={`size-4 shrink-0 text-[#8a7752] transition-transform ${
+                  className={`size-4 shrink-0 text-[#475569] transition-transform ${
                     tripEditorOpen ? "rotate-180" : ""
                   }`}
                   aria-hidden
                 />
               </button>
               {tripEditorOpen ? (
-                <div id="trip-editor" className="border-t border-[#ebe4d3] p-3">
+                <div id="trip-editor" className="border-t border-[#e2e8f0] p-3">
                   <BookingWidget
                     cities={bookingCities}
                     variant="checkout"
@@ -1372,13 +1372,13 @@ export function FleetCheckoutClient({
               {/* KYC — هوية / جواز + رخصة */}
               <section className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <span className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-[#dbb878] to-[#c9a356] text-sm font-extrabold text-white shadow-sm">
+                  <span className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-[#f5821f] to-[#d9690a] text-sm font-extrabold text-white shadow-sm">
                     1
                   </span>
                   <h2 className="text-xl font-extrabold text-[#003749]">{t("idAndLicense")}</h2>
                 </div>
                 {kycDocReq.licenseImage !== "HIDDEN" || kycDocReq.idImage !== "HIDDEN" ? (
-                  <p className="text-[13px] font-semibold leading-relaxed text-[#6b5a3b]">
+                  <p className="text-[13px] font-semibold leading-relaxed text-[#334155]">
                     {kycDocReq.licenseImage !== "HIDDEN" ? (
                       <>
                         {t("licenseImageLabel")}{" "}
@@ -1399,7 +1399,7 @@ export function FleetCheckoutClient({
                   </p>
                 ) : null}
 
-                <div className="rounded-3xl border border-[#ebe4d3] bg-white p-6 shadow-sm sm:p-8">
+                <div className="rounded-3xl border border-[#e2e8f0] bg-white p-6 shadow-sm sm:p-8">
                   <div className="mb-6 flex flex-wrap gap-2">
                     <button
                       type="button"
@@ -1409,8 +1409,8 @@ export function FleetCheckoutClient({
                         setKycFieldError(null);
                       }}
                       className={`rounded-xl px-4 py-2.5 text-[13px] font-extrabold transition-colors ${idDocKind === "SAUDI_ID"
-                        ? "bg-[#003749] text-white ring-2 ring-[#dbb878]/50"
-                        : "border border-[#ebe4d3] bg-[#fdfbf6] text-[#003749] hover:border-[#dbb878]/40"
+                        ? "bg-[#003749] text-white ring-2 ring-[#f5821f]/50"
+                        : "border border-[#e2e8f0] bg-[#f7fafc] text-[#003749] hover:border-[#f5821f]/40"
                         }`}
                     >
                       {t("citizenResident")}
@@ -1424,8 +1424,8 @@ export function FleetCheckoutClient({
                         setKycFieldError(null);
                       }}
                       className={`rounded-xl px-4 py-2.5 text-[13px] font-extrabold transition-colors ${idDocKind === "VISITOR"
-                        ? "bg-[#003749] text-white ring-2 ring-[#dbb878]/50"
-                        : "border border-[#ebe4d3] bg-[#fdfbf6] text-[#003749] hover:border-[#dbb878]/40"
+                        ? "bg-[#003749] text-white ring-2 ring-[#f5821f]/50"
+                        : "border border-[#e2e8f0] bg-[#f7fafc] text-[#003749] hover:border-[#f5821f]/40"
                         }`}
                     >
                       {t("visitor")}
@@ -1449,13 +1449,13 @@ export function FleetCheckoutClient({
                             }
                           }}
                           id="checkout-passport"
-                          className="peer w-full rounded-xl border border-[#ebe4d3] bg-transparent px-4 pb-3 pt-6 text-[14px] font-semibold text-[#003749] outline-none transition-all focus:border-[#dbb878] focus:ring-1 focus:ring-[#dbb878]"
+                          className="peer w-full rounded-xl border border-[#e2e8f0] bg-transparent px-4 pb-3 pt-6 text-[14px] font-semibold text-[#003749] outline-none transition-all focus:border-[#f5821f] focus:ring-1 focus:ring-[#f5821f]"
                           placeholder=" "
                           dir="ltr"
                         />
                         <label
                           htmlFor="checkout-passport"
-                          className="absolute start-4 top-4 text-[13px] font-bold text-[#aaa08e] transition-all peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-[#dbb878] peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:text-[10px]"
+                          className="absolute start-4 top-4 text-[13px] font-bold text-[#94a3b8] transition-all peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-[#f5821f] peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:text-[10px]"
                         >
                           {t("passportNumber")}
                         </label>
@@ -1482,13 +1482,13 @@ export function FleetCheckoutClient({
                             }
                           }}
                           id="checkout-national-id"
-                          className="peer w-full rounded-xl border border-[#ebe4d3] bg-transparent px-4 pb-3 pt-6 text-[14px] font-semibold text-[#003749] outline-none transition-all focus:border-[#dbb878] focus:ring-1 focus:ring-[#dbb878]"
+                          className="peer w-full rounded-xl border border-[#e2e8f0] bg-transparent px-4 pb-3 pt-6 text-[14px] font-semibold text-[#003749] outline-none transition-all focus:border-[#f5821f] focus:ring-1 focus:ring-[#f5821f]"
                           placeholder=" "
                           dir="ltr"
                         />
                         <label
                           htmlFor="checkout-national-id"
-                          className="absolute start-4 top-4 text-[13px] font-bold text-[#aaa08e] transition-all peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-[#dbb878] peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:text-[10px]"
+                          className="absolute start-4 top-4 text-[13px] font-bold text-[#94a3b8] transition-all peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-[#f5821f] peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:text-[10px]"
                         >
                           {t("nationalIdOrIqama")}
                         </label>
@@ -1520,20 +1520,20 @@ export function FleetCheckoutClient({
                           }
                         }}
                         id="checkout-license-no"
-                        className={`peer w-full rounded-xl border border-[#ebe4d3] px-4 pb-3 pt-6 text-[14px] font-semibold text-[#003749] outline-none transition-all focus:border-[#dbb878] focus:ring-1 focus:ring-[#dbb878] ${
-                          idDocKind === "SAUDI_ID" ? "cursor-not-allowed bg-[#f4f0ea]" : "bg-transparent"
+                        className={`peer w-full rounded-xl border border-[#e2e8f0] px-4 pb-3 pt-6 text-[14px] font-semibold text-[#003749] outline-none transition-all focus:border-[#f5821f] focus:ring-1 focus:ring-[#f5821f] ${
+                          idDocKind === "SAUDI_ID" ? "cursor-not-allowed bg-[#f1f5f9]" : "bg-transparent"
                         }`}
                         placeholder=" "
                         dir="ltr"
                       />
                       <label
                         htmlFor="checkout-license-no"
-                        className="absolute start-4 top-4 text-[13px] font-bold text-[#aaa08e] transition-all peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-[#dbb878] peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:text-[10px]"
+                        className="absolute start-4 top-4 text-[13px] font-bold text-[#94a3b8] transition-all peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-[#f5821f] peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:text-[10px]"
                       >
                         {idDocKind === "VISITOR" ? t("intlLicenseNumber") : t("licenseNumber")}
                       </label>
                       {idDocKind === "SAUDI_ID" ? (
-                        <p className="mt-1.5 text-[11px] font-semibold text-[#aaa08e]">
+                        <p className="mt-1.5 text-[11px] font-semibold text-[#94a3b8]">
                           {t("licenseAutofillNote")}
                         </p>
                       ) : null}
@@ -1546,7 +1546,7 @@ export function FleetCheckoutClient({
                       >
                         {t("licenseExpiry")}
                         <span className="text-red-600"> *</span>
-                        <span className="ms-1 font-mono text-[12px] font-semibold text-[#6b5a3b]">
+                        <span className="ms-1 font-mono text-[12px] font-semibold text-[#334155]">
                           (DD-MM-YY)
                         </span>
                       </label>
@@ -1565,13 +1565,13 @@ export function FleetCheckoutClient({
                         minYmd={rentalLastDayYmdForLicense ?? undefined}
                         required
                         rowClassName="w-full"
-                        inputClassName="!rounded-xl !border-[#ebe4d3] !bg-white py-2.5 text-[14px] font-mono tracking-wide text-[#003749]"
-                        buttonClassName="!rounded-xl !border-[#ebe4d3]"
+                        inputClassName="!rounded-xl !border-[#e2e8f0] !bg-white py-2.5 text-[14px] font-mono tracking-wide text-[#003749]"
+                        buttonClassName="!rounded-xl !border-[#e2e8f0]"
                       />
                       {rentalLastDayYmdForLicense ? (
                         <p
                           id="checkout-license-expiry-hint"
-                          className="mt-1.5 text-[12px] font-semibold text-[#6b5a3b]"
+                          className="mt-1.5 text-[12px] font-semibold text-[#334155]"
                         >
                           {t("licenseMinDateNote")}{" "}
                           <span dir="ltr" className="font-mono font-bold text-[#003749]">
@@ -1591,30 +1591,30 @@ export function FleetCheckoutClient({
                   >
                     {/* ID Card Upload */}
                     {kycDocReq.idImage === "HIDDEN" ? null : (
-                    <div className="group relative overflow-hidden rounded-2xl border-2 border-dashed border-[#dbb878]/40 bg-gradient-to-br from-[#fffef9] to-[#fdf9f0] p-5 transition-all hover:border-[#dbb878]/70 hover:shadow-[0_4px_16px_-6px_rgba(219,184,120,0.25)]">
+                    <div className="group relative overflow-hidden rounded-2xl border-2 border-dashed border-[#f5821f]/40 bg-gradient-to-br from-[#ffffff] to-[#f7fafc] p-5 transition-all hover:border-[#f5821f]/70 hover:shadow-[0_4px_16px_-6px_rgba(219,184,120,0.25)]">
                       <div className="mb-3 flex items-center gap-2">
-                        <div className="flex size-8 items-center justify-center rounded-lg bg-[#f4f0ea] text-[#dbb878]">
+                        <div className="flex size-8 items-center justify-center rounded-lg bg-[#f1f5f9] text-[#f5821f]">
                           <UserRound className="size-4" aria-hidden />
                         </div>
                         <div>
                           <p className="text-[13px] font-extrabold text-[#003749]">{t("idOrPassportImage")}</p>
-                          <p className="text-[11px] font-semibold text-[#aaa08e]">
+                          <p className="text-[11px] font-semibold text-[#94a3b8]">
                             {kycDocReq.idImage === "REQUIRED" ? t("required") : t("optional")}
                           </p>
                         </div>
                       </div>
                       {idCardUrl ? (
-                        <div className="relative mb-3 aspect-[16/10] w-full overflow-hidden rounded-xl border border-[#ebe4d3] bg-white shadow-sm">
+                        <div className="relative mb-3 aspect-[16/10] w-full overflow-hidden rounded-xl border border-[#e2e8f0] bg-white shadow-sm">
                           <Image src={idCardUrl} alt="" fill className="object-cover" sizes="(max-width:640px) 100vw,280px" unoptimized />
                           <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition-opacity group-hover:opacity-100">
                             <span className="rounded-lg bg-white/90 px-3 py-1 text-[11px] font-bold text-[#003749]">{t("changeImage")}</span>
                           </div>
                         </div>
                       ) : (
-                        <div className="mb-3 flex h-20 items-center justify-center rounded-xl border border-dashed border-[#dbb878]/30 bg-[#fdfbf6]">
+                        <div className="mb-3 flex h-20 items-center justify-center rounded-xl border border-dashed border-[#f5821f]/30 bg-[#f7fafc]">
                           <div className="text-center">
-                            <UserRound className="mx-auto mb-1 size-6 text-[#dbb878]/60" />
-                            <p className="text-[11px] font-semibold text-[#aaa08e]">{t("dragOrClick")}</p>
+                            <UserRound className="mx-auto mb-1 size-6 text-[#f5821f]/60" />
+                            <p className="text-[11px] font-semibold text-[#94a3b8]">{t("dragOrClick")}</p>
                           </div>
                         </div>
                       )}
@@ -1642,16 +1642,16 @@ export function FleetCheckoutClient({
 
                     {/* License Upload */}
                     {kycDocReq.licenseImage === "HIDDEN" ? null : (
-                    <div className="group relative overflow-hidden rounded-2xl border-2 border-[#dbb878]/60 bg-gradient-to-br from-[#fffef9] to-[#fdf9f0] p-5 shadow-[0_0_0_1px_rgba(219,184,120,0.15)] transition-all hover:border-[#dbb878] hover:shadow-[0_4px_16px_-6px_rgba(219,184,120,0.35)]">
+                    <div className="group relative overflow-hidden rounded-2xl border-2 border-[#f5821f]/60 bg-gradient-to-br from-[#ffffff] to-[#f7fafc] p-5 shadow-[0_0_0_1px_rgba(219,184,120,0.15)] transition-all hover:border-[#f5821f] hover:shadow-[0_4px_16px_-6px_rgba(219,184,120,0.35)]">
                       <div className="mb-3 flex items-center gap-2">
-                        <div className="flex size-8 items-center justify-center rounded-lg bg-[#dbb878]/20 text-[#c9a356]">
+                        <div className="flex size-8 items-center justify-center rounded-lg bg-[#f5821f]/20 text-[#d9690a]">
                           <FileImage className="size-4" aria-hidden />
                         </div>
                         <div>
                           <p className="text-[13px] font-extrabold text-[#003749]">{t("driverLicenseImage")}</p>
                           <p
                             className={`text-[11px] font-extrabold ${
-                              kycDocReq.licenseImage === "REQUIRED" ? "text-red-600" : "text-[#aaa08e]"
+                              kycDocReq.licenseImage === "REQUIRED" ? "text-red-600" : "text-[#94a3b8]"
                             }`}
                           >
                             {kycDocReq.licenseImage === "REQUIRED" ? t("required") : t("optional")}
@@ -1659,22 +1659,22 @@ export function FleetCheckoutClient({
                         </div>
                       </div>
                       {licenseDocUrl ? (
-                        <div className="relative mb-3 aspect-[16/10] w-full overflow-hidden rounded-xl border border-[#dbb878]/30 bg-white shadow-sm">
+                        <div className="relative mb-3 aspect-[16/10] w-full overflow-hidden rounded-xl border border-[#f5821f]/30 bg-white shadow-sm">
                           <Image src={licenseDocUrl} alt="" fill className="object-cover" sizes="(max-width:640px) 100vw,280px" unoptimized />
                           <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition-opacity group-hover:opacity-100">
                             <span className="rounded-lg bg-white/90 px-3 py-1 text-[11px] font-bold text-[#003749]">{t("changeImage")}</span>
                           </div>
                         </div>
                       ) : (
-                        <div className="mb-3 flex h-20 items-center justify-center rounded-xl border border-dashed border-[#dbb878]/50 bg-[#fffdf9]">
+                        <div className="mb-3 flex h-20 items-center justify-center rounded-xl border border-dashed border-[#f5821f]/50 bg-[#ffffff]">
                           <div className="text-center">
-                            <FileImage className="mx-auto mb-1 size-6 text-[#dbb878]/70" />
-                            <p className="text-[11px] font-semibold text-[#aaa08e]">{t("dragOrClick")}</p>
+                            <FileImage className="mx-auto mb-1 size-6 text-[#f5821f]/70" />
+                            <p className="text-[11px] font-semibold text-[#94a3b8]">{t("dragOrClick")}</p>
                           </div>
                         </div>
                       )}
                       <label className="relative flex cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl px-4 py-2.5 text-[12px] font-bold text-white transition-all"
-                        style={{ background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)`, boxShadow: '0 4px 12px -4px rgba(219,184,120,0.5)' }}>
+                        style={{ background: `linear-gradient(135deg, ${ACCENT} 0%, ${ACCENT_DARK} 100%)`, boxShadow: '0 4px 12px -4px rgba(219,184,120,0.5)' }}>
                         <FileImage className="size-3.5" />
                         {uploadingKyc === "license" ? t("uploading") : (licenseDocUrl ? t("changeLicense") : t("uploadLicense"))}
                         <input
@@ -1708,17 +1708,17 @@ export function FleetCheckoutClient({
               {/* Addons Section */}
               <section className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <span className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-[#dbb878] to-[#c9a356] text-sm font-extrabold text-white shadow-sm">
+                  <span className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-[#f5821f] to-[#d9690a] text-sm font-extrabold text-white shadow-sm">
                     2
                   </span>
                   <h2 className="text-xl font-extrabold text-[#003749]">{t("addonsAndInsurance")}</h2>
-                  <span className="rounded-full border border-[#ebe4d3] bg-[#fdfbf6] px-2.5 py-0.5 text-[11px] font-bold text-[#aaa08e]">{t("optional")}</span>
+                  <span className="rounded-full border border-[#e2e8f0] bg-[#f7fafc] px-2.5 py-0.5 text-[11px] font-bold text-[#94a3b8]">{t("optional")}</span>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   {addons.length === 0 ? (
-                    <div className="col-span-2 rounded-2xl border border-dashed border-[#ebe4d3] bg-white p-8 text-center">
-                      <p className="text-[14px] font-semibold text-[#aaa08e]">{t("noAddons")}</p>
+                    <div className="col-span-2 rounded-2xl border border-dashed border-[#e2e8f0] bg-white p-8 text-center">
+                      <p className="text-[14px] font-semibold text-[#94a3b8]">{t("noAddons")}</p>
                     </div>
                   ) : (
                     addons.map((a) => {
@@ -1730,8 +1730,8 @@ export function FleetCheckoutClient({
                         <label
                           key={a.id}
                           className={`group relative flex cursor-pointer flex-col justify-between rounded-2xl border p-5 transition-all duration-300 hover:shadow-[0_8px_24px_-10px_rgba(219,184,120,0.25)] ${on
-                            ? "border-[#dbb878] bg-[#fefdfb] shadow-[0_0_0_1px_rgba(219,184,120,0.5)]"
-                            : "border-[#ebe4d3] bg-white hover:border-[#dbb878]/50"
+                            ? "border-[#f5821f] bg-[#fefdfb] shadow-[0_0_0_1px_rgba(219,184,120,0.5)]"
+                            : "border-[#e2e8f0] bg-white hover:border-[#f5821f]/50"
                             }`}
                         >
                           {/* Native hidden checkbox to make label click work */}
@@ -1744,15 +1744,15 @@ export function FleetCheckoutClient({
 
                           {/* Selection indicator */}
                           <div
-                            className={`absolute start-4 top-4 flex size-5 items-center justify-center rounded border transition-colors ${on ? `border-[${GOLD}] bg-[${GOLD}]` : "border-[#d1ccbf] bg-white group-hover:border-[#dbb878]"
+                            className={`absolute start-4 top-4 flex size-5 items-center justify-center rounded border transition-colors ${on ? `border-[${ACCENT}] bg-[${ACCENT}]` : "border-[#d1ccbf] bg-white group-hover:border-[#f5821f]"
                               }`}
-                            style={{ backgroundColor: on ? GOLD : undefined, borderColor: on ? GOLD : undefined }}
+                            style={{ backgroundColor: on ? ACCENT : undefined, borderColor: on ? ACCENT : undefined }}
                           >
                             {on && <Check className="size-3.5 text-white stroke-[3]" />}
                           </div>
 
                           <div className="mb-4 ps-8">
-                            <div className="mb-3 inline-flex size-12 items-center justify-center rounded-xl bg-[#f4f0ea]/60 text-[#003749] transition-colors group-hover:bg-[#f4f0ea]">
+                            <div className="mb-3 inline-flex size-12 items-center justify-center rounded-xl bg-[#f1f5f9]/60 text-[#003749] transition-colors group-hover:bg-[#f1f5f9]">
                               <AddonVisual iconKey={a.iconKey} />
                             </div>
                             <div className="flex items-center gap-1.5">
@@ -1764,7 +1764,7 @@ export function FleetCheckoutClient({
                                     aria-expanded={infoOpen}
                                     aria-controls={infoId}
                                     aria-label={t("explain", { title: a.title })}
-                                    className="inline-flex size-5 items-center justify-center rounded-full border border-[#d9d0bf] text-[#8f8573] transition-colors hover:border-[#dbb878] hover:text-[#dbb878]"
+                                    className="inline-flex size-5 items-center justify-center rounded-full border border-[#d9d0bf] text-[#8f8573] transition-colors hover:border-[#f5821f] hover:text-[#f5821f]"
                                     onClick={(e) => {
                                       e.preventDefault();
                                       e.stopPropagation();
@@ -1776,7 +1776,7 @@ export function FleetCheckoutClient({
                                   <span
                                     id={infoId}
                                     role="tooltip"
-                                    className={`pointer-events-none absolute bottom-full end-0 z-30 mb-1 w-56 rounded-xl border border-[#ebe4d3] bg-white p-3 text-[12px] leading-relaxed text-[#5f5341] shadow-[0_16px_40px_-20px_rgba(0,0,0,0.35)] transition-all duration-150 ${infoOpen ? "opacity-100" : "opacity-0"
+                                    className={`pointer-events-none absolute bottom-full end-0 z-30 mb-1 w-56 rounded-xl border border-[#e2e8f0] bg-white p-3 text-[12px] leading-relaxed text-[#5f5341] shadow-[0_16px_40px_-20px_rgba(0,0,0,0.35)] transition-all duration-150 ${infoOpen ? "opacity-100" : "opacity-0"
                                       }`}
                                     style={{
                                       transform: `translateY(${infoOpen ? "0" : "4px"})`,
@@ -1785,7 +1785,7 @@ export function FleetCheckoutClient({
                                     {infoText}
                                     <span
                                       aria-hidden
-                                      className="absolute end-2 top-full size-2 -translate-y-1/2 rotate-45 border-b border-r border-[#ebe4d3] bg-white"
+                                      className="absolute end-2 top-full size-2 -translate-y-1/2 rotate-45 border-b border-r border-[#e2e8f0] bg-white"
                                     />
                                   </span>
                                 </span>
@@ -1793,17 +1793,17 @@ export function FleetCheckoutClient({
                             </div>
                           </div>
 
-                          <div className="mt-auto flex items-end justify-between border-t border-[#f0ebe4] pt-4">
+                          <div className="mt-auto flex items-end justify-between border-t border-[#f1f5f9] pt-4">
                             <div className="flex flex-col">
                               <span className="text-[16px] font-extrabold tracking-wide text-[#003749] tabular-nums" dir="ltr">
                                 {formatSarAmount(a.pricePerDay)} <SarCurrencyGlyph />
                               </span>
-                              <span className="text-[11px] font-bold uppercase tracking-wider text-[#aaa08e]">
+                              <span className="text-[11px] font-bold uppercase tracking-wider text-[#94a3b8]">
                                 {t("perDay")}
                               </span>
                             </div>
                             <div
-                              className={`text-[12px] font-bold transition-colors ${on ? "text-[#dbb878]" : "text-[#aaa08e] group-hover:text-[#003749]"
+                              className={`text-[12px] font-bold transition-colors ${on ? "text-[#f5821f]" : "text-[#94a3b8] group-hover:text-[#003749]"
                                 }`}
                             >
                               {on ? t("selected") : t("add")}
@@ -1818,11 +1818,11 @@ export function FleetCheckoutClient({
 
               {/* Installment Options Banner */}
               {/* <section>
-                <div className="relative overflow-hidden rounded-2xl border border-[#dbb878]/30 bg-gradient-to-r from-[#003749] to-[#004d63] p-5 shadow-[0_8px_24px_-10px_rgba(0,55,73,0.3)]">
-                  <div className="absolute -end-6 -top-6 size-24 rounded-full bg-[#dbb878]/10" />
-                  <div className="absolute -bottom-4 end-12 size-16 rounded-full bg-[#dbb878]/8" />
+                <div className="relative overflow-hidden rounded-2xl border border-[#f5821f]/30 bg-gradient-to-r from-[#003749] to-[#004d63] p-5 shadow-[0_8px_24px_-10px_rgba(0,55,73,0.3)]">
+                  <div className="absolute -end-6 -top-6 size-24 rounded-full bg-[#f5821f]/10" />
+                  <div className="absolute -bottom-4 end-12 size-16 rounded-full bg-[#f5821f]/8" />
                   <div className="relative flex items-center gap-4">
-                    <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-[#dbb878]/20 text-[#dbb878]">
+                    <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-[#f5821f]/20 text-[#f5821f]">
                       <CreditCard className="size-6" />
                     </div>
                     <div>
@@ -1830,8 +1830,8 @@ export function FleetCheckoutClient({
                       <p className="mt-0.5 text-[12px] font-semibold text-white/60">{t("splitSubtitle")}</p>
                     </div>
                     <div className="ms-auto flex gap-2">
-                      <span className="rounded-lg bg-white/10 px-3 py-1.5 text-[11px] font-extrabold text-[#dbb878] backdrop-blur-sm">{t("brandTabby")}</span>
-                      <span className="rounded-lg bg-white/10 px-3 py-1.5 text-[11px] font-extrabold text-[#dbb878] backdrop-blur-sm">{t("brandTamara")}</span>
+                      <span className="rounded-lg bg-white/10 px-3 py-1.5 text-[11px] font-extrabold text-[#f5821f] backdrop-blur-sm">{t("brandTabby")}</span>
+                      <span className="rounded-lg bg-white/10 px-3 py-1.5 text-[11px] font-extrabold text-[#f5821f] backdrop-blur-sm">{t("brandTamara")}</span>
                     </div>
                   </div>
                 </div>
@@ -1840,7 +1840,7 @@ export function FleetCheckoutClient({
               {/* Customer Details Form */}
               <section className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <span className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-[#dbb878] to-[#c9a356] text-sm font-extrabold text-white shadow-sm">
+                  <span className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-[#f5821f] to-[#d9690a] text-sm font-extrabold text-white shadow-sm">
                     3
                   </span>
                   <h2 className="text-xl font-extrabold text-[#003749]">{t("contactData")}</h2>
@@ -1851,17 +1851,17 @@ export function FleetCheckoutClient({
                   ref={formRef}
                   onSubmit={handleSubmit}
                   onKeyDown={handleCheckoutFormKeyDown}
-                  className="rounded-3xl border border-[#ebe4d3] bg-white p-6 shadow-sm sm:p-8"
+                  className="rounded-3xl border border-[#e2e8f0] bg-white p-6 shadow-sm sm:p-8"
                 >
                   {sessionCustomer && !editPrefill ? (
-                    <div className="mb-8 rounded-2xl border border-[#ebe4d3] bg-[#fdfbf6] p-5">
+                    <div className="mb-8 rounded-2xl border border-[#e2e8f0] bg-[#f7fafc] p-5">
                       <div className="flex items-center gap-4">
-                        <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-[#dbb878]/20 text-[#dbb878]">
+                        <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-[#f5821f]/20 text-[#f5821f]">
                           <CheckCircle2 className="size-6" />
                         </div>
                         <div>
                           <p className="text-[15px] font-extrabold text-[#003749]">{sessionCustomer.name}</p>
-                          <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] font-semibold text-[#8a7752]">
+                          <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] font-semibold text-[#475569]">
                             <span dir="ltr">+966 {sessionCustomer.phoneLocal}</span>
                             <span className="hidden opacity-40 sm:inline">•</span>
                             <span dir="ltr">{sessionCustomer.email}</span>
@@ -1886,15 +1886,15 @@ export function FleetCheckoutClient({
                           autoComplete="name"
                           readOnly={identityFieldsReadOnly}
                           defaultValue={contactNameDefault}
-                          className={`peer w-full rounded-xl border border-[#ebe4d3] px-4 pb-3 pt-6 text-[14px] font-semibold text-[#003749] outline-none transition-all ${identityFieldsReadOnly
-                            ? "cursor-default bg-[#f4f2ec] focus:border-[#ebe4d3] focus:ring-0"
-                            : "bg-transparent focus:border-[#dbb878] focus:ring-1 focus:ring-[#dbb878]"
+                          className={`peer w-full rounded-xl border border-[#e2e8f0] px-4 pb-3 pt-6 text-[14px] font-semibold text-[#003749] outline-none transition-all ${identityFieldsReadOnly
+                            ? "cursor-default bg-[#f1f5f9] focus:border-[#e2e8f0] focus:ring-0"
+                            : "bg-transparent focus:border-[#f5821f] focus:ring-1 focus:ring-[#f5821f]"
                             }`}
                           placeholder=" "
                         />
                         <label
                           htmlFor="name"
-                          className="absolute start-4 top-4 text-[13px] font-bold text-[#aaa08e] transition-all peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-[#dbb878] peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:text-[10px]"
+                          className="absolute start-4 top-4 text-[13px] font-bold text-[#94a3b8] transition-all peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-[#f5821f] peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:text-[10px]"
                         >
                           {t("fullName")}
                         </label>
@@ -1903,12 +1903,12 @@ export function FleetCheckoutClient({
                       {/* Phone Field */}
                       <div className="group relative">
                         <div
-                          className={`flex w-full overflow-hidden rounded-xl border border-[#ebe4d3] transition-all ${identityFieldsReadOnly
-                            ? "bg-[#f4f2ec]"
-                            : "focus-within:border-[#dbb878] focus-within:ring-1 focus-within:ring-[#dbb878]"
+                          className={`flex w-full overflow-hidden rounded-xl border border-[#e2e8f0] transition-all ${identityFieldsReadOnly
+                            ? "bg-[#f1f5f9]"
+                            : "focus-within:border-[#f5821f] focus-within:ring-1 focus-within:ring-[#f5821f]"
                             }`}
                         >
-                          <span className="flex items-center bg-[#fdfbf6] px-3 border-e border-[#ebe4d3] text-[13px] font-bold text-[#003749]" dir="ltr">
+                          <span className="flex items-center bg-[#f7fafc] px-3 border-e border-[#e2e8f0] text-[13px] font-bold text-[#003749]" dir="ltr">
                             +966
                           </span>
                           <div className="relative flex-1">
@@ -1932,7 +1932,7 @@ export function FleetCheckoutClient({
                             />
                             <label
                               htmlFor="phone"
-                              className="absolute end-4 top-4 text-[13px] font-bold text-[#aaa08e] transition-all peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-[#dbb878] peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:text-[10px]"
+                              className="absolute end-4 top-4 text-[13px] font-bold text-[#94a3b8] transition-all peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-[#f5821f] peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:text-[10px]"
                             >
                               {t("phoneNumber")}
                             </label>
@@ -1947,7 +1947,7 @@ export function FleetCheckoutClient({
                           id="age"
                           required
                           defaultValue={contactAgeDefault}
-                          className="peer w-full appearance-none rounded-xl border border-[#ebe4d3] bg-transparent px-4 pb-3 pt-6 text-[14px] font-semibold text-[#003749] outline-none transition-all focus:border-[#dbb878] focus:ring-1 focus:ring-[#dbb878]"
+                          className="peer w-full appearance-none rounded-xl border border-[#e2e8f0] bg-transparent px-4 pb-3 pt-6 text-[14px] font-semibold text-[#003749] outline-none transition-all focus:border-[#f5821f] focus:ring-1 focus:ring-[#f5821f]"
                         >
                           <option value="25-35">{t("age2535")}</option>
                           <option value="35-50">{t("age3550")}</option>
@@ -1955,11 +1955,11 @@ export function FleetCheckoutClient({
                         </select>
                         <label
                           htmlFor="age"
-                          className="absolute start-4 top-1 text-[10px] font-bold text-[#aaa08e] transition-all peer-focus:text-[#dbb878]"
+                          className="absolute start-4 top-1 text-[10px] font-bold text-[#94a3b8] transition-all peer-focus:text-[#f5821f]"
                         >
                           {t("ageGroup")}
                         </label>
-                        <ChevronDown className="pointer-events-none absolute end-4 top-1/2 size-4 -translate-y-1/2 text-[#aaa08e]" />
+                        <ChevronDown className="pointer-events-none absolute end-4 top-1/2 size-4 -translate-y-1/2 text-[#94a3b8]" />
                       </div>
 
                       <div className="group relative sm:col-span-2">
@@ -1970,13 +1970,13 @@ export function FleetCheckoutClient({
                           required
                           autoComplete="email"
                           defaultValue={contactEmailDefault}
-                          className="peer w-full rounded-xl border border-[#ebe4d3] bg-transparent px-4 pb-3 pt-6 text-[14px] font-semibold text-[#003749] outline-none transition-all focus:border-[#dbb878] focus:ring-1 focus:ring-[#dbb878]"
+                          className="peer w-full rounded-xl border border-[#e2e8f0] bg-transparent px-4 pb-3 pt-6 text-[14px] font-semibold text-[#003749] outline-none transition-all focus:border-[#f5821f] focus:ring-1 focus:ring-[#f5821f]"
                           placeholder=" "
                           dir="ltr"
                         />
                         <label
                           htmlFor="checkout-email"
-                          className="absolute start-4 top-4 text-[13px] font-bold text-[#aaa08e] transition-all peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-[#dbb878] peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:text-[10px]"
+                          className="absolute start-4 top-4 text-[13px] font-bold text-[#94a3b8] transition-all peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-[#f5821f] peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:text-[10px]"
                         >
                           {t("emailForInvoice")}
                         </label>
@@ -1992,16 +1992,16 @@ export function FleetCheckoutClient({
                         name="terms"
                         id="terms"
                         required
-                        className="peer size-5 cursor-pointer appearance-none rounded border-2 border-[#ebe4d3] bg-white transition-colors checked:border-[#dbb878] checked:bg-[#dbb878]"
+                        className="peer size-5 cursor-pointer appearance-none rounded border-2 border-[#e2e8f0] bg-white transition-colors checked:border-[#f5821f] checked:bg-[#f5821f]"
                       />
                       <Check className="pointer-events-none absolute size-3.5 text-white opacity-0 transition-opacity peer-checked:opacity-100" />
                     </div>
-                    <label htmlFor="terms" className="cursor-pointer text-[13px] font-semibold text-[#6b5a3b] select-none">
+                    <label htmlFor="terms" className="cursor-pointer text-[13px] font-semibold text-[#334155] select-none">
                       {t("agreeTo")}{" "}
                       <button
                         type="button"
                         onClick={() => setTermsOpen(true)}
-                        className="text-[#dbb878] hover:underline"
+                        className="text-[#f5821f] hover:underline"
                       >
                         {t("termsAndConditions")}
                       </button>{" "}
@@ -2011,7 +2011,7 @@ export function FleetCheckoutClient({
 
                   {/* Status Messages */}
                   {availability?.loading && (
-                    <div className="mb-6 text-[13px] font-bold text-[#aaa08e]">
+                    <div className="mb-6 text-[13px] font-bold text-[#94a3b8]">
                       {t("checkingAvailability")}
                     </div>
                   )}
@@ -2027,7 +2027,7 @@ export function FleetCheckoutClient({
                     disabled={pending || slotBlocked || !trip.pickupIso || uploadingKyc !== null}
                     className="group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-2xl py-4 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5 hover:shadow-[0_12px_28px_-8px_rgba(219,184,120,0.6)] active:translate-y-0"
                     style={{
-                      background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)`,
+                      background: `linear-gradient(135deg, ${ACCENT} 0%, ${ACCENT_DARK} 100%)`,
                       boxShadow: "0 8px 24px -6px rgba(219,184,120,0.45)",
                     }}
                   >
@@ -2045,7 +2045,7 @@ export function FleetCheckoutClient({
                   {submitBlockedReason && !pending ? (
                     <p
                       role="status"
-                      className="mt-3 text-center text-[12.5px] font-bold leading-relaxed text-[#8a7752]"
+                      className="mt-3 text-center text-[12.5px] font-bold leading-relaxed text-[#475569]"
                     >
                       {submitBlockedReason}
                       {uploadingKyc === null ? (
@@ -2054,7 +2054,7 @@ export function FleetCheckoutClient({
                           <button
                             type="button"
                             onClick={openTripEditorToChangeDates}
-                            className="font-extrabold text-[#003749] underline decoration-[#dbb878] underline-offset-4 hover:text-[#dbb878]"
+                            className="font-extrabold text-[#003749] underline decoration-[#f5821f] underline-offset-4 hover:text-[#f5821f]"
                           >
                             {t("editDates")}
                           </button>
@@ -2068,9 +2068,9 @@ export function FleetCheckoutClient({
 
             {/* ─── Sidebar (Checkout Summary) ─── */}
             <aside id="order-summary" className="order-1 scroll-mt-24 lg:order-2">
-              <div className="sticky top-24 overflow-hidden rounded-3xl border border-[#ebe4d3] bg-white shadow-[0_24px_60px_-20px_rgba(15,61,71,0.15)]">
+              <div className="sticky top-24 overflow-hidden rounded-3xl border border-[#e2e8f0] bg-white shadow-[0_24px_60px_-20px_rgba(15,61,71,0.15)]">
                 {/* Car Image Area */}
-                <div className="relative aspect-[16/10] overflow-hidden bg-gradient-to-br from-[#fdfbf6] via-[#f7f2e9] to-[#f0ebe0]">
+                <div className="relative aspect-[16/10] overflow-hidden bg-gradient-to-br from-[#f7fafc] via-[#f7f2e9] to-[#f0ebe0]">
                   <Image
                     src={car.image}
                     alt={car.alt}
@@ -2078,7 +2078,7 @@ export function FleetCheckoutClient({
                     className="object-contain p-6 drop-shadow-2xl transition-transform duration-700 hover:scale-105"
                     sizes="(max-width: 1024px) 100vw, 360px"
                   />
-                  <div className="absolute start-4 top-4 rounded-full bg-white/90 px-3 py-1 text-[11px] font-extrabold text-[#003749] backdrop-blur-sm shadow-md ring-1 ring-[#dbb878]/20">
+                  <div className="absolute start-4 top-4 rounded-full bg-white/90 px-3 py-1 text-[11px] font-extrabold text-[#003749] backdrop-blur-sm shadow-md ring-1 ring-[#f5821f]/20">
                     {car.categoryTitle}
                   </div>
                   {/* Subtle shimmer overlay */}
@@ -2090,7 +2090,7 @@ export function FleetCheckoutClient({
                       type="button"
                       id="change-car-btn"
                       onClick={() => setChangeCarOpen(true)}
-                      className="group flex items-center gap-1.5 rounded-full border border-[#dbb878]/40 bg-white/80 px-3.5 py-1.5 text-[11.5px] font-extrabold text-[#003749] shadow-[0_4px_16px_-6px_rgba(15,61,71,0.22)] backdrop-blur-sm transition-all duration-200 hover:border-[#dbb878]/80 hover:bg-white hover:shadow-[0_6px_22px_-6px_rgba(219,184,120,0.45)] hover:scale-105 active:scale-95"
+                      className="group flex items-center gap-1.5 rounded-full border border-[#f5821f]/40 bg-white/80 px-3.5 py-1.5 text-[11.5px] font-extrabold text-[#003749] shadow-[0_4px_16px_-6px_rgba(15,61,71,0.22)] backdrop-blur-sm transition-all duration-200 hover:border-[#f5821f]/80 hover:bg-white hover:shadow-[0_6px_22px_-6px_rgba(219,184,120,0.45)] hover:scale-105 active:scale-95"
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -2100,7 +2100,7 @@ export function FleetCheckoutClient({
                         strokeWidth="2.2"
                         strokeLinecap="round"
                         strokeLinejoin="round"
-                        className="size-3.5 text-[#dbb878] transition-transform duration-300 group-hover:rotate-180"
+                        className="size-3.5 text-[#f5821f] transition-transform duration-300 group-hover:rotate-180"
                         aria-hidden
                       >
                         <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
@@ -2118,9 +2118,9 @@ export function FleetCheckoutClient({
                   <h2 className="text-xl font-extrabold leading-tight text-[#003749]">
                     {car.fullTitle}
                   </h2>
-                  <p className="mt-1 text-[12px] font-semibold text-[#8a7752]">{t("orSimilar")}</p>
+                  <p className="mt-1 text-[12px] font-semibold text-[#475569]">{t("orSimilar")}</p>
 
-                  <div className="mt-3 rounded-xl border border-[#ebe4d3] bg-[#fdfbf6] px-3 py-2.5 text-[11px] font-semibold leading-relaxed text-[#5c4d38]">
+                  <div className="mt-3 rounded-xl border border-[#e2e8f0] bg-[#f7fafc] px-3 py-2.5 text-[11px] font-semibold leading-relaxed text-[#5c4d38]">
                     {car.discountLabelAr && !appliedCoupon ? (
                       <p className="mb-2 text-end">
                         <span className="rounded-md bg-[#c2410c]/10 px-2 py-0.5 text-[10px] font-extrabold text-[#c2410c]">
@@ -2148,7 +2148,7 @@ export function FleetCheckoutClient({
                           )}{" "}
                           <SarCurrencyGlyph />
                         </span>{" "}
-                        <span className="text-[#8a7752]">{t("inclVat", { rate: car.vatRatePercent })}</span>
+                        <span className="text-[#475569]">{t("inclVat", { rate: car.vatRatePercent })}</span>
                       </p>
                     ) : rentalPriceDisplayMode === "SPLIT" ? (
                       <div className="space-y-1.5" dir="ltr">
@@ -2184,11 +2184,11 @@ export function FleetCheckoutClient({
                         <span className="font-extrabold text-[#003749]">
                           {formatSarAmount(car.pricePerDayExclTax)} <SarCurrencyGlyph />
                         </span>{" "}
-                        <span className="text-[#8a7752]">{t("exclVatShort")}</span>
+                        <span className="text-[#475569]">{t("exclVatShort")}</span>
                       </p>
                     )}
                     {rentalTab === "weekly" ? (
-                      <p dir="ltr" className="mt-2 border-t border-[#ebe4d3] pt-2 text-end">
+                      <p dir="ltr" className="mt-2 border-t border-[#e2e8f0] pt-2 text-end">
                         {t("weeklyPrice")}{" "}
                         <span className="font-extrabold text-[#003749]">
                           {formatSarAmount(
@@ -2199,7 +2199,7 @@ export function FleetCheckoutClient({
                           )}{" "}
                           <SarCurrencyGlyph />
                         </span>{" "}
-                        <span className="text-[#8a7752]">{t("inclVat", { rate: car.vatRatePercent })}</span>
+                        <span className="text-[#475569]">{t("inclVat", { rate: car.vatRatePercent })}</span>
                       </p>
                     ) : null}
                     {rentalTab === "monthly" && car.pricePerMonthExclTax != null ? (
@@ -2211,7 +2211,7 @@ export function FleetCheckoutClient({
                             </span>
                           </p>
                         ) : null}
-                        <p dir="ltr" className="mt-2 border-t border-[#ebe4d3] pt-2 text-end">
+                        <p dir="ltr" className="mt-2 border-t border-[#e2e8f0] pt-2 text-end">
                           {t("monthlyPrice")}{" "}
                           {monthlyPriceResolved?.days === trip.days &&
                           monthlyPriceResolved.pricePerDayExclTax <
@@ -2234,7 +2234,7 @@ export function FleetCheckoutClient({
                             )}{" "}
                             <SarCurrencyGlyph />
                           </span>{" "}
-                          <span className="text-[#8a7752]">{t("inclVat", { rate: car.vatRatePercent })}</span>
+                          <span className="text-[#475569]">{t("inclVat", { rate: car.vatRatePercent })}</span>
                         </p>
                       </>
                     ) : null}
@@ -2243,44 +2243,44 @@ export function FleetCheckoutClient({
                   <div className="mt-6 space-y-5">
                     {/* Dates block */}
                     <div className="relative ps-5">
-                      <div className="absolute bottom-1.5 start-1.5 top-1.5 w-0.5 rounded-full bg-gradient-to-b from-[#dbb878] to-[#003749]/20" />
+                      <div className="absolute bottom-1.5 start-1.5 top-1.5 w-0.5 rounded-full bg-gradient-to-b from-[#f5821f] to-[#003749]/20" />
 
                       <div className="relative mb-4">
-                        <div className="absolute -start-[23px] top-1 size-2.5 rounded-full border-2 border-[#dbb878] bg-white ring-4 ring-white" />
-                        <p className="text-[11px] font-bold uppercase text-[#aaa08e]">{t("pickup")}</p>
+                        <div className="absolute -start-[23px] top-1 size-2.5 rounded-full border-2 border-[#f5821f] bg-white ring-4 ring-white" />
+                        <p className="text-[11px] font-bold uppercase text-[#94a3b8]">{t("pickup")}</p>
                         <p className="font-extrabold text-[#003749]">
                           {trip.pickupLabel}
                           {deliveryDistanceKm !== null && (
-                            <span className="block mt-0.5 text-[11px] font-bold text-[#c9a356]">
+                            <span className="block mt-0.5 text-[11px] font-bold text-[#d9690a]">
                               {t("distanceFromBranch", { km: deliveryDistanceKm.toFixed(1) })}
                             </span>
                           )}
                         </p>
-                        <p className="text-[12px] font-semibold text-[#8a7752]" dir="ltr">
+                        <p className="text-[12px] font-semibold text-[#475569]" dir="ltr">
                           {pu.date} {pu.time ? `• ${pu.time}` : ""}
                         </p>
                       </div>
 
                       <div className="relative">
                         <div className="absolute -start-[23px] top-1 size-2.5 rounded-full border-2 border-[#003749] bg-white ring-4 ring-white" />
-                        <p className="text-[11px] font-bold uppercase text-[#aaa08e]">{t("dropoff")}</p>
+                        <p className="text-[11px] font-bold uppercase text-[#94a3b8]">{t("dropoff")}</p>
                         <p className="font-extrabold text-[#003749]">{trip.returnLabel}</p>
-                        <p className="text-[12px] font-semibold text-[#8a7752]" dir="ltr">
+                        <p className="text-[12px] font-semibold text-[#475569]" dir="ltr">
                           {du.date} {du.time ? `• ${du.time}` : ""}
                         </p>
                       </div>
                     </div>
 
                     <div className="my-5 flex items-center gap-3">
-                      <div className="h-px flex-1 bg-gradient-to-r from-[#ebe4d3] to-transparent" />
+                      <div className="h-px flex-1 bg-gradient-to-r from-[#e2e8f0] to-transparent" />
                       <span className="text-[10px] font-bold uppercase tracking-widest text-[#c4b89a]">{t("pricingDetails")}</span>
-                      <div className="h-px flex-1 bg-gradient-to-l from-[#ebe4d3] to-transparent" />
+                      <div className="h-px flex-1 bg-gradient-to-l from-[#e2e8f0] to-transparent" />
                     </div>
 
                     {/* Pricing Breakdown */}
                     <div className="space-y-3">
                       <div className="flex justify-between text-[13px]">
-                        <span className="font-semibold text-[#6b5a3b]">
+                        <span className="font-semibold text-[#334155]">
                           {t("rentalFor", { duration: rentalDurationLabel })}
                         </span>
                         <span className="font-bold text-[#003749] tabular-nums" dir="ltr">
@@ -2291,14 +2291,14 @@ export function FleetCheckoutClient({
                       {selectedRows.length > 0 && (
                         <div className="space-y-2">
                           <div className="flex justify-between text-[13px]">
-                            <span className="font-semibold text-[#6b5a3b]">
+                            <span className="font-semibold text-[#334155]">
                               {t("addonsFor", { duration: rentalDurationLabel })}
                             </span>
                             <span className="font-bold text-[#003749] tabular-nums" dir="ltr">
                               {formatSarAmount(totals.addonsExclTax)} <SarCurrencyGlyph />
                             </span>
                           </div>
-                          <ul className="space-y-1.5 rounded-lg bg-[#fdfbf6] px-3 py-2 text-[12px] text-[#6b5a3b]">
+                          <ul className="space-y-1.5 rounded-lg bg-[#f7fafc] px-3 py-2 text-[12px] text-[#334155]">
                             {selectedRows.map((a) => (
                               <li key={a.id} className="flex justify-between gap-3">
                                 <span>• {a.title}</span>
@@ -2313,7 +2313,7 @@ export function FleetCheckoutClient({
 
                       {interCityShippingFeeSar > 0 && interCityShippingLabelAr ? (
                         <div className="flex justify-between text-[13px]">
-                          <span className="max-w-[60%] text-end text-[12px] font-semibold leading-snug text-[#6b5a3b]">
+                          <span className="max-w-[60%] text-end text-[12px] font-semibold leading-snug text-[#334155]">
                             {interCityShippingLabelAr}
                           </span>
                           <span className="shrink-0 font-bold text-[#003749] tabular-nums" dir="ltr">
@@ -2324,7 +2324,7 @@ export function FleetCheckoutClient({
 
                       {deliveryFeeSar > 0 && deliveryDistanceKm != null ? (
                         <div className="flex justify-between text-[13px]">
-                          <span className="font-semibold text-[#6b5a3b]">
+                          <span className="font-semibold text-[#334155]">
                             {t("deliveryFee", { km: deliveryDistanceKm.toFixed(1) })}
                           </span>
                           <span className="font-bold text-[#003749] tabular-nums" dir="ltr">
@@ -2335,7 +2335,7 @@ export function FleetCheckoutClient({
 
                       {checkoutOneTimeFees.map((f) => (
                         <div key={f.slug} className="flex justify-between text-[13px]">
-                          <span className="max-w-[60%] text-end text-[12px] font-semibold leading-snug text-[#6b5a3b]">
+                          <span className="max-w-[60%] text-end text-[12px] font-semibold leading-snug text-[#334155]">
                             {f.label}
                           </span>
                           <span className="shrink-0 font-bold text-[#003749] tabular-nums" dir="ltr">
@@ -2346,7 +2346,7 @@ export function FleetCheckoutClient({
 
                       {delayPenalty && delayPenaltyExclTax > 0 ? (
                         <div className="flex justify-between text-[13px]">
-                          <span className="max-w-[60%] text-end text-[12px] font-semibold leading-snug text-[#6b5a3b]">
+                          <span className="max-w-[60%] text-end text-[12px] font-semibold leading-snug text-[#334155]">
                             {delayPenalty.labelAr}
                           </span>
                           <span className="shrink-0 font-bold text-[#003749] tabular-nums" dir="ltr">
@@ -2356,7 +2356,7 @@ export function FleetCheckoutClient({
                       ) : null}
 
                       {/* Coupon Code */}
-                      <div className="rounded-lg border border-[#ebe4d3] bg-[#fdfbf6] p-3">
+                      <div className="rounded-lg border border-[#e2e8f0] bg-[#f7fafc] p-3">
                         {appliedCoupon ? (
                           <div className="flex items-center justify-between gap-2 text-[13px]">
                             <span className="font-bold text-[#0f7a3d]">
@@ -2365,7 +2365,7 @@ export function FleetCheckoutClient({
                             <button
                               type="button"
                               onClick={handleRemoveCoupon}
-                              className="shrink-0 text-[12px] font-bold text-[#8a7752] underline underline-offset-2 hover:text-[#c2410c]"
+                              className="shrink-0 text-[12px] font-bold text-[#475569] underline underline-offset-2 hover:text-[#c2410c]"
                             >
                               {t("couponRemove")}
                             </button>
@@ -2380,7 +2380,7 @@ export function FleetCheckoutClient({
                                 setCouponError(null);
                               }}
                               placeholder={t("couponPlaceholder")}
-                              className="w-full min-w-0 rounded-lg border border-[#ebe4d3] bg-white px-3 py-2 text-[13px] font-semibold text-[#003749] outline-none focus:border-[#dbb878]"
+                              className="w-full min-w-0 rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-[13px] font-semibold text-[#003749] outline-none focus:border-[#f5821f]"
                             />
                             <button
                               type="button"
@@ -2407,7 +2407,7 @@ export function FleetCheckoutClient({
                       ) : null}
 
                       <div className="flex justify-between text-[13px]">
-                        <span className="font-semibold text-[#6b5a3b]">{t("vat", { rate: car.vatRatePercent })}</span>
+                        <span className="font-semibold text-[#334155]">{t("vat", { rate: car.vatRatePercent })}</span>
                         <span className="font-bold text-[#003749] tabular-nums" dir="ltr">
                           {formatSarAmount(totals.vatAmount)} <SarCurrencyGlyph />
                         </span>
@@ -2416,8 +2416,8 @@ export function FleetCheckoutClient({
 
                     {/* Total Row */}
                     <div className="relative mt-4 overflow-hidden rounded-2xl p-5 text-white shadow-[0_8px_24px_-8px_rgba(0,55,73,0.4)]" style={{ background: `linear-gradient(135deg, #003749 0%, #004d63 60%, #005a75 100%)` }}>
-                      <div className="absolute -end-4 -top-4 size-20 rounded-full bg-[#dbb878]/10" />
-                      <div className="absolute bottom-0 start-0 h-1 w-full" style={{ background: `linear-gradient(90deg, ${GOLD} 0%, ${GOLD_DARK} 100%)` }} />
+                      <div className="absolute -end-4 -top-4 size-20 rounded-full bg-[#f5821f]/10" />
+                      <div className="absolute bottom-0 start-0 h-1 w-full" style={{ background: `linear-gradient(90deg, ${ACCENT} 0%, ${ACCENT_DARK} 100%)` }} />
                       <div className="relative flex items-end justify-between">
                         <div>
                           <p className="text-[11px] font-bold uppercase tracking-widest text-white/60">{t("grandTotal")}</p>
@@ -2430,7 +2430,7 @@ export function FleetCheckoutClient({
                             aria-label={t("sarAria", { amount: formatSarAmount(totals.totalInclTax) })}
                           >
                             {formatSarAmount(totals.totalInclTax)}{" "}
-                            <span className="text-[#dbb878]" aria-hidden>
+                            <span className="text-[#f5821f]" aria-hidden>
                               <SarCurrencyGlyph />
                             </span>
                           </p>
@@ -2461,7 +2461,7 @@ export function FleetCheckoutClient({
       {/* شريط الإجمالي الثابت — جوال فقط: يبقي السعر ظاهراً بعد أن يمرّ الزائر
           بكارت الملخص في أعلى الصفحة وينزل إلى الفورم. */}
       <div
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-[#dbb878]/30 bg-[#003749]/95 px-4 py-3 shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.5)] backdrop-blur-md lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-[#f5821f]/30 bg-[#003749]/95 px-4 py-3 shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.5)] backdrop-blur-md lg:hidden"
       >
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
           <div className="min-w-0">
@@ -2474,14 +2474,14 @@ export function FleetCheckoutClient({
               aria-label={t("sarAria", { amount: formatSarAmount(totals.totalInclTax) })}
             >
               {formatSarAmount(totals.totalInclTax)}{" "}
-              <span className="text-[#dbb878]" aria-hidden>
+              <span className="text-[#f5821f]" aria-hidden>
                 <SarCurrencyGlyph />
               </span>
             </p>
           </div>
           <a
             href="#order-summary"
-            className="shrink-0 rounded-xl border border-[#dbb878]/50 px-3.5 py-2 text-[12px] font-extrabold text-[#dbb878] transition-colors hover:bg-[#dbb878]/10"
+            className="shrink-0 rounded-xl border border-[#f5821f]/50 px-3.5 py-2 text-[12px] font-extrabold text-[#f5821f] transition-colors hover:bg-[#f5821f]/10"
           >
             {t("pricingDetails")}
           </a>

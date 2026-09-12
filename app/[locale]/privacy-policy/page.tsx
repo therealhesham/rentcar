@@ -62,7 +62,7 @@ export default async function PrivacyPolicyPage({
             {t("description")}
           </p>
         </div>
-        <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-[#dbb878]" aria-hidden />
+        <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-[#f5821f]" aria-hidden />
       </header>
 
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-14 sm:px-8 sm:py-20">

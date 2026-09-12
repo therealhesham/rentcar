@@ -148,7 +148,7 @@ export default async function FleetPage({
       //                 key={item!.label}
       //                 className="inline-flex items-center gap-1.5 rounded-full border border-[#003749]/15 bg-white px-3 py-1 text-xs font-bold text-[#1a3a44] shadow-sm"
       //               >
-      //                 <span className="text-[#775927]">{item!.label}</span>
+      //                 <span className="text-[#b45a0a]">{item!.label}</span>
       //                 <span className="text-[#003749]/40">·</span>
       //                 <span>
       //                   {item!.value}
@@ -228,11 +228,11 @@ export default async function FleetPage({
               />
               <Suspense
                 fallback={
-                  <div className="border-t border-[#f0ebe4] px-3 py-6 sm:px-5">
+                  <div className="border-t border-[#f1f5f9] px-3 py-6 sm:px-5">
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                      <div className="h-14 animate-pulse rounded-xl bg-[#f5f0e6]/80" />
-                      <div className="h-14 animate-pulse rounded-xl bg-[#f5f0e6]/80" />
-                      <div className="h-14 animate-pulse rounded-xl bg-[#f5f0e6]/80" />
+                      <div className="h-14 animate-pulse rounded-xl bg-[#f1f5f9]/80" />
+                      <div className="h-14 animate-pulse rounded-xl bg-[#f1f5f9]/80" />
+                      <div className="h-14 animate-pulse rounded-xl bg-[#f1f5f9]/80" />
                     </div>
                   </div>
                 }
@@ -272,7 +272,7 @@ export default async function FleetPage({
                       <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
                     </>
                   ) : (
-                    <span className="inline-flex h-2.5 w-2.5 rounded-full bg-[#dbb878]" />
+                    <span className="inline-flex h-2.5 w-2.5 rounded-full bg-[#f5821f]" />
                   )}
                 </span>
                 {availabilityModelIds !== undefined ? t("availableNow") : t("browseFleet")}
@@ -295,7 +295,7 @@ export default async function FleetPage({
             </div>
           ) : cars.length === 0 ? (
             <div className="mx-auto max-w-lg rounded-3xl border border-dashed border-neutral-300 bg-white px-8 py-16 text-center shadow-sm">
-              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#dbb878]/15 text-[#775927]">
+              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#f5821f]/15 text-[#b45a0a]">
                 <svg viewBox="0 0 24 24" fill="none" className="h-8 w-8" aria-hidden>
                   <path d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>

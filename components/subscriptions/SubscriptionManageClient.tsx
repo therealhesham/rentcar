@@ -102,7 +102,7 @@ export function SubscriptionManageClient({ rows, highlightedId }: Props) {
         >
           <header className="flex flex-wrap items-start justify-between gap-3 border-b border-neutral-100 pb-3">
             <div>
-              <p className="text-[11px] font-black uppercase tracking-wide text-[#775927]">
+              <p className="text-[11px] font-black uppercase tracking-wide text-[#b45a0a]">
                 اشتراك #{s.id}
               </p>
               <h3 className="mt-1 text-lg font-extrabold text-[#003749]">{s.planTitle}</h3>
@@ -243,7 +243,7 @@ function RenewBlock({
   const [months, setMonths] = useState(() => clamp(defaultMonths));
 
   return (
-    <div className="flex flex-wrap items-end gap-2 rounded-xl border border-[#003749]/20 bg-[#fdfbf8] px-3 py-2">
+    <div className="flex flex-wrap items-end gap-2 rounded-xl border border-[#003749]/20 bg-[#fafbfc] px-3 py-2">
       <label className="flex flex-col gap-1 text-[11px] font-bold text-[#003749]/80">
         أشهر التجديد
         <input

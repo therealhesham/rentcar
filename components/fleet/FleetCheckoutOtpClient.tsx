@@ -17,7 +17,7 @@ import {
 } from "@/lib/direct-booking-user-messages";
 
 const TEAL = "#003749";
-const GOLD = "#dbb878";
+const ACCENT = "#f5821f";
 
 export function FleetCheckoutOtpClient() {
   const t = useTranslations("BookingFlow");
@@ -189,32 +189,32 @@ export function FleetCheckoutOtpClient() {
   const backHref = modelId ? `/fleet/checkout?modelId=${encodeURIComponent(modelId)}` : "/fleet";
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#fdfbf6] text-on-surface">
+    <div className="flex min-h-screen flex-col bg-[#f7fafc] text-on-surface">
       <SiteNav active="fleet" />
       <div
         className={`pt-24 pb-20 transition-opacity duration-500 ease-out ${mounted ? "opacity-100" : "opacity-0"}`}
       >
         <main className="mx-auto max-w-lg px-4 sm:px-6">
-          <nav className="mb-6 text-[13px] font-semibold text-[#aaa08e]">
-            <Link href={backHref} className="hover:text-[#dbb878]">
+          <nav className="mb-6 text-[13px] font-semibold text-[#94a3b8]">
+            <Link href={backHref} className="hover:text-[#f5821f]">
               {t("otpBackToCheckout")}
             </Link>
           </nav>
 
           <section
-            className="overflow-hidden rounded-3xl border border-[#ebe4d3] bg-white p-6 shadow-[0_24px_60px_-20px_rgba(15,61,71,0.12)] sm:p-8"
+            className="overflow-hidden rounded-3xl border border-[#e2e8f0] bg-white p-6 shadow-[0_24px_60px_-20px_rgba(15,61,71,0.12)] sm:p-8"
             style={{ color: TEAL }}
           >
             <div className="mb-6 flex items-start gap-3">
               <div
                 className="flex size-11 shrink-0 items-center justify-center rounded-full text-[#003749]"
-                style={{ backgroundColor: `${GOLD}33` }}
+                style={{ backgroundColor: `${ACCENT}33` }}
               >
                 <Shield className="size-5" aria-hidden />
               </div>
               <div>
                 <h1 className="text-lg font-extrabold text-[#003749]">{t("otpTitle")}</h1>
-                {/* <p className="mt-2 text-[13px] font-semibold leading-relaxed text-[#6b5a3b]">
+                {/* <p className="mt-2 text-[13px] font-semibold leading-relaxed text-[#334155]">
                   {t("otpSentTo", { length: BOOKING_OTP_LENGTH })}{" "}
                   {channel === "EMAIL"
                     ? t("otpChannelEmail")
@@ -240,7 +240,7 @@ export function FleetCheckoutOtpClient() {
             </div>
 
             {metaLoading ? (
-              <div className="flex items-center gap-2 py-8 text-[13px] font-bold text-[#aaa08e]">
+              <div className="flex items-center gap-2 py-8 text-[13px] font-bold text-[#94a3b8]">
                 <Loader2 className="size-5 animate-spin" aria-hidden />
                 {t("otpLoading")}
               </div>
@@ -255,7 +255,7 @@ export function FleetCheckoutOtpClient() {
             ) : (
               <form onSubmit={handleConfirm} className="space-y-5">
                 <div className="space-y-3">
-                  <p className="text-center text-[13px] font-bold text-[#8a7752]">
+                  <p className="text-center text-[13px] font-bold text-[#475569]">
                     {t("otpInputLabel", { length: BOOKING_OTP_LENGTH })}
                   </p>
                   <OtpPinInput
@@ -281,14 +281,14 @@ export function FleetCheckoutOtpClient() {
                     {otpSendBusy ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
                     {otpCooldownSec > 0 ? t("otpResendIn", { sec: otpCooldownSec }) : t("otpResend")}
                   </button>
-                  <p className="text-[12px] font-semibold text-[#8a7752]">
+                  <p className="text-[12px] font-semibold text-[#475569]">
                     {t("otpNoMessage")}
                   </p>
                 </div>
 
                 {otpHint ? (
                   <p
-                    className={`text-[12px] font-bold ${otpHintOk ? "text-emerald-700" : "text-[#8a7752]"}`}
+                    className={`text-[12px] font-bold ${otpHintOk ? "text-emerald-700" : "text-[#475569]"}`}
                     role="status"
                   >
                     {otpHint}
@@ -306,7 +306,7 @@ export function FleetCheckoutOtpClient() {
                   disabled={pending || otp.length !== 4}
                   className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-[15px] font-extrabold text-white transition-opacity disabled:opacity-50"
                   style={{
-                    background: `linear-gradient(135deg, ${GOLD} 0%, #c9a356 100%)`,
+                    background: `linear-gradient(135deg, ${ACCENT} 0%, #d9690a 100%)`,
                     boxShadow: "0 8px 24px -6px rgba(219,184,120,0.5)",
                   }}
                 >

@@ -46,24 +46,24 @@ export function FleetBanner() {
       <div className="absolute inset-0 bg-gradient-to-t from-[#003749]/90 via-[#003749]/50 to-[#003749]/30" aria-hidden />
 
       {/* خطان ذهبيان رفيعان أعلى وأسفل البانر */}
-      <div className="absolute inset-x-0 top-0 z-10 h-px bg-gradient-to-r from-transparent via-[#dbb878]/70 to-transparent" aria-hidden />
-      <div className="absolute inset-x-0 bottom-0 z-10 h-px bg-gradient-to-r from-transparent via-[#dbb878]/70 to-transparent" aria-hidden />
+      <div className="absolute inset-x-0 top-0 z-10 h-px bg-gradient-to-r from-transparent via-[#f5821f]/70 to-transparent" aria-hidden />
+      <div className="absolute inset-x-0 bottom-0 z-10 h-px bg-gradient-to-r from-transparent via-[#f5821f]/70 to-transparent" aria-hidden />
 
       {/* content */}
       <div className="relative z-10 flex h-full flex-col items-center justify-center gap-4 px-4 text-center">
         <div className="flex items-center justify-center gap-3">
-          <span className="h-px w-8 bg-gradient-to-l from-[#dbb878] to-transparent sm:w-12" aria-hidden />
-          <span className="text-xs sm:text-[13.5px] font-black uppercase tracking-[0.24em] text-[#dbb878]">
+          <span className="h-px w-8 bg-gradient-to-l from-[#f5821f] to-transparent sm:w-12" aria-hidden />
+          <span className="text-xs sm:text-[13.5px] font-black uppercase tracking-[0.24em] text-[#f5821f]">
             {t("ourFleet")}
           </span>
-          <span className="h-px w-8 bg-gradient-to-r from-[#dbb878] to-transparent sm:w-12" aria-hidden />
+          <span className="h-px w-8 bg-gradient-to-r from-[#f5821f] to-transparent sm:w-12" aria-hidden />
         </div>
         <h2 className="text-balance text-3xl font-black tracking-wide text-white drop-shadow-lg sm:text-4xl lg:text-5xl">
           {t("browseOurFleet")}
         </h2>
         <Link
           href="/fleet"
-          className="mt-1 rounded-full bg-[#dbb878] px-8 py-3 text-sm font-extrabold text-[#1a1408] shadow-[0_12px_32px_-8px_rgba(219,184,120,0.55)] transition-all hover:-translate-y-0.5 hover:bg-[#e8c992] hover:shadow-[0_16px_40px_-8px_rgba(219,184,120,0.65)]"
+          className="mt-1 rounded-full bg-[#f5821f] px-8 py-3 text-sm font-extrabold text-[#0f172a] shadow-[0_12px_32px_-8px_rgba(219,184,120,0.55)] transition-all hover:-translate-y-0.5 hover:bg-[#fbbf66] hover:shadow-[0_16px_40px_-8px_rgba(219,184,120,0.65)]"
         >
           {t("goToOurFleet")}
         </Link>

@@ -7,8 +7,8 @@ import { X, Info, CheckCircle2 } from "lucide-react";
 import { DIALOG_Z } from "@/lib/overlay-z-index";
 
 const TEAL = "#003749";
-const GOLD = "#dbb878";
-const GOLD_DARK = "#c9a356";
+const ACCENT = "#f5821f";
+const ACCENT_DARK = "#d9690a";
 
 type Props = {
   open: boolean;
@@ -105,12 +105,12 @@ export function OrSimilarModal({ open, carName, onConfirm, onClose }: Props) {
               aria-hidden
             >
               {/* سيارة بسيطة */}
-              <rect x="6" y="20" width="36" height="16" rx="4" stroke={GOLD} strokeWidth="2.5" />
-              <path d="M10 20l5-8h18l5 8" stroke={GOLD} strokeWidth="2.5" strokeLinejoin="round" />
-              <circle cx="14" cy="36" r="4" fill={GOLD} />
-              <circle cx="34" cy="36" r="4" fill={GOLD} />
+              <rect x="6" y="20" width="36" height="16" rx="4" stroke={ACCENT} strokeWidth="2.5" />
+              <path d="M10 20l5-8h18l5 8" stroke={ACCENT} strokeWidth="2.5" strokeLinejoin="round" />
+              <circle cx="14" cy="36" r="4" fill={ACCENT} />
+              <circle cx="34" cy="36" r="4" fill={ACCENT} />
               {/* سهم تبادل */}
-              <path d="M20 10h8M24 7l4 3-4 3" stroke={GOLD} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M20 10h8M24 7l4 3-4 3" stroke={ACCENT} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
 
@@ -120,7 +120,7 @@ export function OrSimilarModal({ open, carName, onConfirm, onClose }: Props) {
           >
             <bdi>{carName}</bdi>
           </h2>
-          <p className="mt-1 text-[14px] font-semibold" style={{ color: GOLD }}>
+          <p className="mt-1 text-[14px] font-semibold" style={{ color: ACCENT }}>
             {t("subtitle")}
           </p>
           <p className="mt-2 text-[13px] leading-relaxed text-white/75">
@@ -134,7 +134,7 @@ export function OrSimilarModal({ open, carName, onConfirm, onClose }: Props) {
             <div key={i} className="flex gap-3 py-3.5">
               <pt.icon
                 className="mt-0.5 size-4 shrink-0"
-                style={{ color: i < 2 ? "#16a34a" : GOLD_DARK }}
+                style={{ color: i < 2 ? "#16a34a" : ACCENT_DARK }}
                 strokeWidth={2}
                 aria-hidden
               />
@@ -152,7 +152,7 @@ export function OrSimilarModal({ open, carName, onConfirm, onClose }: Props) {
             type="button"
             onClick={onConfirm}
             className="w-full rounded-2xl py-3.5 text-[15px] font-extrabold text-white shadow-[0_8px_24px_-8px_rgba(201,163,86,0.6)] transition-[transform,box-shadow] hover:-translate-y-0.5 active:translate-y-0"
-            style={{ background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)` }}
+            style={{ background: `linear-gradient(135deg, ${ACCENT} 0%, ${ACCENT_DARK} 100%)` }}
           >
             {t("confirm")}
           </button>

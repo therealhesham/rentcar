@@ -78,19 +78,24 @@ export function SiteNav({ active = "home" }: SiteNavProps) {
             />
           </Link>
 
-          <div className="hidden items-center gap-1 rounded-full bg-[#dbb878] p-1.5 shadow-[0_8px_32px_rgba(119,89,39,0.15)] md:absolute md:left-1/2 md:-translate-x-1/2 md:flex">
+          <div className="hidden items-center gap-1 md:absolute md:left-1/2 md:flex md:-translate-x-1/2 lg:gap-2">
             {links.map((l) => {
               const isActive = active === l.key;
               return (
                 <Link
                   key={l.key}
                   href={l.href}
-                  className={`whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-bold transition-all duration-300 lg:px-7 ${isActive
-                      ? "bg-[#003749] text-white shadow-sm"
-                      : "text-[#2a2520] hover:bg-[#003749]/10"
+                  className={`relative whitespace-nowrap px-4 py-2 text-[15px] font-bold transition-colors duration-200 lg:px-5 ${isActive
+                      ? "text-[#003749]"
+                      : "text-slate-500 hover:text-[#f5821f]"
                     }`}
                 >
                   {l.label}
+                  <span
+                    className={`absolute inset-x-4 -bottom-0.5 h-[3px] rounded-full bg-[#f5821f] transition-opacity duration-200 lg:inset-x-5 ${isActive ? "opacity-100" : "opacity-0"
+                      }`}
+                    aria-hidden
+                  />
                 </Link>
               );
             })}
@@ -107,7 +112,7 @@ export function SiteNav({ active = "home" }: SiteNavProps) {
               aria-expanded={open}
               aria-controls="site-mobile-menu"
               aria-label={open ? "إغلاق القائمة" : "فتح القائمة"}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#dbb878] text-[#2a2520] shadow-[0_8px_32px_rgba(119,89,39,0.15)] transition-colors active:bg-[#c9a55e] md:hidden"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f5821f] text-[#1e293b] shadow-[0_8px_32px_rgba(245,130,31,0.25)] transition-colors active:bg-[#d9690a] md:hidden"
             >
               {open ? (
                 <svg
@@ -198,7 +203,7 @@ export function SiteNav({ active = "home" }: SiteNavProps) {
                   href={l.href}
                   onClick={closeMenu}
                   className={`rounded-xl px-4 py-3.5 text-base font-bold transition-colors ${isActive
-                      ? "bg-[#dbb878] text-[#2a2520] shadow-[0_4px_16px_rgba(219,184,120,0.35)]"
+                      ? "bg-[#f5821f] text-[#1e293b] shadow-[0_4px_16px_rgba(245,130,31,0.35)]"
                       : "text-white hover:bg-white/10 active:bg-white/15"
                     }`}
                 >

@@ -118,7 +118,7 @@ export default async function SubscriptionPlanDetailPage(ctx: {
               </span>
             </div>
             <div className="space-y-4 p-6 sm:p-8">
-              <p className="text-[11px] font-bold uppercase tracking-widest text-[#775927]/90">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-[#b45a0a]/90">
                 {localizeDbField(plan.carModel.category, "title", locale)}
               </p>
               <h1 className="text-3xl font-extrabold text-[#003749]">
@@ -129,7 +129,7 @@ export default async function SubscriptionPlanDetailPage(ctx: {
                   `اشترك في ${carLabel}: كيلومترات شهرية حقيقية، عربون واضح، وضريبة تُحسب وفق الأسعار الحالية.`}
               </p>
 
-              <section aria-labelledby="compare-id" className="rounded-2xl border border-[#dbb878]/28 bg-[#fdfbf8] px-5 py-4">
+              <section aria-labelledby="compare-id" className="rounded-2xl border border-[#f5821f]/28 bg-[#fafbfc] px-5 py-4">
                 <h2 id="compare-id" className="text-sm font-extrabold text-[#003749]">
                   مقارنة سريعة
                 </h2>
@@ -169,7 +169,7 @@ export default async function SubscriptionPlanDetailPage(ctx: {
           </article>
 
           <aside className="space-y-5">
-            <div className="rounded-3xl border border-neutral-100 bg-[#fdfbf6] px-5 py-4 shadow-lg">
+            <div className="rounded-3xl border border-neutral-100 bg-[#f7fafc] px-5 py-4 shadow-lg">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-black uppercase tracking-wide text-[#003749]/65">
                   سعر اشتراك شهري

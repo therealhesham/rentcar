@@ -80,7 +80,7 @@ export default async function SubscriptionsLandingPage({
       <div className="mx-auto max-w-screen-xl px-4 sm:px-6">
         {widgetPreset ? (
           <div
-            className="mb-6 rounded-2xl border border-[#dbb878]/40 bg-[#fffdf8] px-4 py-3 text-center shadow-sm sm:px-6"
+            className="mb-6 rounded-2xl border border-[#f5821f]/40 bg-[#ffffff] px-4 py-3 text-center shadow-sm sm:px-6"
             role="status"
           >
             <p className="text-[13px] font-extrabold text-[#003749]">
@@ -102,7 +102,7 @@ export default async function SubscriptionsLandingPage({
           </div>
         ) : null}
         <header className="py-10 text-center sm:py-14">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#775927]/90 whitespace-nowrap">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#b45a0a]/90 whitespace-nowrap">
             اشتراك شهري
           </p>
           <h1 className="mt-3 text-3xl font-extrabold text-[#003749] sm:text-4xl">

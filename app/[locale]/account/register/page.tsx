@@ -29,7 +29,7 @@ export default function AccountRegisterPage() {
                 required
                 minLength={2}
                 autoComplete="name"
-                className="mt-1.5 w-full rounded-xl border border-neutral-200 px-4 py-3 outline-none focus:ring-2 focus:ring-[#dbb878]/50"
+                className="mt-1.5 w-full rounded-xl border border-neutral-200 px-4 py-3 outline-none focus:ring-2 focus:ring-[#f5821f]/50"
                 dir="rtl"
               />
             </label>
@@ -40,7 +40,7 @@ export default function AccountRegisterPage() {
                 type="email"
                 required
                 autoComplete="email"
-                className="mt-1.5 w-full rounded-xl border border-neutral-200 px-4 py-3 outline-none focus:ring-2 focus:ring-[#dbb878]/50"
+                className="mt-1.5 w-full rounded-xl border border-neutral-200 px-4 py-3 outline-none focus:ring-2 focus:ring-[#f5821f]/50"
                 dir="ltr"
               />
             </label>
@@ -59,7 +59,7 @@ export default function AccountRegisterPage() {
                   inputMode="numeric"
                   autoComplete="tel-national"
                   placeholder="5XXXXXXXX"
-                  className="min-w-0 flex-1 px-4 py-3 outline-none focus:ring-2 focus:ring-[#dbb878]/50"
+                  className="min-w-0 flex-1 px-4 py-3 outline-none focus:ring-2 focus:ring-[#f5821f]/50"
                 />
               </div>
             </label>
@@ -71,7 +71,7 @@ export default function AccountRegisterPage() {
                 required
                 minLength={8}
                 autoComplete="new-password"
-                className="mt-1.5 w-full rounded-xl border border-neutral-200 px-4 py-3 outline-none focus:ring-2 focus:ring-[#dbb878]/50"
+                className="mt-1.5 w-full rounded-xl border border-neutral-200 px-4 py-3 outline-none focus:ring-2 focus:ring-[#f5821f]/50"
               />
             </label>
             <label className="text-sm font-bold text-on-surface-variant">
@@ -82,7 +82,7 @@ export default function AccountRegisterPage() {
                 required
                 minLength={8}
                 autoComplete="new-password"
-                className="mt-1.5 w-full rounded-xl border border-neutral-200 px-4 py-3 outline-none focus:ring-2 focus:ring-[#dbb878]/50"
+                className="mt-1.5 w-full rounded-xl border border-neutral-200 px-4 py-3 outline-none focus:ring-2 focus:ring-[#f5821f]/50"
               />
             </label>
             {state?.error ? (

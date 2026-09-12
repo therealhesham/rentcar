@@ -46,7 +46,7 @@ export function BookingStepper({ currentStep, modelId, bookingId }: BookingStepp
       {/* Step track */}
       <div className="relative flex items-center justify-between px-2 sm:px-4">
         {/* Background track line */}
-        <div className="absolute inset-x-0 top-4 h-[2px] bg-[#ebe4d3] mx-8 sm:mx-12" aria-hidden />
+        <div className="absolute inset-x-0 top-4 h-[2px] bg-[#e2e8f0] mx-8 sm:mx-12" aria-hidden />
 
         {/* Active track line */}
         <div
@@ -68,7 +68,7 @@ export function BookingStepper({ currentStep, modelId, bookingId }: BookingStepp
                   ? "border-[#003749] bg-[#003749] text-white"
                   : isActive
                   ? "border-[#003749] bg-white text-[#003749] shadow-[0_0_0_4px_rgba(0,55,73,0.12)]"
-                  : "border-[#d1c9b8] bg-white text-[#aaa08e]"
+                  : "border-[#d1c9b8] bg-white text-[#94a3b8]"
                 }
               `}
             >
@@ -87,7 +87,7 @@ export function BookingStepper({ currentStep, modelId, bookingId }: BookingStepp
                   <span className="group-hover:scale-110 transition-transform">{circle}</span>
                   <span
                     className={`text-center text-[11px] sm:text-[12px] font-bold leading-snug transition-colors ${
-                      isDone ? "text-[#003749] group-hover:text-[#003749]/80" : isActive ? "text-[#003749]" : "text-[#aaa08e]"
+                      isDone ? "text-[#003749] group-hover:text-[#003749]/80" : isActive ? "text-[#003749]" : "text-[#94a3b8]"
                     }`}
                   >
                     {step.label}
@@ -98,7 +98,7 @@ export function BookingStepper({ currentStep, modelId, bookingId }: BookingStepp
                   {circle}
                   <span
                     className={`text-center text-[11px] sm:text-[12px] font-bold leading-snug ${
-                      isActive ? "text-[#003749]" : isDone ? "text-[#003749]/70" : "text-[#aaa08e]"
+                      isActive ? "text-[#003749]" : isDone ? "text-[#003749]/70" : "text-[#94a3b8]"
                     }`}
                   >
                     {step.label}

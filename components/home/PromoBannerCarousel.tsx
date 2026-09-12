@@ -126,8 +126,8 @@ export function PromoBannerCarousel({ slides }: { slides: PromoBannerSlide[] }) 
                 aria-label={`انتقل إلى الشريحة ${i + 1}`}
                 className={`h-2 rounded-full transition-all duration-300 ${
                   i === current
-                    ? "w-6 bg-[#dbb878]"
-                    : "w-2 bg-[#dbb878]/40 hover:bg-[#dbb878]/70"
+                    ? "w-6 bg-[#f5821f]"
+                    : "w-2 bg-[#f5821f]/40 hover:bg-[#f5821f]/70"
                 }`}
               />
             ))}

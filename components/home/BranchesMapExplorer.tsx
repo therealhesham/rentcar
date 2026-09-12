@@ -82,12 +82,12 @@ export function BranchesMapExplorer({ groups }: { groups: ExplorerCityGroup[] })
       <div
         role="listbox"
         aria-label={t("branchesList")}
-        className="order-2 flex max-h-[300px] flex-col gap-4 overflow-y-auto pe-1 lg:order-1 lg:col-span-2 lg:max-h-[560px] [scrollbar-width:thin] [scrollbar-color:#dbb878_transparent]"
+        className="order-2 flex max-h-[300px] flex-col gap-4 overflow-y-auto pe-1 lg:order-1 lg:col-span-2 lg:max-h-[560px] [scrollbar-width:thin] [scrollbar-color:#f5821f_transparent]"
       >
         {groups.map((group) => (
           <div key={group.cityName}>
-            <p className="sticky top-0 z-10 flex items-center gap-2 bg-gradient-to-b from-[#fdfbf6] via-[#fdfbf6]/95 to-transparent pb-2 pt-1 text-xs font-extrabold tracking-widest text-[#775927]">
-              <span className="h-px w-4 bg-[#dbb878]" aria-hidden />
+            <p className="sticky top-0 z-10 flex items-center gap-2 bg-gradient-to-b from-[#f7fafc] via-[#f7fafc]/95 to-transparent pb-2 pt-1 text-xs font-extrabold tracking-widest text-[#b45a0a]">
+              <span className="h-px w-4 bg-[#f5821f]" aria-hidden />
               {group.cityName}
             </p>
             <div className="flex flex-col gap-2">
@@ -102,15 +102,15 @@ export function BranchesMapExplorer({ groups }: { groups: ExplorerCityGroup[] })
                     onClick={() => setSelectedId(branch.id)}
                     className={`group flex items-start gap-3 rounded-2xl border p-4 text-start transition-all duration-300 ${
                       isActive
-                        ? "border-[#dbb878] bg-white shadow-[0_12px_32px_-12px_rgba(219,184,120,0.35)]"
-                        : "border-[#ebe4d3]/70 bg-white/60 hover:border-[#dbb878]/50 hover:bg-white"
+                        ? "border-[#f5821f] bg-white shadow-[0_12px_32px_-12px_rgba(219,184,120,0.35)]"
+                        : "border-[#e2e8f0]/70 bg-white/60 hover:border-[#f5821f]/50 hover:bg-white"
                     }`}
                   >
                     <span
                       className={`mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl transition-colors duration-300 ${
                         isActive
-                          ? "bg-[#003749] text-[#dbb878]"
-                          : "bg-[#fdfbf6] text-[#003749] ring-1 ring-[#ebe4d3] group-hover:text-[#dbb878]"
+                          ? "bg-[#003749] text-[#f5821f]"
+                          : "bg-[#f7fafc] text-[#003749] ring-1 ring-[#e2e8f0] group-hover:text-[#f5821f]"
                       }`}
                     >
                       <MapPin className="size-4" aria-hidden />
@@ -119,11 +119,11 @@ export function BranchesMapExplorer({ groups }: { groups: ExplorerCityGroup[] })
                       <span className="block truncate text-sm font-extrabold text-[#003749]">
                         {branch.name}
                       </span>
-                      <span className="mt-0.5 block truncate text-xs leading-relaxed text-[#8a7752]">
+                      <span className="mt-0.5 block truncate text-xs leading-relaxed text-[#475569]">
                         {branch.address?.trim() || branch.tagline?.trim() || t("defaultAddress")}
                       </span>
                       {branch.phone?.trim() ? (
-                        <span className="mt-1.5 flex items-center gap-1.5 text-xs font-bold text-[#775927]">
+                        <span className="mt-1.5 flex items-center gap-1.5 text-xs font-bold text-[#b45a0a]">
                           <Phone className="size-3.5 shrink-0" aria-hidden />
                           <span dir="ltr" className="truncate">
                             {branch.phone.trim()}
@@ -140,7 +140,7 @@ export function BranchesMapExplorer({ groups }: { groups: ExplorerCityGroup[] })
       </div>
 
       <div className="order-1 lg:order-2 lg:col-span-3">
-        <div className="relative h-[320px] overflow-hidden rounded-3xl border border-[#ebe4d3] bg-[#fdfbf6] shadow-[0_24px_60px_-24px_rgba(15,61,71,0.25)] sm:h-[440px] lg:h-[560px]">
+        <div className="relative h-[320px] overflow-hidden rounded-3xl border border-[#e2e8f0] bg-[#f7fafc] shadow-[0_24px_60px_-24px_rgba(15,61,71,0.25)] sm:h-[440px] lg:h-[560px]">
           <iframe
             key={selected.id}
             title={t("mapTitle", { name: selected.name })}
@@ -155,14 +155,14 @@ export function BranchesMapExplorer({ groups }: { groups: ExplorerCityGroup[] })
             <div className="pointer-events-auto flex flex-col gap-3 rounded-2xl border border-white/60 bg-white/90 p-4 shadow-[0_16px_40px_-16px_rgba(15,61,71,0.3)] backdrop-blur-md sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
                 <p className="truncate text-sm font-extrabold text-[#003749]">{selected.name}</p>
-                <p className="mt-0.5 truncate text-xs text-[#8a7752]">
+                <p className="mt-0.5 truncate text-xs text-[#475569]">
                   {selected.address?.trim() || selected.tagline?.trim() || t("defaultAddress")}
                 </p>
                 {selected.phone?.trim() ? (
                   <a
                     href={`tel:${selected.phone.trim()}`}
                     dir="ltr"
-                    className="mt-1 inline-flex items-center gap-1.5 text-xs font-extrabold text-[#775927] transition-colors hover:text-[#003749]"
+                    className="mt-1 inline-flex items-center gap-1.5 text-xs font-extrabold text-[#b45a0a] transition-colors hover:text-[#003749]"
                   >
                     <Phone className="size-3.5 shrink-0" aria-hidden />
                     {selected.phone.trim()}
@@ -183,7 +183,7 @@ export function BranchesMapExplorer({ groups }: { groups: ExplorerCityGroup[] })
                   href={resolveBranchMapUrl(selected)}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-full border border-[#dbb878] bg-[#dbb878]/15 px-4 py-2 text-xs font-bold text-[#775927] transition-colors hover:bg-[#dbb878]/30"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[#f5821f] bg-[#f5821f]/15 px-4 py-2 text-xs font-bold text-[#b45a0a] transition-colors hover:bg-[#f5821f]/30"
                 >
                   <Navigation className="size-3.5" aria-hidden />
                   {t("directions")}

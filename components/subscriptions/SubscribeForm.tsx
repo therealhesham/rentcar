@@ -101,7 +101,7 @@ export function SubscribeForm({
   }
 
   return (
-    <div className="space-y-4 rounded-2xl border border-neutral-200 bg-[#fdfbf6]/80 p-5 shadow-inner">
+    <div className="space-y-4 rounded-2xl border border-neutral-200 bg-[#f7fafc]/80 p-5 shadow-inner">
       <div>
         <label
           htmlFor="sub-start-date"

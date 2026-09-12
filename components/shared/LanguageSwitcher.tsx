@@ -34,12 +34,12 @@ export function LanguageSwitcher({ variant = "light" }: { variant?: "light" | "d
       disabled={isPending}
       aria-label={ariaLabel}
       dir={target === "en" ? "ltr" : "rtl"}
-      className={`relative flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-[#dbb878]/50 bg-[#dbb878]/10 px-3.5 text-xs font-bold tracking-wide backdrop-blur transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#dbb878] sm:px-4 ${
+      className={`relative flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-[#f5821f]/50 bg-[#f5821f]/10 px-3.5 text-xs font-bold tracking-wide backdrop-blur transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#f5821f] sm:px-4 ${
         isPending ? "pointer-events-none opacity-50" : ""
       } ${
         variant === "light"
-          ? "text-[#003749] hover:bg-[#dbb878]/25"
-          : "text-white hover:bg-white/10 hover:text-[#dbb878]"
+          ? "text-[#003749] hover:bg-[#f5821f]/25"
+          : "text-white hover:bg-white/10 hover:text-[#f5821f]"
       }`}
     >
       <span className={`flex items-center gap-1.5 ${isPending ? "invisible" : ""}`}>
@@ -60,7 +60,7 @@ export function LanguageSwitcher({ variant = "light" }: { variant?: "light" | "d
       </span>
       {isPending && (
         <span aria-hidden className="absolute inset-0 flex items-center justify-center">
-          <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[#dbb878] border-t-transparent" />
+          <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[#f5821f] border-t-transparent" />
         </span>
       )}
     </button>

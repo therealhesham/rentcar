@@ -200,17 +200,17 @@ export function TimePickerPopover({
       role="dialog"
       aria-label={`${t("select")} ${label}`}
       style={panelStyle}
-      className="datetime-popover flex flex-col overflow-hidden rounded-2xl border border-[#ebe4d3] bg-white shadow-[0_20px_60px_-10px_rgba(0,55,73,0.22),0_4px_16px_-4px_rgba(0,55,73,0.12)]"
+      className="datetime-popover flex flex-col overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-[0_20px_60px_-10px_rgba(0,55,73,0.22),0_4px_16px_-4px_rgba(0,55,73,0.12)]"
       dir={isAr ? "rtl" : "ltr"}
     >
-      <div className="flex items-center justify-between border-b border-[#f0ebe4] bg-gradient-to-l from-[#fdfbf6] to-[#f9f5ee] px-4 py-3">
+      <div className="flex items-center justify-between border-b border-[#f1f5f9] bg-gradient-to-l from-[#f7fafc] to-[#f7fafc] px-4 py-3">
         <span className="text-[13.5px] font-extrabold text-[#003749]">
           {t("select")} {label}
         </span>
         <button
           type="button"
           onClick={onClose}
-          className="flex size-6 items-center justify-center rounded-full text-[#8a7752] transition-colors hover:bg-[#f0ebe4]"
+          className="flex size-6 items-center justify-center rounded-full text-[#475569] transition-colors hover:bg-[#f1f5f9]"
           aria-label="إغلاق"
         >
           <X className="size-3.5" />
@@ -218,13 +218,13 @@ export function TimePickerPopover({
       </div>
 
       {readOnly ? (
-        <p className="px-3 py-4 text-center text-[11px] font-semibold text-[#aaa08e]">
+        <p className="px-3 py-4 text-center text-[11px] font-semibold text-[#94a3b8]">
           الوقت محدد آلياً
         </p>
       ) : groups.length === 0 ? (
         <div className="flex flex-col items-center gap-2 px-4 py-6 text-center">
-          <CalendarX2 className="size-7 text-[#c9a356]" aria-hidden />
-          <p className="text-[12.5px] font-bold leading-relaxed text-[#3a2f1e]">
+          <CalendarX2 className="size-7 text-[#d9690a]" aria-hidden />
+          <p className="text-[12.5px] font-bold leading-relaxed text-[#1e293b]">
             {bounds.kind === "closed"
               ? isAr
                 ? "الفرع مغلق في هذا اليوم — اختر تاريخاً آخر أو فرعاً آخر."
@@ -236,9 +236,9 @@ export function TimePickerPopover({
         </div>
       ) : (
         <>
-          <div className="flex items-center gap-1.5 border-b border-[#f0ebe4] px-4 py-2.5">
-            <Clock className="size-3.5 shrink-0 text-[#dbb878]" aria-hidden />
-            <span className="text-[11.5px] font-bold text-[#6b5a3b]">
+          <div className="flex items-center gap-1.5 border-b border-[#f1f5f9] px-4 py-2.5">
+            <Clock className="size-3.5 shrink-0 text-[#f5821f]" aria-hidden />
+            <span className="text-[11.5px] font-bold text-[#334155]">
               {bounds.kind !== "range" ? (
                 isAr ? "متاح على مدار 24 ساعة" : "24-hour availability"
               ) : (
@@ -273,8 +273,8 @@ export function TimePickerPopover({
                         className={`rounded-lg py-2.5 text-center text-[12.5px] font-bold tabular-nums transition-all
                           ${
                             isActive
-                              ? "bg-gradient-to-r from-[#dbb878] to-[#c9a356] text-white shadow-sm"
-                              : "bg-[#f7f3ea] text-[#3a2f1e] hover:bg-[#efe7d6]"
+                              ? "bg-gradient-to-r from-[#f5821f] to-[#d9690a] text-white shadow-sm"
+                              : "bg-[#f7f3ea] text-[#1e293b] hover:bg-[#e2e8f0]"
                           }`}
                       >
                         {formatSlotLabel(hm, isAr)}

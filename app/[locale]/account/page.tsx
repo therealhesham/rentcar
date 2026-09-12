@@ -323,7 +323,7 @@ export default async function AccountDashboardPage({
                   </span>
                 ) : null}
                 {modeLabel ? (
-                  <span className="inline-flex items-center gap-1 rounded-md bg-[#fffbf2] px-2 py-0.5 text-[11px] font-bold text-[#775927]">
+                  <span className="inline-flex items-center gap-1 rounded-md bg-[#fffbf2] px-2 py-0.5 text-[11px] font-bold text-[#b45a0a]">
                     <svg viewBox="0 0 24 24" fill="none" className="h-3 w-3" aria-hidden>
                       <path d="M12 21s-6-5.2-6-10a6 6 0 1112 0c0 4.8-6 10-6 10z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                       <circle cx="12" cy="11" r="2" stroke="currentColor" strokeWidth="2" />
@@ -340,7 +340,7 @@ export default async function AccountDashboardPage({
             {/* معلومات الفروع */}
             {(pickupBranchName || returnBranchName) ? (
               <div className="flex items-center gap-2 text-xs">
-                <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5 shrink-0 text-[#775927]" aria-hidden>
+                <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5 shrink-0 text-[#b45a0a]" aria-hidden>
                   <path d="M12 21s-6-5.2-6-10a6 6 0 1112 0c0 4.8-6 10-6 10z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                   <circle cx="12" cy="11" r="2" stroke="currentColor" strokeWidth="2" />
                 </svg>
@@ -433,8 +433,8 @@ export default async function AccountDashboardPage({
         {/* ────── هيدر الملف الشخصي ────── */}
         <header className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#003749] via-[#013040] to-[#163332] shadow-2xl">
           {/* خلفية زخرفية */}
-          <div className="pointer-events-none absolute -left-20 -top-20 h-72 w-72 rounded-full bg-[#dbb878]/15 blur-3xl" aria-hidden />
-          <div className="pointer-events-none absolute -bottom-16 right-0 h-56 w-56 rounded-full bg-[#dbb878]/10 blur-3xl" aria-hidden />
+          <div className="pointer-events-none absolute -left-20 -top-20 h-72 w-72 rounded-full bg-[#f5821f]/15 blur-3xl" aria-hidden />
+          <div className="pointer-events-none absolute -bottom-16 right-0 h-56 w-56 rounded-full bg-[#f5821f]/10 blur-3xl" aria-hidden />
           <div className="pointer-events-none absolute left-1/2 top-0 h-px w-3/4 -translate-x-1/2 bg-gradient-to-r from-transparent via-white/10 to-transparent" aria-hidden />
 
           <div className="relative px-6 py-7 sm:px-8 sm:py-9">
@@ -442,14 +442,14 @@ export default async function AccountDashboardPage({
               {/* معلومات العميل */}
               <div className="flex flex-col items-center gap-4 sm:flex-row">
                 <div className="relative shrink-0">
-                  <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-[#e6be82] to-[#c9a356] text-2xl font-black text-[#003749] shadow-lg ring-4 ring-white/15">
+                  <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-[#fbbf66] to-[#d9690a] text-2xl font-black text-[#003749] shadow-lg ring-4 ring-white/15">
                     {profileInitials(profile.name)}
                   </div>
                   {/* نقطة خضراء تدل على نشاط الحساب */}
                   <span className="absolute -bottom-1 -left-1 h-4 w-4 rounded-full border-2 border-[#013040] bg-emerald-400" aria-hidden />
                 </div>
                 <div className="text-center sm:text-start">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-[#e6be82]/80">{t("customerAccount")}</p>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-[#fbbf66]/80">{t("customerAccount")}</p>
                   <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
                     {profile.name ?? t("dearCustomer")}
                   </h1>
@@ -478,7 +478,7 @@ export default async function AccountDashboardPage({
               <div className="flex flex-wrap items-center justify-center gap-2.5 sm:flex-col sm:items-stretch sm:gap-2">
                 {/* <Link
                   href="/subscriptions"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-l from-[#dbb878] to-[#e6be82] px-5 py-2.5 text-sm font-extrabold text-[#003749] shadow-md transition-all hover:shadow-lg hover:brightness-105"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-l from-[#f5821f] to-[#fbbf66] px-5 py-2.5 text-sm font-extrabold text-[#003749] shadow-md transition-all hover:shadow-lg hover:brightness-105"
                 >
                   <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden>
                     <path d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -551,7 +551,7 @@ export default async function AccountDashboardPage({
 
           {bookings.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-neutral-300 bg-white px-6 py-16 text-center shadow-sm">
-              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#dbb878]/20 text-[#775927]">
+              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#f5821f]/20 text-[#b45a0a]">
                 <svg viewBox="0 0 24 24" fill="none" className="h-8 w-8" aria-hidden>
                   <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>

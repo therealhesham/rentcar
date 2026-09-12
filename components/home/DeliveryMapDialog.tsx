@@ -487,7 +487,7 @@ export function DeliveryMapDialog({
                     }}
                     className="flex w-full items-start gap-2 px-3 py-2.5 text-start text-[13px] font-semibold leading-snug text-on-surface transition hover:bg-surface-container-low"
                   >
-                    <MapPin className="mt-0.5 size-4 shrink-0 text-[#dbb878]" aria-hidden />
+                    <MapPin className="mt-0.5 size-4 shrink-0 text-[#f5821f]" aria-hidden />
                     <span className="min-w-0">{p.label}</span>
                   </button>
                 </li>
@@ -516,7 +516,7 @@ export function DeliveryMapDialog({
                   }`}
                 >
                   <MapPin
-                    className="size-9 fill-[#dbb878] text-[#003749] drop-shadow-[0_4px_6px_rgba(0,0,0,0.35)]"
+                    className="size-9 fill-[#f5821f] text-[#003749] drop-shadow-[0_4px_6px_rgba(0,0,0,0.35)]"
                     strokeWidth={1.5}
                   />
                 </div>

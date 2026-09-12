@@ -92,10 +92,10 @@ export function SubscriptionPackagesInWidget({
   }, [months, startYmd]);
 
   return (
-    <div className="col-span-full mb-1 rounded-2xl border border-[#dbb878]/35 bg-gradient-to-br from-[#fffdf8] via-white to-[#f0faf9] p-3.5 shadow-inner sm:p-4">
+    <div className="col-span-full mb-1 rounded-2xl border border-[#f5821f]/35 bg-gradient-to-br from-[#ffffff] via-white to-[#f0faf9] p-3.5 shadow-inner sm:p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-[10px] font-black uppercase tracking-wide text-[#775927]/90 whitespace-nowrap">
+          <p className="text-[10px] font-black uppercase tracking-wide text-[#b45a0a]/90 whitespace-nowrap">
             اشتراك شهري بالسيارة
           </p>
           <h3 className="mt-0.5 text-sm font-extrabold text-[#003749] sm:text-[15px]">
@@ -108,7 +108,7 @@ export function SubscriptionPackagesInWidget({
         </div>
         <Link
           href={`/subscriptions${querySuffix}`}
-          className="shrink-0 rounded-xl border border-[#003749]/20 bg-white px-3 py-1.5 text-[11px] font-extrabold text-[#003749] shadow-sm transition-colors hover:border-[#dbb878]"
+          className="shrink-0 rounded-xl border border-[#003749]/20 bg-white px-3 py-1.5 text-[11px] font-extrabold text-[#003749] shadow-sm transition-colors hover:border-[#f5821f]"
         >
           كل الباقات ←
         </Link>
@@ -145,7 +145,7 @@ export function SubscriptionPackagesInWidget({
                 }
               }}
               dir="ltr"
-              className="w-[5.5rem] rounded-xl border border-[#003749]/20 bg-white px-2.5 py-1.5 text-center text-[13px] font-extrabold tabular-nums text-[#003749] shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-[#dbb878]/40"
+              className="w-[5.5rem] rounded-xl border border-[#003749]/20 bg-white px-2.5 py-1.5 text-center text-[13px] font-extrabold tabular-nums text-[#003749] shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-[#f5821f]/40"
             />
             <span className="pb-1 text-[10px] font-semibold text-on-surface-variant">
               شهراً ({MIN_SUBSCRIPTION_DURATION_MONTHS}–{MAX_SUBSCRIPTION_DURATION_MONTHS})
@@ -192,7 +192,7 @@ export function SubscriptionPackagesInWidget({
               onStartYmdChange(y);
               setStartDraft(formatYmdAsDdMmYy(y));
             }}
-            inputClassName="rounded-xl border-[#ebe4d3]/90 bg-white px-2.5 py-1.5 shadow-sm"
+            inputClassName="rounded-xl border-[#e2e8f0]/90 bg-white px-2.5 py-1.5 shadow-sm"
             buttonClassName="rounded-xl"
           />
         </div>
@@ -210,7 +210,7 @@ export function SubscriptionPackagesInWidget({
               <li key={p.slug} className="w-[min(11rem,72vw)] shrink-0">
                 <Link
                   href={`/subscriptions/${encodeURIComponent(p.slug)}${querySuffix}`}
-                  className="flex flex-col overflow-hidden rounded-xl border border-[#ebe4d3]/80 bg-white shadow-sm transition-[box-shadow,transform] hover:-translate-y-0.5 hover:shadow-md"
+                  className="flex flex-col overflow-hidden rounded-xl border border-[#e2e8f0]/80 bg-white shadow-sm transition-[box-shadow,transform] hover:-translate-y-0.5 hover:shadow-md"
                 >
                   <div className="relative aspect-[16/10] bg-neutral-100">
                     {img ? (
@@ -245,7 +245,7 @@ export function SubscriptionPackagesInWidget({
         </ul>
       ) : null}
       {children ? (
-        <div className="mt-4 border-t border-[#dbb878]/30 pt-4 sm:mt-5 sm:pt-5">{children}</div>
+        <div className="mt-4 border-t border-[#f5821f]/30 pt-4 sm:mt-5 sm:pt-5">{children}</div>
       ) : null}
     </div>
   );

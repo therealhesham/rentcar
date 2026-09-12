@@ -45,14 +45,14 @@ export function FleetShowcase() {
           <h2 className="mb-4 text-[2.5rem] font-extrabold tracking-tight">
             أسطول مختار بعناية
           </h2>
-          <div className="mx-auto h-1 w-12 rounded-full bg-primary" />
+          <div className="mx-auto h-1 w-12 rounded-full bg-[#F5821F]" />
         </div>
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-3">
           {cars.map((car) => (
             <div key={car.name} className="group">
               <div className="relative mb-6 aspect-[4/3] overflow-hidden rounded-xl bg-surface-container-low">
                 {car.badge ? (
-                  <div className="absolute start-4 top-4 z-10 rounded-full bg-primary-fixed px-3 py-1 text-[10px] font-bold tracking-wide text-on-primary-fixed">
+                  <div className="absolute start-4 top-4 z-10 rounded-full bg-[#FDE4C4] px-3 py-1 text-[10px] font-bold tracking-wide text-[#B45A0A]">
                     {car.badge}
                   </div>
                 ) : null}
@@ -71,7 +71,7 @@ export function FleetShowcase() {
                 </div>
                 <div className="shrink-0 text-end">
                   <SarAmountWithSymbol
-                    amountClassName="block text-xl font-extrabold text-primary"
+                    amountClassName="block text-xl font-extrabold text-[#B45A0A]"
                     className="block justify-end"
                   >
                     {car.price}
@@ -87,7 +87,7 @@ export function FleetShowcase() {
               {car.cta === "outline" ? (
                 <button
                   type="button"
-                  className="w-full rounded-xl border border-outline-variant py-4 text-xs font-bold tracking-wide text-primary transition-colors hover:bg-primary-container/10"
+                  className="w-full rounded-xl border border-outline-variant py-4 text-xs font-bold tracking-wide text-[#B45A0A] transition-colors hover:bg-[#F5821F]/10"
                 >
                   {t("viewDetails")}
                 </button>

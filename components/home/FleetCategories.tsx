@@ -61,7 +61,7 @@ export async function FleetCategories({ rentalTab }: { rentalTab?: string | null
           backgroundSize: "24px 24px",
         }}
       />
-      <div className="pointer-events-none absolute -start-[16rem] top-0 h-[32rem] w-[32rem] rounded-full bg-gradient-to-tr from-[#dbb878]/14 to-transparent blur-3xl" />
+      <div className="pointer-events-none absolute -start-[16rem] top-0 h-[32rem] w-[32rem] rounded-full bg-gradient-to-tr from-[#f5821f]/14 to-transparent blur-3xl" />
       <div className="pointer-events-none absolute -end-[16rem] bottom-0 h-[32rem] w-[32rem] rounded-full bg-gradient-to-bl from-[#003749]/10 to-transparent blur-3xl" />
 
       <Reveal className="relative z-[1]">

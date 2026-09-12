@@ -44,7 +44,7 @@ export function FloatingBookCta() {
           className="fixed bottom-5 left-1/2 z-40 flex -translate-x-1/2 items-center gap-2 rounded-full bg-[#003749] py-3 pe-6 ps-5 text-sm font-extrabold text-white shadow-[0_16px_40px_-10px_rgba(0,55,73,0.55)] ring-1 ring-white/15 transition-colors hover:bg-[#00465d] sm:bottom-7"
         >
           <span
-            className="flex size-6 items-center justify-center rounded-full bg-[#dbb878] text-[#1a1408]"
+            className="flex size-6 items-center justify-center rounded-full bg-[#f5821f] text-[#0f172a]"
             aria-hidden
           >
             <CalendarCheck className="size-3.5" />

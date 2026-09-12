@@ -7,8 +7,8 @@ import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import { DIALOG_Z } from "@/lib/overlay-z-index";
 
-const GOLD = "#dbb878";
-const GOLD_DARK = "#c9a356";
+const ACCENT = "#f5821f";
+const ACCENT_DARK = "#d9690a";
 const TEAL = "#003749";
 
 type Props = {
@@ -59,7 +59,7 @@ export function BranchOutsideHoursModal({
         <button
           type="button"
           onClick={onClose}
-          className="absolute end-4 top-4 rounded-full p-1.5 text-[#aaa08e] transition-colors hover:bg-[#fdfbf6] hover:text-[#003749]"
+          className="absolute end-4 top-4 rounded-full p-1.5 text-[#94a3b8] transition-colors hover:bg-[#f7fafc] hover:text-[#003749]"
           aria-label={t("close")}
         >
           <X className="size-5" aria-hidden />
@@ -93,7 +93,7 @@ export function BranchOutsideHoursModal({
               }}
               className="w-full rounded-2xl py-3.5 text-[15px] font-extrabold text-white shadow-[0_10px_28px_-10px_rgba(201,163,86,0.55)] transition-[transform,box-shadow] hover:-translate-y-0.5 active:translate-y-0"
               style={{
-                background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)`,
+                background: `linear-gradient(135deg, ${ACCENT} 0%, ${ACCENT_DARK} 100%)`,
               }}
             >
               {t("editTimeOrBranch")}
@@ -101,7 +101,7 @@ export function BranchOutsideHoursModal({
             <Link
               href="/fleet"
               onClick={onClose}
-              className="w-full rounded-2xl border-2 border-[#003749]/18 bg-white py-3.5 text-center text-[14px] font-extrabold text-[#003749] transition-colors hover:border-[#dbb878]/45 hover:bg-[#fdfbf6]"
+              className="w-full rounded-2xl border-2 border-[#003749]/18 bg-white py-3.5 text-center text-[14px] font-extrabold text-[#003749] transition-colors hover:border-[#f5821f]/45 hover:bg-[#f7fafc]"
             >
               {t("browseFleet")}
             </Link>

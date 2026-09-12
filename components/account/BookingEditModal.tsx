@@ -285,7 +285,7 @@ export function BookingEditModal(props: BookingEditModalProps) {
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-[#775927]">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[#b45a0a]">
               {t("editTitle", { id: props.bookingId })}
             </p>
             <h2 className="truncate text-base font-extrabold text-[#003749]">{props.carName}</h2>
@@ -319,7 +319,7 @@ export function BookingEditModal(props: BookingEditModalProps) {
             </span>
             {props.branchName ? (
               <span className="inline-flex items-center gap-1.5 text-xs font-bold text-on-surface-variant">
-                <MapPin className="h-3.5 w-3.5 text-[#775927]" />
+                <MapPin className="h-3.5 w-3.5 text-[#b45a0a]" />
                 {props.branchName}
               </span>
             ) : null}
@@ -343,7 +343,7 @@ export function BookingEditModal(props: BookingEditModalProps) {
               </div>
             ) : (
               <div className="mb-3 flex items-center gap-2 text-[12px] font-bold text-on-surface-variant">
-                <Calendar className="h-4 w-4 text-[#dbb878]" />
+                <Calendar className="h-4 w-4 text-[#f5821f]" />
                 {pendingStart ? t("pickReturn") : t("pickPickupThenReturn")}
               </div>
             )}
@@ -352,7 +352,7 @@ export function BookingEditModal(props: BookingEditModalProps) {
               <button
                 type="button"
                 onClick={prevMonth}
-                className="flex h-8 w-8 items-center justify-center rounded-full text-[#8a7752] transition-colors hover:bg-[#f0ebe4] hover:text-[#003749]"
+                className="flex h-8 w-8 items-center justify-center rounded-full text-[#475569] transition-colors hover:bg-[#f1f5f9] hover:text-[#003749]"
                 aria-label={t("prevMonth")}
               >
                 <ChevronRight className="h-4 w-4" />
@@ -363,7 +363,7 @@ export function BookingEditModal(props: BookingEditModalProps) {
               <button
                 type="button"
                 onClick={nextMonth}
-                className="flex h-8 w-8 items-center justify-center rounded-full text-[#8a7752] transition-colors hover:bg-[#f0ebe4] hover:text-[#003749]"
+                className="flex h-8 w-8 items-center justify-center rounded-full text-[#475569] transition-colors hover:bg-[#f1f5f9] hover:text-[#003749]"
                 aria-label={t("nextMonth")}
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -372,7 +372,7 @@ export function BookingEditModal(props: BookingEditModalProps) {
 
             <div className="mb-1 grid grid-cols-7 gap-1 text-center">
               {weekdays.map((d) => (
-                <span key={d} className="py-1 text-[11px] font-bold text-[#8a7752]">{d}</span>
+                <span key={d} className="py-1 text-[11px] font-bold text-[#475569]">{d}</span>
               ))}
             </div>
 
@@ -392,14 +392,14 @@ export function BookingEditModal(props: BookingEditModalProps) {
                     disabled={cell.disabled}
                     onClick={() => !cell.disabled && handleDayClick(cell.ymd)}
                     className={`relative flex h-10 w-full items-center justify-center text-[13px] font-bold transition-all
-                      ${cell.disabled ? "cursor-not-allowed text-neutral-300" : "text-[#3a2f1e] hover:bg-[#fdfbf6]"}
-                      ${inRange ? "bg-[#dbb878]/20 text-[#003749]" : ""}
+                      ${cell.disabled ? "cursor-not-allowed text-neutral-300" : "text-[#1e293b] hover:bg-[#f7fafc]"}
+                      ${inRange ? "bg-[#f5821f]/20 text-[#003749]" : ""}
                       ${isPickup && !isReturn ? "rounded-r-xl rounded-l-md" : ""}
                       ${isReturn && !isPickup ? "rounded-l-xl rounded-r-md" : ""}
                       ${isPickup && isReturn ? "rounded-xl" : ""}
-                      ${isEnd ? "bg-gradient-to-br from-[#dbb878] to-[#c9a356] text-white shadow-[0_2px_8px_-2px_rgba(219,184,120,0.6)]" : ""}
+                      ${isEnd ? "bg-gradient-to-br from-[#f5821f] to-[#d9690a] text-white shadow-[0_2px_8px_-2px_rgba(219,184,120,0.6)]" : ""}
                       ${isPending ? "rounded-xl ring-2 ring-[#003749] ring-offset-1" : ""}
-                      ${isToday && !isEnd && !inRange && !isPending ? "rounded-lg ring-1 ring-[#dbb878]/60" : ""}
+                      ${isToday && !isEnd && !inRange && !isPending ? "rounded-lg ring-1 ring-[#f5821f]/60" : ""}
                     `}
                   >
                     {cell.day}
@@ -411,7 +411,7 @@ export function BookingEditModal(props: BookingEditModalProps) {
             {/* وقت الاستلام */}
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-neutral-100 pt-4">
               <span className="inline-flex items-center gap-1.5 text-xs font-bold text-on-surface-variant">
-                <Clock className="h-4 w-4 text-[#dbb878]" />
+                <Clock className="h-4 w-4 text-[#f5821f]" />
                 {t("pickupTime")}
               </span>
               {props.started ? (

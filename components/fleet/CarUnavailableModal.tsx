@@ -11,8 +11,8 @@ import type { CheckoutAlternativeDTO } from "@/lib/checkout-alternatives";
 import { DIALOG_Z } from "@/lib/overlay-z-index";
 import { dailyRentalInclTaxSar, type RentalPriceDisplayMode } from "@/lib/pricing";
 
-const GOLD = "#dbb878";
-const GOLD_DARK = "#c9a356";
+const ACCENT = "#f5821f";
+const ACCENT_DARK = "#d9690a";
 const TEAL = "#003749";
 
 type Props = {
@@ -151,7 +151,7 @@ export function CarUnavailableModal({
         <button
           type="button"
           onClick={onClose}
-          className="absolute end-4 top-4 z-10 rounded-full p-1.5 text-[#aaa08e] transition-colors hover:bg-[#fdfbf6] hover:text-[#003749]"
+          className="absolute end-4 top-4 z-10 rounded-full p-1.5 text-[#94a3b8] transition-colors hover:bg-[#f7fafc] hover:text-[#003749]"
           aria-label={closeLabel}
         >
           <X className="size-5" aria-hidden />
@@ -191,7 +191,7 @@ export function CarUnavailableModal({
           </p>
 
           {loadingAlts ? (
-            <div className="mt-7 flex items-center justify-center gap-2 text-[13px] font-bold text-[#aaa08e]">
+            <div className="mt-7 flex items-center justify-center gap-2 text-[13px] font-bold text-[#94a3b8]">
               <Loader2 className="size-4 animate-spin" aria-hidden />
               {isRTL ? "جاري البحث عن سيارات متاحة…" : "Finding available cars…"}
             </div>
@@ -213,9 +213,9 @@ export function CarUnavailableModal({
                         onPickAlternative?.(alt.modelId);
                         onClose();
                       }}
-                      className="flex w-full items-center gap-3 rounded-2xl border border-[#ebe4d3] bg-white p-2.5 text-start transition-all hover:border-[#dbb878]/70 hover:bg-[#fffdf8] hover:shadow-[0_10px_24px_-14px_rgba(15,61,71,0.35)]"
+                      className="flex w-full items-center gap-3 rounded-2xl border border-[#e2e8f0] bg-white p-2.5 text-start transition-all hover:border-[#f5821f]/70 hover:bg-[#ffffff] hover:shadow-[0_10px_24px_-14px_rgba(15,61,71,0.35)]"
                     >
-                      <span className="relative size-[52px] shrink-0 overflow-hidden rounded-xl bg-[#fdfbf6]">
+                      <span className="relative size-[52px] shrink-0 overflow-hidden rounded-xl bg-[#f7fafc]">
                         <Image
                           src={alt.image}
                           alt={alt.alt}
@@ -229,11 +229,11 @@ export function CarUnavailableModal({
                           {alt.fullTitle}
                         </span>
                         <span className="mt-0.5 flex items-center gap-1.5">
-                          <span className="truncate text-[11px] font-bold text-[#8a7752]">
+                          <span className="truncate text-[11px] font-bold text-[#475569]">
                             {alt.categoryTitle}
                           </span>
                           {alt.sameCategory ? (
-                            <span className="shrink-0 rounded-full bg-[#dbb878]/18 px-1.5 py-px text-[9.5px] font-extrabold text-[#8a6d2f]">
+                            <span className="shrink-0 rounded-full bg-[#f5821f]/18 px-1.5 py-px text-[9.5px] font-extrabold text-[#8a6d2f]">
                               {isRTL ? "نفس الفئة" : "Same class"}
                             </span>
                           ) : null}
@@ -260,11 +260,11 @@ export function CarUnavailableModal({
                               {formatSarAmount(
                                 dailyRentalInclTaxSar(alt.pricePerDayExclTax, alt.vatRatePercent),
                               )}{" "}
-                              <span className="text-[#dbb878]" aria-hidden>
+                              <span className="text-[#f5821f]" aria-hidden>
                                 <SarCurrencyGlyph />
                               </span>
                             </span>
-                            <span className="block text-[10px] font-bold text-[#aaa08e]">
+                            <span className="block text-[10px] font-bold text-[#94a3b8]">
                               {isRTL ? "يومياً (شامل ض)" : "per day (incl. tax)"}
                             </span>
                           </>
@@ -284,11 +284,11 @@ export function CarUnavailableModal({
                               dir="ltr"
                             >
                               {formatSarAmount(alt.pricePerDayExclTax)}{" "}
-                              <span className="text-[#dbb878]" aria-hidden>
+                              <span className="text-[#f5821f]" aria-hidden>
                                 <SarCurrencyGlyph />
                               </span>
                             </span>
-                            <span className="block text-[10px] font-bold text-[#aaa08e]">
+                            <span className="block text-[10px] font-bold text-[#94a3b8]">
                               {isRTL ? "يومياً (قبل ض)" : "per day (ex. tax)"}
                             </span>
                           </>
@@ -309,11 +309,11 @@ export function CarUnavailableModal({
                               dir="ltr"
                             >
                               {formatSarAmount(alt.pricePerDayExclTax)}{" "}
-                              <span className="text-[#dbb878]" aria-hidden>
+                              <span className="text-[#f5821f]" aria-hidden>
                                 <SarCurrencyGlyph />
                               </span>
                             </span>
-                            <span className="block text-[10px] font-bold text-[#aaa08e]">
+                            <span className="block text-[10px] font-bold text-[#94a3b8]">
                               {isRTL ? "يومياً" : "per day"}
                             </span>
                           </>
@@ -337,13 +337,13 @@ export function CarUnavailableModal({
                 }}
                 className={
                   hasAlternatives
-                    ? "w-full rounded-2xl border-2 border-[#003749]/18 bg-white py-3 text-[14px] font-extrabold text-[#003749] transition-colors hover:border-[#dbb878]/45 hover:bg-[#fdfbf6]"
+                    ? "w-full rounded-2xl border-2 border-[#003749]/18 bg-white py-3 text-[14px] font-extrabold text-[#003749] transition-colors hover:border-[#f5821f]/45 hover:bg-[#f7fafc]"
                     : "w-full rounded-2xl py-3.5 text-[15px] font-extrabold text-white shadow-[0_10px_28px_-10px_rgba(201,163,86,0.55)] transition-[transform,box-shadow] hover:-translate-y-0.5 active:translate-y-0"
                 }
                 style={
                   hasAlternatives
                     ? undefined
-                    : { background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)` }
+                    : { background: `linear-gradient(135deg, ${ACCENT} 0%, ${ACCENT_DARK} 100%)` }
                 }
               >
                 {primaryBtnText}
@@ -351,7 +351,7 @@ export function CarUnavailableModal({
               <Link
                 href="/fleet"
                 onClick={onClose}
-                className="w-full rounded-2xl border-2 border-[#003749]/18 bg-white py-3 text-center text-[14px] font-extrabold text-[#003749] transition-colors hover:border-[#dbb878]/45 hover:bg-[#fdfbf6]"
+                className="w-full rounded-2xl border-2 border-[#003749]/18 bg-white py-3 text-center text-[14px] font-extrabold text-[#003749] transition-colors hover:border-[#f5821f]/45 hover:bg-[#f7fafc]"
               >
                 {secondaryBtnText}
               </Link>

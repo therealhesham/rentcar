@@ -41,7 +41,7 @@ export function TimeInput24h({
       dir="ltr"
       className={
         className ??
-        "flex min-w-0 cursor-pointer items-center gap-0.5 rounded-md border border-[#ebe4d3]/80 bg-white/80 px-1 py-0.5 text-[13px] font-semibold tabular-nums text-[#0f1923] outline-none focus-within:ring-2 focus-within:ring-[#dbb878]/30"
+        "flex min-w-0 cursor-pointer items-center gap-0.5 rounded-md border border-[#e2e8f0]/80 bg-white/80 px-1 py-0.5 text-[13px] font-semibold tabular-nums text-[#0f1923] outline-none focus-within:ring-2 focus-within:ring-[#f5821f]/30"
       }
     >
       <select

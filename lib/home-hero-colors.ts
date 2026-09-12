@@ -22,10 +22,10 @@ export type HomeHeroColors = {
 export const DEFAULT_HOME_HERO_COLORS: HomeHeroColors = {
   titleColor: "#003749",
   subtitleColor: "#0F3D47",
-  eyebrowTextColor: "#A8874F",
-  eyebrowLineColor: "#C9A356",
+  eyebrowTextColor: "#B45A0A",
+  eyebrowLineColor: "#D9690A",
   trustTextColor: "#0F3D47",
-  trustIconColor: "#C9A356",
+  trustIconColor: "#D9690A",
 };
 
 export const HOME_HERO_COLOR_KEYS = Object.keys(

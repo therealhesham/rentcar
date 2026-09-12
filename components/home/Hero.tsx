@@ -33,7 +33,7 @@ export function Hero({
   const isRtl = locale === "ar";
 
   return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-[#eef6f8] via-white to-[#fdfbf6] pt-[4.5rem] sm:pt-24">
+    <section className="relative overflow-hidden bg-gradient-to-b from-[#eef6f8] via-white to-[#f7fafc] pt-[4.5rem] sm:pt-24">
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
         <HeroSlideshow slides={slides} isRtl={isRtl} />
         <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-white/70 to-transparent" />
@@ -129,7 +129,7 @@ export function Hero({
 
       {/* خط ذهبي رفيع أسفل الهيرو */}
       <div
-        className="relative h-[3px] w-full bg-gradient-to-r from-transparent via-[#dbb878] to-transparent"
+        className="relative h-[3px] w-full bg-gradient-to-r from-transparent via-[#f5821f] to-transparent"
         aria-hidden
       />
     </section>

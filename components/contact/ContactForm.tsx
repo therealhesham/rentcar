@@ -6,10 +6,10 @@ import { CheckCircle2, AlertCircle, Send } from "lucide-react";
 import { submitContactMessage } from "@/app/contact-actions";
 
 const TEAL = "#003749";
-const GOLD = "#dbb878";
+const ACCENT = "#f5821f";
 
 const FIELD_CLASS =
-  "w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 outline-none transition-all placeholder:text-neutral-400 focus:border-[#dbb878] focus:ring-2 focus:ring-[#dbb878]/30";
+  "w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 outline-none transition-all placeholder:text-neutral-400 focus:border-[#f5821f] focus:ring-2 focus:ring-[#f5821f]/30";
 
 export function ContactForm() {
   const t = useTranslations("ContactPage.form");
@@ -58,7 +58,7 @@ export function ContactForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="relative rounded-3xl border border-[#dbb878]/40 bg-white p-6 shadow-sm sm:p-8"
+      className="relative rounded-3xl border border-[#f5821f]/40 bg-white p-6 shadow-sm sm:p-8"
       noValidate
     >
       <h2 className="text-xl font-extrabold sm:text-2xl" style={{ color: TEAL }}>
@@ -183,7 +183,7 @@ export function ContactForm() {
         type="submit"
         disabled={isPending}
         className="mt-7 inline-flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-extrabold text-[#003749] shadow-sm transition-all hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-        style={{ backgroundColor: GOLD }}
+        style={{ backgroundColor: ACCENT }}
       >
         {isPending ? (
           <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#003749]/30 border-t-[#003749]" />

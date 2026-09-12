@@ -81,7 +81,7 @@ export default async function FleetPaymentPage({
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#fdfbf6] text-on-surface">
+    <div className="flex min-h-screen flex-col bg-[#f7fafc] text-on-surface">
       <SiteNav active="fleet" />
       <div className="pt-24 pb-20">
         <PaymentClient

@@ -8,7 +8,7 @@ import { getTranslations } from "next-intl/server";
 import { Mail, MapPin, Phone, Clock } from "lucide-react";
 
 const TEAL = "#003749";
-const GOLD = "#dbb878";
+const ACCENT = "#f5821f";
 
 export async function generateMetadata({
   params,
@@ -56,7 +56,7 @@ export default async function ContactPage({ params }: { params: Promise<{ locale
             {t("heroSubtitle")}
           </p>
         </div>
-        <div className="absolute bottom-0 left-0 right-0 h-1.5" style={{ backgroundColor: GOLD }} aria-hidden />
+        <div className="absolute bottom-0 left-0 right-0 h-1.5" style={{ backgroundColor: ACCENT }} aria-hidden />
       </header>
 
       {/* ─── الفورم + بيانات التواصل ─── */}
@@ -67,7 +67,7 @@ export default async function ContactPage({ params }: { params: Promise<{ locale
           </div>
 
           <aside className="flex flex-col gap-5">
-            <div className="rounded-3xl border border-[#dbb878]/40 bg-white p-6 shadow-sm">
+            <div className="rounded-3xl border border-[#f5821f]/40 bg-white p-6 shadow-sm">
               <h2 className="text-lg font-extrabold" style={{ color: TEAL }}>
                 {t("infoTitle")}
               </h2>
@@ -106,7 +106,7 @@ export default async function ContactPage({ params }: { params: Promise<{ locale
             </div>
 
             {branchesWithPhone.length > 0 && (
-              <div className="rounded-3xl border border-[#dbb878]/40 bg-white p-6 shadow-sm">
+              <div className="rounded-3xl border border-[#f5821f]/40 bg-white p-6 shadow-sm">
                 <h2 className="text-lg font-extrabold" style={{ color: TEAL }}>
                   {t("branchesTitle")}
                 </h2>
@@ -124,7 +124,7 @@ export default async function ContactPage({ params }: { params: Promise<{ locale
                       )}
                       <a
                         href={`tel:${b.phone!.replace(/\s/g, "")}`}
-                        className="mt-2 inline-flex items-center gap-2 rounded-lg bg-[#dbb878]/15 px-3 py-1.5 text-xs font-bold tabular-nums transition-colors hover:bg-[#dbb878]/30"
+                        className="mt-2 inline-flex items-center gap-2 rounded-lg bg-[#f5821f]/15 px-3 py-1.5 text-xs font-bold tabular-nums transition-colors hover:bg-[#f5821f]/30"
                         style={{ color: TEAL }}
                         dir="ltr"
                       >

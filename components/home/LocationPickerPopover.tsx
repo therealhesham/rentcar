@@ -153,15 +153,15 @@ function BranchCard({
       tabIndex={0}
       onClick={onClick}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }}
-      className={`group relative flex w-full cursor-pointer flex-col gap-2.5 rounded-xl border p-4 text-start transition-all duration-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#dbb878] ${
+      className={`group relative flex w-full cursor-pointer flex-col gap-2.5 rounded-xl border p-4 text-start transition-all duration-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f5821f] ${
         isSelected
-          ? "border-[#dbb878] bg-[#fffcf5] shadow-[0_4px_20px_-4px_rgba(219,184,120,0.3)] ring-1 ring-[#dbb878]/50"
-          : "border-[#e8e0d0] bg-white hover:-translate-y-0.5 hover:border-[#dbb878]/60 hover:bg-[#faf9f5] hover:shadow-[0_8px_24px_-8px_rgba(0,55,73,0.12)]"
+          ? "border-[#f5821f] bg-[#ffffff] shadow-[0_4px_20px_-4px_rgba(219,184,120,0.3)] ring-1 ring-[#f5821f]/50"
+          : "border-[#e8e0d0] bg-white hover:-translate-y-0.5 hover:border-[#f5821f]/60 hover:bg-[#f7fafc] hover:shadow-[0_8px_24px_-8px_rgba(0,55,73,0.12)]"
       }`}
     >
       {/* Selected indicator */}
       {isSelected && (
-        <span className="absolute end-3 top-3 flex size-5 items-center justify-center rounded-full bg-[#dbb878]">
+        <span className="absolute end-3 top-3 flex size-5 items-center justify-center rounded-full bg-[#f5821f]">
           <svg className="size-3 text-white" viewBox="0 0 12 12" fill="none">
             <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
@@ -171,10 +171,10 @@ function BranchCard({
       {/* Branch name and map pin */}
       <div className="flex items-start justify-between gap-2 pe-6">
         <span className="flex min-w-0 flex-1 items-center gap-2.5">
-          <span className={`flex size-8 shrink-0 items-center justify-center rounded-full ${isSelected ? "bg-[#dbb878]/20 shadow-inner" : "bg-[#f5f0e8] group-hover:bg-[#dbb878]/15"} transition-all duration-300`}>
+          <span className={`flex size-8 shrink-0 items-center justify-center rounded-full ${isSelected ? "bg-[#f5821f]/20 shadow-inner" : "bg-[#f1f5f9] group-hover:bg-[#f5821f]/15"} transition-all duration-300`}>
             {hasCoords
-              ? <MapPin className={`size-4 ${isSelected ? "text-[#c9a356]" : "text-[#8a7752]"}`} />
-              : <Building2 className={`size-4 ${isSelected ? "text-[#c9a356]" : "text-[#8a7752]"}`} />}
+              ? <MapPin className={`size-4 ${isSelected ? "text-[#d9690a]" : "text-[#475569]"}`} />
+              : <Building2 className={`size-4 ${isSelected ? "text-[#d9690a]" : "text-[#475569]"}`} />}
           </span>
           <span className={`min-w-0 flex-1 text-[14px] font-bold leading-snug whitespace-normal break-words ${isSelected ? "text-[#003749]" : "text-[#1a1a1a] group-hover:text-[#003749]"} transition-colors duration-300`}>
             {branch.name}
@@ -186,7 +186,7 @@ function BranchCard({
             type="button"
             onClick={handleMapClick}
             title={isRTL ? "عرض الموقع على الخريطة" : "View on map"}
-            className="flex size-8 shrink-0 items-center justify-center rounded-full border border-[#e8e0d0] bg-white text-[#8a7752] shadow-sm transition-all duration-300 hover:scale-105 hover:border-[#dbb878] hover:bg-[#dbb878] hover:text-white hover:shadow-md"
+            className="flex size-8 shrink-0 items-center justify-center rounded-full border border-[#e8e0d0] bg-white text-[#475569] shadow-sm transition-all duration-300 hover:scale-105 hover:border-[#f5821f] hover:bg-[#f5821f] hover:text-white hover:shadow-md"
           >
             <MapPin className="size-4" />
           </button>
@@ -197,14 +197,14 @@ function BranchCard({
       <div className="flex items-start justify-between gap-2">
         {branch.address && (
           <span className="flex items-start gap-1.5 text-[12px] text-[#5c4d32] leading-relaxed opacity-90">
-            <MapPin className="mt-0.5 size-3 shrink-0 text-[#8a7752]/70" aria-hidden />
+            <MapPin className="mt-0.5 size-3 shrink-0 text-[#475569]/70" aria-hidden />
             <span>{branch.address}</span>
           </span>
         )}
         
         {userLocation && branch.lat != null && branch.lng != null && (
           <span className="shrink-0 flex items-center gap-1.5 text-[11px] font-bold text-[#003749] bg-[#e8e0d0]/40 px-2 py-1 rounded-md">
-            <Navigation className="size-3 text-[#dbb878]" />
+            <Navigation className="size-3 text-[#f5821f]" />
             <span dir="ltr">
               {(() => {
                 const dist = getDistanceKm(userLocation.lat, userLocation.lng, branch.lat, branch.lng);
@@ -219,7 +219,7 @@ function BranchCard({
 
       {/* Opening hours hint */}
       {branch.openingHours && (
-        <span className="flex items-center gap-1.5 text-[11px] text-[#8a7752]">
+        <span className="flex items-center gap-1.5 text-[11px] text-[#475569]">
           <Clock className="size-3 shrink-0" aria-hidden />
           <span className="leading-tight">
             {isRTL ? "متاح الأسبوع" : "Available"}
@@ -251,31 +251,31 @@ function CityAccordion({
   const selectedInThisCity = city.branches.some((b) => b.slug === effectiveBranch);
 
   return (
-    <div className="border-b border-[#f0ebe4] last:border-0">
+    <div className="border-b border-[#f1f5f9] last:border-0">
       {/* Accordion header */}
       <button
         type="button"
         onClick={onToggle}
-        className={`group flex w-full cursor-pointer items-center justify-between px-5 py-4 text-start transition-all duration-300 hover:bg-[#faf9f5] ${isExpanded ? "bg-[#faf9f5]" : ""}`}
+        className={`group flex w-full cursor-pointer items-center justify-between px-5 py-4 text-start transition-all duration-300 hover:bg-[#f7fafc] ${isExpanded ? "bg-[#f7fafc]" : ""}`}
       >
         <span className="flex items-center gap-3.5">
-          <span className={`flex size-9 shrink-0 items-center justify-center rounded-full border shadow-sm transition-all duration-300 ${isExpanded ? "border-[#dbb878]/50 bg-[#fffcf5] text-[#dbb878] scale-105" : "border-[#e8e0d0] bg-white text-[#8a7752] group-hover:border-[#dbb878]/30 group-hover:text-[#dbb878]"}`}>
+          <span className={`flex size-9 shrink-0 items-center justify-center rounded-full border shadow-sm transition-all duration-300 ${isExpanded ? "border-[#f5821f]/50 bg-[#ffffff] text-[#f5821f] scale-105" : "border-[#e8e0d0] bg-white text-[#475569] group-hover:border-[#f5821f]/30 group-hover:text-[#f5821f]"}`}>
             <Building2 className="size-4" />
           </span>
           <span>
             <span className={`block text-[14px] font-bold ${isExpanded ? "text-[#003749]" : "text-[#1a1a1a]"} transition-colors`}>
               {city.name}
               {selectedInThisCity && (
-                <span className="ms-2 inline-flex size-2 rounded-full bg-[#dbb878] align-middle" />
+                <span className="ms-2 inline-flex size-2 rounded-full bg-[#f5821f] align-middle" />
               )}
             </span>
-            <span className="block text-[11px] text-[#8a7752]">
+            <span className="block text-[11px] text-[#475569]">
               {city.branches.length} {isRTL ? "فرع" : "branch"}
             </span>
           </span>
         </span>
         <ChevronDown
-          className={`size-4 text-[#8a7752] transition-transform duration-200 ${isExpanded ? "rotate-180 text-[#c9a356]" : ""}`}
+          className={`size-4 text-[#475569] transition-transform duration-200 ${isExpanded ? "rotate-180 text-[#d9690a]" : ""}`}
           aria-hidden
         />
       </button>
@@ -475,22 +475,22 @@ export function LocationPickerPopover({
     >
       {/* ── Search bar ─────────────────────────────────────── */}
       <div className="shrink-0 bg-white/80 px-5 pt-5 pb-3">
-        <div className="relative flex items-center gap-2.5 rounded-xl border-2 border-[#e8e0d0] bg-[#faf9f5] px-4 py-3 transition-all duration-300 focus-within:border-[#dbb878] focus-within:bg-white focus-within:shadow-[0_4px_20px_-4px_rgba(219,184,120,0.2)]">
-          <Search className="size-4.5 shrink-0 text-[#dbb878]" aria-hidden />
+        <div className="relative flex items-center gap-2.5 rounded-xl border-2 border-[#e8e0d0] bg-[#f7fafc] px-4 py-3 transition-all duration-300 focus-within:border-[#f5821f] focus-within:bg-white focus-within:shadow-[0_4px_20px_-4px_rgba(219,184,120,0.2)]">
+          <Search className="size-4.5 shrink-0 text-[#f5821f]" aria-hidden />
           <input
             ref={searchRef}
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={isRTL ? "ابحث عن مدينة أو فرع…" : "Search for a city or branch…"}
-            className="flex-1 bg-transparent text-[15px] text-[#003749] placeholder:text-[#8a7752] outline-none"
+            className="flex-1 bg-transparent text-[15px] text-[#003749] placeholder:text-[#475569] outline-none"
             aria-label={isRTL ? "بحث عن مدينة أو فرع" : "Search city or branch"}
           />
           {query ? (
             <button
               type="button"
               onClick={() => setQuery("")}
-              className="flex size-7 cursor-pointer shrink-0 items-center justify-center rounded-full bg-[#f5f0e8] text-[#8a7752] transition-all hover:bg-[#e8e0d0] hover:text-[#003749]"
+              className="flex size-7 cursor-pointer shrink-0 items-center justify-center rounded-full bg-[#f1f5f9] text-[#475569] transition-all hover:bg-[#e8e0d0] hover:text-[#003749]"
               aria-label={isRTL ? "مسح البحث" : "Clear search"}
             >
               <X className="size-4" />
@@ -535,14 +535,14 @@ export function LocationPickerPopover({
             );
           }}
         >
-          <Navigation className="size-3.5 text-[#dbb878]" aria-hidden />
+          <Navigation className="size-3.5 text-[#f5821f]" aria-hidden />
           {isRTL ? "البحث عن أقرب فرع" : "Find Branches Near Me"}
         </button>
       </div>
 
       {/* ── City list heading ───────────────────────────────── */}
-      <div className="shrink-0 border-t border-b border-[#f0ebe4] bg-[#fdfbf6] px-4 py-2">
-        <span className="text-[12px] font-bold uppercase tracking-widest text-[#8a7752]">
+      <div className="shrink-0 border-t border-b border-[#f1f5f9] bg-[#f7fafc] px-4 py-2">
+        <span className="text-[12px] font-bold uppercase tracking-widest text-[#475569]">
           {isSearching
             ? isRTL
               ? `${filteredCities.reduce((s, c) => s + c.branches.length, 0)} نتيجة`
@@ -556,7 +556,7 @@ export function LocationPickerPopover({
       {/* ── Scrollable accordion list ───────────────────────── */}
       <div className="overflow-y-auto" style={{ maxHeight: 420 }}>
         {filteredCities.length === 0 ? (
-          <p className="px-4 py-10 text-center text-[13px] text-[#aaa08e]">
+          <p className="px-4 py-10 text-center text-[13px] text-[#94a3b8]">
             {isRTL ? "لا توجد نتائج مطابقة" : "No results found"}
           </p>
         ) : (

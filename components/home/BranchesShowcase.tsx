@@ -59,21 +59,21 @@ export async function BranchesShowcase() {
   const groups = await groupBranchesByCity(branchesRaw as BranchWithCity[]);
 
   return (
-    <section id="branches-new" className="overflow-x-clip bg-gradient-to-b from-white to-[#fdfbf6]">
+    <section id="branches-new" className="overflow-x-clip bg-gradient-to-b from-white to-[#f7fafc]">
       <Reveal>
         <div className="mx-auto w-full max-w-screen-xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
           <div className="mb-10 text-center sm:mb-12">
             <div className="mb-4 flex items-center justify-center gap-3">
-              <span className="h-px w-10 bg-gradient-to-l from-[#dbb878] to-transparent sm:w-14" aria-hidden />
-              <p className="text-xs sm:text-[13.5px] font-black uppercase tracking-[0.22em] text-[#dbb878]">
+              <span className="h-px w-10 bg-gradient-to-l from-[#f5821f] to-transparent sm:w-14" aria-hidden />
+              <p className="text-xs sm:text-[13.5px] font-black uppercase tracking-[0.22em] text-[#f5821f]">
                 {t("eyebrow")}
               </p>
-              <span className="h-px w-10 bg-gradient-to-r from-[#dbb878] to-transparent sm:w-14" aria-hidden />
+              <span className="h-px w-10 bg-gradient-to-r from-[#f5821f] to-transparent sm:w-14" aria-hidden />
             </div>
             <h2 className="text-2xl font-black tracking-tight text-[#003749] sm:text-4xl">
               {t("title")}
             </h2>
-            <p className="mx-auto mt-3 max-w-xl text-sm font-medium leading-relaxed text-[#8a7752] sm:text-base">
+            <p className="mx-auto mt-3 max-w-xl text-sm font-medium leading-relaxed text-[#475569] sm:text-base">
               {t("subtitle")}
             </p>
           </div>

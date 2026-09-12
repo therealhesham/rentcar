@@ -240,35 +240,35 @@ export function DateRangePickerPopover({
       role="dialog"
       aria-label={t("selectDate")}
       style={panelStyle}
-      className="datetime-popover flex flex-col overflow-hidden rounded-2xl border border-[#ebe4d3] bg-white shadow-[0_20px_60px_-10px_rgba(0,55,73,0.22),0_4px_16px_-4px_rgba(0,55,73,0.12)]"
+      className="datetime-popover flex flex-col overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-[0_20px_60px_-10px_rgba(0,55,73,0.22),0_4px_16px_-4px_rgba(0,55,73,0.12)]"
       dir="rtl"
     >
-      <div className="flex items-center justify-between border-b border-[#f0ebe4] bg-gradient-to-l from-[#fdfbf6] to-[#f9f5ee] px-4 py-3">
+      <div className="flex items-center justify-between border-b border-[#f1f5f9] bg-gradient-to-l from-[#f7fafc] to-[#f7fafc] px-4 py-3">
         <div className="flex items-center gap-2">
-          <span className="flex size-7 items-center justify-center rounded-full bg-[#dbb878]/15">
-            <CalendarRange className="size-3.5 text-[#dbb878]" />
+          <span className="flex size-7 items-center justify-center rounded-full bg-[#f5821f]/15">
+            <CalendarRange className="size-3.5 text-[#f5821f]" />
           </span>
           <span className="text-[13px] font-bold text-[#003749]">تواريخ الحجز</span>
         </div>
         <button
           type="button"
           onClick={onClose}
-          className="flex size-7 items-center justify-center rounded-full text-[#8a7752] transition-colors hover:bg-[#f0ebe4] hover:text-[#003749]"
+          className="flex size-7 items-center justify-center rounded-full text-[#475569] transition-colors hover:bg-[#f1f5f9] hover:text-[#003749]"
           aria-label="إغلاق"
         >
           <X className="size-4" />
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 border-b border-[#f0ebe4] bg-[#fdfbf6] px-4 py-2.5 text-[11px]">
-        <div className={`rounded-lg px-2 py-1.5 ${pickingEnd ? "ring-2 ring-[#dbb878]/50 bg-white" : ""}`}>
-          <span className="block font-bold text-[#8a7752]">{startLabel}</span>
+      <div className="grid grid-cols-2 gap-2 border-b border-[#f1f5f9] bg-[#f7fafc] px-4 py-2.5 text-[11px]">
+        <div className={`rounded-lg px-2 py-1.5 ${pickingEnd ? "ring-2 ring-[#f5821f]/50 bg-white" : ""}`}>
+          <span className="block font-bold text-[#475569]">{startLabel}</span>
           <span className="font-bold text-[#003749]">
             {rangeStart ? formatYmdAsDdMmYy(rangeStart) : "—"}
           </span>
         </div>
         <div className={`rounded-lg px-2 py-1.5 ${pickingEnd ? "bg-white/60" : rangeEnd ? "bg-white" : ""}`}>
-          <span className="block font-bold text-[#8a7752]">{endLabel}</span>
+          <span className="block font-bold text-[#475569]">{endLabel}</span>
           <span className="font-bold text-[#003749]">
             {rangeEnd ? formatYmdAsDdMmYy(rangeEnd) : pickingEnd ? t("selectDate") : "—"}
           </span>
@@ -280,7 +280,7 @@ export function DateRangePickerPopover({
           <button
             type="button"
             onClick={prevMonth}
-            className="flex size-7 items-center justify-center rounded-full text-[#8a7752] transition-colors hover:bg-[#f0ebe4] hover:text-[#003749]"
+            className="flex size-7 items-center justify-center rounded-full text-[#475569] transition-colors hover:bg-[#f1f5f9] hover:text-[#003749]"
           >
             <ChevronRight className="size-4" />
           </button>
@@ -290,14 +290,14 @@ export function DateRangePickerPopover({
           <button
             type="button"
             onClick={nextMonth}
-            className="flex size-7 items-center justify-center rounded-full text-[#8a7752] transition-colors hover:bg-[#f0ebe4] hover:text-[#003749]"
+            className="flex size-7 items-center justify-center rounded-full text-[#475569] transition-colors hover:bg-[#f1f5f9] hover:text-[#003749]"
           >
             <ChevronLeft className="size-4" />
           </button>
         </div>
         <div className="mb-1 grid grid-cols-7 gap-0.5 text-center">
           {DAYS_AR.map((d) => (
-            <span key={d} className="py-0.5 text-[10px] font-bold text-[#8a7752]">
+            <span key={d} className="py-0.5 text-[10px] font-bold text-[#475569]">
               {d}
             </span>
           ))}
@@ -323,13 +323,13 @@ export function DateRangePickerPopover({
                   ${cell.disabled && cell.currMonth ? "cursor-not-allowed text-[#ddd] opacity-50" : ""}
                   ${
                     isStart || isEnd
-                      ? "z-10 rounded-lg bg-gradient-to-br from-[#dbb878] to-[#c9a356] text-white shadow-[0_2px_8px_-2px_rgba(219,184,120,0.6)]"
+                      ? "z-10 rounded-lg bg-gradient-to-br from-[#f5821f] to-[#d9690a] text-white shadow-[0_2px_8px_-2px_rgba(219,184,120,0.6)]"
                       : inRange && !cell.disabled
-                        ? "rounded-none bg-[#dbb878]/20 text-[#003749]"
+                        ? "rounded-none bg-[#f5821f]/20 text-[#003749]"
                         : isToday && !cell.disabled
-                          ? "rounded-lg border border-[#dbb878]/60 text-[#003749]"
+                          ? "rounded-lg border border-[#f5821f]/60 text-[#003749]"
                           : !cell.disabled && cell.currMonth
-                            ? "rounded-lg text-[#3a2f1e] hover:bg-[#fdfbf6]"
+                            ? "rounded-lg text-[#1e293b] hover:bg-[#f7fafc]"
                             : ""
                   }`}
               >
@@ -340,20 +340,20 @@ export function DateRangePickerPopover({
         </div>
       </div>
 
-      <div className="border-t border-[#f0ebe4] bg-[#fdfbf6] px-4 py-3">
+      <div className="border-t border-[#f1f5f9] bg-[#f7fafc] px-4 py-3">
         <p className="text-center text-[12px] font-bold text-[#003749]">
           {pickingEnd ? (
-            <span className="text-[#dbb878]">{t("select")} {endLabel}</span>
+            <span className="text-[#f5821f]">{t("select")} {endLabel}</span>
           ) : days != null ? (
             <span>
-              مدة الحجز: <span className="tabular-nums text-[#dbb878]">{days}</span> يوم
+              مدة الحجز: <span className="tabular-nums text-[#f5821f]">{days}</span> يوم
             </span>
           ) : (
-            <span className="text-[#aaa08e]">{t("select")} {startLabel} {t("select")} {endLabel}</span>
+            <span className="text-[#94a3b8]">{t("select")} {startLabel} {t("select")} {endLabel}</span>
           )}
         </p>
         {pickingEnd && days != null ? (
-          <p className="mt-1 text-center text-[11px] font-semibold text-[#6b5a3b]">
+          <p className="mt-1 text-center text-[11px] font-semibold text-[#334155]">
             معاينة: <span className="tabular-nums">{days}</span> يوم
           </p>
         ) : null}

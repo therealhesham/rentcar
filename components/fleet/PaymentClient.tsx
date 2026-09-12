@@ -454,7 +454,7 @@ export function PaymentClient({
 
       <div className="mb-8">
         <h1 className="text-2xl font-extrabold tracking-tight text-[#003749] sm:text-3xl">{t("title")}</h1>
-        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#6b5a3b]">
+        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#334155]">
           {t("bookingNoPrefix")}{" "}
           <span dir="ltr" className="tabular-nums font-bold text-[#003749]">
             #{booking.id}
@@ -646,7 +646,7 @@ export function PaymentClient({
             <form
               action={formAction}
               onSubmit={onSubmit}
-              className="space-y-5 rounded-3xl border border-[#ebe4d3] bg-white p-6 shadow-sm sm:p-8"
+              className="space-y-5 rounded-3xl border border-[#e2e8f0] bg-white p-6 shadow-sm sm:p-8"
             >
               <input type="hidden" name="bookingRequestId" value={booking.id} />
               <input type="hidden" name="paymentMethod" value={method} />
@@ -696,10 +696,10 @@ export function PaymentClient({
                         setClientError(null);
                       }}
                       className={`relative flex flex-col items-start gap-2 rounded-xl border px-4 py-3 text-start transition-all ${ineligible
-                        ? "cursor-not-allowed border-[#ebe4d3] bg-neutral-50 opacity-60"
+                        ? "cursor-not-allowed border-[#e2e8f0] bg-neutral-50 opacity-60"
                         : on
-                          ? "border-[#dbb878] bg-[#003749]/[0.04] ring-2 ring-[#dbb878]/35"
-                          : "border-[#ebe4d3] bg-white hover:border-[#dbb878]/40 hover:shadow-sm"
+                          ? "border-[#f5821f] bg-[#003749]/[0.04] ring-2 ring-[#f5821f]/35"
+                          : "border-[#e2e8f0] bg-white hover:border-[#f5821f]/40 hover:shadow-sm"
                         }`}
                     >
                       {on ? (
@@ -723,7 +723,7 @@ export function PaymentClient({
                         ) : (
                           <span
                             className={`grid size-10 shrink-0 place-items-center rounded-xl ring-1 transition-colors ${on
-                              ? "bg-[#003749]/[0.06] ring-[#dbb878]/40"
+                              ? "bg-[#003749]/[0.06] ring-[#f5821f]/40"
                               : "bg-neutral-50 ring-black/[0.06]"
                               }`}
                           >
@@ -807,7 +807,7 @@ export function PaymentClient({
                       value={pointsNote}
                       onChange={(e) => setPointsNote(e.target.value)}
                       rows={2}
-                      className="rounded-lg border border-amber-200/80 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#dbb878]/40"
+                      className="rounded-lg border border-amber-200/80 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#f5821f]/40"
                       placeholder={t("pointsNotePlaceholder")}
                       dir="rtl"
                     />
@@ -831,7 +831,7 @@ export function PaymentClient({
                       onChange={(e) => setHolder(e.target.value)}
                       required={usesCardEntryForm(method)}
                       minLength={3}
-                      className="rounded-lg border border-neutral-200 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#dbb878]/50"
+                      className="rounded-lg border border-neutral-200 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#f5821f]/50"
                       dir="rtl"
                       autoComplete="cc-name"
                     />
@@ -846,7 +846,7 @@ export function PaymentClient({
                       autoComplete="cc-number"
                       placeholder="4242 4242 4242 4242"
                       required={usesCardEntryForm(method)}
-                      className="rounded-lg border border-neutral-200 px-3 py-2.5 text-sm tabular-nums outline-none focus:ring-2 focus:ring-[#dbb878]/50"
+                      className="rounded-lg border border-neutral-200 px-3 py-2.5 text-sm tabular-nums outline-none focus:ring-2 focus:ring-[#f5821f]/50"
                       dir="ltr"
                     />
                   </label>
@@ -861,7 +861,7 @@ export function PaymentClient({
                         autoComplete="cc-exp"
                         placeholder="12/29"
                         required={usesCardEntryForm(method)}
-                        className="rounded-lg border border-neutral-200 px-3 py-2.5 text-sm tabular-nums outline-none focus:ring-2 focus:ring-[#dbb878]/50"
+                        className="rounded-lg border border-neutral-200 px-3 py-2.5 text-sm tabular-nums outline-none focus:ring-2 focus:ring-[#f5821f]/50"
                         dir="ltr"
                       />
                     </label>
@@ -874,7 +874,7 @@ export function PaymentClient({
                         autoComplete="cc-csc"
                         placeholder="123"
                         required={usesCardEntryForm(method)}
-                        className="rounded-lg border border-neutral-200 px-3 py-2.5 text-sm tabular-nums outline-none focus:ring-2 focus:ring-[#dbb878]/50"
+                        className="rounded-lg border border-neutral-200 px-3 py-2.5 text-sm tabular-nums outline-none focus:ring-2 focus:ring-[#f5821f]/50"
                         dir="ltr"
                       />
                     </label>
@@ -924,7 +924,7 @@ export function PaymentClient({
         </section>
 
         <aside className="order-1 space-y-4 lg:order-2 lg:sticky lg:top-28 lg:self-start">
-          <div className="overflow-hidden rounded-3xl border border-[#ebe4d3] bg-white shadow-md">
+          <div className="overflow-hidden rounded-3xl border border-[#e2e8f0] bg-white shadow-md">
             <div className="relative aspect-[16/10] bg-neutral-100">
               <Image
                 src={booking.car.image}
@@ -1092,7 +1092,7 @@ export function PaymentClient({
           </div>
 
           {!checkoutComplete ? (
-            <p className="rounded-2xl border border-[#ebe4d3] bg-[#fffdf9] px-4 py-3 text-center text-xs leading-relaxed text-[#6b5a3b]">
+            <p className="rounded-2xl border border-[#e2e8f0] bg-[#ffffff] px-4 py-3 text-center text-xs leading-relaxed text-[#334155]">
               {t("totalsNote")}
             </p>
           ) : null}

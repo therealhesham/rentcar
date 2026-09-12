@@ -110,11 +110,11 @@ export function FleetCategoriesShowcase({
     <div className="relative mx-auto max-w-screen-xl px-3 sm:px-8">
       <header className="mb-8 flex flex-col items-center text-center sm:mb-14">
         <div className="mb-3 flex items-center gap-3">
-          <span className="h-px w-10 bg-gradient-to-l from-[#dbb878] to-transparent" />
-          <span className="text-xs sm:text-[13.5px] font-black uppercase tracking-[0.2em] text-[#dbb878]">
+          <span className="h-px w-10 bg-gradient-to-l from-[#f5821f] to-transparent" />
+          <span className="text-xs sm:text-[13.5px] font-black uppercase tracking-[0.2em] text-[#f5821f]">
             {t("ourFleet")}
           </span>
-          <span className="h-px w-10 bg-gradient-to-r from-[#dbb878] to-transparent" />
+          <span className="h-px w-10 bg-gradient-to-r from-[#f5821f] to-transparent" />
         </div>
         <h2
           id="fleet-categories-heading"
@@ -226,7 +226,7 @@ export function FleetCategoriesShowcase({
           href={`/fleet?category=${encodeURIComponent(current.slug)}${
             rentalTab ? `&rental=${encodeURIComponent(rentalTab)}` : ""
           }`}
-          className="inline-flex items-center gap-2 rounded-full border-2 border-[#003749]/18 bg-white px-8 py-3 text-sm font-extrabold text-[#003749] shadow-sm transition-colors hover:border-[#dbb878]/45 hover:bg-[#fdfbf6]"
+          className="inline-flex items-center gap-2 rounded-full border-2 border-[#003749]/18 bg-white px-8 py-3 text-sm font-extrabold text-[#003749] shadow-sm transition-colors hover:border-[#f5821f]/45 hover:bg-[#f7fafc]"
         >
           {t("viewAll")}
           {/* يشير إلى جهة التقدّم في القراءة: يميناً في LTR ويساراً في RTL. */}

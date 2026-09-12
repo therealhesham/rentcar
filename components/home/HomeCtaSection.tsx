@@ -22,11 +22,11 @@ export function HomeCtaSection() {
 
       <Reveal className="relative z-[1] mx-auto max-w-screen-xl text-center">
         <div className="mb-4 flex items-center justify-center gap-3">
-          <span className="h-px w-10 bg-gradient-to-l from-[#dbb878]/60 to-transparent sm:w-14" />
-          <span className="text-xs sm:text-[13.5px] font-black uppercase tracking-[0.22em] text-[#dbb878]">
+          <span className="h-px w-10 bg-gradient-to-l from-[#f5821f]/60 to-transparent sm:w-14" />
+          <span className="text-xs sm:text-[13.5px] font-black uppercase tracking-[0.22em] text-[#f5821f]">
             {t("readyToGo")}
           </span>
-          <span className="h-px w-10 bg-gradient-to-r from-[#dbb878]/60 to-transparent sm:w-14" />
+          <span className="h-px w-10 bg-gradient-to-r from-[#f5821f]/60 to-transparent sm:w-14" />
         </div>
 
         <h2 className="text-balance text-2xl font-extrabold tracking-tight text-white sm:text-4xl lg:text-[2.65rem]">
@@ -39,7 +39,7 @@ export function HomeCtaSection() {
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:mt-10 sm:flex-row sm:gap-4">
           <a
             href="#home-booking"
-            className="inline-flex min-h-[48px] w-full max-w-xs items-center justify-center gap-2 rounded-full bg-[#dbb878] px-8 py-3 text-sm font-extrabold text-[#1a1408] shadow-[0_12px_32px_-8px_rgba(219,184,120,0.55)] transition-all hover:-translate-y-0.5 hover:bg-[#e8c992] hover:shadow-[0_16px_40px_-8px_rgba(219,184,120,0.65)] sm:w-auto"
+            className="inline-flex min-h-[48px] w-full max-w-xs items-center justify-center gap-2 rounded-full bg-[#f5821f] px-8 py-3 text-sm font-extrabold text-[#0f172a] shadow-[0_12px_32px_-8px_rgba(219,184,120,0.55)] transition-all hover:-translate-y-0.5 hover:bg-[#fbbf66] hover:shadow-[0_16px_40px_-8px_rgba(219,184,120,0.65)] sm:w-auto"
           >
             <CalendarCheck className="size-4 shrink-0" aria-hidden />
             {commonT("bookNow")}
@@ -66,7 +66,7 @@ function CtaDecorations() {
   return (
     <>
       <div
-        className="pointer-events-none absolute -start-32 top-0 h-72 w-72 rounded-full bg-[#dbb878]/10 blur-3xl"
+        className="pointer-events-none absolute -start-32 top-0 h-72 w-72 rounded-full bg-[#f5821f]/10 blur-3xl"
         aria-hidden
       />
       <div
