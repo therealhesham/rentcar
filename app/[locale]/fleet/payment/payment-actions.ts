@@ -34,6 +34,8 @@ import {
 import { prisma } from "@/lib/prisma";
 import { recordPaymentTransaction } from "@/lib/payment-transaction";
 import { getAppPublicUrl } from "@/lib/app-public-url";
+import { buildTabbyBuyerContext } from "@/lib/tabby/order-history";
+import { TABBY_FALLBACK_ZIP } from "@/lib/tabby/constants";
 import { getLocale, getTranslations } from "next-intl/server";
 
 export type ConfirmPaymentResult =
@@ -147,7 +149,15 @@ export async function confirmMockPayment(
       carModel: { select: { name: true, brand: { select: { name: true } } } },
       pickupMode: true,
       deliveryAddress: true,
-      pickupBranch: { select: { address: true, city: { select: { name: true } } } },
+      customerId: true,
+      pickupBranch: {
+        select: {
+          address: true,
+          addressEn: true,
+          postalCode: true,
+          city: { select: { name: true, nameEn: true } },
+        },
+      },
     },
   });
   if (!bookingGate) {
@@ -165,10 +175,30 @@ export async function confirmMockPayment(
   }
 
   // عنوان الشحن لتابي: عنوان التوصيل لو الحجز توصيل، وإلا عنوان فرع الاستلام.
-  const tabbyShippingAddress =
-    bookingGate.pickupMode === "DELIVERY"
-      ? { city: bookingGate.pickupBranch?.city?.name, address: bookingGate.deliveryAddress }
-      : { city: bookingGate.pickupBranch?.city?.name, address: bookingGate.pickupBranch?.address };
+  // الحقول الثلاثة إلزامية لدى تابي — لذلك لا يُترك أيٌّ منها فارغاً.
+  const tabbyCity =
+    bookingGate.pickupBranch?.city?.nameEn?.trim() ||
+    bookingGate.pickupBranch?.city?.name?.trim() ||
+    "";
+  const tabbyShippingAddress = {
+    city: tabbyCity,
+    address:
+      (bookingGate.pickupMode === "DELIVERY" ? bookingGate.deliveryAddress?.trim() : null) ||
+      bookingGate.pickupBranch?.addressEn?.trim() ||
+      bookingGate.pickupBranch?.address?.trim() ||
+      tabbyCity,
+    // الرمز البريدي الفعلي للفرع؛ الثابت احتياطٌ لأي فرع لم يُملأ رمزه بعد.
+    zip: bookingGate.pickupBranch?.postalCode?.trim() || TABBY_FALLBACK_ZIP,
+  };
+
+  // سياق العميل لتابي (حجوزاته السابقة + عدد المكتملة) — يُبنى مرة ويُستخدم في
+  // مسارَي الدفع: الدفعة الأولى وفرق التمديد.
+  const tabbyCtx = await buildTabbyBuyerContext({
+    customerId: bookingGate.customerId,
+    phone: bookingGate.phone,
+    excludeBookingId: id,
+    fallbackZip: TABBY_FALLBACK_ZIP,
+  });
 
   const isCash = paymentMethod === "CASH";
 
@@ -213,10 +243,12 @@ export async function confirmMockPayment(
             name: bookingGate.fullName || undefined,
           },
           buyerHistory: {
-            registeredSinceIso: bookingGate.customer?.createdAt?.toISOString() ?? null,
-            loyaltyLevel: 0,
+            registeredSinceIso:
+              bookingGate.customer?.createdAt?.toISOString() ?? tabbyCtx.registeredSinceIso,
+            loyaltyLevel: tabbyCtx.loyaltyLevel,
           },
           shippingAddress: tabbyShippingAddress,
+          orderHistory: tabbyCtx.orderHistory,
           items: [
             {
               title: `${bookingGate.carModel?.brand?.name ?? ""} ${bookingGate.carModel?.name ?? ""}`.trim() || te("itemExtension", { id }),
@@ -357,10 +389,12 @@ export async function confirmMockPayment(
           name: bookingGate.fullName || undefined,
         },
         buyerHistory: {
-          registeredSinceIso: bookingGate.customer?.createdAt?.toISOString() ?? null,
-          loyaltyLevel: 0,
+          registeredSinceIso:
+            bookingGate.customer?.createdAt?.toISOString() ?? tabbyCtx.registeredSinceIso,
+          loyaltyLevel: tabbyCtx.loyaltyLevel,
         },
         shippingAddress: tabbyShippingAddress,
+        orderHistory: tabbyCtx.orderHistory,
         items: [
           {
             title: `${bookingGate.carModel?.brand?.name ?? ""} ${bookingGate.carModel?.name ?? ""}`.trim() || te("itemBooking", { id }),

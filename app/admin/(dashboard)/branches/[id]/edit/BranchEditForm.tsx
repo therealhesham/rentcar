@@ -18,6 +18,7 @@ type Branch = {
   taglineEn: string | null;
   address: string | null;
   addressEn: string | null;
+  postalCode: string | null;
   detailedAddress: string | null;
   detailedAddressEn: string | null;
   phone: string | null;
@@ -142,6 +143,20 @@ export function BranchEditForm({ branch, cities }: Props) {
           defaultValue={branch.addressEn ?? ""}
           className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
         />
+      </label>
+      <label className="text-sm font-medium md:col-span-1">
+        الرمز البريدي
+        <input
+          name="postalCode"
+          defaultValue={branch.postalCode ?? ""}
+          inputMode="numeric"
+          maxLength={10}
+          placeholder="42311"
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+        />
+        <span className="mt-1 block text-xs text-on-surface-variant">
+          يُرسَل لبوابة تابي في عنوان الشحن — حقل إلزامي لديها.
+        </span>
       </label>
       <label className="text-sm font-medium md:col-span-1">
         العنوان التفصيلي

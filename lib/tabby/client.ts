@@ -142,7 +142,9 @@ export async function checkTabbyEligibility(args: {
         };
         rejection_reason?: string;
       };
-    }>(cfg, "/api/v2/checkout", false, {
+    // `true` = المفتاح السري: تابي تشترط `sk_` لطلبَي الأهلية وإنشاء الجلسة معاً
+    // (كان يُرسَل بالمفتاح العام — رصدها Egor في مراجعة التكامل).
+    }>(cfg, "/api/v2/checkout", true, {
       method: "POST",
       body: {
         payment: {
@@ -181,8 +183,10 @@ export async function createTabbyCheckoutSession(args: {
   buyer: TabbyBuyerInfo;
   /** سياق العميل لتقييم مخاطر تابي — يُحذف من الحمولة لو غير متوفر (مثلاً أداة الاختبار الداخلية). */
   buyerHistory?: { registeredSinceIso?: string | null; loyaltyLevel?: number };
-  /** عنوان فرع الاستلام أو عنوان التوصيل — مطلوب حسب توثيق تابي. */
+  /** عنوان فرع الاستلام أو عنوان التوصيل — `city`/`address`/`zip` كلها إلزامية لدى تابي. */
   shippingAddress?: TabbyShippingAddress;
+  /** طلبات العميل السابقة (٥–١٠، الحالي مستثنى) — تستخدمها تابي في تقييم المخاطر. */
+  orderHistory?: unknown[];
   items?: TabbyOrderItem[];
   successUrl: string;
   cancelUrl: string;
@@ -237,8 +241,8 @@ export async function createTabbyCheckoutSession(args: {
       ...(args.shippingAddress
         ? {
             shipping_address: {
-              city: args.shippingAddress.city || undefined,
-              address: args.shippingAddress.address || undefined,
+              city: args.shippingAddress.city || "",
+              address: args.shippingAddress.address || "",
               zip: args.shippingAddress.zip || "",
             },
           }
@@ -251,9 +255,9 @@ export async function createTabbyCheckoutSession(args: {
         reference_id: merchantReferenceId,
         items: formattedItems,
       },
-      // مصفوفة فارغة لعميل جديد بلا حجوزات سابقة — Tabby's "Session payload model"
-      // (sub-fields غير موثّقة في quick-start) لسه محتاجة مراجعة لملئها بحجوزات حقيقية.
-      order_history: [],
+      // حجوزات العميل السابقة (بُنيت في lib/tabby/order-history.ts) — فارغة فقط
+      // لعميل جديد فعلاً أو لأداة الاختبار الداخلية.
+      order_history: args.orderHistory ?? [],
     },
     lang: args.language || "ar",
     merchant_code: cfg.merchantCode,

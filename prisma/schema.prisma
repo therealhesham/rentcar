@@ -148,6 +148,8 @@ model Branch {
   taglineEn           String?  @db.VarChar(255)
   address             String?  @db.VarChar(255)
   addressEn           String?  @db.VarChar(255)
+  /// الرمز البريدي للفرع — يُرسَل في `shipping_address.zip` لبوابة تابي (حقل إلزامي لديها).
+  postalCode          String?  @db.VarChar(10)
   detailedAddress     String?  @db.Text
   detailedAddressEn   String?  @db.Text
   phone               String?  @db.VarChar(32)

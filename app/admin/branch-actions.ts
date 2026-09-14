@@ -110,6 +110,7 @@ export async function createBranch(
   const taglineEn = String(formData.get("taglineEn") ?? "").trim() || null;
   const address = String(formData.get("address") ?? "").trim() || null;
   const addressEn = String(formData.get("addressEn") ?? "").trim() || null;
+  const postalCode = String(formData.get("postalCode") ?? "").trim() || null;
   const detailedAddress = String(formData.get("detailedAddress") ?? "").trim() || null;
   const detailedAddressEn = String(formData.get("detailedAddressEn") ?? "").trim() || null;
   const phone = normalizePhone(String(formData.get("phone") ?? ""));
@@ -181,6 +182,7 @@ export async function createBranch(
         taglineEn,
         address,
         addressEn,
+        postalCode,
         detailedAddress,
         detailedAddressEn,
         phone,
@@ -227,6 +229,7 @@ export async function updateBranch(
   const taglineEn = String(formData.get("taglineEn") ?? "").trim() || null;
   const address = String(formData.get("address") ?? "").trim() || null;
   const addressEn = String(formData.get("addressEn") ?? "").trim() || null;
+  const postalCode = String(formData.get("postalCode") ?? "").trim() || null;
   const detailedAddress = String(formData.get("detailedAddress") ?? "").trim() || null;
   const detailedAddressEn = String(formData.get("detailedAddressEn") ?? "").trim() || null;
   const phone = normalizePhone(String(formData.get("phone") ?? ""));
@@ -300,6 +303,7 @@ export async function updateBranch(
         taglineEn,
         address,
         addressEn,
+        postalCode,
         detailedAddress,
         detailedAddressEn,
         phone,

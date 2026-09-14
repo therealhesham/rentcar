@@ -121,6 +121,19 @@ export function BranchCreateForm({ cities }: { cities: CityOption[] }) {
         />
       </label>
       <label className="text-sm font-medium md:col-span-1">
+        الرمز البريدي
+        <input
+          name="postalCode"
+          inputMode="numeric"
+          maxLength={10}
+          placeholder="42311"
+          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
+        />
+        <span className="mt-1 block text-xs text-on-surface-variant">
+          يُرسَل لبوابة تابي في عنوان الشحن — حقل إلزامي لديها.
+        </span>
+      </label>
+      <label className="text-sm font-medium md:col-span-1">
         العنوان التفصيلي (عربي)
         <textarea
           name="detailedAddress"
