@@ -547,9 +547,7 @@
     "dueNowBalance": "Due now (extension balance)",
     "totalsNote": "The amount shown includes VAT. Nothing will be charged until you confirm the payment.",
     "metaDescription": "Choose a payment method and complete your car booking.",
-    "returnCancelTitle": "Payment aborted",
     "returnCancelBody": "You aborted the payment. Please retry or choose another payment method.",
-    "returnFailureTitle": "Purchase not approved",
     "returnFailureBody": "Sorry, Tabby is unable to approve this purchase. Please use an alternative payment method for your order"
   },
   "Checkout": {

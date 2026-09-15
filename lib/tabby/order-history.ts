@@ -60,7 +60,7 @@ export type TabbyOrderHistoryEntry = {
 
 export type TabbyBuyerContext = {
   orderHistory: TabbyOrderHistoryEntry[];
-  /** عدد الطلبات المُنجَزة فعلاً (مدفوعة وغير ملغاة) — يُرسَل كـ loyalty_level. */
+  /** عدد الطلبات التي تمّت بنجاح (مدفوعة وغير ملغاة) بأي وسيلة — يُرسَل كـ loyalty_level. */
   loyaltyLevel: number;
   /** تاريخ تسجيل العميل، أو تاريخ أول حجز له إن لم يكن مسجَّلاً. */
   registeredSinceIso: string | null;
@@ -149,8 +149,18 @@ export async function buildTabbyBuyerContext(args: {
     };
   });
 
-  // «طلبات مُنجَزة بنجاح» = وصلت لحالة مكتملة ولم تُلغَ أو تُسترد.
-  const loyaltyLevel = orderHistory.filter((o) => o.status === "complete").length;
+  // تعريف Egor حرفياً: «عدد الطلبات التي تمّت بنجاح بأي وسيلة دفع».
+  // يُعدّ من القاعدة مباشرةً لا من `orderHistory` — تلك مقتطعة عند 10 عناصر،
+  // فاشتقاق العدد منها كان يُرجع صفراً لعميل قديم كل حجوزاته المدفوعة أقدم من
+  // آخر عشرة (حدث فعلاً وقت الاختبار).
+  const loyaltyLevel = await prisma.bookingRequest.count({
+    where: {
+      ...where,
+      id: { not: args.excludeBookingId },
+      paymentStatus: { in: ["PAID", "PARTIAL_REFUND"] },
+      status: { notIn: ["CANCELLED", "REJECTED"] },
+    },
+  });
 
   // تاريخ التسجيل، أو أقدم حجز حين لا يوجد حساب (كما اقترح Egor).
   const accountCreated = rows.find((r) => r.customer?.createdAt)?.customer?.createdAt ?? null;

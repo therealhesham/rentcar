@@ -496,14 +496,11 @@ export function PaymentClient({
           ) : (
             <Info className="mt-0.5 size-5 shrink-0" aria-hidden />
           )}
-          <div>
-            <p className="text-sm font-extrabold">
-              {returnStatus === "failure" ? t("returnFailureTitle") : t("returnCancelTitle")}
-            </p>
-            <p className="mt-1 text-xs leading-relaxed opacity-90">
-              {returnStatus === "failure" ? t("returnFailureBody") : t("returnCancelBody")}
-            </p>
-          </div>
+          {/* نص تابي المعتمد وحده بلا عنوان من عندنا — Egor طلب استخدام الرسائل
+              كما هي حرفياً (مراجعة ٩ سبتمبر ٢٠٢٦). */}
+          <p className="text-sm font-bold leading-relaxed">
+            {returnStatus === "failure" ? t("returnFailureBody") : t("returnCancelBody")}
+          </p>
         </div>
       ) : null}
 
