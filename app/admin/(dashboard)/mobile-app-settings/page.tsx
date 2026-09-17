@@ -7,7 +7,13 @@ import {
   MOBILE_KEY_PAYMENT_METHODS,
   normalizeMobileAppPaymentMethodFlags,
 } from "@/lib/mobile-app-payment-flags";
+import {
+  DEFAULT_MOBILE_APP_BOOKING_WIDGET_FLAGS,
+  MOBILE_KEY_BOOKING_WIDGET_TABS,
+  normalizeMobileAppBookingWidgetFlags,
+} from "@/lib/mobile-app-booking-widget-flags";
 import { MobileAppPaymentMethodsForm } from "./MobileAppPaymentMethodsForm";
+import { MobileAppBookingWidgetTabsForm } from "./MobileAppBookingWidgetTabsForm";
 
 export const dynamic = "force-dynamic";
 
@@ -30,18 +36,38 @@ async function getMobileAppPaymentFlags() {
   }
 }
 
+async function getMobileAppBookingWidgetFlags() {
+  try {
+    const row = await prisma.mobileAppSetting.findUnique({
+      where: { key: MOBILE_KEY_BOOKING_WIDGET_TABS },
+      select: { value: true },
+    });
+    if (!row?.value?.trim()) return DEFAULT_MOBILE_APP_BOOKING_WIDGET_FLAGS;
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(row.value) as unknown;
+    } catch {
+      return DEFAULT_MOBILE_APP_BOOKING_WIDGET_FLAGS;
+    }
+    return normalizeMobileAppBookingWidgetFlags(parsed);
+  } catch {
+    return DEFAULT_MOBILE_APP_BOOKING_WIDGET_FLAGS;
+  }
+}
+
 export default async function MobileAppSettingsPage() {
   if (!(await verifyAdminSession())) {
     redirect("/admin/login");
   }
 
   const flags = await getMobileAppPaymentFlags();
+  const bookingWidgetFlags = await getMobileAppBookingWidgetFlags();
 
   return (
     <>
       <AdminPageHeader
         title="إعدادات تطبيق الموبايل"
-        description="تحكم في طرق الدفع الظاهرة للعميل في تطبيق روائس — مستقل تماماً عن طرق دفع الموقع."
+        description="تحكم في طرق الدفع وودجت البحث الظاهرة للعميل في تطبيق روائس — مستقل تماماً عن الموقع."
         backHref="/admin"
         backLabel="لوحة التحكم"
       />
@@ -55,10 +81,16 @@ export default async function MobileAppSettingsPage() {
         المشترك في قاعدة البيانات — لا تأثير على صفحة دفع الموقع.
       </div>
 
-      <MobileAppPaymentMethodsForm
-        key={JSON.stringify(flags)}
-        flags={flags}
-      />
+      <div className="space-y-6">
+        <MobileAppPaymentMethodsForm
+          key={JSON.stringify(flags)}
+          flags={flags}
+        />
+        <MobileAppBookingWidgetTabsForm
+          key={JSON.stringify(bookingWidgetFlags)}
+          flags={bookingWidgetFlags}
+        />
+      </div>
     </>
   );
 }
