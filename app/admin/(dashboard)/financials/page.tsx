@@ -57,10 +57,13 @@ export default async function FinancialsPage(props: {
     };
   }
 
-  // المؤرشف مستبعد من كل أرقام هذه الصفحة — النطاق والرؤية في شرط واحد.
+  // المؤرشف مستبعد من كل أرقام هذه الصفحة — النطاق والرؤية في شرط واحد. حجوزات "تحديث
+  // الاتاحة" المستوردة بالجملة (isBulkAvailabilityImport) مستبعدة كذلك — راجع تعليق
+  // lib/availability-block-import.ts: هذه الشاشة مخصصة لمدفوعات حجوزات حقيقية عبر الموقع.
   const baseWhere: Prisma.BookingRequestWhereInput = {
     ...bookingWhereForScope(scope),
     ...VISIBLE_BOOKINGS_WHERE,
+    isBulkAvailabilityImport: false,
   };
 
   const combinedAnd = [baseWhere, searchWhere].filter(x => Object.keys(x).length > 0);

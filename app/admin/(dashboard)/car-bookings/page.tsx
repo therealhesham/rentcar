@@ -136,6 +136,7 @@ export default async function AdminCarBookingsPage({
       deliveryLng: b.deliveryLng,
       status: b.status,
       kind: b.kind as "INQUIRY" | "DIRECT",
+      isBulkAvailabilityImport: b.isBulkAvailabilityImport,
       carModelId: b.carModelId,
       paymentStatus: b.paymentStatus ?? null,
       vehiclePlateNumber: b.vehiclePlateNumber ?? null,

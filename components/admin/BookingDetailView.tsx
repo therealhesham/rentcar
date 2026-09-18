@@ -280,7 +280,7 @@ export function BookingDetailView({
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-3.5">
             <div className="flex flex-wrap items-center gap-2">
-              <AdminKindBadge kind={booking.kind} />
+              <AdminKindBadge kind={booking.kind} isBulkAvailabilityImport={booking.isBulkAvailabilityImport} />
               <AdminStatusBadge status={booking.status} />
               <span
                 className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold ring-1 ring-inset ${

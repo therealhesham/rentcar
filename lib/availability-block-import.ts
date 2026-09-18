@@ -1,5 +1,6 @@
 import "server-only";
 import { buildBranchResolver } from "@/lib/branch-name-resolver";
+import { BOOKING_EVENTS } from "@/lib/booking-audit";
 import {
   buildModelIndex,
   bulkLookupCustomersByPhone,
@@ -20,10 +21,19 @@ export type { ImportRow } from "@/lib/vehicle-import-excel";
 
 /**
  * حجب إتاحة إداري بالجملة عبر Excel — **مسار مستقل عن `createDirectBooking`** بنفس فلسفة
- * `lib/booking-import.ts`، لكنه لا يمثّل حجز عميل: يُنشئ صفوف `BookingRequest` بنوع `BLOCK`
- * (صيانة/تأجير خارجي) تحجب فلييت الموديل+الفرع بنفس منطق حجز مباشر بالضبط، لأنها تُقرأ من
- * نفس الاستعلام (`loadBlockingDirectBookings` في lib/direct-booking.ts) — صفر انحراف عن
- * إتاحة العميل الفعلية.
+ * `lib/booking-import.ts`. الحجز الناتج **حجز مباشر عادي** (`kind: "DIRECT"`) بكل ما
+ * يترتب على ذلك (يظهر في القوائم، يُحسب في الإحصائيات، يخضع لتاريخ تابي إن كان لعميل
+ * حقيقي...) — قرار مقصود بعد تجربة: نوع `kind` مستقل (`BLOCK`) بدا أنظف نظرياً، لكن عشرات
+ * الاستعلامات عبر الكود (لوحة التحكم، الإحصائيات، الإشعارات، تابي، حساب العميل) تفترض أن
+ * كل صف `BookingRequest` من نوعين فقط، فتسرّبت صفوف الحجب إليها بمسمّيات خاطئة. الحل: علامة
+ * منفصلة `isBulkAvailabilityImport` لا يفحصها أي كود آخر إطلاقاً — صفر مفاجآت.
+ *
+ * الاستثناءان الوحيدان المتعمَّدان لهذه الحجوزات:
+ * 1. تُستبعد من صفحة العمليات المالية (`app/admin/(dashboard)/financials/page.tsx`) — راجع
+ *    `baseWhere` هناك.
+ * 2. لا تُرسِل إيميل "حجز جديد" للموظفين — نسجّل `BOOKING_EVENTS.STAFF_BOOKING_EMAIL_SENT`
+ *    فوراً عند الإنشاء بدل الإرسال الفعلي، فيعاملها كرون `booking-notification-drops` كأنها
+ *    أُشعِر بها بالفعل ولا يعيد إرسالها بعد ٢٤ ساعة.
  *
  * التوقيت: تاريخ+وقت كل من الاستلام والإرجاع يُدمَجان بنفس شكل `composeDatetimeLocal`
  * ثم يمران على `parseDateTimeInRiyadh` — **حرفياً نفس المسار** الذي يمر منه نموذج بحث العميل،
@@ -286,7 +296,7 @@ export async function importAvailabilityBlocksFromRows(payload: {
   if (carModelIds.length > 0 && branchIds.length > 0) {
     const existing = await prisma.bookingRequest.findMany({
       where: {
-        kind: "BLOCK",
+        isBulkAvailabilityImport: true,
         status: { not: "CANCELLED" },
         carModelId: { in: carModelIds },
         branchId: { in: branchIds },
@@ -349,7 +359,8 @@ export async function importAvailabilityBlocksFromRows(payload: {
 
       const booking = await prisma.bookingRequest.create({
         data: {
-          kind: "BLOCK",
+          kind: "DIRECT",
+          isBulkAvailabilityImport: true,
           carModelId: p.carModelId,
           customerId,
           fullName: p.customerFullName ?? PLACEHOLDER_FULL_NAME,
@@ -380,6 +391,18 @@ export async function importAvailabilityBlocksFromRows(payload: {
           notes: p.reason
             ? `حجب إتاحة من Excel — السبب: ${p.reason}`.slice(0, 500)
             : "حجب إتاحة من Excel",
+        },
+      });
+
+      // يمنع كرون "حجوزات بلا إشعار" من إرسال إيميل "حجز جديد" حقيقي لهذا الصف —
+      // راجع تعليق أعلى الملف ولوحة booking-notification-drops.ts.
+      await prisma.bookingLog.create({
+        data: {
+          bookingId: booking.id,
+          event: BOOKING_EVENTS.STAFF_BOOKING_EMAIL_SENT,
+          actorKind: "SYSTEM",
+          actorName: "Excel Import",
+          notes: "لا يوجد إيميل فعلي — حجز مستورد بالجملة من تحديث الاتاحة",
         },
       });
 
@@ -415,7 +438,7 @@ export type AvailabilityBlockRow = {
 export async function listActiveAvailabilityBlocks(branchIds?: number[]): Promise<AvailabilityBlockRow[]> {
   const rows = await prisma.bookingRequest.findMany({
     where: {
-      kind: "BLOCK",
+      isBulkAvailabilityImport: true,
       status: { not: "CANCELLED" },
       ...(branchIds ? { branchId: { in: branchIds } } : {}),
     },
@@ -461,9 +484,9 @@ export async function cancelAvailabilityBlock(
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const row = await prisma.bookingRequest.findUnique({
     where: { id },
-    select: { id: true, kind: true, status: true },
+    select: { id: true, isBulkAvailabilityImport: true, status: true },
   });
-  if (!row || row.kind !== "BLOCK") {
+  if (!row || !row.isBulkAvailabilityImport) {
     return { ok: false, error: "سجل الحجب غير موجود." };
   }
   if (row.status === "CANCELLED") {

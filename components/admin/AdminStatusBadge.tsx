@@ -27,17 +27,31 @@ export function AdminStatusBadge({ status }: { status: string }) {
   );
 }
 
-export function AdminKindBadge({ kind }: { kind: string }) {
+export function AdminKindBadge({
+  kind,
+  isBulkAvailabilityImport,
+}: {
+  kind: string;
+  /** حجز أُنشئ بالجملة من أداة "تحديث الاتاحة" (Excel) — راجع lib/availability-block-import.ts. */
+  isBulkAvailabilityImport?: boolean;
+}) {
   const isDirect = kind === "DIRECT";
   return (
-    <span
-      className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold ring-1 ring-inset ${
-        isDirect
-          ? "bg-[#ecfdf5] text-[#047857] ring-[#6ee7b7]/40"
-          : "bg-[#f5f3ff] text-[#6d28d9] ring-[#c4b5fd]/40"
-      }`}
-    >
-      {isDirect ? "حجز مباشر" : "استفسار"}
+    <span className="inline-flex items-center gap-1.5">
+      <span
+        className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold ring-1 ring-inset ${
+          isDirect
+            ? "bg-[#ecfdf5] text-[#047857] ring-[#6ee7b7]/40"
+            : "bg-[#f5f3ff] text-[#6d28d9] ring-[#c4b5fd]/40"
+        }`}
+      >
+        {isDirect ? "حجز مباشر" : "استفسار"}
+      </span>
+      {isBulkAvailabilityImport ? (
+        <span className="inline-flex rounded-full bg-[#fff7ed] px-2.5 py-0.5 text-[11px] font-bold text-[#9a3412] ring-1 ring-inset ring-[#fdba74]/40">
+          مستوردة من ملف خارجي
+        </span>
+      ) : null}
     </span>
   );
 }

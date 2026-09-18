@@ -25,7 +25,7 @@ import {
 export type AccountBookingCardActionsProps = {
   booking: {
     id: number;
-    kind: "INQUIRY" | "DIRECT" | "BLOCK";
+    kind: "INQUIRY" | "DIRECT";
     carModelId: number | null;
     pickupDateIso: string;
     numberOfDays: number;

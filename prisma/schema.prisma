@@ -732,6 +732,11 @@ model BookingRequest {
   /// أنشأه الموقع أو الإدارة. `unique` هو مفتاح منع التكرار عند إعادة رفع نفس الملف
   /// (MySQL يسمح بتعدد صفوف NULL في الفهرس الفريد، فالحجوزات العادية لا تتعارض).
   legacyRef                     String?      @unique @db.VarChar(64)
+  /// حجز أُنشئ بالجملة من أداة "تحديث الاتاحة" (Excel) — علامة عرض/فلترة فقط؛ الحجز نفسه
+  /// حجز مباشر عادي (kind=DIRECT) بكل ما يترتب على ذلك (يظهر في القوائم، يخضع لتاريخ
+  /// تابي إن كان لعميل حقيقي...) عدا استثناءين: تُستبعد من صفحة العمليات المالية، وتظهر
+  /// بشارة توضّح مصدرها. راجع lib/availability-block-import.ts.
+  isBulkAvailabilityImport      Boolean      @default(false)
 
 
   /// أرشفة: تخفي الحجز عن العميل وعن لوحة الإدارة وكل الأقسام المالية دون حذف أي شيء.
@@ -906,9 +911,6 @@ model CustomerLoginOtp {
 enum BookingRequestKind {
   INQUIRY
   DIRECT
-  /// حجب إتاحة إداري (صيانة/تأجير خارجي) عبر استيراد Excel — يحجب فلييت الموديل+الفرع
-  /// بنفس منطق DIRECT دون أن يظهر كحجز عميل حقيقي. راجع docs/availability-block-import.md.
-  BLOCK
 }
 
 enum Transmission {

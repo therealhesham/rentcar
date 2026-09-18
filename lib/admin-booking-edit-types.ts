@@ -1,7 +1,7 @@
 /** بيانات الحجز القابلة للتعديل من لوحة الإدارة */
 export type EditableBookingRow = {
   id: number;
-  kind: "INQUIRY" | "DIRECT" | "BLOCK";
+  kind: "INQUIRY" | "DIRECT";
   fullName: string;
   phone: string;
   ageRange: string;

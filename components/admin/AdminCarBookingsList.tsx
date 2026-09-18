@@ -30,6 +30,8 @@ export type CarBookingRow = {
   deliveryLng: number | null;
   status: string;
   kind: "INQUIRY" | "DIRECT";
+  /** حجز أُنشئ بالجملة من أداة "تحديث الاتاحة" (Excel) — راجع lib/availability-block-import.ts. */
+  isBulkAvailabilityImport?: boolean;
   carModelId: number | null;
   paymentStatus: string | null;
   vehiclePlateNumber?: string | null;
@@ -44,6 +46,15 @@ export type CarBookingDayGroup = {
 type Props = {
   groups: CarBookingDayGroup[];
 };
+
+/** حجز أُنشئ بالجملة من أداة "تحديث الاتاحة" (Excel) — راجع lib/availability-block-import.ts. */
+function ImportBadge() {
+  return (
+    <span className="inline-flex rounded-full bg-[#fff7ed] px-2.5 py-0.5 text-[11px] font-bold text-[#9a3412] ring-1 ring-inset ring-[#fdba74]/40">
+      مستوردة من ملف خارجي
+    </span>
+  );
+}
 
 function PickupModeCell({ row }: { row: CarBookingRow }) {
   if (row.pickupMode === "DELIVERY") {
@@ -170,6 +181,7 @@ export function AdminCarBookingsList({ groups }: Props) {
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <AdminStatusBadge status={row.status} />
+                      {row.isBulkAvailabilityImport ? <ImportBadge /> : null}
                       <span className="tabular-nums text-xs font-bold text-on-surface-variant" dir="ltr">
                         #{row.id}
                       </span>
@@ -267,7 +279,10 @@ export function AdminCarBookingsList({ groups }: Props) {
                       <PickupModeCell row={row} />
                     </td>
                     <td className="px-4 py-3 align-top">
-                      <AdminStatusBadge status={row.status} />
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <AdminStatusBadge status={row.status} />
+                        {row.isBulkAvailabilityImport ? <ImportBadge /> : null}
+                      </div>
                     </td>
                     <td className="px-4 py-3 align-top tabular-nums text-xs font-bold text-on-surface-variant">
                       #{row.id}

@@ -386,9 +386,7 @@ async function loadBlockingDirectBookings(
 ): Promise<OverlapRow[]> {
   return client.bookingRequest.findMany({
     where: {
-      // BLOCK = حجب إتاحة إداري مستورد من Excel (صيانة/تأجير خارجي) — يحجب الفلييت
-      // بنفس منطق DIRECT بالضبط دون أن يكون حجز عميل حقيقي. راجع lib/availability-block-import.ts.
-      kind: { in: ["DIRECT", "BLOCK"] },
+      kind: "DIRECT",
       carModelId,
       NOT: { status: { in: [...NON_BLOCKING_BOOKING_STATUSES] } },
       ...(branchSlug ? { returnBranch: { slug: branchSlug } } : {}),
