@@ -21,7 +21,7 @@ export function cellToPlainString(value: unknown): string {
 
 /**
  * زي `cellToPlainString` لكنها **لا تقصّ وقت اليوم** من خلايا التاريخ/الوقت — تُرجع
- * ISO كامل (`YYYY-MM-DDTHH:mm:ss.sssZ`). لازمة لأعمدة "التوقيت" في استيراد حجب الإتاحة:
+ * ISO كامل (`YYYY-MM-DDTHH:mm:ss.sssZ`). لازمة لأعمدة "التوقيت" في استيراد الاكسل:
  * Excel يحوّل تلقائياً أي نص شبه-وقت (مثل "14:30") لخلية Time، فلو استخدمنا
  * `cellToPlainString` العادية (بتقصّ لـ`YYYY-MM-DD` فقط) هيضيع الوقت بصمت.
  */

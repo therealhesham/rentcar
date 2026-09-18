@@ -29,22 +29,22 @@ const IMPORT_FIELDS: {
   hint: string;
   required?: boolean;
 }[] = [
-  { key: "brand", label: "الماركة", hint: "تويوتا / Toyota…" },
-  { key: "modelName", label: "اسم الموديل", hint: "كامري / يارس… — مطلوب هو أو الماركة", required: true },
-  { key: "year", label: "سنة الصنع", hint: "للتمييز عند تكرار الموديل" },
-  { key: "branch", label: "الفرع", hint: "بالاسم العربي أو المدينة", required: true },
-  { key: "pickupDate", label: "تاريخ الاستلام", hint: "مطلوب · yyyy-mm-dd أو dd/mm/yyyy", required: true },
-  { key: "pickupTime", label: "توقيت الاستلام", hint: "مطلوب · HH:mm مثل 14:30", required: true },
-  { key: "returnDate", label: "تاريخ الإرجاع", hint: "مطلوب", required: true },
-  { key: "returnTime", label: "توقيت الإرجاع", hint: "مطلوب · HH:mm مثل 18:00", required: true },
-  { key: "reason", label: "السبب", hint: "صيانة / تأجير خارجي… (اختياري)" },
-  {
-    key: "fullName",
-    label: "اسم العميل",
-    hint: "اختياري — لو اتربط مع الجوال يُنشأ/يُربط حساب عميل حقيقي (تأجير خارجي) بدل حجب مجهول",
-  },
-  { key: "phone", label: "جوال العميل", hint: "اختياري · 05xxxxxxxx — لازم يترافق مع الاسم" },
-];
+    { key: "brand", label: "الماركة", hint: "تويوتا / Toyota…" },
+    { key: "modelName", label: "اسم الموديل", hint: "كامري / يارس… — مطلوب هو أو الماركة", required: true },
+    { key: "year", label: "سنة الصنع", hint: "للتمييز عند تكرار الموديل" },
+    { key: "branch", label: "الفرع", hint: "بالاسم العربي أو المدينة", required: true },
+    { key: "pickupDate", label: "تاريخ الاستلام", hint: "مطلوب · yyyy-mm-dd أو dd/mm/yyyy", required: true },
+    { key: "pickupTime", label: "توقيت الاستلام", hint: "مطلوب · HH:mm مثل 14:30", required: true },
+    { key: "returnDate", label: "تاريخ الإرجاع", hint: "مطلوب", required: true },
+    { key: "returnTime", label: "توقيت الإرجاع", hint: "مطلوب · HH:mm مثل 18:00", required: true },
+    { key: "reason", label: "السبب", hint: "صيانة / تأجير خارجي… (اختياري)" },
+    {
+      key: "fullName",
+      label: "اسم العميل",
+      hint: "اختياري — لو اتربط مع الجوال يُنشأ/يُربط حساب عميل حقيقي (تأجير خارجي) بدل حجب مجهول",
+    },
+    { key: "phone", label: "جوال العميل", hint: "اختياري · 05xxxxxxxx — لازم يترافق مع الاسم" },
+  ];
 
 function autoDetect(headers: string[]): Record<string, string> {
   const result: Record<string, string> = {};
@@ -140,7 +140,7 @@ function UploadZone({ onParsed }: { onParsed: (data: ParsedFile) => void }) {
 
       <div>
         <p className="text-lg font-extrabold text-on-surface">
-          {loading ? "جاري تحليل الملف…" : "ارفع ملف حجب الإتاحة"}
+          {loading ? "جاري تحليل الملف…" : "ارفع ملف الاكسل"}
         </p>
         <p className="mt-1 text-sm text-on-surface-variant">
           اسحب وأفلت أو انقر للاختيار · xlsx / csv
@@ -186,9 +186,8 @@ function MappingRow({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={`flex-1 rounded-xl border bg-surface-container px-3 py-2.5 text-sm text-on-surface outline-none ring-primary/30 transition-colors focus:ring-2 ${
-          missing ? "border-error/60" : "border-outline-variant"
-        }`}
+        className={`flex-1 rounded-xl border bg-surface-container px-3 py-2.5 text-sm text-on-surface outline-none ring-primary/30 transition-colors focus:ring-2 ${missing ? "border-error/60" : "border-outline-variant"
+          }`}
       >
         <option value={NONE}>— لا يُربط —</option>
         {headers.map((h) => (
@@ -311,9 +310,8 @@ export function AvailabilityImportClient() {
         <div className="rounded-2xl border border-outline-variant/30 bg-surface-container-low p-6 sm:p-8">
           <div className="mb-6 flex items-start gap-3">
             <span
-              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg ${
-                allOk ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
-              }`}
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg ${allOk ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                }`}
             >
               {allOk ? "✓" : "!"}
             </span>
