@@ -906,6 +906,9 @@ model CustomerLoginOtp {
 enum BookingRequestKind {
   INQUIRY
   DIRECT
+  /// حجب إتاحة إداري (صيانة/تأجير خارجي) عبر استيراد Excel — يحجب فلييت الموديل+الفرع
+  /// بنفس منطق DIRECT دون أن يظهر كحجز عميل حقيقي. راجع docs/availability-block-import.md.
+  BLOCK
 }
 
 enum Transmission {

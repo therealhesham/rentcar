@@ -6,7 +6,9 @@ import {
   scopeAllowsMultipleBranches,
 } from "@/lib/admin-scope";
 import { addDaysToYmd, getDirectBookingAvailability } from "@/lib/direct-booking";
+import { listActiveAvailabilityBlocks } from "@/lib/availability-block-import";
 import { prisma } from "@/lib/prisma";
+import { CancelAvailabilityBlockButton } from "./CancelAvailabilityBlockButton";
 
 export const dynamic = "force-dynamic";
 
@@ -62,10 +64,14 @@ export default async function FleetAvailabilityPage({
     branchSlug
       ? prisma.branch.findFirst({
           where: { slug: branchSlug },
-          select: { name: true },
+          select: { id: true, name: true },
         })
       : Promise.resolve(null),
   ]);
+
+  const activeBlocks = branchRow
+    ? await listActiveAvailabilityBlocks([branchRow.id])
+    : [];
 
   const rows = await Promise.all(
     models.map(async (m) => {
@@ -92,27 +98,37 @@ export default async function FleetAvailabilityPage({
 
   return (
     <>
-      <header className="mb-8">
-        <h1 className="text-3xl font-extrabold tracking-tight">توفر المركبات</h1>
-        <p className="mt-2 max-w-2xl text-on-surface-variant">
-          {branchRow ? (
-            <>
-              توفر الأسطول لفرع{" "}
-              <span className="font-bold text-on-surface">{branchRow.name}</span>: «المحجوز» =
-              حجوزات مباشرة نشطة من هذا الفرع فقط في الفترة المختارة.
-            </>
-          ) : (
-            <>
-              مقارنة <span className="font-bold text-on-surface">وحدات الأسطول</span> بعدد{" "}
-              <span className="font-bold text-on-surface">الحجوزات المباشرة النشطة</span> في الفترة.
-            </>
-          )}
-        </p>
-        <p className="mt-3 text-sm text-on-surface-variant">
-          <Link href="/admin" className="font-bold text-primary hover:underline">
-            لوحة التحكم
+      <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-3xl font-extrabold tracking-tight">توفر المركبات</h1>
+          <p className="mt-2 max-w-2xl text-on-surface-variant">
+            {branchRow ? (
+              <>
+                توفر الأسطول لفرع{" "}
+                <span className="font-bold text-on-surface">{branchRow.name}</span>: «المحجوز» =
+                حجوزات مباشرة نشطة من هذا الفرع فقط في الفترة المختارة.
+              </>
+            ) : (
+              <>
+                مقارنة <span className="font-bold text-on-surface">وحدات الأسطول</span> بعدد{" "}
+                <span className="font-bold text-on-surface">الحجوزات المباشرة النشطة</span> في الفترة.
+              </>
+            )}
+          </p>
+          <p className="mt-3 text-sm text-on-surface-variant">
+            <Link href="/admin" className="font-bold text-primary hover:underline">
+              لوحة التحكم
+            </Link>
+          </p>
+        </div>
+        <div className="shrink-0">
+          <Link
+            href="/admin/fleet-availability/import"
+            className="rounded-xl border border-outline-variant px-4 py-2.5 text-xs font-bold text-primary transition-colors hover:bg-surface-container"
+          >
+            تحديث الاتاحة
           </Link>
-        </p>
+        </div>
       </header>
 
       <section className="mb-8 rounded-2xl border border-outline-variant/30 bg-surface-container-low p-5 md:p-6">
@@ -229,6 +245,66 @@ export default async function FleetAvailabilityPage({
           </ul>
         </section>
       ) : null}
+
+      <section className="mt-8 rounded-2xl border border-outline-variant/30 bg-surface-container-low p-5 md:p-6">
+        <h2 className="text-lg font-extrabold tracking-tight">
+          حجب إتاحة نشط{branchRow ? ` — فرع ${branchRow.name}` : ""}
+        </h2>
+        <p className="mt-1 text-sm text-on-surface-variant">
+          عربيات محجوبة إدارياً (صيانة/تأجير خارجي) مستوردة من{" "}
+          <Link href="/admin/fleet-availability/import" className="font-bold text-primary hover:underline">
+            تحديث الاتاحة
+          </Link>
+          . إلغاء الحجب يعيد العربية متاحة فوراً لنفس الفترة.
+        </p>
+        {activeBlocks.length === 0 ? (
+          <p className="mt-4 text-sm text-on-surface-variant">لا يوجد حجب نشط حالياً.</p>
+        ) : (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[720px] text-start text-sm">
+              <thead>
+                <tr className="border-b border-outline-variant/30 text-on-surface-variant">
+                  <th className="px-3 py-2">المركبة</th>
+                  <th className="px-3 py-2">العميل</th>
+                  <th className="px-3 py-2">من</th>
+                  <th className="px-3 py-2">إلى</th>
+                  <th className="px-3 py-2">السبب</th>
+                  <th className="px-3 py-2" />
+                </tr>
+              </thead>
+              <tbody>
+                {activeBlocks.map((b) => (
+                  <tr key={b.id} className="border-b border-outline-variant/15">
+                    <td className="px-3 py-2 font-medium">{b.carModelTitle}</td>
+                    <td className="px-3 py-2">
+                      {b.customerFullName ? (
+                        <>
+                          <span className="font-medium">{b.customerFullName}</span>
+                          <span className="block font-mono text-xs text-on-surface-variant" dir="ltr">
+                            {b.customerPhone}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-on-surface-variant">— حجب صيانة —</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 font-mono text-xs" dir="ltr">
+                      {b.pickupAt.toLocaleString("ar-SA", { timeZone: "Asia/Riyadh" })}
+                    </td>
+                    <td className="px-3 py-2 font-mono text-xs" dir="ltr">
+                      {b.returnAt.toLocaleString("ar-SA", { timeZone: "Asia/Riyadh" })}
+                    </td>
+                    <td className="px-3 py-2 text-on-surface-variant">{b.reason || "—"}</td>
+                    <td className="px-3 py-2">
+                      <CancelAvailabilityBlockButton id={b.id} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </>
   );
 }

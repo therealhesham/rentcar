@@ -19,14 +19,30 @@ export function cellToPlainString(value: unknown): string {
   return String(value).trim();
 }
 
+/**
+ * زي `cellToPlainString` لكنها **لا تقصّ وقت اليوم** من خلايا التاريخ/الوقت — تُرجع
+ * ISO كامل (`YYYY-MM-DDTHH:mm:ss.sssZ`). لازمة لأعمدة "التوقيت" في استيراد حجب الإتاحة:
+ * Excel يحوّل تلقائياً أي نص شبه-وقت (مثل "14:30") لخلية Time، فلو استخدمنا
+ * `cellToPlainString` العادية (بتقصّ لـ`YYYY-MM-DD` فقط) هيضيع الوقت بصمت.
+ */
+export function cellToPlainStringWithTime(value: unknown): string {
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? "" : value.toISOString();
+  }
+  return cellToPlainString(value);
+}
+
 export type ImportRow = Record<string, string>;
 
 /** تحويل صفوف خام إلى كائنات نصية فقط. */
-export function sanitizeExcelRows(rows: Record<string, unknown>[]): ImportRow[] {
+export function sanitizeExcelRows(
+  rows: Record<string, unknown>[],
+  cellToString: (value: unknown) => string = cellToPlainString,
+): ImportRow[] {
   return rows.map((row) => {
     const out: ImportRow = {};
     for (const [key, val] of Object.entries(row)) {
-      out[String(key)] = cellToPlainString(val);
+      out[String(key)] = cellToString(val);
     }
     return out;
   });
@@ -56,14 +72,17 @@ function asRowArray(row: unknown): unknown[] {
   return Array.isArray(row) ? row : [];
 }
 
-function matrixToImportRows(matrix: unknown[][]): { headers: string[]; rows: ImportRow[] } {
+function matrixToImportRows(
+  matrix: unknown[][],
+  cellToString: (value: unknown) => string = cellToPlainString,
+): { headers: string[]; rows: ImportRow[] } {
   if (matrix.length === 0) {
     throw new Error("الملف فارغ.");
   }
 
   const headerRow = asRowArray(matrix[0]);
   const rawHeaders = headerRow.map((cell, i) => {
-    const label = cellToPlainString(cell);
+    const label = cellToString(cell);
     return label || `عمود_${i + 1}`;
   });
 
@@ -83,12 +102,12 @@ function matrixToImportRows(matrix: unknown[][]): { headers: string[]; rows: Imp
   const rows: ImportRow[] = [];
   for (let r = 1; r < matrix.length; r++) {
     const line = asRowArray(matrix[r]);
-    const empty = line.every((c) => cellToPlainString(c) === "");
+    const empty = line.every((c) => cellToString(c) === "");
     if (empty) continue;
 
     const obj: ImportRow = {};
     for (let c = 0; c < headers.length; c++) {
-      obj[headers[c]!] = cellToPlainString(line[c]);
+      obj[headers[c]!] = cellToString(line[c]);
     }
     rows.push(obj);
   }
@@ -131,29 +150,41 @@ function parseCsvText(text: string): unknown[][] {
   });
 }
 
-async function parseCsvFile(file: File): Promise<{ headers: string[]; rows: ImportRow[] }> {
+async function parseCsvFile(
+  file: File,
+  cellToString: (value: unknown) => string,
+): Promise<{ headers: string[]; rows: ImportRow[] }> {
   const text = await file.text();
-  return matrixToImportRows(parseCsvText(text));
+  return matrixToImportRows(parseCsvText(text), cellToString);
 }
 
-async function parseXlsxFile(file: File): Promise<{ headers: string[]; rows: ImportRow[] }> {
+async function parseXlsxFile(
+  file: File,
+  cellToString: (value: unknown) => string,
+): Promise<{ headers: string[]; rows: ImportRow[] }> {
   const { readSheet } = await import("read-excel-file/browser");
   const raw = await readSheet(file);
-  return matrixToImportRows(coerceSheetMatrix(raw));
+  return matrixToImportRows(coerceSheetMatrix(raw), cellToString);
 }
 
-/** قراءة .xlsx أو .csv في المتصفح (بدون مكتبة SheetJS/xlsx). */
+/**
+ * قراءة .xlsx أو .csv في المتصفح (بدون مكتبة SheetJS/xlsx).
+ * `cellToString` اختياري — مرّر `cellToPlainStringWithTime` لو الملف فيه أعمدة وقت
+ * (راجع تعليقها أعلاه)؛ الافتراضي يطابق السلوك القديم بلا تغيير لبقية الاستخدامات.
+ */
 export async function parseSpreadsheetFile(
   file: File,
+  options?: { cellToString?: (value: unknown) => string },
 ): Promise<{ headers: string[]; rows: ImportRow[] }> {
+  const cellToString = options?.cellToString ?? cellToPlainString;
   const name = file.name.toLowerCase();
 
   if (name.endsWith(".csv")) {
-    return parseCsvFile(file);
+    return parseCsvFile(file, cellToString);
   }
 
   if (name.endsWith(".xlsx")) {
-    return parseXlsxFile(file);
+    return parseXlsxFile(file, cellToString);
   }
 
   if (name.endsWith(".xls")) {

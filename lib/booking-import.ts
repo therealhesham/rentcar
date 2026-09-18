@@ -91,7 +91,7 @@ const VALID_PAYMENT_METHODS = new Set([
   "TRANSFER",
 ]);
 
-function cell(row: ImportRow, col?: string): string {
+export function cell(row: ImportRow, col?: string): string {
   if (!col) return "";
   return (row[col] ?? "").trim();
 }
@@ -101,7 +101,7 @@ function normalizeModelKey(s: string): string {
 }
 
 /** أرقام عربية-هندية → لاتينية؛ ملفات المكاتب القديمة مليانة بيها. */
-function toLatinDigits(s: string): string {
+export function toLatinDigits(s: string): string {
   return s.replace(/[٠-٩۰-۹]/g, (d) => {
     const code = d.charCodeAt(0);
     const base = code >= 0x06f0 ? 0x06f0 : 0x0660;
@@ -138,7 +138,7 @@ export function parseAmount(raw: string): number | null {
   return Math.round(n * 100) / 100;
 }
 
-function parseIntCell(raw: string): number | null {
+export function parseIntCell(raw: string): number | null {
   if (!raw) return null;
   const digits = toLatinDigits(raw).replace(/[^\d]/g, "");
   if (!digits) return null;
@@ -258,14 +258,14 @@ function parsePaidFlag(raw: string): boolean | null {
   return null;
 }
 
-type ModelIndex = {
+export type ModelIndex = {
   exact: Map<string, number>;
   byBrandModel: Map<string, number[]>;
   byModel: Map<string, number[]>;
   carTypeById: Map<number, string>;
 };
 
-async function buildModelIndex(): Promise<ModelIndex> {
+export async function buildModelIndex(): Promise<ModelIndex> {
   const models = await prisma.carModel.findMany({
     select: {
       id: true,
@@ -296,7 +296,7 @@ async function buildModelIndex(): Promise<ModelIndex> {
 }
 
 /** يحلّ الموديل من أعمدة الماركة/الموديل/السنة؛ يرمي خطأً عند التعذّر. */
-function resolveModelId(
+export function resolveModelId(
   index: ModelIndex,
   brandRaw: string,
   modelRaw: string,
@@ -356,8 +356,64 @@ type ParsedBooking = {
  * (محجوز في RFC 2606 فمستحيل يوصله بريد حقيقي بالغلط). ثابت لنفس الجوال حتى تبقى
  * إعادة الرفع بلا حسابات مكررة.
  */
-function syntheticEmailForPhone(phoneE164: string): string {
+export function syntheticEmailForPhone(phoneE164: string): string {
   return `${phoneE164.replace(/\D/g, "")}@imported.invalid`;
+}
+
+/** بحث جماعي بالجوال قبل الكتابة — لعرض إحصاء «عملاء موجودون/جدد» في المعاينة بلا كتابة. */
+export async function bulkLookupCustomersByPhone(
+  phones: string[],
+): Promise<Map<string, number>> {
+  const map = new Map<string, number>();
+  if (phones.length === 0) return map;
+  const existingUsers = await prisma.user.findMany({
+    where: { phone: { in: phones } },
+    select: { id: true, phone: true },
+  });
+  for (const u of existingUsers) {
+    if (u.phone) map.set(u.phone, u.id);
+  }
+  return map;
+}
+
+/**
+ * يحلّ حساب عميل بالجوال أو ينشئه — نفس منطق الترحيل التاريخي بالحرف، مُستخرَج هنا
+ * ليُستخدم أيضاً من `lib/availability-block-import.ts` (حجوزات تأجير خارجي حقيقية عبر
+ * حجب الإتاحة) بدل تكرار منطق حساسّ (تطابق الإيميل، ربط جوال ناقص...).
+ * `cache` يُحدَّث في مكانه — مرّر نفس الـMap عبر كل صفوف الملف لتفادي إنشاء العميل مرتين
+ * لو تكرر جواله في أكثر من صف.
+ */
+export async function resolveOrCreateCustomerByPhone(
+  phoneE164: string,
+  fullName: string,
+  email: string | null,
+  cache: Map<string, number>,
+): Promise<number> {
+  const cached = cache.get(phoneE164);
+  if (cached !== undefined) return cached;
+
+  const finalEmail = email ?? syntheticEmailForPhone(phoneE164);
+  // الإيميل unique كذلك: لو موجود لحساب آخر نربط بيه بدل ما نفشل الصف
+  const byEmail = await prisma.user.findUnique({
+    where: { email: finalEmail },
+    select: { id: true, phone: true },
+  });
+
+  let customerId: number;
+  if (byEmail) {
+    customerId = byEmail.id;
+    if (!byEmail.phone) {
+      await prisma.user.update({ where: { id: byEmail.id }, data: { phone: phoneE164 } });
+    }
+  } else {
+    const createdUser = await prisma.user.create({
+      data: { email: finalEmail, phone: phoneE164, name: fullName, passwordHash: null },
+      select: { id: true },
+    });
+    customerId = createdUser.id;
+  }
+  cache.set(phoneE164, customerId);
+  return customerId;
 }
 
 function parseRow(
@@ -609,14 +665,7 @@ export async function importBookingsFromRows(payload: {
 
   // ── المرحلة ٣: حلّ العملاء بالجوال ─────────────────────────────────────────
   const phones = [...new Set(pending.map((p) => p.phoneE164))];
-  const existingUsers = await prisma.user.findMany({
-    where: { phone: { in: phones } },
-    select: { id: true, phone: true },
-  });
-  const userIdByPhone = new Map<string, number>();
-  for (const u of existingUsers) {
-    if (u.phone) userIdByPhone.set(u.phone, u.id);
-  }
+  const userIdByPhone = await bulkLookupCustomersByPhone(phones);
 
   result.customersMatched = phones.filter((p) => userIdByPhone.has(p)).length;
   result.customersToCreate = phones.length - result.customersMatched;
@@ -631,31 +680,12 @@ export async function importBookingsFromRows(payload: {
   // ── المرحلة ٤: الكتابة ─────────────────────────────────────────────────────
   for (const p of pending) {
     try {
-      let customerId = userIdByPhone.get(p.phoneE164) ?? null;
-      if (customerId === null) {
-        const email = p.email ?? syntheticEmailForPhone(p.phoneE164);
-        // الإيميل unique كذلك: لو موجود لحساب آخر نربط بيه بدل ما نفشل الصف
-        const byEmail = await prisma.user.findUnique({
-          where: { email },
-          select: { id: true, phone: true },
-        });
-        if (byEmail) {
-          customerId = byEmail.id;
-          if (!byEmail.phone) {
-            await prisma.user.update({
-              where: { id: byEmail.id },
-              data: { phone: p.phoneE164 },
-            });
-          }
-        } else {
-          const createdUser = await prisma.user.create({
-            data: { email, phone: p.phoneE164, name: p.fullName, passwordHash: null },
-            select: { id: true },
-          });
-          customerId = createdUser.id;
-        }
-        userIdByPhone.set(p.phoneE164, customerId);
-      }
+      const customerId = await resolveOrCreateCustomerByPhone(
+        p.phoneE164,
+        p.fullName,
+        p.email,
+        userIdByPhone,
+      );
 
       const paidAt = p.paymentStatus === "PAID" ? p.pickupDate : null;
 

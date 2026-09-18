@@ -356,6 +356,14 @@ export default async function AdminDashboardPage(props: {
             : `بيانات ${scopeLabel(scope)} فقط. مرحباً ${session.displayName}. الحجوزات والعملاء والمركبات مرتبطة بهذا النطاق.`
         }
         backHref={undefined}
+        actions={
+          <Link
+            href="/admin/fleet-availability/import"
+            className="rounded-xl border border-outline-variant px-4 py-2.5 text-xs font-bold text-primary transition-colors hover:bg-surface-container"
+          >
+            تحديث الاتاحة
+          </Link>
+        }
       />
 
       {scope.kind === "all" ? null : (

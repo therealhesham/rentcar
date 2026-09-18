@@ -46,6 +46,13 @@ const EXTRA_PAGE_PERMISSIONS: AdminPagePermission[] = [
     label: "ترحيل حجوزات من Excel",
     groupLabel: "الحجوزات والعملاء",
   },
+  // نفس السبب: بدونها ترثها من `/admin/fleet-availability` فيقدر أي موظف يشوف التوفر
+  // على حجب/إلغاء حجب عربيات بالجملة عبر Excel يؤثر على إتاحة العميل مباشرة.
+  {
+    href: "/admin/fleet-availability/import",
+    label: "تحديث الاتاحة (حجب/إلغاء حجب بالجملة)",
+    groupLabel: "الأسطول والفروع",
+  },
 ];
 
 /** كل صفحات الأدمن القابلة لمنح صلاحية مستقلة لها — الـ href نفسه هو معرّف الصلاحية.

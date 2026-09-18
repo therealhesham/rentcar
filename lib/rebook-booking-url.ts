@@ -1,7 +1,7 @@
 /** روابط «إعادة الحجز» بنفس المدة ونوع الاستلام والفرع (مع ضبط التاريخ إذا كان قديماً). */
 
 export type BookingLikeForRebook = {
-  kind: "INQUIRY" | "DIRECT";
+  kind: "INQUIRY" | "DIRECT" | "BLOCK";
   carModelId: number | null;
   pickupDate: Date;
   numberOfDays: number;
