@@ -61,7 +61,7 @@ export async function resolveCouponCode(
         value: customized.value,
         scope: customized.scope,
         appliesTo: "DAILY_AND_MONTHLY",
-        canBypassMinPrice: false,
+        canBypassMinPrice: customized.canBypassMinPrice,
         maxUses: 1,
         source: "CUSTOMIZED",
       },

@@ -49,6 +49,7 @@ export function CustomizedCouponEditForm({ coupon }: { coupon: CustomizedCouponA
           kind: coupon.kind,
           value: coupon.value,
           scope: coupon.scope,
+          canBypassMinPrice: coupon.canBypassMinPrice,
           endsAt: dateInputValue(coupon.endsAt),
           isActive: coupon.isActive,
         }}

@@ -27,6 +27,7 @@ function readCustomizedCouponFormFields(formData: FormData):
         kind: "PERCENT" | "FIXED";
         value: number;
         scope: "RENTAL_ONLY" | "FULL_TOTAL";
+        canBypassMinPrice: boolean;
         endsAt: Date | null;
         isActive: boolean;
       };
@@ -37,6 +38,8 @@ function readCustomizedCouponFormFields(formData: FormData):
   const kindRaw = String(formData.get("kind") ?? "").trim().toUpperCase();
   const scopeRaw = String(formData.get("scope") ?? "").trim().toUpperCase();
   const value = Number(formData.get("value"));
+  const canBypassMinPrice =
+    formData.get("canBypassMinPrice") === "on" || formData.get("canBypassMinPrice") === "true";
   const endsAt = parseOptionalDate(formData.get("endsAt"));
   const isActive = formData.get("isActive") === "on" || formData.get("isActive") === "true";
 
@@ -70,6 +73,7 @@ function readCustomizedCouponFormFields(formData: FormData):
       kind: kindRaw,
       value: Math.round(value),
       scope: scopeRaw,
+      canBypassMinPrice,
       endsAt,
       isActive,
     },
@@ -124,6 +128,7 @@ export async function updateCustomizedCoupon(
         kind: parsed.data.kind,
         value: parsed.data.value,
         scope: parsed.data.scope,
+        canBypassMinPrice: parsed.data.canBypassMinPrice,
         endsAt: parsed.data.endsAt,
         isActive: parsed.data.isActive,
       },

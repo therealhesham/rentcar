@@ -8,6 +8,7 @@ export type CustomizedCouponAdminRow = {
   kind: CouponDiscountKind;
   value: number;
   scope: CouponScope;
+  canBypassMinPrice: boolean;
   endsAt: Date | null;
   isActive: boolean;
   isUsed: boolean;
@@ -23,6 +24,7 @@ const ROW_SELECT = {
   kind: true,
   value: true,
   scope: true,
+  canBypassMinPrice: true,
   endsAt: true,
   isActive: true,
   isUsed: true,
