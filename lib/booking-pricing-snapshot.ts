@@ -28,6 +28,8 @@ export type CouponCodeSnap = {
   scope: "RENTAL_ONLY" | "FULL_TOTAL";
   /** المبلغ المخصوم من الإجمالي الفرعي قبل الضريبة — فقط لنطاق FULL_TOTAL (صفر لـ RENTAL_ONLY لأنه مُجمَّد أصلاً في rentalPricePerDayExclTax). */
   discountExclTax: number;
+  /** true = الكود من جدول `CustomizedCoupon` (مخصَّص لعميل واحد) لا `CouponCode` العام. غائب/false = عام (سلوك تاريخي). */
+  isCustomized?: boolean;
 };
 
 export type BookingPricingSnapshotV1 = {
@@ -215,6 +217,7 @@ export function parseBookingPricingSnapshot(raw: string | null): {
         kind: (cc as CouponCodeSnap).kind,
         scope: (cc as CouponCodeSnap).scope,
         discountExclTax: Math.max(0, Math.round((cc as CouponCodeSnap).discountExclTax * 100) / 100),
+        isCustomized: (cc as CouponCodeSnap).isCustomized === true,
       };
     }
 

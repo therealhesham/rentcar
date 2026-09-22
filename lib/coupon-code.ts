@@ -13,6 +13,8 @@ export type ResolvedCoupon = {
   /** true = مصرَّح له بالنزول تحت الحد الأدنى للسعر. */
   canBypassMinPrice: boolean;
   maxUses: number | null;
+  /** GENERAL = جدول `CouponCode`؛ CUSTOMIZED = جدول `CustomizedCoupon` (مخصَّص لعميل واحد). */
+  source: "GENERAL" | "CUSTOMIZED";
 };
 
 const ERROR_NOT_FOUND = "كود الخصم غير صحيح.";
@@ -27,6 +29,10 @@ const ERROR_MONTHLY_ONLY = "هذا الكود يسري على التأجير ا�
 /**
  * يتحقق من صلاحية كود الخصم: مفعّل، داخل الفترة، مسموح لنوع التأجير المطلوب،
  * ولم يتجاوز حد الاستخدام الإجمالي أو حد هذا العميل.
+ *
+ * يفحص أولاً جدول `CustomizedCoupon` (كود مخصَّص لرقم جوال هذا العميل بالذات).
+ * لو الكود مطابق لعميل آخر أو غير موجود فيه أصلاً، يكمل البحث في جدول
+ * `CouponCode` العام كالمعتاد — بلا أي فرق في السلوك عن السابق.
  */
 export async function resolveCouponCode(
   rawCode: string,
@@ -35,11 +41,37 @@ export async function resolveCouponCode(
   const code = rawCode.trim().toUpperCase();
   if (!code) return { ok: false, error: ERROR_NOT_FOUND };
 
+  const now = ctx.now ?? new Date();
+
+  const customized = await prisma.customizedCoupon.findUnique({
+    where: { code_customerPhone: { code, customerPhone: ctx.customerPhone } },
+  });
+  if (customized) {
+    if (!customized.isActive) return { ok: false, error: ERROR_INACTIVE };
+    if (customized.isUsed) return { ok: false, error: ERROR_CUSTOMER_LIMIT_REACHED };
+    if (customized.endsAt && now.getTime() > customized.endsAt.getTime()) {
+      return { ok: false, error: ERROR_EXPIRED };
+    }
+    return {
+      ok: true,
+      coupon: {
+        id: customized.id,
+        code: customized.code,
+        kind: customized.kind,
+        value: customized.value,
+        scope: customized.scope,
+        appliesTo: "DAILY_AND_MONTHLY",
+        canBypassMinPrice: false,
+        maxUses: 1,
+        source: "CUSTOMIZED",
+      },
+    };
+  }
+
   const row = await prisma.couponCode.findUnique({ where: { code } });
   if (!row) return { ok: false, error: ERROR_NOT_FOUND };
   if (!row.isActive) return { ok: false, error: ERROR_INACTIVE };
 
-  const now = ctx.now ?? new Date();
   if (row.startsAt && now.getTime() < row.startsAt.getTime()) {
     return { ok: false, error: ERROR_NOT_STARTED };
   }
@@ -75,6 +107,7 @@ export async function resolveCouponCode(
       appliesTo: row.appliesTo,
       canBypassMinPrice: row.canBypassMinPrice,
       maxUses: row.maxUses,
+      source: "GENERAL",
     },
   };
 }

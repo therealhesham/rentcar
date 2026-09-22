@@ -1483,7 +1483,14 @@ export async function createDirectBooking(
   let discountedPeriodAmountExclTax = basePeriodAmountExclTax;
   let rentalDiscountSnap: ReturnType<typeof rentalDiscountSnapFromResolved> | null = null;
   let couponApplication:
-    | { id: number; maxUses: number | null; kind: "PERCENT" | "FIXED"; value: number; snap: CouponCodeSnap }
+    | {
+      id: number;
+      maxUses: number | null;
+      kind: "PERCENT" | "FIXED";
+      value: number;
+      snap: CouponCodeSnap;
+      source: "GENERAL" | "CUSTOMIZED";
+    }
     | null = null;
   // كود مصرَّح له إدارياً بتجاوز الحد الأدنى → نلغي الأرضية لهذا الحجز.
   let bypassMinPrice = false;
@@ -1535,7 +1542,14 @@ export async function createDirectBooking(
       kind: c.kind,
       value: c.value,
       // discountExclTax يبدأ صفر ويُملأ لاحقاً لنطاق FULL_TOTAL بعد معرفة الإجمالي الفرعي.
-      snap: { code: c.code, kind: c.kind, scope: c.scope, discountExclTax: 0 },
+      snap: {
+        code: c.code,
+        kind: c.kind,
+        scope: c.scope,
+        discountExclTax: 0,
+        isCustomized: c.source === "CUSTOMIZED",
+      },
+      source: c.source,
     };
   }
 
@@ -1776,7 +1790,17 @@ export async function createDirectBooking(
         });
 
         if (couponApplication) {
-          if (couponApplication.maxUses != null) {
+          if (couponApplication.source === "CUSTOMIZED") {
+            const updated = await tx.customizedCoupon.updateMany({
+              where: { id: couponApplication.id, isUsed: false },
+              data: { isUsed: true, usedAt: new Date(), usedByBookingRequestId: created.id },
+            });
+            if (updated.count === 0) {
+              throw new CouponUnavailableError(
+                "تم استخدام كود الخصم المخصص من قبل. أعد المحاولة بدون الكود.",
+              );
+            }
+          } else if (couponApplication.maxUses != null) {
             const updated = await tx.couponCode.updateMany({
               where: { id: couponApplication.id, usesCount: { lt: couponApplication.maxUses } },
               data: { usesCount: { increment: 1 } },
@@ -1790,14 +1814,16 @@ export async function createDirectBooking(
               data: { usesCount: { increment: 1 } },
             });
           }
-          await tx.couponRedemption.create({
-            data: {
-              couponCodeId: couponApplication.id,
-              bookingRequestId: created.id,
-              customerPhone: commonNormalized.phone,
-              discountAmountSar: couponDiscountAmountSar,
-            },
-          });
+          if (couponApplication.source !== "CUSTOMIZED") {
+            await tx.couponRedemption.create({
+              data: {
+                couponCodeId: couponApplication.id,
+                bookingRequestId: created.id,
+                customerPhone: commonNormalized.phone,
+                discountAmountSar: couponDiscountAmountSar,
+              },
+            });
+          }
         }
 
         return created.id;
@@ -2116,6 +2142,7 @@ export async function updateBookingRequestByAdmin(
       refundDueSettledAt: true,
       rentalPeriodKind: true,
       addonsJson: true,
+      phone: true,
       carModel: { select: { price: true, vatRatePercent: true } },
     },
   });
@@ -2256,6 +2283,8 @@ export async function updateBookingRequestByAdmin(
       if (couponCode?.scope === "RENTAL_ONLY") {
         const couponReprice = await repriceRentalOnlyCouponForModelChange({
           couponCode: couponCode.code,
+          isCustomized: couponCode.isCustomized === true,
+          customerPhone: booking.phone,
           baseAfterAutoDiscountExclTax: discountedPeriodAmountExclTax,
           periodKind: isMonthly ? "MONTHLY" : "DAILY",
         });
