@@ -557,6 +557,39 @@ model CouponRedemption {
   @@index([customerPhone])
 }
 
+/// كود خصم مخصَّص لعميل واحد بعينه (برقم جواله) — يُفحص أولاً قبل جدول `CouponCode`
+/// العام عند إدخال العميل لأي كود في صفحة الدفع. نسخة مبسّطة عمداً: بلا
+/// `appliesTo`/`canBypassMinPrice`/`perCustomerLimit` — يسري على اليومي والشهري
+/// معاً، يحترم الحد الأدنى للسعر دائماً، واستخدام واحد فقط ثم يُقفل الكود.
+model CustomizedCoupon {
+  id                     Int                @id @default(autoincrement())
+  /// يُخزَّن بحروف كبيرة (UPPERCASE)، غير فريد وحده — الفريد هو (code, customerPhone)
+  /// لأن نفس نص الكود ممكن يتكرر لعملاء مختلفين بعروض مختلفة.
+  code                   String             @db.VarChar(32)
+  /// رقم جوال العميل المخصَّص له الكود، بصيغة +9665xxxxxxxx — تطابق تام بالرقم كاملاً.
+  customerPhone          String             @db.VarChar(20)
+  kind                   CouponDiscountKind
+  /// PERCENT: 1–100؛ FIXED: مبلغ ثابت بالريال (دون ضريبة).
+  value                  Int
+  /// نطاق التطبيق: سعر الإيجار فقط أو الإجمالي كامل (إيجار + إضافات + رسوم).
+  scope                  CouponScope
+  /// نهاية الصلاحية (اختياري؛ null = بلا نهاية).
+  endsAt                 DateTime?
+  isActive               Boolean            @default(true)
+  /// true بعد أول استخدام ناجح — الكود مرة واحدة فقط ولا يُعاد استخدامه.
+  isUsed                 Boolean            @default(false)
+  usedAt                 DateTime?
+  usedByBookingRequestId Int?
+  /// معرّف الموظف الذي أنشأ الكود (اختياري، للتتبع فقط).
+  createdByEmployeeId    Int?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  @@unique([code, customerPhone])
+  @@index([customerPhone])
+  @@index([isActive])
+}
+
 enum CouponDiscountKind {
   PERCENT
   FIXED

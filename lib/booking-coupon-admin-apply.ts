@@ -137,6 +137,7 @@ async function loadCouponApplyContext(
 type CouponComputation = {
   scope: "RENTAL_ONLY" | "FULL_TOTAL";
   couponId: number;
+  couponSource: "GENERAL" | "CUSTOMIZED";
   couponMaxUses: number | null;
   currentPricePerDayExclTax: number;
   newPricePerDayExclTax: number;
@@ -225,6 +226,7 @@ async function computeCouponApplication(
       kind: coupon.kind,
       scope: "RENTAL_ONLY",
       discountExclTax: 0,
+      isCustomized: coupon.source === "CUSTOMIZED",
     };
     parsed.couponCode = snap;
 
@@ -233,6 +235,7 @@ async function computeCouponApplication(
       result: {
         scope: "RENTAL_ONLY",
         couponId: coupon.id,
+        couponSource: coupon.source,
         couponMaxUses: coupon.maxUses,
         currentPricePerDayExclTax,
         newPricePerDayExclTax,
@@ -297,6 +300,7 @@ async function computeCouponApplication(
     kind: coupon.kind,
     scope: "FULL_TOTAL",
     discountExclTax: capped.discountExclTax,
+    isCustomized: coupon.source === "CUSTOMIZED",
   };
   parsed.couponCode = snap;
 
@@ -305,6 +309,7 @@ async function computeCouponApplication(
     result: {
       scope: "FULL_TOTAL",
       couponId: coupon.id,
+      couponSource: coupon.source,
       couponMaxUses: coupon.maxUses,
       currentPricePerDayExclTax: priceInput.pricePerDayExclTax,
       newPricePerDayExclTax: priceInput.pricePerDayExclTax,
@@ -470,28 +475,38 @@ export async function applyAdminCoupon(
           });
         }
 
-        if (r.couponMaxUses != null) {
-          const updated = await tx.couponCode.updateMany({
-            where: { id: r.couponId, usesCount: { lt: r.couponMaxUses } },
-            data: { usesCount: { increment: 1 } },
+        if (r.couponSource === "CUSTOMIZED") {
+          const updated = await tx.customizedCoupon.updateMany({
+            where: { id: r.couponId, isUsed: false },
+            data: { isUsed: true, usedAt: new Date(), usedByBookingRequestId: bookingRequestId },
           });
           if (updated.count === 0) {
-            throw new CouponUnavailableError("نفد الحد الأقصى لاستخدام كود الخصم.");
+            throw new CouponUnavailableError("تم استخدام كود الخصم المخصص من قبل.");
           }
         } else {
-          await tx.couponCode.update({
-            where: { id: r.couponId },
-            data: { usesCount: { increment: 1 } },
+          if (r.couponMaxUses != null) {
+            const updated = await tx.couponCode.updateMany({
+              where: { id: r.couponId, usesCount: { lt: r.couponMaxUses } },
+              data: { usesCount: { increment: 1 } },
+            });
+            if (updated.count === 0) {
+              throw new CouponUnavailableError("نفد الحد الأقصى لاستخدام كود الخصم.");
+            }
+          } else {
+            await tx.couponCode.update({
+              where: { id: r.couponId },
+              data: { usesCount: { increment: 1 } },
+            });
+          }
+          await tx.couponRedemption.create({
+            data: {
+              couponCodeId: r.couponId,
+              bookingRequestId,
+              customerPhone: ctx.booking.phone,
+              discountAmountSar: r.discountAmountSar,
+            },
           });
         }
-        await tx.couponRedemption.create({
-          data: {
-            couponCodeId: r.couponId,
-            bookingRequestId,
-            customerPhone: ctx.booking.phone,
-            discountAmountSar: r.discountAmountSar,
-          },
-        });
 
         await tx.bookingRequest.update({
           where: { id: bookingRequestId },
