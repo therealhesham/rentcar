@@ -559,8 +559,8 @@ model CouponRedemption {
 
 /// كود خصم مخصَّص لعميل واحد بعينه (برقم جواله) — يُفحص أولاً قبل جدول `CouponCode`
 /// العام عند إدخال العميل لأي كود في صفحة الدفع. نسخة مبسّطة عمداً: بلا
-/// `appliesTo`/`canBypassMinPrice`/`perCustomerLimit` — يسري على اليومي والشهري
-/// معاً، يحترم الحد الأدنى للسعر دائماً، واستخدام واحد فقط ثم يُقفل الكود.
+/// `appliesTo`/`perCustomerLimit` — يسري على اليومي والشهري معاً، واستخدام واحد
+/// فقط ثم يُقفل الكود. يحمل `canBypassMinPrice` مثل الكوبون العام بالضبط.
 model CustomizedCoupon {
   id                     Int                @id @default(autoincrement())
   /// يُخزَّن بحروف كبيرة (UPPERCASE)، غير فريد وحده — الفريد هو (code, customerPhone)
@@ -573,6 +573,9 @@ model CustomizedCoupon {
   value                  Int
   /// نطاق التطبيق: سعر الإيجار فقط أو الإجمالي كامل (إيجار + إضافات + رسوم).
   scope                  CouponScope
+  /// true = هذا الكود مصرَّح له بالنزول تحت الحد الأدنى للسعر. false (الافتراضي)
+  /// = الحد الأدنى يقصّ الخصم كالمعتاد، زي الكوبون العام بالضبط.
+  canBypassMinPrice      Boolean            @default(false)
   /// نهاية الصلاحية (اختياري؛ null = بلا نهاية).
   endsAt                 DateTime?
   isActive               Boolean            @default(true)

@@ -8,6 +8,7 @@ type Defaults = {
   kind?: "PERCENT" | "FIXED";
   value?: number | "";
   scope?: "RENTAL_ONLY" | "FULL_TOTAL";
+  canBypassMinPrice?: boolean;
   endsAt?: string;
   isActive?: boolean;
 };
@@ -77,6 +78,23 @@ export function CustomizedCouponFields({ defaults, lockIdentity }: Props) {
           <option value="RENTAL_ONLY">سعر الإيجار فقط</option>
           <option value="FULL_TOTAL">الإجمالي كامل (إيجار + إضافات + رسوم)</option>
         </select>
+      </label>
+
+      <label className="flex items-start gap-2 text-sm font-medium md:col-span-2">
+        <input
+          name="canBypassMinPrice"
+          type="checkbox"
+          defaultChecked={defaults?.canBypassMinPrice ?? false}
+          className="mt-0.5 size-4 rounded border-outline-variant"
+        />
+        <span>
+          يُسمح لهذا الكود بالنزول تحت الحد الأدنى للسعر
+          <span className="mt-1 block text-[11px] font-normal text-on-surface-variant">
+            افتراضياً الحد الأدنى المسجّل يقصّ الخصم فيبقى بلا أثر لو السعر
+            أصلاً عليه. فعّل الخيار ده للعروض الاستثنائية المعتمدة لهذا
+            العميل بالذات — الخصم وقتها هيُطبَّق بالكامل مهما نزل السعر.
+          </span>
+        </span>
       </label>
 
       <label className="text-sm font-medium">
