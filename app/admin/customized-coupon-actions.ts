@@ -20,18 +20,18 @@ function revalidateCustomizedCouponPaths() {
 
 function readCustomizedCouponFormFields(formData: FormData):
   | {
-      ok: true;
-      data: {
-        code: string;
-        customerPhone: string;
-        kind: "PERCENT" | "FIXED";
-        value: number;
-        scope: "RENTAL_ONLY" | "FULL_TOTAL";
-        canBypassMinPrice: boolean;
-        endsAt: Date | null;
-        isActive: boolean;
-      };
-    }
+    ok: true;
+    data: {
+      code: string;
+      customerPhone: string;
+      kind: "PERCENT" | "FIXED";
+      value: number;
+      scope: "RENTAL_ONLY" | "FULL_TOTAL";
+      canBypassMinPrice: boolean;
+      endsAt: Date | null;
+      isActive: boolean;
+    };
+  }
   | { ok: false; error: string } {
   const code = String(formData.get("code") ?? "").trim().toUpperCase();
   const localPhone = String(formData.get("customerPhone") ?? "").replace(/\s+/g, "").trim();

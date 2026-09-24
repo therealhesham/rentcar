@@ -242,11 +242,6 @@ export function PaymentClient({
     [paymentMethodFlags],
   );
 
-  const methodOptions = useMemo(
-    () => buildMethodOptions(paymentIconUrls, t),
-    [paymentIconUrls, t],
-  );
-
   const router = useRouter();
   // زر Apple Pay السريع يحتاج بوابة مهيّأة + رابط المكتبة؛ غير ذلك يبقى النص التجريبي.
   const applePayExpressReady = Boolean(hostedCheckout && geideaScriptUrl);
@@ -257,6 +252,17 @@ export function PaymentClient({
   const balanceDueSar = Math.round((booking.balanceDueAtBranchSar ?? 0) * 100) / 100;
   const balancePaymentMode = ps === "PAID" && balanceDueSar > 0;
   const paymentFinalized = ps !== "PENDING" && !balancePaymentMode;
+
+  // المبلغ المطلوب سداده الآن: الرصيد فقط في وضع فرق التمديد، وإلا الإجمالي كاملاً.
+  const payableAmountSar = balancePaymentMode ? balanceDueSar : booking.totals.totalInclTax;
+
+  const methodOptions = useMemo(() => {
+    const base = buildMethodOptions(paymentIconUrls, t);
+    const perMonthSar = (payableAmountSar / 4).toFixed(2);
+    return base.map((opt) =>
+      opt.id === "TABBY" ? { ...opt, hint: t("methodTabbyHint", { amount: perMonthSar }) } : opt,
+    );
+  }, [paymentIconUrls, t, payableAmountSar]);
 
   const visibleMethodOptions = useMemo(
     () =>
@@ -299,9 +305,6 @@ export function PaymentClient({
     const next = pickDefaultMethod(enabledMethods);
     if (next) setMethod(next);
   }, [enabledMethods, method, tabbyIneligible]);
-
-  // المبلغ المطلوب سداده الآن: الرصيد فقط في وضع فرق التمديد، وإلا الإجمالي كاملاً.
-  const payableAmountSar = balancePaymentMode ? balanceDueSar : booking.totals.totalInclTax;
 
   const cashSubmitted =
     !balancePaymentMode &&
@@ -744,23 +747,15 @@ export function PaymentClient({
                 })}
               </div>
 
-              {method === "TABBY" ? (
-                <div className="rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-950">
-                  <p className="font-bold">{t("tabbyPanelTitle")}</p>
-                  <p className="mt-1 text-xs leading-relaxed opacity-90">
-                    {t("tabbyPanelBody")}
-                  </p>
-                  {tabbyPromo ? (
-                    <div className="mt-2">
-                      <TabbyPromoSnippet
-                        publicKey={tabbyPromo.publicKey}
-                        merchantCode={tabbyPromo.merchantCode}
-                        priceSar={payableAmountSar}
-                        lang={locale === "en" ? "en" : "ar"}
-                        source="cart"
-                      />
-                    </div>
-                  ) : null}
+              {method === "TABBY" && tabbyPromo ? (
+                <div className="mt-1">
+                  <TabbyPromoSnippet
+                    publicKey={tabbyPromo.publicKey}
+                    merchantCode={tabbyPromo.merchantCode}
+                    priceSar={payableAmountSar}
+                    lang={locale === "en" ? "en" : "ar"}
+                    source="cart"
+                  />
                 </div>
               ) : null}
 
