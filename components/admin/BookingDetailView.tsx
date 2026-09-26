@@ -58,6 +58,7 @@ import {
 import { computeBookingOutstanding } from "@/lib/booking-outstanding";
 import { addDaysToYmd } from "@/lib/booking-calendar-ymd";
 import { BookingHeaderGearMenu } from "@/components/admin/BookingHeaderGearMenu";
+import { BlacklistBadge, CustomerBlacklistToggle } from "@/components/admin/CustomerBlacklistToggle";
 import { VehiclePlateHandoverModal } from "@/components/admin/VehiclePlateHandoverModal";
 
 function paymentStatusLabelAr(ps: string, balanceDue?: number): string {
@@ -131,6 +132,13 @@ type Props = {
   /** يتحكم بظهور أزرار قرار غرامة التأخير — يُحسب كذلك من الجلسة على السيرفر. */
   latePenaltyDecisionPerms: LatePenaltyDecisionPerms;
   canEditBooking: boolean;
+  customerBlacklist: {
+    isBlacklisted: boolean;
+    reason: string | null;
+    blacklistedAt: string | null;
+    /** صلاحية صفحة العملاء — تُحسب على السيرفر */
+    canManage: boolean;
+  };
 };
 
 export function BookingDetailView({
@@ -140,6 +148,7 @@ export function BookingDetailView({
   canOverrideCancelPolicy,
   latePenaltyDecisionPerms,
   canEditBooking,
+  customerBlacklist,
 }: Props) {
   const [updatePlateModalOpen, setUpdatePlateModalOpen] = useState(false);
   const [notesModalOpen, setNotesModalOpen] = useState(false);
@@ -282,6 +291,7 @@ export function BookingDetailView({
             <div className="flex flex-wrap items-center gap-2">
               <AdminKindBadge kind={booking.kind} isBulkAvailabilityImport={booking.isBulkAvailabilityImport} />
               <AdminStatusBadge status={booking.status} />
+              {customerBlacklist.isBlacklisted ? <BlacklistBadge /> : null}
               <span
                 className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold ring-1 ring-inset ${
                   booking.rentalPeriodKind?.trim().toUpperCase() === "MONTHLY"
@@ -481,6 +491,16 @@ export function BookingDetailView({
               ) : null}
               <DetailRow label="الفئة العمرية">{booking.ageRange}</DetailRow>
             </dl>
+            {customerBlacklist.canManage ? (
+              <div className="mt-4 border-t border-outline-variant/20 pt-4">
+                <CustomerBlacklistToggle
+                  target={{ kind: "booking", bookingId: booking.id }}
+                  isBlacklisted={customerBlacklist.isBlacklisted}
+                  reason={customerBlacklist.reason}
+                  blacklistedAt={customerBlacklist.blacklistedAt}
+                />
+              </div>
+            ) : null}
           </BookingDetailSection>
 
           {booking.pickupMode === "DELIVERY" &&

@@ -80,6 +80,24 @@ export default async function AdminBookingDetailPage({
   ]);
   if (!booking) notFound();
 
+  // حساب محظور مرتبط بالحجز أو بجواله — يُعرض كشارة للجميع، وزر الحظر لمن يملك صلاحية العملاء.
+  const blacklistedUser = await prisma.user.findFirst({
+    where: {
+      isBlacklisted: true,
+      OR: [
+        ...(booking.customerId != null ? [{ id: booking.customerId }] : []),
+        { phone: booking.phone },
+      ],
+    },
+    select: { blacklistReason: true, blacklistedAt: true },
+  });
+  const customerBlacklist = {
+    isBlacklisted: blacklistedUser != null,
+    reason: blacklistedUser?.blacklistReason ?? null,
+    blacklistedAt: blacklistedUser?.blacklistedAt?.toISOString() ?? null,
+    canManage: sessionHasPermission(session, "/admin/customers"),
+  };
+
   const editable = toEditableBookingRow(booking);
 
   const [cancellation, editContext] = await Promise.all([
@@ -119,6 +137,7 @@ export default async function AdminBookingDetailPage({
         canOverrideCancelPolicy={canOverrideCancelPolicy}
         latePenaltyDecisionPerms={latePenaltyDecisionPerms}
         canEditBooking={canEditBooking}
+        customerBlacklist={customerBlacklist}
       />
       <section className="mx-auto mt-8 max-w-screen-xl px-4 sm:px-6 lg:px-8">
         <div className="rounded-2xl border border-outline-variant/30 bg-surface-container-low p-5 md:p-6">

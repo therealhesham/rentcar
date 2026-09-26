@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCustomerSessionUserId } from "@/lib/customer-auth";
+import { assertCustomerNotBlacklisted } from "@/lib/customer-blacklist";
 import { createFleetBookingAndLinkCustomerSession } from "@/lib/fleet-checkout-customer-session";
 import {
   isBookingCheckoutOtpStepRequired,
@@ -53,6 +54,22 @@ export async function POST(request: Request) {
   const activeCheck = await assertNoActiveBookingForPhone(parsed.input.phone);
   if (!activeCheck.ok) {
     return NextResponse.json({ ok: false, error: activeCheck.error }, { status: 409 });
+  }
+
+  // قبل إرسال رمز التحقق — العميل المحظور لا يصله OTP، والرسالة عامة لا تكشف السبب.
+  const blacklistCheck = await assertCustomerNotBlacklisted(
+    {
+      customerId: parsed.input.customerId,
+      phone: parsed.input.phone,
+      email: parsed.input.contactEmail,
+      nationalIdNumber: parsed.input.kyc?.nationalIdNumber,
+      passportNumber: parsed.input.kyc?.passportNumber,
+      licenseNumber: parsed.input.kyc?.licenseNumber,
+    },
+    "checkout-draft",
+  );
+  if (!blacklistCheck.ok) {
+    return NextResponse.json({ ok: false, error: blacklistCheck.error }, { status: 400 });
   }
 
   const branchHours = await assertBranchesAndPickupHoursForDirectBooking(parsed.input);

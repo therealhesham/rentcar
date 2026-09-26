@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { getCustomerSessionUserId } from "@/lib/customer-auth";
+import { assertCustomerNotBlacklisted } from "@/lib/customer-blacklist";
 import { prisma } from "@/lib/prisma";
 import { addLocalCalendarMonths } from "@/lib/booking-search-shared";
 import { isAllowedDuration } from "@/lib/subscriptions/duration-options";
@@ -28,6 +29,12 @@ export async function POST(
     return bad("JSON غير صالح.");
   }
   const durationMonths = Number(body.durationMonths);
+
+  const blacklistCheck = await assertCustomerNotBlacklisted(
+    { customerId: uid },
+    "subscription-renew",
+  );
+  if (!blacklistCheck.ok) return bad(blacklistCheck.error);
 
   const sub = await prisma.userSubscription.findFirst({
     where: { id: sid, userId: uid },

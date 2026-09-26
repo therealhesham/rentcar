@@ -75,11 +75,18 @@ model User {
   licenseExpiryDate     DateTime? @db.Date
   idCardImageUrl        String?   @db.Text
   driverLicenseImageUrl String?   @db.Text
+  /// قائمة سوداء: يُرفض أي حجز/اشتراك جديد تلقائياً برسالة عامة — لا يُكشف السبب للعميل أبداً.
+  isBlacklisted         Boolean   @default(false)
+  blacklistedAt         DateTime?
+  /// ملاحظة داخلية للإدارة فقط.
+  blacklistReason       String?   @db.VarChar(500)
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
   bookingRequests BookingRequest[]
   subscriptions   UserSubscription[]
+
+  @@index([isBlacklisted])
 }
 
 /// مدينة تتبعها فروع الاستلام (للتجميع في الحجز ولوحة الإدارة).

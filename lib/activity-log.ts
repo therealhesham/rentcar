@@ -22,7 +22,11 @@ export type ActivityKind =
   | "KYC_UPLOAD_FAIL"
   | "CHECKOUT_ABANDON"
   | "BOOKING_PAYMENT"
-  | "BOOKING_REFUND";
+  | "BOOKING_REFUND"
+  // قائمة سوداء — من الخادم فقط: محاولة حجز مرفوضة لعميل محظور، وحظر/إلغاء حظر من الإدارة.
+  | "BOOKING_BLOCKED"
+  | "CUSTOMER_BLACKLISTED"
+  | "CUSTOMER_UNBLACKLISTED";
 
 /**
  * الأحداث التي يُسمح للمتصفح بإرسالها عبر `/api/track/view`. تسجيلات الدخول

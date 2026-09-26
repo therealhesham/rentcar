@@ -54,6 +54,7 @@ type CustomerLookupFound = {
   email: string | null;
   bookingCount: number;
   lastBookingAt: string | null;
+  isBlacklisted: boolean;
 };
 
 type CustomerLookupState =
@@ -263,6 +264,7 @@ export function AdminDirectBookingForm({
         email?: string | null;
         bookingCount?: number;
         lastBookingAt?: string | null;
+        isBlacklisted?: boolean;
       };
       if (!res.ok || !data.ok) {
         setCustomerLookup({
@@ -280,6 +282,7 @@ export function AdminDirectBookingForm({
           email: data.email ?? null,
           bookingCount: data.bookingCount ?? 0,
           lastBookingAt: data.lastBookingAt ?? null,
+          isBlacklisted: data.isBlacklisted === true,
         };
         setCustomerLookup({ status: "found", data: found });
         setCustomerName(found.fullName);
@@ -562,6 +565,11 @@ export function AdminDirectBookingForm({
                       {customerLookup.data.bookingCount > 0
                         ? ` · ${customerLookup.data.bookingCount} حجز سابق`
                         : ""}
+                    </p>
+                  ) : null}
+                  {customerLookup?.status === "found" && customerLookup.data.isBlacklisted ? (
+                    <p className="mt-2 rounded-lg bg-zinc-900 px-2.5 py-1.5 text-xs font-bold text-white">
+                      ⛔ هذا العميل في القائمة السوداء — لن يُقبل الحجز. ألغِ الحظر من صفحة العملاء أولاً.
                     </p>
                   ) : null}
                   {customerLookup?.status === "found" && customerLookup.data.email ? (

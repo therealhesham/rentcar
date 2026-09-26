@@ -38,6 +38,8 @@ export const BOOKING_EVENTS = {
   ADMIN_NOTES_UPDATED: "ADMIN_NOTES_UPDATED",
   BOOKING_REJECTED: "BOOKING_REJECTED",
   COUPON_APPLIED_BY_ADMIN: "COUPON_APPLIED_BY_ADMIN",
+  CUSTOMER_BLACKLISTED: "CUSTOMER_BLACKLISTED",
+  CUSTOMER_UNBLACKLISTED: "CUSTOMER_UNBLACKLISTED",
 } as const;
 
 export type BookingEvent = (typeof BOOKING_EVENTS)[keyof typeof BOOKING_EVENTS];
@@ -66,6 +68,8 @@ export const BOOKING_EVENT_LABELS: Record<BookingEvent, string> = {
   ADMIN_NOTES_UPDATED: "تحديث ملاحظات الإدارة",
   BOOKING_REJECTED: "رفض الطلب",
   COUPON_APPLIED_BY_ADMIN: "تطبيق كود خصم من الإدارة",
+  CUSTOMER_BLACKLISTED: "إضافة العميل للقائمة السوداء",
+  CUSTOMER_UNBLACKLISTED: "إزالة العميل من القائمة السوداء",
 };
 
 

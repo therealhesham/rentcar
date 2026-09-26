@@ -7,6 +7,7 @@ import {
   assertNoActiveBookingForPhone,
 } from "@/lib/direct-booking";
 import { branchIdsFromReturnSlug } from "@/lib/booking-branches";
+import { assertCustomerNotBlacklisted } from "@/lib/customer-blacklist";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/lib/notification-service";
 import { sendNewBookingNotificationEmails } from "@/lib/booking-notification-email";
@@ -42,6 +43,9 @@ export async function submitBookingRequest(
   // منع العميل من إرسال استفسار جديد إذا كان لديه حجز نشط برقم جواله.
   const activeCheck = await assertNoActiveBookingForPhone(data.phone);
   if (!activeCheck.ok) return activeCheck;
+
+  const blacklistCheck = await assertCustomerNotBlacklisted({ phone: data.phone }, "inquiry");
+  if (!blacklistCheck.ok) return blacklistCheck;
 
   let createdId: number;
   try {

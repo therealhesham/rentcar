@@ -16,6 +16,7 @@ import { logBookingEvent } from "@/lib/booking-audit";
 import { hasBookingPickupPassed } from "@/lib/booking-lifecycle";
 import { createNotification } from "@/lib/notification-service";
 import { currentRequestMeta, logActivity } from "@/lib/activity-log";
+import { assertCustomerNotBlacklisted } from "@/lib/customer-blacklist";
 import { safeCustomerReturnPath } from "@/lib/customer-booking-access";
 import { updateDirectBookingDates } from "@/lib/direct-booking";
 import {
@@ -138,6 +139,12 @@ export async function updateCustomerBookingDates(
   if (statusKey === "CANCELLED" || statusKey === "REJECTED" || statusKey === "COMPLETED") {
     return { ok: false, error: "لا يمكن تعديل حجز منتهٍ أو ملغى." };
   }
+
+  const blacklistCheck = await assertCustomerNotBlacklisted(
+    { customerId: profile.id, phone: profile.phone },
+    "account-edit-dates",
+  );
+  if (!blacklistCheck.ok) return blacklistCheck;
 
   const now = new Date();
   if (hasBookingPickupPassed(booking.pickupDate, now)) {

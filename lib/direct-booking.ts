@@ -11,6 +11,11 @@ import { resolveInterCityShippingSnap } from "@/lib/inter-city-shipping";
 import type { CheckoutOneTimeFeeLine } from "@/lib/checkout-one-time-fees";
 import { getActiveCheckoutOneTimeFees } from "@/lib/checkout-one-time-fees";
 import { prisma } from "@/lib/prisma";
+import {
+  assertCustomerNotBlacklisted,
+  BLACKLISTED_ADMIN_MESSAGE,
+  findBlacklistedMatch,
+} from "@/lib/customer-blacklist";
 import { e164ToLocalNine } from "@/lib/normalize-saudi-phone";
 import { isTrustedSpacesImageUrl } from "@/lib/spaces-upload";
 import {
@@ -1405,6 +1410,24 @@ export async function createDirectBooking(
   const branchAssert = await assertBranchesAndPickupHoursForDirectBooking(prepared);
   if (!branchAssert.ok) {
     return branchAssert;
+  }
+
+  // القائمة السوداء: العميل يتلقى رسالة عامة لا تكشف السبب، والموظف (حجز المكتب) يُبلَّغ صراحةً.
+  const blacklistIdentity = {
+    customerId,
+    phone: common.phone,
+    email: contactEmail,
+    nationalIdNumber: prepared.kyc?.nationalIdNumber,
+    passportNumber: prepared.kyc?.passportNumber,
+    licenseNumber: prepared.kyc?.licenseNumber,
+  };
+  if (officePayment) {
+    if (await findBlacklistedMatch(blacklistIdentity)) {
+      return { ok: false, error: BLACKLISTED_ADMIN_MESSAGE };
+    }
+  } else {
+    const blacklistCheck = await assertCustomerNotBlacklisted(blacklistIdentity, "direct-booking");
+    if (!blacklistCheck.ok) return blacklistCheck;
   }
 
   // منع العميل من فتح حجز جديد وعنده حجز نشط — الحجوزات الإدارية (officePayment) مُستثناة.

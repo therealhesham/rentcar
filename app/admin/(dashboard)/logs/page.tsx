@@ -37,6 +37,9 @@ const KIND_LABELS: Record<string, string> = {
   CAR_UNAVAILABLE: "السيارة غير متاحة",
   CHECKOUT_SUBMIT: "أرسل النموذج",
   CHECKOUT_ERROR: "خطأ في النموذج",
+  BOOKING_BLOCKED: "حجز مرفوض (قائمة سوداء)",
+  CUSTOMER_BLACKLISTED: "حظر عميل",
+  CUSTOMER_UNBLACKLISTED: "إلغاء حظر عميل",
 };
 
 const KIND_BADGE_CLASSES: Record<string, string> = {
@@ -52,6 +55,9 @@ const KIND_BADGE_CLASSES: Record<string, string> = {
   CAR_UNAVAILABLE: "bg-rose-50 text-rose-700 border-rose-200",
   CHECKOUT_SUBMIT: "bg-indigo-50 text-indigo-700 border-indigo-200",
   CHECKOUT_ERROR: "bg-rose-50 text-rose-700 border-rose-200",
+  BOOKING_BLOCKED: "bg-zinc-900 text-white border-zinc-900",
+  CUSTOMER_BLACKLISTED: "bg-zinc-900 text-white border-zinc-900",
+  CUSTOMER_UNBLACKLISTED: "bg-emerald-50 text-emerald-700 border-emerald-200",
 };
 
 /**

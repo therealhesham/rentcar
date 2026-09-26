@@ -14,6 +14,8 @@ export type AdminCustomerPhoneLookup = {
   email: string | null;
   bookingCount: number;
   lastBookingAt: string | null;
+  /** للإدارة فقط — يمنع حجز المكتب له (انظر createDirectBooking). */
+  isBlacklisted: boolean;
 };
 
 export async function lookupAdminCustomerByPhone(
@@ -24,7 +26,7 @@ export async function lookupAdminCustomerByPhone(
     return { ok: false, error: "رقم الجوال غير صالح." };
   }
 
-  const [user, lastBooking, bookingCount] = await Promise.all([
+  const [user, lastBooking, bookingCount, blacklistedCount] = await Promise.all([
     prisma.user.findUnique({
       where: { phone: phoneE164 },
       select: { id: true, name: true, email: true },
@@ -40,6 +42,7 @@ export async function lookupAdminCustomerByPhone(
       },
     }),
     prisma.bookingRequest.count({ where: { phone: phoneE164 } }),
+    prisma.user.count({ where: { isBlacklisted: true, phone: phoneE164 } }),
   ]);
 
   if (user) {
@@ -62,6 +65,7 @@ export async function lookupAdminCustomerByPhone(
         email: user.email,
         bookingCount,
         lastBookingAt: lastBooking?.createdAt.toISOString() ?? null,
+        isBlacklisted: blacklistedCount > 0,
       },
     };
   }
@@ -89,6 +93,7 @@ export async function lookupAdminCustomerByPhone(
         email: null,
         bookingCount,
         lastBookingAt: lastBooking.createdAt.toISOString(),
+        isBlacklisted: blacklistedCount > 0,
       },
     };
   }

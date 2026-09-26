@@ -1,6 +1,7 @@
 import type { CreateDirectBookingInput } from "@/lib/direct-booking";
 import { createDirectBooking, enforceEditLockedIdentityOnInput } from "@/lib/direct-booking";
 import { setCustomerSessionCookie } from "@/lib/customer-auth";
+import { assertCustomerNotBlacklisted } from "@/lib/customer-blacklist";
 import { upsertCustomerFromFleetBooking } from "@/lib/customer-upsert-from-checkout";
 
 /**
@@ -16,6 +17,20 @@ export async function createFleetBookingAndLinkCustomerSession(
 
   const enforced = await enforceEditLockedIdentityOnInput(input);
   if (!enforced.ok) return enforced;
+
+  // قبل إنشاء/تحديث الحساب — حتى لا يُحدِّث العميل المحظور بياناته أو يُنشئ حساباً جديداً.
+  const blacklistCheck = await assertCustomerNotBlacklisted(
+    {
+      customerId: enforced.prepared.customerId,
+      phone: enforced.prepared.phone,
+      email,
+      nationalIdNumber: enforced.prepared.kyc?.nationalIdNumber,
+      passportNumber: enforced.prepared.kyc?.passportNumber,
+      licenseNumber: enforced.prepared.kyc?.licenseNumber,
+    },
+    "fleet-checkout",
+  );
+  if (!blacklistCheck.ok) return blacklistCheck;
 
   const cust = await upsertCustomerFromFleetBooking({
     email,

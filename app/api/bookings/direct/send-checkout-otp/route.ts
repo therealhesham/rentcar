@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { sendBookingCheckoutOtpFromPublicRequest } from "@/lib/booking-checkout-otp";
 import { getBookingCheckoutDraftByToken, parseBookingCheckoutDraftPayload } from "@/lib/booking-checkout-draft";
 import { parseCreateDirectBookingInputFromCheckoutJson } from "@/lib/booking-direct-checkout-parse";
-import { e164ToLocalNine } from "@/lib/normalize-saudi-phone";
+import { assertCustomerNotBlacklisted } from "@/lib/customer-blacklist";
+import { e164ToLocalNine, saudiLocalNineToE164 } from "@/lib/normalize-saudi-phone";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +52,16 @@ export async function POST(request: Request) {
   } else {
     phone = typeof o.phone === "string" ? o.phone : undefined;
     email = typeof o.email === "string" ? o.email : undefined;
+  }
+
+  // العميل المحظور لا يصله رمز تحقق للحجز — رسالة عامة وحالة 400 مثل أي فشل آخر.
+  const localPhone = String(phone ?? "").trim();
+  const blacklistCheck = await assertCustomerNotBlacklisted(
+    { phone: saudiLocalNineToE164(localPhone), email },
+    "checkout-otp",
+  );
+  if (!blacklistCheck.ok) {
+    return NextResponse.json({ ok: false, error: blacklistCheck.error }, { status: 400 });
   }
 
   const result = await sendBookingCheckoutOtpFromPublicRequest({

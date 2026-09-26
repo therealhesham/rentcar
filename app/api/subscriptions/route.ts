@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { getCustomerSessionUserId } from "@/lib/customer-auth";
+import { assertCustomerNotBlacklisted } from "@/lib/customer-blacklist";
 import { prisma } from "@/lib/prisma";
 import {
   isAllowedDuration,
@@ -111,6 +112,9 @@ export async function POST(req: Request) {
 
   const startParsed = parseSubscriptionStartDateYmd(startDateRaw);
   if (!startParsed.ok) return bad(startParsed.error);
+
+  const blacklistCheck = await assertCustomerNotBlacklisted({ customerId: uid }, "subscription");
+  if (!blacklistCheck.ok) return bad(blacklistCheck.error);
 
   const plan = await prisma.subscriptionPlan.findFirst({
     where: { slug: planSlug, isActive: true },

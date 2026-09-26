@@ -51,6 +51,8 @@ const EVENT_ICONS: Record<string, string> = {
   REVERTED_TO_INQUIRY: "⇐",
   INTER_BRANCH_RETURN: "↔",
   STAFF_BOOKING_EMAIL_SENT: "✉",
+  CUSTOMER_BLACKLISTED: "⛔",
+  CUSTOMER_UNBLACKLISTED: "✔",
 };
 
 function statusLabel(s: string | null) {
