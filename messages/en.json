@@ -573,6 +573,7 @@
     "couponPlaceholder": "Discount code (if any)",
     "couponApply": "Apply",
     "couponDiscount": "Coupon discount",
+    "couponExtraDiscountTag": "({percent}% off)",
     "errNoDates": "Booking dates were not found. Go back to the fleet or home page and search again.",
     "errSlotBlocked": "This car is unavailable for the selected period. Change your booking dates to continue.",
     "errNameIncomplete": "Please enter your full name",

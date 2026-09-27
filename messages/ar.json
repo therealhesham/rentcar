@@ -573,6 +573,7 @@
     "couponPlaceholder": "كود الخصم (إن وُجد)",
     "couponApply": "تطبيق",
     "couponDiscount": "خصم الكوبون",
+    "couponExtraDiscountTag": "(خصم {percent}٪)",
     "errNoDates": "لم يُعثر على تواريخ الحجز. ارجع إلى الأسطول أو الصفحة الرئيسية وابحث مجدداً.",
     "errSlotBlocked": "السيارة غير متاحة في الفترة المحددة. غيّر تواريخ الحجز للمتابعة.",
     "errNameIncomplete": "رجاء كتابة الاسم بالكامل",

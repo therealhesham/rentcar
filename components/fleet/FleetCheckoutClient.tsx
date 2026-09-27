@@ -60,6 +60,11 @@ import type { StoredFleetSearchContext } from "@/lib/fleet-search-storage";
 import { FLEET_SEARCH_STORAGE_KEY } from "@/lib/fleet-search-storage";
 import { DELIVERY_ADDRESS_MIN_CHARS } from "@/lib/delivery-address";
 import { citySlugForBranchSlug, lookupInterCityFeeSar } from "@/lib/inter-city-shipping-client";
+import {
+  CUSTOMIZED_COUPON_EXTRAS_DISCOUNT_PERCENT,
+  customizedCouponExtraPrice,
+  isUnlimitedKmAddonSlug,
+} from "@/lib/customized-coupon-extras";
 import type { BookingCityBranchesOption } from "@/lib/booking-location-options";
 import type { RentalAddonDTO } from "@/lib/rental-addon-data";
 import { sumCheckoutOneTimeFees } from "@/lib/checkout-one-time-fees";
@@ -214,6 +219,8 @@ export function FleetCheckoutClient({
         discountedPricePerDayExclTax: number;
         discountExclTax: number;
         labelAr: string;
+        /** كود مخصَّص لرقم العميل — يخفّض الكيلومتر المفتوح والشحن بين المدن أيضاً. */
+        isCustomized: boolean;
       }
   >(null);
 
@@ -498,12 +505,22 @@ export function FleetCheckoutClient({
     [branchBySlug],
   );
 
+  // الكود المخصَّص يخفّض الكيلومتر المفتوح والشحن بين المدن — نفس حساب الخادم عند إنشاء الحجز.
+  const customizedExtrasDiscount = appliedCoupon?.isCustomized === true;
+
   const selectedRows = useMemo(
-    () => addons.filter((a) => selected.has(a.id)),
-    [addons, selected],
+    () =>
+      addons
+        .filter((a) => selected.has(a.id))
+        .map((a) =>
+          customizedExtrasDiscount && isUnlimitedKmAddonSlug(a.slug)
+            ? { ...a, pricePerDay: customizedCouponExtraPrice(a.pricePerDay), extraDiscounted: true }
+            : { ...a, extraDiscounted: false },
+        ),
+    [addons, selected, customizedExtrasDiscount],
   );
 
-  const interCityShippingFeeSar = useMemo(
+  const interCityShippingBaseFeeSar = useMemo(
     () =>
       lookupInterCityFeeSar(
         interCityShippingRules,
@@ -512,6 +529,12 @@ export function FleetCheckoutClient({
       ),
     [interCityShippingRules, trip.pickupCitySlug, trip.returnCitySlug],
   );
+  const interCityShippingFeeSar = customizedExtrasDiscount
+    ? customizedCouponExtraPrice(interCityShippingBaseFeeSar)
+    : interCityShippingBaseFeeSar;
+  const extraDiscountTag = t("couponExtraDiscountTag", {
+    percent: CUSTOMIZED_COUPON_EXTRAS_DISCOUNT_PERCENT,
+  });
 
   const interCityShippingLabelAr = useMemo(() => {
     if (interCityShippingFeeSar <= 0) return null;
@@ -802,7 +825,7 @@ export function FleetCheckoutClient({
         }),
       });
       const data = (await res.json()) as
-        | { ok: true; scope: "RENTAL_ONLY" | "FULL_TOTAL"; discountedPricePerDayExclTax: number; discountExclTax: number; labelAr: string }
+        | { ok: true; scope: "RENTAL_ONLY" | "FULL_TOTAL"; isCustomized?: boolean; discountedPricePerDayExclTax: number; discountExclTax: number; labelAr: string }
         | { ok: false; error: string };
       if (!data.ok) {
         setAppliedCoupon(null);
@@ -815,6 +838,7 @@ export function FleetCheckoutClient({
         discountedPricePerDayExclTax: data.discountedPricePerDayExclTax,
         discountExclTax: data.discountExclTax,
         labelAr: data.labelAr,
+        isCustomized: data.isCustomized === true,
       });
     } catch {
       setAppliedCoupon(null);
@@ -2301,7 +2325,12 @@ export function FleetCheckoutClient({
                           <ul className="space-y-1.5 rounded-lg bg-[#fdfbf6] px-3 py-2 text-[12px] text-[#6b5a3b]">
                             {selectedRows.map((a) => (
                               <li key={a.id} className="flex justify-between gap-3">
-                                <span>• {a.title}</span>
+                                <span>
+                                  • {a.title}
+                                  {a.extraDiscounted ? (
+                                    <span className="ms-1 font-bold text-[#0f7a3d]">{extraDiscountTag}</span>
+                                  ) : null}
+                                </span>
                                 <span className="tabular-nums font-semibold text-[#003749]" dir="ltr">
                                   {formatSarAmount(a.pricePerDay * trip.days)} <SarCurrencyGlyph />
                                 </span>
@@ -2315,6 +2344,9 @@ export function FleetCheckoutClient({
                         <div className="flex justify-between text-[13px]">
                           <span className="max-w-[60%] text-end text-[12px] font-semibold leading-snug text-[#6b5a3b]">
                             {interCityShippingLabelAr}
+                            {customizedExtrasDiscount ? (
+                              <span className="ms-1 font-bold text-[#0f7a3d]">{extraDiscountTag}</span>
+                            ) : null}
                           </span>
                           <span className="shrink-0 font-bold text-[#003749] tabular-nums" dir="ltr">
                             {formatSarAmount(interCityShippingFeeSar)} <SarCurrencyGlyph />

@@ -13,6 +13,10 @@ import {
   resolveCouponCode,
 } from "@/lib/coupon-code";
 import {
+  customizedCouponExtraPrice,
+  isUnlimitedKmAddonSlug,
+} from "@/lib/customized-coupon-extras";
+import {
   applyPriceFloorPerDay,
   capFullTotalDiscountToFloor,
   resolvePriceFloorForModel,
@@ -100,6 +104,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: resolved.error }, { status: 400 });
   }
   const coupon = resolved.coupon;
+  // الكود المخصَّص يخفّض الكيلومتر المفتوح والشحن بين المدن — الصفحة تطبّقه على
+  // البندين بنفسها (`customized-coupon-extras`)، ويدخل هنا في الإجمالي الفرعي لـ FULL_TOTAL.
+  const isCustomized = coupon.source === "CUSTOMIZED";
 
   // الأرضية الحقيقية للمركبة — يحتاجها خصم `TO_MIN_PRICE` ليعرف لأي رقم ينزّل،
   // ولا علاقة لها بتصريح تجاوز الكود.
@@ -154,6 +161,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       ok: true,
       scope: coupon.scope,
+      isCustomized,
       discountedPricePerDayExclTax: floorOutcome.finalPricePerDayExclTax,
       discountExclTax: 0,
       labelAr: buildCouponDiscountLabelAr(coupon.kind, coupon.value, effectiveDiscountPerDay),
@@ -164,7 +172,7 @@ export async function POST(request: Request) {
     addonIds.length > 0
       ? await prisma.rentalAddon.findMany({
           where: { id: { in: addonIds }, isActive: true },
-          select: { pricePerDay: true },
+          select: { slug: true, pricePerDay: true },
         })
       : [];
   const checkoutFees = await prisma.checkoutOneTimeFee.findMany({
@@ -177,7 +185,12 @@ export async function POST(request: Request) {
     basePricePerDay,
     numberOfDays,
     model.vatRatePercent,
-    addons.map((a) => ({ pricePerDay: a.pricePerDay })),
+    addons.map((a) => ({
+      pricePerDay:
+        isCustomized && isUnlimitedKmAddonSlug(a.slug)
+          ? customizedCouponExtraPrice(a.pricePerDay)
+          : a.pricePerDay,
+    })),
     { oneTimeFeesExclTax },
   );
   const requestedDiscount = computeCouponDiscountOnSubtotal(
@@ -209,6 +222,7 @@ export async function POST(request: Request) {
   return NextResponse.json({
     ok: true,
     scope: coupon.scope,
+    isCustomized,
     discountedPricePerDayExclTax: basePricePerDay,
     discountExclTax,
     labelAr: buildCouponDiscountLabelAr(coupon.kind, coupon.value, discountExclTax),

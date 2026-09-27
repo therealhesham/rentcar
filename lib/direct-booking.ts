@@ -69,6 +69,7 @@ import {
   computeCouponDiscountForPeriod,
   resolveCouponCode,
 } from "@/lib/coupon-code";
+import { applyCustomizedCouponExtrasDiscount } from "@/lib/customized-coupon-extras";
 import {
   applyPriceFloorPerDay,
   capFullTotalDiscountToFloor,
@@ -1637,13 +1638,22 @@ export async function createDirectBooking(
     return { ok: false, error: addonsSnap.error };
   }
 
+  // الكود المخصَّص يخفّض الكيلومتر المفتوح والشحن بين المدن داخل اللقطة نفسها —
+  // قبل حساب الإجمالي، فيدخل كوبون FULL_TOTAL على الأسعار بعد التخفيض.
+  let pricedAddonsJson = addonsSnap.json;
+  if (couponApplication?.source === "CUSTOMIZED" && pricedAddonsJson) {
+    const rawSnap = JSON.parse(pricedAddonsJson) as Record<string, unknown>;
+    applyCustomizedCouponExtrasDiscount(rawSnap);
+    pricedAddonsJson = JSON.stringify(rawSnap);
+  }
+
   // حساب المبلغ الإجمالي المدفوع (شامل الضريبة) لحفظه لحظة الدفع الإلكتروني
   const {
     addons: addonsForTotals,
     interCityShipping: shipForTotals,
     checkoutOneTimeFees: feesForTotals,
     delayPenalty: delayForTotals,
-  } = parseBookingPricingSnapshot(addonsSnap.json);
+  } = parseBookingPricingSnapshot(pricedAddonsJson);
   const shipFeeForTotals = shipForTotals?.feeExclVatSar ?? 0;
   const checkoutFeesSum = feesForTotals.reduce((s: number, x: { feeExclVatSar: number }) => s + x.feeExclVatSar, 0);
   // بند ساعات التأخير/الساعات الإضافية جزء من الإجمالي — إسقاطه كان يجعل
@@ -1709,7 +1719,7 @@ export async function createDirectBooking(
 
   // نلصق القيمة النهائية لـ discountExclTax داخل اللقطة المخزَّنة (كانت صفر مؤقتاً وقت البناء
   // لأنها تعتمد على الإجمالي الفرعي الذي لا يُعرف إلا بعد جمع الإضافات والرسوم).
-  let finalAddonsJson = addonsSnap.json;
+  let finalAddonsJson = pricedAddonsJson;
   if (couponApplication && couponApplication.snap.scope === "FULL_TOTAL" && finalAddonsJson) {
     const rawSnap = JSON.parse(finalAddonsJson) as Record<string, unknown>;
     rawSnap.couponCode = { ...couponApplication.snap, discountExclTax: couponDiscountExclTax };

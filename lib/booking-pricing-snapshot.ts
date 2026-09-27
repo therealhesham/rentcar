@@ -137,7 +137,8 @@ export function parseBookingPricingSnapshot(raw: string | null): {
       interCityShipping = {
         fromCitySlug: s.fromCitySlug,
         toCitySlug: s.toCitySlug,
-        feeExclVatSar: Math.round(s.feeExclVatSar),
+        // هللتان لا ريال كامل: خصم الكود المخصَّص (٥٠٪) قد يُنتج نصف ريال.
+        feeExclVatSar: Math.round(s.feeExclVatSar * 100) / 100,
         labelAr: s.labelAr,
       };
     }

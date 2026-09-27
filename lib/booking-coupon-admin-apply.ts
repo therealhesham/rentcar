@@ -13,6 +13,7 @@ import {
   computeCouponDiscountOnSubtotal,
   resolveCouponCode,
 } from "@/lib/coupon-code";
+import { applyCustomizedCouponExtrasDiscount } from "@/lib/customized-coupon-extras";
 import {
   NO_PRICE_FLOOR,
   applyPriceFloorPerDay,
@@ -176,6 +177,20 @@ async function computeCouponApplication(
   });
   const enforcedFloor = coupon.canBypassMinPrice ? NO_PRICE_FLOOR : priceFloor;
 
+  // اللقطة الأساس للحساب — الكود المخصَّص يخفّض فيها الكيلومتر المفتوح والشحن بين
+  // المدن أولاً (نفس ترتيب `createDirectBooking`)، فيُحسب FULL_TOTAL على الأسعار بعده.
+  let parsed: Record<string, unknown> = {};
+  if (booking.addonsJson?.trim()) {
+    try {
+      parsed = JSON.parse(booking.addonsJson) as Record<string, unknown>;
+    } catch {
+      parsed = {};
+    }
+  }
+  const extrasSavedExclTax =
+    coupon.source === "CUSTOMIZED" ? applyCustomizedCouponExtrasDiscount(parsed) : 0;
+  const baseAddonsJson = extrasSavedExclTax > 0 ? JSON.stringify(parsed) : booking.addonsJson;
+
   // السعر الحالي المجمَّد — «الظاهر للعميل» فعلاً؛ الكوبون يُطبَّق فوقه لا فوق سعر مُعاد اشتقاقه.
   const currentPricePerDayExclTax = resolveBookingRentalPricePerDayExclTax(
     model.price,
@@ -206,14 +221,6 @@ async function computeCouponApplication(
       return { ok: false, error: "لا يمكن تطبيق هذا الكود على هذا السعر." };
     }
 
-    let parsed: Record<string, unknown> = {};
-    if (booking.addonsJson?.trim()) {
-      try {
-        parsed = JSON.parse(booking.addonsJson) as Record<string, unknown>;
-      } catch {
-        parsed = {};
-      }
-    }
     parsed.rentalPricePerDayExclTax = round2(newPricePerDayExclTax);
     if (floorOutcome.floorPerDayExclTax != null) {
       parsed.rentalFloorPerDayExclTax = round2(floorOutcome.floorPerDayExclTax);
@@ -240,7 +247,7 @@ async function computeCouponApplication(
         currentPricePerDayExclTax,
         newPricePerDayExclTax,
         newAddonsJson: JSON.stringify(parsed),
-        discountAmountSar: round2(effectiveDiscountPerDay * days),
+        discountAmountSar: round2(effectiveDiscountPerDay * days + extrasSavedExclTax),
         labelAr: buildCouponDiscountLabelAr(coupon.kind, coupon.value, effectiveDiscountPerDay),
         floorApplied: floorOutcome.floorApplied,
         carLabel,
@@ -253,7 +260,7 @@ async function computeCouponApplication(
   }
 
   // FULL_TOTAL
-  const priceInput = bookingDaysPriceInputFromSnapshot(model.price, model.vatRatePercent, booking.addonsJson);
+  const priceInput = bookingDaysPriceInputFromSnapshot(model.price, model.vatRatePercent, baseAddonsJson);
   const addonRows = priceInput.addonPerDayExclTax.map((p) => ({ pricePerDay: p }));
   const preDiscountTotals = computeCheckoutTotals(
     priceInput.pricePerDayExclTax,
@@ -282,14 +289,6 @@ async function computeCouponApplication(
     return { ok: false, error: "لا يمكن تطبيق هذا الكود على هذا السعر." };
   }
 
-  let parsed: Record<string, unknown> = {};
-  if (booking.addonsJson?.trim()) {
-    try {
-      parsed = JSON.parse(booking.addonsJson) as Record<string, unknown>;
-    } catch {
-      parsed = {};
-    }
-  }
   if (floorPerDay != null) {
     parsed.rentalFloorPerDayExclTax = round2(floorPerDay);
   } else if (!coupon.canBypassMinPrice) {
@@ -314,7 +313,7 @@ async function computeCouponApplication(
       currentPricePerDayExclTax: priceInput.pricePerDayExclTax,
       newPricePerDayExclTax: priceInput.pricePerDayExclTax,
       newAddonsJson: JSON.stringify(parsed),
-      discountAmountSar: capped.discountExclTax,
+      discountAmountSar: round2(capped.discountExclTax + extrasSavedExclTax),
       labelAr: buildCouponDiscountLabelAr(coupon.kind, coupon.value, capped.discountExclTax),
       floorApplied: capped.floorApplied,
       carLabel,

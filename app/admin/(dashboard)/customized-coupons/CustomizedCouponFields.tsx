@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CUSTOMIZED_COUPON_EXTRAS_DISCOUNT_PERCENT } from "@/lib/customized-coupon-extras";
 
 type Defaults = {
   code?: string;
@@ -148,8 +149,12 @@ export function CustomizedCouponFields({ defaults, lockIdentity }: Props) {
       </label>
 
       <p className="text-[11px] font-normal text-on-surface-variant md:col-span-2">
-        نسخة مبسّطة من أكواد الخصم العامة: يسري على التأجير اليومي والشهري معاً، يحترم الحد الأدنى
-        للسعر دائماً، واستخدام واحد فقط — يُقفل الكود تلقائياً بعد أول حجز يستخدمه.
+        نسخة مبسّطة من أكواد الخصم العامة: يسري على التأجير اليومي والشهري معاً، واستخدام واحد
+        فقط — يُقفل الكود تلقائياً بعد أول حجز يستخدمه.
+      </p>
+      <p className="rounded-xl bg-surface-container px-4 py-3 text-[12px] font-medium text-on-surface md:col-span-2">
+        كل كود مخصَّص يعطي العميل تلقائياً خصم {CUSTOMIZED_COUPON_EXTRAS_DISCOUNT_PERCENT}٪ على
+        الكيلومتر المفتوح ورسوم الشحن بين المدن، فوق الخصم المحدد أعلاه.
       </p>
     </>
   );
