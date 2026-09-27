@@ -58,7 +58,8 @@ import {
 import { computeBookingOutstanding } from "@/lib/booking-outstanding";
 import { addDaysToYmd } from "@/lib/booking-calendar-ymd";
 import { BookingHeaderGearMenu } from "@/components/admin/BookingHeaderGearMenu";
-import { BlacklistBadge, CustomerBlacklistToggle } from "@/components/admin/CustomerBlacklistToggle";
+import { BlacklistBadge } from "@/components/admin/CustomerBlacklistToggle";
+import { BookingBlacklistModal } from "@/components/admin/BookingBlacklistModal";
 import { VehiclePlateHandoverModal } from "@/components/admin/VehiclePlateHandoverModal";
 
 function paymentStatusLabelAr(ps: string, balanceDue?: number): string {
@@ -152,6 +153,7 @@ export function BookingDetailView({
 }: Props) {
   const [updatePlateModalOpen, setUpdatePlateModalOpen] = useState(false);
   const [notesModalOpen, setNotesModalOpen] = useState(false);
+  const [blacklistModalOpen, setBlacklistModalOpen] = useState(false);
   const [newNoteText, setNewNoteText] = useState("");
   const [isSavingNotes, setIsSavingNotes] = useState(false);
   const [notesError, setNotesError] = useState<string | null>(null);
@@ -273,20 +275,20 @@ export function BookingDetailView({
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {editActions}
-            {customerBlacklist.canManage ? (
-              <CustomerBlacklistToggle
-                target={{ kind: "booking", bookingId: booking.id }}
-                isBlacklisted={customerBlacklist.isBlacklisted}
-                compact
-                popover
-              />
-            ) : null}
             <BookingHeaderGearMenu
               bookingId={booking.id}
               kind={booking.kind}
               currentPlateNumber={booking.vehiclePlateNumber}
               onOpenPlateModal={() => setUpdatePlateModalOpen(true)}
               canEditBooking={canEditBooking}
+              blacklist={
+                customerBlacklist.canManage
+                  ? {
+                      isBlacklisted: customerBlacklist.isBlacklisted,
+                      onOpen: () => setBlacklistModalOpen(true),
+                    }
+                  : null
+              }
             />
           </div>
         }
@@ -499,14 +501,19 @@ export function BookingDetailView({
               ) : null}
               <DetailRow label="الفئة العمرية">{booking.ageRange}</DetailRow>
             </dl>
-            {customerBlacklist.canManage ? (
-              <div className="mt-4 border-t border-outline-variant/20 pt-4">
-                <CustomerBlacklistToggle
-                  target={{ kind: "booking", bookingId: booking.id }}
-                  isBlacklisted={customerBlacklist.isBlacklisted}
-                  reason={customerBlacklist.reason}
-                  blacklistedAt={customerBlacklist.blacklistedAt}
-                />
+            {customerBlacklist.isBlacklisted ? (
+              <div className="mt-4 space-y-1.5 border-t border-outline-variant/20 pt-4">
+                <BlacklistBadge />
+                {customerBlacklist.blacklistedAt || customerBlacklist.reason ? (
+                  <p className="text-xs text-on-surface-variant">
+                    {customerBlacklist.blacklistedAt ? (
+                      <span className="tabular-nums">
+                        منذ {new Date(customerBlacklist.blacklistedAt).toLocaleDateString("ar-SA")}
+                      </span>
+                    ) : null}
+                    {customerBlacklist.reason ? <span> — {customerBlacklist.reason}</span> : null}
+                  </p>
+                ) : null}
               </div>
             ) : null}
           </BookingDetailSection>
@@ -730,6 +737,17 @@ export function BookingDetailView({
         mode="UPDATE_ONLY"
         currentPlateNumber={booking.vehiclePlateNumber}
       />
+
+      {customerBlacklist.canManage ? (
+        <BookingBlacklistModal
+          isOpen={blacklistModalOpen}
+          onClose={() => setBlacklistModalOpen(false)}
+          bookingId={booking.id}
+          customerName={booking.fullName}
+          customerPhone={booking.phone}
+          isBlacklisted={customerBlacklist.isBlacklisted}
+        />
+      ) : null}
 
       {/* Admin Notes Quick Modal */}
       {notesModalOpen ? (

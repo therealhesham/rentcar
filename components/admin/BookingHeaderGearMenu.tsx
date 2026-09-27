@@ -13,6 +13,8 @@ import {
   Loader2,
   CheckCircle2,
   XCircle,
+  Ban,
+  ShieldCheck,
 } from "lucide-react";
 import { adminSendStatementEmail } from "@/app/admin/(dashboard)/bookings/[id]/statement/statement-actions";
 
@@ -22,6 +24,8 @@ type Props = {
   currentPlateNumber?: string | null;
   onOpenPlateModal?: () => void;
   canEditBooking?: boolean;
+  /** يظهر فقط لمن يملك صلاحية العملاء */
+  blacklist?: { isBlacklisted: boolean; onOpen: () => void } | null;
 };
 
 export function BookingHeaderGearMenu({
@@ -30,6 +34,7 @@ export function BookingHeaderGearMenu({
   currentPlateNumber,
   onOpenPlateModal,
   canEditBooking = false,
+  blacklist = null,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [loadingEmail, setLoadingEmail] = useState(false);
@@ -173,6 +178,31 @@ export function BookingHeaderGearMenu({
                   </button>
                 </>
               ) : null}
+            </>
+          ) : null}
+
+          {blacklist ? (
+            <>
+              <div className="my-1 h-px bg-outline-variant/20 mx-2" />
+              {blacklist.isBlacklisted ? (
+                <button
+                  type="button"
+                  onClick={blacklist.onOpen}
+                  className="flex w-full items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-right text-xs font-bold text-emerald-800 transition-colors hover:bg-emerald-50"
+                >
+                  <ShieldCheck className="size-4 text-emerald-600" />
+                  إلغاء الحظر
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={blacklist.onOpen}
+                  className="flex w-full items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-right text-xs font-bold text-zinc-900 transition-colors hover:bg-zinc-100"
+                >
+                  <Ban className="size-4 text-zinc-700" />
+                  إضافة للقائمة السوداء
+                </button>
+              )}
             </>
           ) : null}
         </div>
