@@ -330,7 +330,7 @@ export function AccountBookingCardActions({
             </Link>
           ) : null}
 
-          {bookingStarted ? null : (
+          {/* {bookingStarted ? null : (
             <button
               type="button"
               disabled={cancelPastDeadline || isTerminal}
@@ -343,7 +343,7 @@ export function AccountBookingCardActions({
             >
               {t("cancelBooking")}
             </button>
-          )}
+          )} */}
         </div>
       )}
 

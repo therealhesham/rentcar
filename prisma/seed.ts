@@ -118,7 +118,7 @@ const seedFleetModels = [
 const seedCustomers = [
   {
     email: "heshammoha231992@gmail.com",
-    password: "225666",
+    password: "123456",
     name: "Hesham",
     phoneLocalNine: "582187287",
   },
