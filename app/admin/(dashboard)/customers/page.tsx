@@ -21,6 +21,8 @@ type BookingClientRow = {
   lastKind: string;
   /** أحدث حجز لهذا الجوال — يُستخدم هدفاً لزر الحظر (يُنشئ حساباً إن لم يوجد). */
   lastBookingId: number;
+  /** محظور بالجوال أو بالحساب المربوط بأيّ من طلباته — نفس منطق `findBlacklistedMatch`. */
+  isBlacklisted: boolean;
 };
 
 function aggregateClientsFromBookings(
@@ -30,20 +32,16 @@ function aggregateClientsFromBookings(
     fullName: string;
     createdAt: Date;
     kind: string;
+    customerId: number | null;
   }>,
+  blacklisted: { phones: Set<string>; userIds: Set<number> },
 ): BookingClientRow[] {
-  const map = new Map<
-    string,
-    {
-      fullName: string;
-      lastAt: Date;
-      requestCount: number;
-      lastKind: string;
-      lastBookingId: number;
-    }
-  >();
+  const map = new Map<string, Omit<BookingClientRow, "phone">>();
 
   for (const r of rows) {
+    const hit =
+      blacklisted.phones.has(r.phone) ||
+      (r.customerId != null && blacklisted.userIds.has(r.customerId));
     const cur = map.get(r.phone);
     if (!cur) {
       map.set(r.phone, {
@@ -52,9 +50,11 @@ function aggregateClientsFromBookings(
         requestCount: 1,
         lastKind: r.kind,
         lastBookingId: r.id,
+        isBlacklisted: hit,
       });
     } else {
       cur.requestCount += 1;
+      if (hit) cur.isBlacklisted = true;
     }
   }
 
@@ -190,17 +190,42 @@ export default async function AdminCustomersPage({
       : {}),
   };
 
-  const bookingSearch: Prisma.BookingRequestWhereInput | undefined = q
-    ? {
-        OR: [
-          { fullName: { contains: q } },
-          ...(phoneDigits ? [{ phone: { contains: phoneDigits } }] : []),
-        ],
-      }
-    : undefined;
+  const blacklistedUsers = await prisma.user.findMany({
+    where: { isBlacklisted: true },
+    select: { id: true, phone: true },
+  });
+  const blacklisted = {
+    phones: new Set(blacklistedUsers.map((u) => u.phone).filter((p): p is string => Boolean(p))),
+    userIds: new Set(blacklistedUsers.map((u) => u.id)),
+  };
+
+  const bookingFilters: Prisma.BookingRequestWhereInput[] = [];
+  if (q) {
+    bookingFilters.push({
+      OR: [
+        { fullName: { contains: q } },
+        ...(phoneDigits ? [{ phone: { contains: phoneDigits } }] : []),
+      ],
+    });
+  }
+  if (onlyBlacklisted) {
+    // التصفية في القاعدة لا بعد الجلب — كي لا يسقط محظور خارج حدّ آخر 3000 طلب.
+    bookingFilters.push({
+      OR: [
+        { phone: { in: [...blacklisted.phones] } },
+        { customerId: { in: [...blacklisted.userIds] } },
+      ],
+    });
+  }
+  const bookingSearch: Prisma.BookingRequestWhereInput | undefined =
+    bookingFilters.length === 0
+      ? undefined
+      : bookingFilters.length === 1
+        ? bookingFilters[0]
+        : { AND: bookingFilters };
 
   // حسابات الموقع غير مرتبطة بفرع — تُعرض لمن نطاقه كل الفروع فقط.
-  const [users, bookingRows, blacklistedPhoneRows] = await Promise.all([
+  const [users, bookingRows] = await Promise.all([
     showUsers
       ? prisma.user.findMany({
           where: userWhere,
@@ -228,23 +253,23 @@ export default async function AdminCustomersPage({
         fullName: true,
         createdAt: true,
         kind: true,
+        customerId: true,
       },
-    }),
-    prisma.user.findMany({
-      where: { isBlacklisted: true, phone: { not: null } },
-      select: { phone: true },
     }),
   ]);
 
-  const blacklistedPhones = new Set(
-    blacklistedPhoneRows.map((u) => u.phone).filter((p): p is string => Boolean(p)),
-  );
-  const clientsFromBookings = aggregateClientsFromBookings(bookingRows).filter(
-    (c) => !onlyBlacklisted || blacklistedPhones.has(c.phone),
-  );
+  const clientsFromBookings = aggregateClientsFromBookings(bookingRows, blacklisted);
   const repeatCount = clientsFromBookings.filter((c) => c.requestCount > 1).length;
-  const blacklistedCount = clientsFromBookings.filter((c) => blacklistedPhones.has(c.phone)).length;
   const scopeHint = hasFilter ? "ضمن نتائج التصفية" : `من آخر ${BOOKING_ROWS_LIMIT.toLocaleString("ar-SA")} طلب`;
+
+  /** رابط يحافظ على البحث الحالي ويبدّل تصفية القائمة السوداء فوراً (بلا زر «بحث»). */
+  const filterHref = (blacklistedOnly: boolean) => {
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (blacklistedOnly) params.set("blacklisted", "1");
+    const qs = params.toString();
+    return qs ? `/admin/customers?${qs}` : "/admin/customers";
+  };
 
   return (
     <>
@@ -278,8 +303,8 @@ export default async function AdminCustomersPage({
         />
         <StatTile
           label="في القائمة السوداء"
-          value={blacklistedCount}
-          hint="من الأرقام المعروضة"
+          value={blacklistedUsers.length}
+          hint="إجمالي العملاء المحظورين"
           icon={Ban}
           accent="bg-zinc-100 text-zinc-900"
         />
@@ -287,7 +312,7 @@ export default async function AdminCustomersPage({
           <StatTile
             label="حسابات مسجّلة"
             value={users.length}
-            hint={hasFilter ? "ضمن نتائج التصفية" : "أحدث 200 حساب"}
+            hint={hasFilter ? "ضمن نتائج التصفية" : `أحدث ${(200).toLocaleString("ar-SA")} حساب`}
             icon={UserRound}
             accent="bg-[#fff7ed] text-[#9a3412]"
           />
@@ -312,17 +337,44 @@ export default async function AdminCustomersPage({
           />
         </label>
 
-        <label className="inline-flex cursor-pointer select-none items-center gap-2 rounded-xl border border-outline-variant/40 bg-white px-3.5 py-2.5 text-sm font-bold text-on-surface shadow-sm transition has-[:checked]:border-zinc-900 has-[:checked]:bg-zinc-900 has-[:checked]:text-white">
-          <input
-            type="checkbox"
-            name="blacklisted"
-            value="1"
-            defaultChecked={onlyBlacklisted}
-            className="sr-only"
-          />
-          <Ban className="h-4 w-4" aria-hidden />
-          القائمة السوداء فقط
-        </label>
+        {onlyBlacklisted ? <input type="hidden" name="blacklisted" value="1" /> : null}
+
+        <nav
+          aria-label="تصفية العملاء"
+          className="inline-flex shrink-0 rounded-xl border border-outline-variant/40 bg-white p-1 shadow-sm"
+        >
+          <Link
+            href={filterHref(false)}
+            aria-current={!onlyBlacklisted ? "page" : undefined}
+            className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-sm font-bold transition ${
+              !onlyBlacklisted
+                ? "bg-primary text-on-primary"
+                : "text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface"
+            }`}
+          >
+            <Users className="h-4 w-4" aria-hidden />
+            الكل
+          </Link>
+          <Link
+            href={filterHref(true)}
+            aria-current={onlyBlacklisted ? "page" : undefined}
+            className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-sm font-bold transition ${
+              onlyBlacklisted
+                ? "bg-zinc-900 text-white"
+                : "text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface"
+            }`}
+          >
+            <Ban className="h-4 w-4" aria-hidden />
+            القائمة السوداء
+            <span
+              className={`rounded-full px-1.5 text-[11px] tabular-nums ${
+                onlyBlacklisted ? "bg-white/20" : "bg-surface-container-low"
+              }`}
+            >
+              {blacklistedUsers.length.toLocaleString("ar-SA")}
+            </span>
+          </Link>
+        </nav>
 
         <div className="flex items-center gap-2">
           <button
@@ -368,7 +420,7 @@ export default async function AdminCustomersPage({
                 </thead>
                 <tbody className="divide-y divide-outline-variant/15">
                   {clientsFromBookings.map((c) => {
-                    const isBlacklisted = blacklistedPhones.has(c.phone);
+                    const isBlacklisted = c.isBlacklisted;
                     return (
                       <tr
                         key={c.phone}
