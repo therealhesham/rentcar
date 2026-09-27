@@ -2,6 +2,7 @@ import "server-only";
 import type { Prisma } from "@prisma/client";
 import { currentRequestMeta, logActivity } from "@/lib/activity-log";
 import { syntheticEmailForPhone } from "@/lib/booking-import";
+import { saudiLocalNineToE164 } from "@/lib/normalize-saudi-phone";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -140,4 +141,136 @@ export async function resolveOrCreateUserForBlacklist(opts: {
     select: { id: true },
   });
   return created.id;
+}
+
+/** نطاق البريد الاصطلاحي لمن يُحظر يدوياً بلا جوال — `.invalid` لا يستقبل بريداً أبداً. */
+const MANUAL_BLACKLIST_EMAIL_DOMAIN = "blacklist.invalid";
+
+/** «05xxxxxxxx» / «5xxxxxxxx» / «+9665…» / «009665…» → +9665XXXXXXXX، وإلا null. */
+export function parseSaudiPhoneInput(raw: string): string | null {
+  const digits = raw.replace(/\D/g, "").replace(/^(00966|966|0)/, "");
+  return saudiLocalNineToE164(digits);
+}
+
+export type ManualBlacklistEntry = {
+  phone?: string | null;
+  email?: string | null;
+  name?: string | null;
+  nationalIdNumber?: string | null;
+  passportNumber?: string | null;
+  licenseNumber?: string | null;
+};
+
+/**
+ * سطر من الإضافة الجماعية: قيم مفصولة بفاصلة/فاصلة منقوطة/Tab/«|» بأي ترتيب —
+ * جوال سعودي، بريد، رقم هوية/إقامة (10 أرقام تبدأ بـ 1 أو 2)، والباقي اسم.
+ */
+export function parseBlacklistLine(line: string): ManualBlacklistEntry | null {
+  const entry: ManualBlacklistEntry = {};
+  const nameParts: string[] = [];
+  for (const token of line.split(/[,;\t|،؛]/).map((t) => t.trim()).filter(Boolean)) {
+    const compact = token.replace(/[\s-]/g, "");
+    if (!entry.email && token.includes("@")) entry.email = token.toLowerCase();
+    else if (!entry.nationalIdNumber && /^[12]\d{9}$/.test(compact)) entry.nationalIdNumber = compact;
+    else if (!entry.phone && parseSaudiPhoneInput(token)) entry.phone = parseSaudiPhoneInput(token);
+    else nameParts.push(token);
+  }
+  if (nameParts.length) entry.name = nameParts.join(" ");
+  return entry.phone || entry.email || entry.nationalIdNumber ? entry : null;
+}
+
+/**
+ * حظر عميل قد لا يملك حساباً ولا حجزاً بعد: تُحظر كل الحسابات المطابقة للجوال/البريد/
+ * أرقام الوثائق، وإن لم يطابق شيء يُنشأ سجل محظور يلتقطه `findBlacklistedMatch` عند أي
+ * محاولة حجز لاحقة (والتسجيل بنفس الجوال/البريد يُرفض لأنهما unique).
+ */
+export async function blacklistManualEntry(
+  entry: ManualBlacklistEntry,
+  opts: { reason: string | null; actorName: string },
+): Promise<"added" | "already"> {
+  const phone = entry.phone?.trim() || null;
+  const email = entry.email?.trim().toLowerCase() || null;
+  const nationalId = docNumber(entry.nationalIdNumber);
+  const passport = docNumber(entry.passportNumber);
+  const license = docNumber(entry.licenseNumber);
+
+  const or: Prisma.UserWhereInput[] = [];
+  if (phone) or.push({ phone }, { email: syntheticEmailForPhone(phone) });
+  if (email) or.push({ email });
+  if (nationalId) or.push({ nationalIdNumber: nationalId });
+  if (passport) or.push({ passportNumber: passport });
+  if (license) or.push({ licenseNumber: license });
+  if (or.length === 0) throw new Error("blacklistManualEntry: no identity");
+
+  const matches = await prisma.user.findMany({
+    where: { OR: or },
+    select: {
+      id: true,
+      isBlacklisted: true,
+      phone: true,
+      nationalIdNumber: true,
+      passportNumber: true,
+      licenseNumber: true,
+    },
+  });
+
+  const now = new Date();
+  const toBlacklist = matches.filter((u) => !u.isBlacklisted);
+  const userIds: number[] = [];
+
+  for (const u of toBlacklist) {
+    await prisma.user.update({
+      where: { id: u.id },
+      data: {
+        isBlacklisted: true,
+        blacklistedAt: now,
+        blacklistReason: opts.reason,
+        // نُكمل الوثائق الناقصة فقط — لا نكتب فوق بيانات العميل.
+        ...(nationalId && !u.nationalIdNumber ? { nationalIdNumber: nationalId } : {}),
+        ...(passport && !u.passportNumber ? { passportNumber: passport } : {}),
+        ...(license && !u.licenseNumber ? { licenseNumber: license } : {}),
+      },
+    });
+    userIds.push(u.id);
+  }
+
+  if (matches.length === 0) {
+    const docKey = (nationalId ?? passport ?? license ?? "").replace(/[^A-Za-z0-9]/g, "").toLowerCase();
+    const createEmail =
+      email ??
+      (phone ? syntheticEmailForPhone(phone) : `${docKey}@${MANUAL_BLACKLIST_EMAIL_DOMAIN}`);
+    const created = await prisma.user.create({
+      data: {
+        email: createEmail,
+        phone,
+        name: entry.name?.trim().slice(0, 255) || null,
+        passwordHash: null,
+        nationalIdNumber: nationalId,
+        passportNumber: passport,
+        licenseNumber: license,
+        isBlacklisted: true,
+        blacklistedAt: now,
+        blacklistReason: opts.reason,
+      },
+      select: { id: true },
+    });
+    userIds.push(created.id);
+  }
+
+  if (userIds.length === 0) return "already";
+
+  const meta = await currentRequestMeta();
+  for (const userId of userIds) {
+    await logActivity({
+      kind: "CUSTOMER_BLACKLISTED",
+      userId,
+      actorLabel: opts.actorName,
+      detail: ["manual", phone ?? email ?? nationalId ?? passport ?? license, opts.reason]
+        .filter(Boolean)
+        .join(" · "),
+      ip: meta.ip,
+      userAgent: meta.userAgent,
+    });
+  }
+  return "added";
 }

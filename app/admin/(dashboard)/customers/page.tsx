@@ -4,9 +4,9 @@ import type { Prisma } from "@prisma/client";
 import { Ban, Mail, Phone, Repeat, Search, UserRound, Users, X } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { BlacklistBadge, CustomerBlacklistToggle } from "@/components/admin/CustomerBlacklistToggle";
+import { ManualBlacklistForm } from "@/components/admin/ManualBlacklistForm";
 import { bookingBranchWhere, sessionHasPermission } from "@/lib/admin-access";
-import { requireAdminPage } from "@/lib/admin-page";
-import { adminScope } from "@/lib/admin-scope";
+import { requireAdminPage } from "@/lib/admin-page";import { adminScope } from "@/lib/admin-scope";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -319,6 +319,8 @@ export default async function AdminCustomersPage({
         ) : null}
       </div>
 
+      {canManageBlacklist ? <ManualBlacklistForm /> : null}
+
       <form
         method="get"
         className="mb-8 flex flex-col gap-3 rounded-2xl border border-outline-variant/25 bg-surface-container-low/50 p-4 sm:flex-row sm:items-center sm:p-5"
@@ -540,10 +542,20 @@ export default async function AdminCustomersPage({
                               {initialOf(u.name ?? u.email)}
                             </span>
                             <div className="min-w-0">
-                              <p className="font-bold text-on-surface">{u.name ?? "—"}</p>
-                              <p className="truncate font-mono text-xs text-on-surface-variant" dir="ltr">
-                                {u.email}
+                              <p className="flex flex-wrap items-center gap-1.5 font-bold text-on-surface">
+                                {u.name ?? "—"}
+                                {/* بريد اصطلاحي (استيراد/حظر يدوي) — لا حساب دخول فعلي. */}
+                                {u.email.endsWith(".invalid") ? (
+                                  <span className="rounded-md bg-surface-container-low px-1.5 py-0.5 text-[10px] font-bold text-on-surface-variant">
+                                    بلا حساب
+                                  </span>
+                                ) : null}
                               </p>
+                              {u.email.endsWith(".invalid") ? null : (
+                                <p className="truncate font-mono text-xs text-on-surface-variant" dir="ltr">
+                                  {u.email}
+                                </p>
+                              )}
                             </div>
                           </div>
                         </td>
