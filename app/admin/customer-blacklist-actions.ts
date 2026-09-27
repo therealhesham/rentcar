@@ -5,12 +5,13 @@ import { assertBookingRequestInScope, requirePermissionForAction } from "@/lib/a
 import { currentRequestMeta, logActivity } from "@/lib/activity-log";
 import { logBookingEvent } from "@/lib/booking-audit";
 import {
-  blacklistManualEntry,
-  parseBlacklistLine,
+  isBlankRow,
   parseSaudiPhoneInput,
-  resolveOrCreateUserForBlacklist,
+  validateBlacklistRow,
+  type BlacklistRowInput,
   type ManualBlacklistEntry,
-} from "@/lib/customer-blacklist";
+} from "@/lib/blacklist-input";
+import { blacklistManualEntry, resolveOrCreateUserForBlacklist } from "@/lib/customer-blacklist";
 import { prisma } from "@/lib/prisma";
 
 export type BlacklistActionState = { ok: boolean; error?: string; message?: string };
@@ -173,8 +174,6 @@ export type ManualBlacklistState = {
   error?: string;
   added?: number;
   already?: number;
-  /** أسطر الإضافة الجماعية التي لم يُفهم منها جوال/بريد/هوية. */
-  invalid?: string[];
 };
 
 const MAX_BULK_LINES = 500;
@@ -185,7 +184,7 @@ function field(formData: FormData, name: string): string {
 
 /**
  * إضافة يدوية للقائمة السوداء — لعميل لم يحجز بعد أو لمجموعة دفعة واحدة.
- * `mode=single`: حقول منفصلة. `mode=bulk`: سطر لكل عميل (انظر `parseBlacklistLine`).
+ * `mode=single`: حقول منفصلة. `mode=bulk`: `rows` = JSON لصفوف الجدول (`BlacklistRowInput[]`).
  */
 export async function addManualBlacklist(
   _prev: ManualBlacklistState | null,
@@ -196,28 +195,37 @@ export async function addManualBlacklist(
 
   const reason = readReason(formData);
   const entries: ManualBlacklistEntry[] = [];
-  const invalid: string[] = [];
 
   if (field(formData, "mode") === "bulk") {
-    const lines = field(formData, "lines")
-      .split(/\r?\n/)
-      .map((l) => l.trim())
-      .filter(Boolean);
-    if (lines.length === 0) return { ok: false, error: "أدخل عميلاً واحداً على الأقل (سطر لكل عميل)." };
-    if (lines.length > MAX_BULK_LINES) {
-      return { ok: false, error: `الحد الأقصى ${MAX_BULK_LINES} سطر في المرة الواحدة.` };
+    let rows: BlacklistRowInput[];
+    try {
+      const parsed: unknown = JSON.parse(field(formData, "rows") || "[]");
+      if (!Array.isArray(parsed)) throw new Error("not an array");
+      rows = parsed.map((r) => ({
+        phone: String(r?.phone ?? ""),
+        name: String(r?.name ?? ""),
+        nationalIdNumber: String(r?.nationalIdNumber ?? ""),
+      }));
+    } catch {
+      return { ok: false, error: "بيانات الجدول غير صالحة — أعد تحميل الصفحة وحاول مجدداً." };
     }
+    rows = rows.filter((r) => !isBlankRow(r));
+    if (rows.length === 0) return { ok: false, error: "أدخل عميلاً واحداً على الأقل." };
+    if (rows.length > MAX_BULK_LINES) {
+      return { ok: false, error: `الحد الأقصى ${MAX_BULK_LINES} عميل في المرة الواحدة.` };
+    }
+    // النموذج يمنع الإرسال بصفوف خاطئة؛ هذا خط دفاع أخير فلا نحظر نصف المجموعة بصمت.
+    const badRow = rows.findIndex((r) => !validateBlacklistRow(r).ok);
+    if (badRow >= 0) return { ok: false, error: `الصف ${badRow + 1} غير صالح — راجع البيانات.` };
+
     const seen = new Set<string>();
-    for (const line of lines) {
-      const entry = parseBlacklistLine(line);
-      if (!entry) {
-        invalid.push(line.slice(0, 80));
-        continue;
-      }
-      const key = entry.phone ?? entry.email ?? entry.nationalIdNumber!;
+    for (const row of rows) {
+      const result = validateBlacklistRow(row);
+      if (!result.ok) continue;
+      const key = result.entry.phone ?? result.entry.nationalIdNumber!;
       if (seen.has(key)) continue;
       seen.add(key);
-      entries.push(entry);
+      entries.push(result.entry);
     }
   } else {
     const rawPhone = field(formData, "phone");
@@ -256,5 +264,5 @@ export async function addManualBlacklist(
   }
 
   revalidatePath("/admin/customers");
-  return { ok: true, added, already, invalid };
+  return { ok: true, added, already };
 }

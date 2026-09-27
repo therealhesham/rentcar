@@ -1,8 +1,8 @@
 import "server-only";
 import type { Prisma } from "@prisma/client";
 import { currentRequestMeta, logActivity } from "@/lib/activity-log";
+import type { ManualBlacklistEntry } from "@/lib/blacklist-input";
 import { syntheticEmailForPhone } from "@/lib/booking-import";
-import { saudiLocalNineToE164 } from "@/lib/normalize-saudi-phone";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -145,39 +145,6 @@ export async function resolveOrCreateUserForBlacklist(opts: {
 
 /** نطاق البريد الاصطلاحي لمن يُحظر يدوياً بلا جوال — `.invalid` لا يستقبل بريداً أبداً. */
 const MANUAL_BLACKLIST_EMAIL_DOMAIN = "blacklist.invalid";
-
-/** «05xxxxxxxx» / «5xxxxxxxx» / «+9665…» / «009665…» → +9665XXXXXXXX، وإلا null. */
-export function parseSaudiPhoneInput(raw: string): string | null {
-  const digits = raw.replace(/\D/g, "").replace(/^(00966|966|0)/, "");
-  return saudiLocalNineToE164(digits);
-}
-
-export type ManualBlacklistEntry = {
-  phone?: string | null;
-  email?: string | null;
-  name?: string | null;
-  nationalIdNumber?: string | null;
-  passportNumber?: string | null;
-  licenseNumber?: string | null;
-};
-
-/**
- * سطر من الإضافة الجماعية: قيم مفصولة بفاصلة/فاصلة منقوطة/Tab/«|» بأي ترتيب —
- * جوال سعودي، بريد، رقم هوية/إقامة (10 أرقام تبدأ بـ 1 أو 2)، والباقي اسم.
- */
-export function parseBlacklistLine(line: string): ManualBlacklistEntry | null {
-  const entry: ManualBlacklistEntry = {};
-  const nameParts: string[] = [];
-  for (const token of line.split(/[,;\t|،؛]/).map((t) => t.trim()).filter(Boolean)) {
-    const compact = token.replace(/[\s-]/g, "");
-    if (!entry.email && token.includes("@")) entry.email = token.toLowerCase();
-    else if (!entry.nationalIdNumber && /^[12]\d{9}$/.test(compact)) entry.nationalIdNumber = compact;
-    else if (!entry.phone && parseSaudiPhoneInput(token)) entry.phone = parseSaudiPhoneInput(token);
-    else nameParts.push(token);
-  }
-  if (nameParts.length) entry.name = nameParts.join(" ");
-  return entry.phone || entry.email || entry.nationalIdNumber ? entry : null;
-}
 
 /**
  * حظر عميل قد لا يملك حساباً ولا حجزاً بعد: تُحظر كل الحسابات المطابقة للجوال/البريد/
