@@ -18,6 +18,8 @@ type Props = {
   blacklistedAt?: string | null;
   /** عرض مختصر لصفوف الجداول (بدون سطر السبب والتاريخ) */
   compact?: boolean;
+  /** نموذج التأكيد يطفو أسفل الزر بدل أن يتمدد مكانه — لشريط أزرار رأس الصفحة */
+  popover?: boolean;
 };
 
 /** شارة «قائمة سوداء» — للإدارة فقط. */
@@ -36,6 +38,7 @@ export function CustomerBlacklistToggle({
   reason,
   blacklistedAt,
   compact = false,
+  popover = false,
 }: Props) {
   const action = target.kind === "booking" ? setBookingCustomerBlacklist : setCustomerBlacklist;
   const [rawState, formAction, pending] = useActionState(
@@ -100,27 +103,37 @@ export function CustomerBlacklistToggle({
   }
 
   // بعد نجاح أي إجراء نعود للزر — وإلا بقي نموذج التأكيد مفتوحاً بعد «حظر ثم إلغاء حظر».
-  if (!confirming || state?.ok) {
+  const showForm = confirming && !state?.ok;
+  const trigger = (
+    <button
+      type="button"
+      onClick={() => {
+        setConfirming(popover ? !showForm : true);
+        resetState();
+      }}
+      className="inline-flex items-center gap-1 rounded-lg border border-zinc-900/40 px-2.5 py-1 text-xs font-bold text-zinc-900 hover:bg-zinc-100"
+    >
+      <Ban className="size-3.5" aria-hidden />
+      إضافة للقائمة السوداء
+    </button>
+  );
+
+  if (!showForm) {
     return (
-      <div className={compact ? "inline-flex flex-col items-start" : undefined}>
-        <button
-          type="button"
-          onClick={() => {
-            setConfirming(true);
-            resetState();
-          }}
-          className="inline-flex items-center gap-1 rounded-lg border border-zinc-900/40 px-2.5 py-1 text-xs font-bold text-zinc-900 hover:bg-zinc-100"
-        >
-          <Ban className="size-3.5" aria-hidden />
-          إضافة للقائمة السوداء
-        </button>
+      <div className={compact || popover ? "inline-flex flex-col items-start" : undefined}>
+        {trigger}
         {feedback}
       </div>
     );
   }
 
-  return (
-    <form action={formAction} className="space-y-2 rounded-xl border border-zinc-900/20 bg-zinc-50 p-3">
+  const form = (
+    <form
+      action={formAction}
+      className={`space-y-2 rounded-xl border border-zinc-900/20 bg-zinc-50 p-3 ${
+        popover ? "absolute end-0 top-full z-30 mt-2 w-72 max-w-[calc(100vw-2rem)] shadow-lg" : ""
+      }`}
+    >
       {hidden}
       <input type="hidden" name="blacklisted" value="1" />
       <p className="text-xs font-bold text-on-surface">
@@ -150,5 +163,14 @@ export function CustomerBlacklistToggle({
       </div>
       {feedback}
     </form>
+  );
+
+  return popover ? (
+    <div className="relative inline-flex">
+      {trigger}
+      {form}
+    </div>
+  ) : (
+    form
   );
 }

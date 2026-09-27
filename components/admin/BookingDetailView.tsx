@@ -273,6 +273,14 @@ export function BookingDetailView({
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {editActions}
+            {customerBlacklist.canManage ? (
+              <CustomerBlacklistToggle
+                target={{ kind: "booking", bookingId: booking.id }}
+                isBlacklisted={customerBlacklist.isBlacklisted}
+                compact
+                popover
+              />
+            ) : null}
             <BookingHeaderGearMenu
               bookingId={booking.id}
               kind={booking.kind}
