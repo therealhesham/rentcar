@@ -3,18 +3,24 @@
 import { revalidatePath } from "next/cache";
 import { requirePermissionForAction } from "@/lib/admin-access";
 import {
+  analyzeAvailabilityImportValues,
   cancelAvailabilityBlock,
   importAvailabilityBlocksFromRows,
 } from "@/lib/availability-block-import";
 import type {
   AvailabilityBlockFieldMapping,
   AvailabilityImportResult,
+  AvailabilityValueReview,
 } from "@/lib/availability-block-import";
+import type { AvailabilityValueOverrides } from "@/lib/availability-import-values";
 
 export type { ImportRow } from "@/lib/vehicle-import-excel";
 export type {
   AvailabilityBlockFieldMapping,
   AvailabilityImportResult,
+  AvailabilityValueReview,
+  ValueReviewItem,
+  ValueOption,
 } from "@/lib/availability-block-import";
 
 const PERMISSION_ID = "/admin/fleet-availability/import";
@@ -37,6 +43,7 @@ export async function importAvailabilityBlocksFromExcel(payload: {
   rows: Record<string, string>[];
   mapping: AvailabilityBlockFieldMapping;
   dryRun: boolean;
+  overrides?: AvailabilityValueOverrides;
 }): Promise<AvailabilityImportResult> {
   // صلاحية مستقلة عن `/admin/fleet-availability` — عرض التوفر لا يعني إذناً بتعديله
   const auth = await requirePermissionForAction(PERMISSION_ID);
@@ -47,6 +54,7 @@ export async function importAvailabilityBlocksFromExcel(payload: {
     mapping: payload.mapping,
     dryRun: payload.dryRun,
     actorName: auth.session.displayName,
+    overrides: payload.overrides,
   });
 
   if (!payload.dryRun && result.created > 0) {
@@ -55,6 +63,16 @@ export async function importAvailabilityBlocksFromExcel(payload: {
   }
 
   return result;
+}
+
+/** القيم المميزة لعمودي الفرع والموديل مع مطابقتها واقتراحات للغير مطابق. */
+export async function reviewAvailabilityImportValues(input: {
+  branches: { raw: string; count: number }[];
+  models: { brand: string; model: string; year: string; count: number }[];
+}): Promise<{ ok: true; review: AvailabilityValueReview } | { ok: false; error: string }> {
+  const auth = await requirePermissionForAction(PERMISSION_ID);
+  if (!auth.ok) return { ok: false, error: auth.error };
+  return { ok: true, review: await analyzeAvailabilityImportValues(input) };
 }
 
 export async function cancelAvailabilityBlockAction(

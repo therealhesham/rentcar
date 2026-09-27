@@ -1,12 +1,24 @@
 "use client";
 
-import { useState, useRef, useCallback, useTransition } from "react";
+import { useState, useRef, useCallback, useEffect, useTransition } from "react";
 import Link from "next/link";
 import type {
   AvailabilityBlockFieldMapping,
   AvailabilityImportResult,
+  AvailabilityValueReview,
+  ValueOption,
+  ValueReviewItem,
 } from "@/app/admin/availability-import-actions";
-import { importAvailabilityBlocksFromExcel } from "@/app/admin/availability-import-actions";
+import {
+  importAvailabilityBlocksFromExcel,
+  reviewAvailabilityImportValues,
+} from "@/app/admin/availability-import-actions";
+import {
+  AUTO_SUGGEST_MIN_SCORE,
+  branchValueKey,
+  modelValueKey,
+  type AvailabilityValueOverrides,
+} from "@/lib/availability-import-values";
 import {
   parseSpreadsheetFile,
   cellToPlainStringWithTime,
@@ -22,6 +34,9 @@ type ParsedFile = {
 };
 
 const NONE = "__none__";
+
+/** route تنزيل (ملف xlsx) لا صفحة — لذلك `<a>` عادي لا `<Link>`. */
+const TEMPLATE_HREF = "/api/admin/fleet/availability-template";
 
 const IMPORT_FIELDS: {
   key: keyof AvailabilityBlockFieldMapping;
@@ -200,6 +215,147 @@ function MappingRow({
   );
 }
 
+// ─── Value review (typos) ─────────────────────────────────────────────────────
+
+type ValueChoices = { branch: Record<string, number | null>; model: Record<string, number | null> };
+
+/** الاختيار المبدئي: المطابقة الحرفية، وإلا أقرب اقتراح لو قريب كفاية، وإلا لا شيء. */
+function initialChoice(item: ValueReviewItem): number | null {
+  if (item.matchedId !== null) return item.matchedId;
+  const top = item.suggestions[0];
+  return top && top.score >= AUTO_SUGGEST_MIN_SCORE ? top.id : null;
+}
+
+/** القيم المميزة لعمودي الفرع والموديل في الملف مع عدد تكرار كل قيمة. */
+function collectDistinctValues(rows: ImportRow[], mapping: Record<string, string>) {
+  const get = (row: ImportRow, col?: string) => (col ? (row[col] ?? "").trim() : "");
+  const branches = new Map<string, number>();
+  const models = new Map<string, { brand: string; model: string; year: string; count: number }>();
+  for (const row of rows) {
+    const branch = get(row, mapping.branch);
+    if (branch) branches.set(branchValueKey(branch), (branches.get(branchValueKey(branch)) ?? 0) + 1);
+
+    const brand = get(row, mapping.brand);
+    const model = get(row, mapping.modelName);
+    const year = get(row, mapping.year);
+    if (brand || model) {
+      const key = modelValueKey(brand, model, year);
+      const hit = models.get(key);
+      if (hit) hit.count++;
+      else models.set(key, { brand, model, year, count: 1 });
+    }
+  }
+  return {
+    branches: [...branches].map(([raw, count]) => ({ raw, count })),
+    models: [...models.values()],
+  };
+}
+
+function ValueReviewRow({
+  item,
+  options,
+  value,
+  onChange,
+}: {
+  item: ValueReviewItem;
+  options: ValueOption[];
+  value: number | null;
+  onChange: (v: number | null) => void;
+}) {
+  const labelById = new Map(options.map((o) => [o.id, o.label]));
+  const status =
+    value === null
+      ? { text: "غير مطابق — اختر", cls: "bg-error/10 text-error" }
+      : item.matchedId === value
+        ? { text: "مطابق", cls: "bg-emerald-100 text-emerald-700" }
+        : item.matchedId === null && value === initialChoice(item)
+          ? { text: "اقتراح — راجعه", cls: "bg-amber-100 text-amber-800" }
+          : { text: "تم التعديل", cls: "bg-primary/10 text-primary" };
+
+  return (
+    <div className="flex flex-col gap-1.5 border-b border-outline-variant/20 px-5 py-3 last:border-0 sm:flex-row sm:items-center sm:gap-4">
+      <div className="min-w-0 sm:w-64 sm:shrink-0">
+        <p className="flex flex-wrap items-center gap-2 text-sm font-bold text-on-surface">
+          <span className="truncate" dir="auto">«{item.raw}»</span>
+          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${status.cls}`}>{status.text}</span>
+        </p>
+        <p className="text-[11px] leading-snug text-on-surface-variant">
+          {item.count.toLocaleString("en-US")} صف
+          {item.matchedId === null && item.issue ? ` · ${item.issue}` : ""}
+        </p>
+      </div>
+      <select
+        value={value === null ? NONE : String(value)}
+        onChange={(e) => onChange(e.target.value === NONE ? null : Number(e.target.value))}
+        className={`min-w-0 flex-1 rounded-xl border bg-surface-container px-3 py-2.5 text-sm text-on-surface outline-none ring-primary/30 transition-colors focus:ring-2 ${value === null ? "border-error/60" : "border-outline-variant"
+          }`}
+      >
+        <option value={NONE}>— بدون (الصفوف دي هتترفض) —</option>
+        {item.suggestions.length > 0 && (
+          <optgroup label="أقرب اقتراحات">
+            {item.suggestions.map((s) => (
+              <option key={`s-${s.id}`} value={s.id}>
+                {labelById.get(s.id) ?? s.id} · {Math.round(s.score * 100)}%
+              </option>
+            ))}
+          </optgroup>
+        )}
+        <optgroup label="الكل">
+          {options
+            .filter((o) => !item.suggestions.some((s) => s.id === o.id))
+            .map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.label}
+              </option>
+            ))}
+        </optgroup>
+      </select>
+    </div>
+  );
+}
+
+function ValueReviewSection({
+  title,
+  items,
+  options,
+  choices,
+  onChange,
+}: {
+  title: string;
+  items: ValueReviewItem[];
+  options: ValueOption[];
+  choices: Record<string, number | null>;
+  onChange: (key: string, v: number | null) => void;
+}) {
+  if (items.length === 0) return null;
+  // غير المطابق أولاً — هو اللي محتاج قرار
+  const sorted = [...items].sort(
+    (a, b) => Number(a.matchedId !== null) - Number(b.matchedId !== null) || b.count - a.count,
+  );
+  const unmatched = items.filter((i) => i.matchedId === null).length;
+  return (
+    <div className="overflow-hidden rounded-2xl border border-outline-variant/30 bg-surface-container-lowest">
+      <div className="border-b border-outline-variant/30 px-5 py-3">
+        <p className="text-sm font-extrabold text-on-surface">
+          {title} · {items.length} قيمة
+          {unmatched > 0 && <span className="text-amber-700"> ({unmatched} غير مطابقة حرفياً)</span>}
+        </p>
+      </div>
+      <div className="max-h-[28rem] overflow-y-auto">
+        {sorted.map((item) => (
+          <ValueReviewRow
+            key={item.key}
+            item={item}
+            options={options}
+            value={choices[item.key] ?? null}
+            onChange={(v) => onChange(item.key, v)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Stat card ────────────────────────────────────────────────────────────────
 
 function StatCard({
@@ -261,13 +417,60 @@ export function AvailabilityImportClient() {
   const [preview, setPreview] = useState<AvailabilityImportResult | null>(null);
   const [result, setResult] = useState<AvailabilityImportResult | null>(null);
   const [isPending, startTransition] = useTransition();
+  /** مراجعة قيم الفرع/الموديل (أخطاء إملائية) + اختيار المستخدم أمام كل قيمة. */
+  const [review, setReview] = useState<AvailabilityValueReview | null>(null);
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
+  const [choices, setChoices] = useState<ValueChoices>({ branch: {}, model: {} });
 
   const handleParsed = useCallback((data: ParsedFile) => {
     setParsed(data);
     setMapping(autoDetect(data.headers));
     setPreview(null);
     setResult(null);
+    setReview(null);
   }, []);
+
+  // المراجعة تُعاد عند تغيّر الملف أو ربط أعمدة الفرع/الماركة/الموديل/السنة فقط
+  const reviewCols = [mapping.branch, mapping.brand, mapping.modelName, mapping.year];
+  const reviewDeps = reviewCols.join("\u0000");
+  useEffect(() => {
+    if (!parsed) return;
+    const { branches, models } = collectDistinctValues(parsed.rows, mapping);
+    if (branches.length === 0 && models.length === 0) {
+      setReview(null);
+      setChoices({ branch: {}, model: {} });
+      return;
+    }
+    let cancelled = false;
+    setReviewLoading(true);
+    setReviewError(null);
+    reviewAvailabilityImportValues({ branches, models })
+      .then((r) => {
+        if (cancelled) return;
+        if (!r.ok) {
+          setReviewError(r.error);
+          setReview(null);
+          return;
+        }
+        setReview(r.review);
+        setChoices({
+          branch: Object.fromEntries(r.review.branches.map((i) => [i.key, initialChoice(i)])),
+          model: Object.fromEntries(r.review.models.map((i) => [i.key, initialChoice(i)])),
+        });
+        setPreview(null);
+      })
+      .catch(() => {
+        if (!cancelled) setReviewError("تعذّرت مراجعة القيم — أعد المحاولة.");
+      })
+      .finally(() => {
+        if (!cancelled) setReviewLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parsed, reviewDeps]);
 
   /** أي تغيير في الربط يُبطل الفحص — وإلا حُفظ شيء غير الذي عاينه المستخدم. */
   const invalidatePreview = () => setPreview(null);
@@ -276,6 +479,23 @@ export function AvailabilityImportClient() {
     setMapping((prev) => ({ ...prev, [field]: raw === NONE ? "" : raw }));
     invalidatePreview();
   };
+
+  const setChoice = (kind: keyof ValueChoices, key: string, v: number | null) => {
+    setChoices((prev) => ({ ...prev, [kind]: { ...prev[kind], [key]: v } }));
+    invalidatePreview();
+  };
+
+  const buildOverrides = (): AvailabilityValueOverrides => {
+    const pick = (m: Record<string, number | null>) =>
+      Object.fromEntries(Object.entries(m).filter((e): e is [string, number] => e[1] !== null));
+    return { branch: pick(choices.branch), model: pick(choices.model) };
+  };
+
+  const unresolvedValues = review
+    ? [...review.branches.filter((i) => choices.branch[i.key] == null),
+      ...review.models.filter((i) => choices.model[i.key] == null)]
+    : [];
+  const unresolvedRows = unresolvedValues.reduce((n, i) => n + i.count, 0);
 
   const buildMapping = (): AvailabilityBlockFieldMapping => {
     const fm: AvailabilityBlockFieldMapping = {};
@@ -295,6 +515,7 @@ export function AvailabilityImportClient() {
         rows: parsed.rows,
         mapping: buildMapping(),
         dryRun,
+        overrides: buildOverrides(),
       });
       if (dryRun) setPreview(r);
       else setResult(r);
@@ -368,7 +589,29 @@ export function AvailabilityImportClient() {
   // ── Upload ───────────────────────────────────────────────────────────────────
 
   if (!parsed) {
-    return <UploadZone onParsed={handleParsed} />;
+    return (
+      <div className="space-y-6">
+        <div className="rounded-2xl border border-outline-variant/30 bg-surface-container-lowest p-6">
+          <h2 className="font-extrabold text-on-surface">1 · نزّل ملف الاكسل</h2>
+          <p className="mt-1 text-sm text-on-surface-variant">
+            قالب فارغ بالأعمدة المطلوبة، وأعمدة الفرع والماركة والموديل فيها قائمة منسدلة بالأسماء
+            المسجّلة في النظام (ورقة «القوائم») — املأه واحفظه ثم ارفعه.
+          </p>
+          <a
+            href={TEMPLATE_HREF}
+            download
+            className="mt-4 inline-block rounded-xl border border-outline-variant px-6 py-3 text-sm font-extrabold text-primary transition-colors hover:bg-surface-container"
+          >
+            تنزيل ملف الاكسل (xlsx)
+          </a>
+        </div>
+
+        <div>
+          <h2 className="mb-3 font-extrabold text-on-surface">2 · ارفع الملف</h2>
+          <UploadZone onParsed={handleParsed} />
+        </div>
+      </div>
+    );
   }
 
   // ── Mapping + dry run ────────────────────────────────────────────────────────
@@ -439,9 +682,16 @@ export function AvailabilityImportClient() {
             </p>
           )}
 
+          {unresolvedRows > 0 && !reviewLoading && (
+            <p className="rounded-xl border border-error/30 bg-error/8 px-4 py-3 text-[11px] font-bold leading-snug text-error">
+              {unresolvedValues.length} قيمة بدون اختيار في «مراجعة القيم» —{" "}
+              {unresolvedRows.toLocaleString("en-US")} صف هيترفض لو كمّلت كده.
+            </p>
+          )}
+
           <button
             onClick={() => run(true)}
-            disabled={isPending || missingRequired.length > 0}
+            disabled={isPending || reviewLoading || missingRequired.length > 0}
             className="w-full rounded-xl border border-primary px-6 py-3 text-sm font-extrabold text-primary transition-colors hover:bg-primary/5 disabled:opacity-40"
           >
             {isPending && !preview ? "جاري الفحص…" : "١ · فحص بدون حفظ"}
@@ -466,6 +716,45 @@ export function AvailabilityImportClient() {
           )}
         </div>
       </div>
+
+      {/* Value review — قائمة اختيار أمام كل فرع/موديل لتصحيح الأخطاء الإملائية */}
+      {(review || reviewLoading || reviewError) && (
+        <div className="space-y-4">
+          <div>
+            <h2 className="font-extrabold text-on-surface">مراجعة القيم</h2>
+            <p className="mt-0.5 text-xs text-on-surface-variant">
+              كل فرع وموديل مكتوب في الملف وقدامه اختيار من النظام. لو الاسم ناقص حرف أو مكتوب
+              بشكل مختلف، اختار الصح من القائمة — الاختيار يتطبّق على كل الصفوف اللي فيها نفس القيمة.
+            </p>
+          </div>
+          {reviewLoading && (
+            <p className="text-sm text-on-surface-variant">جاري مطابقة القيم…</p>
+          )}
+          {reviewError && (
+            <p className="rounded-xl border border-error/30 bg-error/8 px-4 py-3 text-sm font-bold text-error">
+              {reviewError}
+            </p>
+          )}
+          {review && !reviewLoading && (
+            <>
+              <ValueReviewSection
+                title="الفروع"
+                items={review.branches}
+                options={review.branchOptions}
+                choices={choices.branch}
+                onChange={(k, v) => setChoice("branch", k, v)}
+              />
+              <ValueReviewSection
+                title="الموديلات"
+                items={review.models}
+                options={review.modelOptions}
+                choices={choices.model}
+                onChange={(k, v) => setChoice("model", k, v)}
+              />
+            </>
+          )}
+        </div>
+      )}
 
       {/* Dry run report */}
       {preview && (

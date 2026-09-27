@@ -12,6 +12,12 @@ import {
   type ModelIndex,
 } from "@/lib/booking-import";
 import { parseHmCell } from "@/lib/availability-block-time";
+import {
+  branchValueKey,
+  modelValueKey,
+  similarity,
+  type AvailabilityValueOverrides,
+} from "@/lib/availability-import-values";
 import { parseDateTimeInRiyadh } from "@/lib/branch-opening-hours";
 import { composeDatetimeLocal } from "@/lib/booking-search-shared";
 import { prisma } from "@/lib/prisma";
@@ -125,12 +131,19 @@ function blockReturnAtFromAddonsJson(raw: string | null): Date | null {
   }
 }
 
+/** اختيارات المستخدم بعد التحقق من أن كل id موجود فعلاً (فرع نشط / موديل قائم). */
+type ResolvedOverrides = {
+  branch: Map<string, number>;
+  model: Map<string, number>;
+};
+
 function parseRow(
   row: ImportRow,
   rowNum: number,
   mapping: AvailabilityBlockFieldMapping,
   modelIndex: ModelIndex,
   resolveBranch: (name: string) => number | null,
+  overrides: ResolvedOverrides,
 ): ParsedBlock | null {
   const brandRaw = cell(row, mapping.brand);
   const modelRaw = cell(row, mapping.modelName);
@@ -146,10 +159,14 @@ function parseRow(
   if (!brandRaw && !modelRaw) {
     throw new Error("عمود الماركة أو الموديل مطلوب");
   }
-  const carModelId = resolveModelId(modelIndex, brandRaw, modelRaw, cell(row, mapping.year));
+  // اختيار المستخدم من «مراجعة القيم» يسبق المطابقة الحرفية — هو اللي بيصلّح الأخطاء الإملائية
+  const yearRaw = cell(row, mapping.year);
+  const carModelId =
+    overrides.model.get(modelValueKey(brandRaw, modelRaw, yearRaw)) ??
+    resolveModelId(modelIndex, brandRaw, modelRaw, yearRaw);
 
   if (!branchRaw) throw new Error("عمود الفرع مطلوب");
-  const branchId = resolveBranch(branchRaw);
+  const branchId = overrides.branch.get(branchValueKey(branchRaw)) ?? resolveBranch(branchRaw);
   if (branchId === null) throw new Error(`فرع غير معروف: "${branchRaw}"`);
 
   if (!pickupDateRaw) throw new Error("تاريخ الاستلام مطلوب");
@@ -233,6 +250,8 @@ export async function importAvailabilityBlocksFromRows(payload: {
   dryRun?: boolean;
   /** اسم الموظف المنفّذ — يُسجَّل في `BookingLog`. */
   actorName?: string | null;
+  /** تصحيحات المستخدم لقيم الفرع/الموديل غير المطابقة حرفياً (من «مراجعة القيم»). */
+  overrides?: AvailabilityValueOverrides;
 }): Promise<AvailabilityImportResult> {
   const { rows, mapping } = payload;
   const dryRun = payload.dryRun ?? true;
@@ -250,10 +269,21 @@ export async function importAvailabilityBlocksFromRows(payload: {
     warnings: [],
   };
 
-  const [modelIndex, resolveBranch] = await Promise.all([
+  const [modelIndex, resolveBranch, activeBranches] = await Promise.all([
     buildModelIndex(),
     buildBranchResolver(),
+    prisma.branch.findMany({ where: { isActive: true }, select: { id: true } }),
   ]);
+
+  // ids قادمة من المتصفح — لا نقبل إلا فرعاً نشطاً أو موديلاً موجوداً فعلاً
+  const activeBranchIds = new Set(activeBranches.map((b) => b.id));
+  const overrides: ResolvedOverrides = { branch: new Map(), model: new Map() };
+  for (const [key, id] of Object.entries(payload.overrides?.branch ?? {})) {
+    if (activeBranchIds.has(id)) overrides.branch.set(key, id);
+  }
+  for (const [key, id] of Object.entries(payload.overrides?.model ?? {})) {
+    if (modelIndex.carTypeById.has(id)) overrides.model.set(key, id);
+  }
 
   // ── المرحلة ١: تحليل كل الصفوف قبل أي كتابة ────────────────────────────────
   const parsedRows: ParsedBlock[] = [];
@@ -262,7 +292,7 @@ export async function importAvailabilityBlocksFromRows(payload: {
   for (let i = 0; i < rows.length; i++) {
     const rowNum = i + 2; // +2: صف الرأس + فهرسة من 1
     try {
-      const parsed = parseRow(rows[i]!, rowNum, mapping, modelIndex, resolveBranch);
+      const parsed = parseRow(rows[i]!, rowNum, mapping, modelIndex, resolveBranch, overrides);
       if (!parsed) {
         result.skipped++;
         continue;
@@ -419,6 +449,125 @@ export async function importAvailabilityBlocksFromRows(payload: {
   }
 
   return result;
+}
+
+// ─── مراجعة القيم قبل الفحص ───────────────────────────────────────────────────
+
+export type ValueOption = { id: number; label: string };
+
+export type ValueReviewItem = {
+  /** مفتاح القيمة (`branchValueKey` / `modelValueKey`) — يربط اختيار المستخدم بالصفوف. */
+  key: string;
+  /** النص كما هو في الملف — للعرض. */
+  raw: string;
+  /** عدد الصفوف التي تحمل هذه القيمة. */
+  count: number;
+  /** مطابقة حرفية بنفس منطق الاستيراد — null = لن يُقبل الصف بدون اختيار يدوي. */
+  matchedId: number | null;
+  /** أقرب الخيارات تنازلياً بالتشابه — فارغة عند وجود مطابقة. */
+  suggestions: { id: number; score: number }[];
+  /** سبب تعذّر المطابقة (موديل غير موجود / يطابق أكثر من سنة...). */
+  issue?: string;
+};
+
+export type AvailabilityValueReview = {
+  branchOptions: ValueOption[];
+  modelOptions: ValueOption[];
+  branches: ValueReviewItem[];
+  models: ValueReviewItem[];
+};
+
+const MAX_REVIEW_VALUES = 500;
+const SUGGESTION_MIN_SCORE = 0.35;
+
+function topSuggestions(scored: { id: number; score: number }[]): { id: number; score: number }[] {
+  return scored
+    .filter((s) => s.score >= SUGGESTION_MIN_SCORE)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5)
+    .map((s) => ({ id: s.id, score: Math.round(s.score * 100) / 100 }));
+}
+
+/**
+ * يحلّل القيم المميزة لأعمدة الفرع والموديل: ما يطابق حرفياً (نفس منطق الاستيراد) وما لا يطابق
+ * مع أقرب اقتراحات — لتعرض الواجهة قائمة اختيار أمام كل قيمة بدل رفض الصفوف بخطأ إملائي.
+ */
+export async function analyzeAvailabilityImportValues(input: {
+  branches: { raw: string; count: number }[];
+  models: { brand: string; model: string; year: string; count: number }[];
+}): Promise<AvailabilityValueReview> {
+  const [modelIndex, resolveBranch, branches, models] = await Promise.all([
+    buildModelIndex(),
+    buildBranchResolver(),
+    prisma.branch.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true, city: { select: { name: true } } },
+      orderBy: { name: "asc" },
+    }),
+    prisma.carModel.findMany({
+      select: { id: true, name: true, year: true, brand: { select: { name: true } } },
+      orderBy: [{ brand: { name: "asc" } }, { name: "asc" }, { year: "asc" }],
+    }),
+  ]);
+
+  const branchItems: ValueReviewItem[] = input.branches.slice(0, MAX_REVIEW_VALUES).map((b) => {
+    const raw = branchValueKey(b.raw);
+    const matchedId = raw ? resolveBranch(raw) : null;
+    const suggestions =
+      matchedId !== null
+        ? []
+        : topSuggestions(
+            branches.map((br) => {
+              const city = br.city?.name ?? "";
+              return {
+                id: br.id,
+                score: Math.max(
+                  similarity(raw, br.name),
+                  city ? similarity(raw, `${city} ${br.name}`) : 0,
+                  city ? similarity(raw, city) * 0.9 : 0,
+                ),
+              };
+            }),
+          );
+    return { key: raw, raw, count: b.count, matchedId, suggestions };
+  });
+
+  const modelItems: ValueReviewItem[] = input.models.slice(0, MAX_REVIEW_VALUES).map((m) => {
+    const key = modelValueKey(m.brand, m.model, m.year);
+    const raw = [m.brand, m.model, m.year].map((s) => s.trim()).filter(Boolean).join(" ");
+    let matchedId: number | null = null;
+    let issue: string | undefined;
+    try {
+      matchedId = resolveModelId(modelIndex, m.brand.trim(), m.model.trim(), m.year.trim());
+    } catch (err) {
+      issue = err instanceof Error ? err.message : "تعذّرت المطابقة";
+    }
+    const year = Number(m.year.trim());
+    const suggestions =
+      matchedId !== null
+        ? []
+        : topSuggestions(
+            models.map((cm) => {
+              const brandScore = m.brand.trim() ? similarity(m.brand, cm.brand.name) : 1;
+              let score = m.model.trim()
+                ? similarity(m.model, cm.name) * 0.75 + brandScore * 0.25
+                : brandScore * 0.5;
+              if (m.year.trim() && Number.isInteger(year)) score += year === cm.year ? 0.05 : -0.1;
+              return { id: cm.id, score: Math.max(0, Math.min(1, score)) };
+            }),
+          );
+    return { key, raw, count: m.count, matchedId, suggestions, issue };
+  });
+
+  return {
+    branchOptions: branches.map((b) => ({
+      id: b.id,
+      label: b.city?.name && !b.name.includes(b.city.name) ? `${b.name} — ${b.city.name}` : b.name,
+    })),
+    modelOptions: models.map((m) => ({ id: m.id, label: `${m.brand.name} ${m.name} ${m.year}` })),
+    branches: branchItems,
+    models: modelItems,
+  };
 }
 
 export type AvailabilityBlockRow = {
