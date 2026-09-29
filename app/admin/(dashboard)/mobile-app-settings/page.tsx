@@ -12,8 +12,14 @@ import {
   MOBILE_KEY_BOOKING_WIDGET_TABS,
   normalizeMobileAppBookingWidgetFlags,
 } from "@/lib/mobile-app-booking-widget-flags";
+import {
+  DEFAULT_MOBILE_APP_WHATSAPP_OTP_CONFIG,
+  MOBILE_KEY_WHATSAPP_OTP_CONFIG,
+  normalizeMobileAppWhatsappOtpConfig,
+} from "@/lib/mobile-app-whatsapp-otp-config";
 import { MobileAppPaymentMethodsForm } from "./MobileAppPaymentMethodsForm";
 import { MobileAppBookingWidgetTabsForm } from "./MobileAppBookingWidgetTabsForm";
+import { MobileAppWhatsappOtpForm } from "./MobileAppWhatsappOtpForm";
 
 export const dynamic = "force-dynamic";
 
@@ -55,6 +61,25 @@ async function getMobileAppBookingWidgetFlags() {
   }
 }
 
+async function getMobileAppWhatsappOtpConfig() {
+  try {
+    const row = await prisma.mobileAppSetting.findUnique({
+      where: { key: MOBILE_KEY_WHATSAPP_OTP_CONFIG },
+      select: { value: true },
+    });
+    if (!row?.value?.trim()) return DEFAULT_MOBILE_APP_WHATSAPP_OTP_CONFIG;
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(row.value) as unknown;
+    } catch {
+      return DEFAULT_MOBILE_APP_WHATSAPP_OTP_CONFIG;
+    }
+    return normalizeMobileAppWhatsappOtpConfig(parsed);
+  } catch {
+    return DEFAULT_MOBILE_APP_WHATSAPP_OTP_CONFIG;
+  }
+}
+
 export default async function MobileAppSettingsPage() {
   if (!(await verifyAdminSession())) {
     redirect("/admin/login");
@@ -62,6 +87,7 @@ export default async function MobileAppSettingsPage() {
 
   const flags = await getMobileAppPaymentFlags();
   const bookingWidgetFlags = await getMobileAppBookingWidgetFlags();
+  const whatsappOtpConfig = await getMobileAppWhatsappOtpConfig();
 
   return (
     <>
@@ -89,6 +115,10 @@ export default async function MobileAppSettingsPage() {
         <MobileAppBookingWidgetTabsForm
           key={JSON.stringify(bookingWidgetFlags)}
           flags={bookingWidgetFlags}
+        />
+        <MobileAppWhatsappOtpForm
+          key={JSON.stringify(whatsappOtpConfig)}
+          config={whatsappOtpConfig}
         />
       </div>
     </>

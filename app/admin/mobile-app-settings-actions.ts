@@ -15,6 +15,11 @@ import {
   normalizeMobileAppBookingWidgetFlags,
   type MobileAppBookingWidgetFlags,
 } from "@/lib/mobile-app-booking-widget-flags";
+import {
+  MOBILE_KEY_WHATSAPP_OTP_CONFIG,
+  normalizeMobileAppWhatsappOtpConfig,
+  type MobileAppWhatsappOtpConfig,
+} from "@/lib/mobile-app-whatsapp-otp-config";
 import { prisma } from "@/lib/prisma";
 
 function readCheckbox(formData: FormData, name: string): boolean {
@@ -48,6 +53,40 @@ export async function updateMobileAppPaymentMethods(
     });
   } catch {
     return { ok: false, error: "تعذّر حفظ إعدادات التطبيق." };
+  }
+
+  revalidatePath("/admin/mobile-app-settings");
+  return { ok: true };
+}
+
+export async function updateMobileAppWhatsappOtpConfig(
+  _prev: { ok: boolean; error?: string } | null,
+  formData: FormData,
+): Promise<{ ok: boolean; error?: string }> {
+  const auth = await requireSuperAdminForAction();
+  if (!auth.ok) return { ok: false, error: auth.error };
+
+  const raw: MobileAppWhatsappOtpConfig = {
+    enabled: readCheckbox(formData, "enabled"),
+    apiBaseUrl: String(formData.get("apiBaseUrl") ?? ""),
+    apiKey: String(formData.get("apiKey") ?? ""),
+    instanceName: String(formData.get("instanceName") ?? ""),
+  };
+
+  const config = normalizeMobileAppWhatsappOtpConfig(raw);
+
+  if (config.enabled && (!config.apiBaseUrl || !config.apiKey || !config.instanceName)) {
+    return { ok: false, error: "عبّي الحقول الثلاثة كلها قبل تفعيل الخدمة." };
+  }
+
+  try {
+    await prisma.mobileAppSetting.upsert({
+      where: { key: MOBILE_KEY_WHATSAPP_OTP_CONFIG },
+      create: { key: MOBILE_KEY_WHATSAPP_OTP_CONFIG, value: JSON.stringify(config) },
+      update: { value: JSON.stringify(config) },
+    });
+  } catch {
+    return { ok: false, error: "تعذّر حفظ إعدادات واتساب." };
   }
 
   revalidatePath("/admin/mobile-app-settings");
