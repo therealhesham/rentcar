@@ -12,6 +12,7 @@ import {
   createTabbyCheckoutSession,
   isTabbyConfigured,
 } from "@/lib/tabby/client";
+import { createAmkanOrder, isAmkanConfigured } from "@/lib/amkan/client";
 import { BOOKING_STATUS_UNDER_REVIEW } from "@/lib/booking-cash-flow";
 import { sendBookingReceivedNotification, sendAdminEmailForNewBooking } from "@/lib/booking-received-notification";
 import {
@@ -302,6 +303,41 @@ export async function confirmMockPayment(
       redirect(redirectUrl);
     }
 
+    // إمكان مختارة والبوابة غير مهيّأة: رفض صريح. بدونه يسقط الطلب إلى مسار
+    // المحاكاة أدناه فيُسجَّل الرصيد مسدَّداً دون تحصيل ريال واحد — و`getAmkanConfig`
+    // يشترط ستة متغيّرات بيئة، نقصان أيٍّ منها يجعل البوابة «غير مهيّأة» بصمت.
+    if (paymentMethod === "AMKAN" && !isAmkanConfigured()) {
+      return { ok: false, error: "التمويل عبر إمكان غير متاح حالياً. اختر وسيلة دفع أخرى." };
+    }
+
+    const amkanBalanceHosted = isAmkanConfigured() && paymentMethod === "AMKAN";
+    if (amkanBalanceHosted) {
+      const appUrl = (process.env.APP_PUBLIC_URL ?? "").trim().replace(/\/$/, "");
+      let redirectUrl: string;
+      try {
+        const session = await createAmkanOrder({
+          bookingRequestId: id,
+          amountSar: balanceDueSar,
+          mobileNumber: bookingGate.phone,
+          returnUrl: `${appUrl}/fleet/payment/${id}`,
+          callbackUrl: `${appUrl}/api/payments/amkan/webhook`,
+        });
+        await prisma.bookingRequest.update({
+          where: { id },
+          data: {
+            paymentSessionRef: session.orderId,
+            paymentGatewayRef: session.gatewayOrderId,
+            paymentMethod: "AMKAN",
+          },
+        });
+        redirectUrl = session.paymentURL;
+      } catch (e) {
+        console.error("[amkan] balance order creation failed:", e);
+        return { ok: false, error: "تعذّر بدء طلب التمويل عبر إمكان. حاول مجدداً." };
+      }
+      redirect(redirectUrl);
+    }
+
     // بلا بوابة (محاكاة/وسائل غير مربوطة): تُسجَّل دفعة الرصيد مباشرةً بقفل تفاؤلي
     // مع سطر BALANCE_PAYMENT في الدفتر ذرّياً.
     const res = await prisma.$transaction(async (tx) => {
@@ -454,6 +490,49 @@ export async function confirmMockPayment(
     } catch (e) {
       console.error("[geidea] session creation failed:", e);
       return { ok: false, error: te("hppFailed") };
+    }
+    redirect(redirectUrl);
+  }
+
+  // إمكان مختارة والبوابة غير مهيّأة: رفض صريح بدل السقوط إلى مسار المحاكاة أدناه
+  // الذي يعلّم الحجز مدفوعاً دون تحصيل (انظر التعليق في فرع الرصيد أعلاه).
+  if (!isCash && paymentMethod === "AMKAN" && !isAmkanConfigured()) {
+    return { ok: false, error: "التمويل عبر إمكان غير متاح حالياً. اختر وسيلة دفع أخرى." };
+  }
+
+  // إمكان (BNPL): تحويل العميل لصفحة اكتتاب إمكان — التأكيد الفعلي يصل عبر الإشعار
+  // (Merchant Notifier) أو المصالحة عند العودة، لا يُسجَّل أي دفع هنا.
+  const amkanHosted = !isCash && isAmkanConfigured() && paymentMethod === "AMKAN";
+
+  if (amkanHosted) {
+    if (paidTotalSar == null || paidTotalSar <= 0) {
+      return { ok: false, error: "تعذّر احتساب مبلغ الحجز. تواصل مع الدعم." };
+    }
+    const appUrl = (process.env.APP_PUBLIC_URL ?? "").trim().replace(/\/$/, "");
+    let redirectUrl: string;
+    try {
+      const session = await createAmkanOrder({
+        bookingRequestId: id,
+        amountSar: paidTotalSar,
+        mobileNumber: bookingGate.phone,
+        returnUrl: `${appUrl}/fleet/payment/${id}`,
+        callbackUrl: `${appUrl}/api/payments/amkan/webhook`,
+      });
+      // مرجعنا (paymentSessionRef) ومعرّف إمكان (paymentGatewayRef) يُحفظان قبل
+      // التحويل — إمكان ترجع orderId فوراً عند الإنشاء (بعكس جيديا)، وهذا يتيح
+      // استعلام الحالة للمصالحة قبل وصول أي إشعار.
+      await prisma.bookingRequest.update({
+        where: { id },
+        data: {
+          paymentSessionRef: session.orderId,
+          paymentGatewayRef: session.gatewayOrderId,
+          paymentMethod,
+        },
+      });
+      redirectUrl = session.paymentURL;
+    } catch (e) {
+      console.error("[amkan] order creation failed:", e);
+      return { ok: false, error: "تعذّر بدء طلب التمويل عبر إمكان. حاول مجدداً." };
     }
     redirect(redirectUrl);
   }

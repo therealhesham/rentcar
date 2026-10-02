@@ -62,6 +62,8 @@ type Props = {
   tabbyEligibility?: { status: "eligible" | "rejected" | "unknown"; rejectionReason?: string } | null;
   /** `?status=` من رابط العودة من البوابة: success | cancel | failure. */
   returnStatus?: string;
+  /** سقوف مبلغ إمكان الفعلية — null يعني عدم الفلترة (بوابة غير مهيّأة أو تعذّر الجلب). */
+  amkanLimits?: { orderLowerLimit: number; orderUpperLimit: number } | null;
 };
 
 export type CheckoutPaymentMethod = CustomerCheckoutPaymentMethod;
@@ -233,6 +235,7 @@ export function PaymentClient({
   tabbyPromo,
   tabbyEligibility,
   returnStatus,
+  amkanLimits,
 }: Props) {
   const t = useTranslations("Payment");
   const locale = useLocale();
@@ -264,15 +267,21 @@ export function PaymentClient({
     );
   }, [paymentIconUrls, t, payableAmountSar]);
 
+  const amkanOutOfRange =
+    !!amkanLimits &&
+    (payableAmountSar < amkanLimits.orderLowerLimit || payableAmountSar > amkanLimits.orderUpperLimit);
+
   const visibleMethodOptions = useMemo(
     () =>
       methodOptions.filter(
         (opt) =>
           enabledMethods.includes(opt.id) &&
           // في وضع دفع فرق التمديد لا يُعرض «عند الفرع» — الرصيد يُسدَّد أونلاين.
-          !(balancePaymentMode && opt.id === "CASH"),
+          !(balancePaymentMode && opt.id === "CASH") &&
+          // مبلغ خارج سقوف إمكان يعني رفضاً مؤكَّداً — لا تُعرض الوسيلة أصلاً.
+          !(opt.id === "AMKAN" && amkanOutOfRange),
       ),
-    [methodOptions, enabledMethods, balancePaymentMode],
+    [methodOptions, enabledMethods, balancePaymentMode, amkanOutOfRange],
   );
 
   // pre-scoring: تُعطَّل فقط عند رفض صريح من تابي. "unknown" (تعذّر الوصول) تبقى

@@ -28,6 +28,11 @@ const EXTRA_PAGE_PERMISSIONS: AdminPagePermission[] = [
     groupLabel: "الإدارة المالية",
   },
   {
+    href: "/admin/test-amkan",
+    label: "أداة اختبار بوابة إمكان",
+    groupLabel: "الإدارة المالية",
+  },
+  {
     href: "/admin/booking-notification-drops",
     label: "حجوزات بلا إشعار (دروب الدفع)",
     groupLabel: "الحجوزات والعملاء",

@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
 import { isGeideaConfigured, refundGeideaPayment } from "@/lib/geidea/client";
 import { isTabbyConfigured, refundTabbyPayment } from "@/lib/tabby/client";
+import { isAmkanConfigured, submitAmkanRefund } from "@/lib/amkan/client";
 
 export type CancellationRefundExecutionResult =
   | { ok: true; externalRef: string }
@@ -70,6 +71,57 @@ export async function executeCancellationRefundByPaymentMethod(args: {
       return {
         ok: false,
         error: "فشل تنفيذ الاسترداد عبر بوابة تابي. حاول لاحقاً أو تواصل مع الدعم.",
+      };
+    }
+  }
+
+  // إمكان (BNPL): تقديم طلب استرداد غير متزامن — إمكان تؤكّد الاستلام فقط هنا،
+  // والتنفيذ الفعلي يصل لاحقاً عبر Merchant Notifier (eventCode: FULLY_REFUND/PARTIAL_REFUND).
+  if (method === "AMKAN") {
+    if (!isAmkanConfigured()) {
+      console.info(
+        `[booking-refund] simulated Amkan refund booking=${args.bookingRequestId} amountSar=${amount}`,
+      );
+      return {
+        ok: true,
+        externalRef: `MOCK-AMKAN-${args.bookingRequestId}-${Date.now()}`,
+      };
+    }
+    // المرجع يُقرأ من دفتر الأستاذ لا من `paymentGatewayRef` على الحجز: العمود ذاك
+    // يحمل **آخر** طلب إمكان، وطلب سداد فرق التمديد يدهس طلب الدفعة الأولى. الاسترداد
+    // يجب أن يستهدف الطلب الأصلي، وسطر INITIAL_PAYMENT يحتفظ بمرجعه دائماً.
+    const initialPayment = await prisma.paymentTransaction.findFirst({
+      where: {
+        bookingId: args.bookingRequestId,
+        kind: "INITIAL_PAYMENT",
+        method: "AMKAN",
+        gatewayRef: { not: null },
+      },
+      orderBy: { id: "asc" },
+      select: { gatewayRef: true },
+    });
+    const orderCode = initialPayment?.gatewayRef;
+    if (!orderCode) {
+      return {
+        ok: false,
+        error:
+          "لا يوجد مرجع تمويل من إمكان لهذا الحجز — نفّذ الاسترداد من لوحة تاجر إمكان ثم سجّله يدوياً من صفحة العمليات المالية.",
+      };
+    }
+    try {
+      await submitAmkanRefund({
+        orderCode,
+        refundAmountSar: amount,
+      });
+      return { ok: true, externalRef: `AMKAN-PENDING-${orderCode}-${Date.now()}` };
+    } catch (e) {
+      console.error(
+        `[booking-refund] Amkan refund failed booking=${args.bookingRequestId}:`,
+        e,
+      );
+      return {
+        ok: false,
+        error: "فشل تقديم طلب الاسترداد عبر إمكان. حاول لاحقاً أو تواصل مع الدعم.",
       };
     }
   }

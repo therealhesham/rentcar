@@ -8,6 +8,8 @@ import { geideaCheckoutScriptUrl, isGeideaConfigured } from "@/lib/geidea/client
 import { reconcilePendingGeideaPaymentById } from "@/lib/geidea/mark-paid";
 import { reconcilePendingTabbyPaymentById } from "@/lib/tabby/mark-paid";
 import { checkTabbyEligibility, getTabbyConfig, type TabbyEligibility } from "@/lib/tabby/client";
+import { cachedAmkanAmountLimits } from "@/lib/amkan/client";
+import { reconcilePendingAmkanPaymentById } from "@/lib/amkan/mark-paid";
 import {
   getApplePayExpressEnabled,
   getCheckoutPaymentMethodFlags,
@@ -45,11 +47,12 @@ export default async function FleetPaymentPage({
 
   await requireCustomerPaymentPageAccess(id);
 
-  // مصالحة: لو العميل عاد من البوابة (جيديا أو تابي) قبل وصول الـ webhook، تُجلب حالة الدفع
-  // مباشرةً من البوابة ويُعلَّم الحجز مدفوعاً قبل عرض الصفحة.
+  // مصالحة: لو العميل عاد من البوابة (جيديا أو تابي أو إمكان) قبل وصول الـ webhook،
+  // تُجلب حالة الدفع مباشرةً من البوابة ويُعلَّم الحجز مدفوعاً قبل عرض الصفحة.
   await Promise.all([
     reconcilePendingGeideaPaymentById(id),
     reconcilePendingTabbyPaymentById(id),
+    reconcilePendingAmkanPaymentById(id),
   ]);
 
   const [booking, paymentMethodFlags, applePayExpress, paymentIconUrls] = await Promise.all([
@@ -80,6 +83,10 @@ export default async function FleetPaymentPage({
     }
   }
 
+  // تُجلب السقوف فقط حين تكون إمكان مفعّلة — لا معنى لأن ينتظر عميلٌ يدفع بالبطاقة
+  // رداً من بوابة لن تُعرض له أصلاً.
+  const amkanLimits = paymentMethodFlags.AMKAN ? await cachedAmkanAmountLimits() : null;
+
   return (
     <div className="flex min-h-screen flex-col bg-[#fdfbf6] text-on-surface">
       <SiteNav active="fleet" />
@@ -94,6 +101,7 @@ export default async function FleetPaymentPage({
           tabbyPromo={tabbyPromo}
           tabbyEligibility={tabbyEligibility}
           returnStatus={returnStatus}
+          amkanLimits={amkanLimits}
         />
       </div>
       <SiteFooter />
