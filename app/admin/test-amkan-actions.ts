@@ -100,27 +100,46 @@ export async function probeAmkanMerchantConfigAction(
 }
 
 /**
- * تشخيص 401/403 مبنيّ على مقارنة صريحة مع مواصفة V1.7: كل رسائل 401 الموثّقة فيها
- * محدَّدة («Credentials are invalid», «Merchant Id is not related to Merchant Code»…)
- * — أما «General Integration Error» فلا تظهر في أي جدول أخطاء بالمستند، وهذا يرجّح
- * أن الرفض يحدث في طبقة بوابة (Gateway/WAF) قبل بلوغ منطق BNPL نفسه، لا في التحقّق من
- * اليوزر/الباسورد. المستند ينصّ صراحةً (قسم Network Connectivity): «IP whitelisting
- * will be implemented» — وهو ما يفسّر رفض نفس الطلب على بيئتي الساندبوكس والإنتاج
- * معاً بنفس الشكل، بصرف النظر عن صحة المفاتيح.
+ * تشخيص الرفض. الفرق الحاسم — مُحقَّق عملياً في 2026-10-02 بتجريب نفس النداء من
+ * مصدرين — أن الرفض نوعان لا نوع واحد، ولا يصحّ خلطهما:
+ *
+ * | المصدر                  | الرد                                  | المعنى                       |
+ * |-------------------------|---------------------------------------|------------------------------|
+ * | سيرفرنا `31.97.55.12`   | `403` + HTML فيه `server: cloudflare` | محجوب **قبل** إمكان          |
+ * | عنوان يَعبُر Cloudflare | `401` JSON بـ`requestId` بادئته `AGW` | وصل بوابة إمكان فعلاً وردّت  |
+ *
+ * الحجب ثابت على IPv4 وIPv6 ومع User-Agent متصفّح كامل — فهو على مستوى الـIP.
+ * ولهذا لا تُقال جملة «الطلب وصل إلى إمكان» إلا حين يثبت ذلك من شكل الرد نفسه.
  */
 function authFailureHint(message: string, creds: AmkanCredentials): string | undefined {
   if (!message.includes("HTTP 401") && !message.includes("HTTP 403")) return undefined;
-  const isGenericGatewayError =
-    message.includes("General Integration Error") || !/[A-Za-z]+-\d{4}/.test(message);
+
+  // ردّ HTML (لا JSON) معناه أن حاجزاً شبكياً ردّ بدل إمكان — فواجهتها لا تُرجع HTML أبداً.
+  const isNetworkBlock =
+    /<!DOCTYPE html|<html/i.test(message) || /cloudflare|access denied|forbidden/i.test(message);
+  if (isNetworkBlock) {
+    return [
+      "⛔ حجب شبكي — الطلب لم يصل إلى إمكان إطلاقاً.",
+      "الرد صفحة HTML من طبقة حماية (Cloudflare) لا JSON من إمكان، فلم يُفحَص اليوزر/الباسورد أصلاً.",
+      "المفاتيح غير متورّطة هنا: لا تضيّع وقتاً في مراجعتها.",
+      "المطلوب: أن تضيف إمكان عنوانَي سيرفرنا إلى قائمة السماح في طبقة Cloudflare/WAF —",
+      "IPv4: 31.97.55.12 | IPv6: 2a02:4780:28:16e1::1 (ثابت على البروتوكولين ومع User-Agent متصفّح).",
+      "أرسل لهم cf-ray من سجل السيرفر وقت المحاولة؛ يفتحونه في لوحتهم ويرون قاعدة الحجب مباشرةً.",
+    ].join("\n");
+  }
+
+  // وصل بوابتهم: `AGW` بادئة requestId في ردود API Gateway لديهم.
+  const reachedGateway = /"requestId"\s*:\s*"AGW/i.test(message);
+  const isDocumentedBnplError = /[A-Za-z]+-\d{4}/.test(message);
   return [
-    "رُفضت المصادقة — الطلب وصل إلى إمكان وعُولج، فالعنوان والمسار سليمان.",
-    isGenericGatewayError
-      ? "١) الأرجح: تقييد IP (المواصفة تنصّ صراحة: «IP whitelisting will be implemented»). " +
-        "رسالة الخطأ عامة ولا تطابق أياً من رسائل 401 الموثّقة لمنطق BNPL نفسه " +
-        "(Credentials are invalid / Merchant Id is not related to Merchant Code) — " +
-        "ما يرجّح رفضاً في طبقة البوابة قبل التحقّق من اليوزر/الباسورد أصلاً. " +
-        "اطلب من إمكان تسجيل IP سيرفرك الصادر في القائمة البيضاء."
-      : "١) الرسالة تطابق نمط أخطاء BNPL الموثّقة — الأرجح مفتاح خاطئ أو تسجيل ناقص.",
+    reachedGateway
+      ? "الطلب وصل بوابة إمكان وعُولج (requestId ببادئة AGW) — فالعنوان والمسار والمنفذ الشبكي سليمة."
+      : "رُفضت المصادقة. شكل الرد لا يحدّد إن كان وصل بوابة إمكان أم حُجب قبلها — راجع الرد الخام أعلاه.",
+    isDocumentedBnplError
+      ? "١) الرسالة تطابق نمط أخطاء BNPL الموثّقة في المواصفة — الأرجح مفتاح خاطئ أو تسجيل ناقص."
+      : "١) الرسالة عامة («General Integration Error») ولا ترد في أي جدول أخطاء بالمواصفة V1.7، " +
+        "بينما كل رسائل 401 الموثّقة محدَّدة بالاسم (Credentials are invalid / Merchant Id is not " +
+        "related to Merchant Code). اسأل إمكان عن معنى هذا الرد تحديداً وعن صحة merchantId/merchantCode.",
     "٢) حرف ملتبس عند النسخ: قارن l (لام صغيرة) بـ I (آي كبيرة) في AMKAN_USERNAME و AMKAN_PASSWORD — انسخهما من البورتال بالتحديد لا بإعادة الكتابة.",
     "٣) مسافة أو سطر زائد داخل علامتَي الاقتباس في .env.",
     `للتحقّق: طول المستخدم الحالي ${creds.username.length} حرفاً وكلمة المرور ${creds.password.length} حرفاً (المتوقّع 28 لكليهما).`,

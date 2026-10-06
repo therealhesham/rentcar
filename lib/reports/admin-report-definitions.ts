@@ -10,7 +10,7 @@ import {
 import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
 import { addDaysToYmd, NON_BLOCKING_BOOKING_STATUSES } from "@/lib/direct-booking";
 import { prisma } from "@/lib/prisma";
-import { formatReportDate, type ReportRow, type ReportTable } from "@/lib/reports/report-model";
+import { formatReportDate, formatReportDateTime, type ReportRow, type ReportTable } from "@/lib/reports/report-model";
 
 export type ReportId =
   | "cancelled-bookings"
@@ -247,6 +247,7 @@ async function loadRange(session: AdminSession, params: ReportParams): Promise<R
     status: bookingStatusLabelAr(b.status),
     payment: bookingPaymentStatusLabelAr(b.paymentStatus),
     paid: b.paidAmountSar ?? 0,
+    createdAt: formatReportDateTime(b.createdAt),
   }));
   return {
     title: "تقرير الحجوزات (مدى تاريخ)",
@@ -262,6 +263,7 @@ async function loadRange(session: AdminSession, params: ReportParams): Promise<R
       { key: "status", header: "الحالة", width: 14, align: "center" },
       { key: "payment", header: "الدفع", width: 12, align: "center" },
       { key: "paid", header: "المدفوع (ر.س)", width: 12, align: "center", numeric: true },
+      { key: "createdAt", header: "تاريخ الإنشاء (created at)", width: 20, align: "center" },
     ],
     rows: data,
   };
