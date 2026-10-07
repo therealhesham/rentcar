@@ -150,7 +150,14 @@ export async function buildTabbyBuyerContext(args: {
   });
 
   // تعريف Egor حرفياً: «عدد الطلبات التي تمّت بنجاح بأي وسيلة دفع».
-  // يُعدّ من القاعدة مباشرةً لا من `orderHistory` — تلك مقتطعة عند 10 عناصر،
+  // استُبعد `status: CANCELLED` عمداً — ولو الدفعة بقيت PAID/PARTIAL_REFUND: حجز
+  // أُلغي (ولو احتفظنا بكل أو بعض المبلغ كغرامة إلغاء، أي `NO_REFUND` أو
+  // `PARTIAL_REFUND` الناتجة عن إلغاء) لم تُسلَّم فيه الخدمة فعلياً، وهو نفسه
+  // الحجز الذي يُرسَل في order_history بحالة `"canceled"` — عدّه هنا كـ"ناجح" كان
+  // يناقض ذلك. أما `REJECTED` فتبقى مقبولة عمداً: دالّة أرشفة حجوزات الاختبار بعد
+  // الدفع (حجوزات Egor نفسها) لا تعني فشل الطلب فعلياً — استبعادها هو الخطأ
+  // الأصلي الذي رصده Egor وأدّى لـloyalty_level=0 رغم دفعات ناجحة حقيقية.
+  // تُعدّ من القاعدة مباشرةً لا من `orderHistory` — تلك مقتطعة عند 10 عناصر،
   // فاشتقاق العدد منها كان يُرجع صفراً لعميل قديم كل حجوزاته المدفوعة أقدم من
   // آخر عشرة (حدث فعلاً وقت الاختبار).
   const loyaltyLevel = await prisma.bookingRequest.count({
@@ -158,7 +165,7 @@ export async function buildTabbyBuyerContext(args: {
       ...where,
       id: { not: args.excludeBookingId },
       paymentStatus: { in: ["PAID", "PARTIAL_REFUND"] },
-      status: { notIn: ["CANCELLED", "REJECTED"] },
+      status: { not: "CANCELLED" },
     },
   });
 

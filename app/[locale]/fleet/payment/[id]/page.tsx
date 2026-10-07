@@ -7,7 +7,7 @@ import { getBookingForPayment } from "@/lib/booking-payment-data";
 import { geideaCheckoutScriptUrl, isGeideaConfigured } from "@/lib/geidea/client";
 import { reconcilePendingGeideaPaymentById } from "@/lib/geidea/mark-paid";
 import { reconcilePendingTabbyPaymentById } from "@/lib/tabby/mark-paid";
-import { checkTabbyEligibility, getTabbyConfig, type TabbyEligibility } from "@/lib/tabby/client";
+import { cachedCheckTabbyEligibility, getTabbyConfig, type TabbyEligibility } from "@/lib/tabby/client";
 import { cachedAmkanAmountLimits } from "@/lib/amkan/client";
 import { reconcilePendingAmkanPaymentById } from "@/lib/amkan/mark-paid";
 import {
@@ -76,9 +76,10 @@ export default async function FleetPaymentPage({
     const balanceDueSar = booking.balanceDueAtBranchSar ?? 0;
     const amountSar = ps === "PAID" && balanceDueSar > 0 ? balanceDueSar : booking.totals.totalInclTax;
     if (amountSar > 0) {
-      tabbyEligibility = await checkTabbyEligibility({
-        amountSar,
-        buyer: { phone: booking.phone, email: booking.invoiceEmail, name: booking.fullName },
+      tabbyEligibility = await cachedCheckTabbyEligibility(amountSar, {
+        phone: booking.phone,
+        email: booking.invoiceEmail,
+        name: booking.fullName,
       });
     }
   }

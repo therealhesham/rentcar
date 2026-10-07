@@ -1341,12 +1341,21 @@ const TERMINAL_BOOKING_STATUSES = new Set([
 ]);
 
 /**
+ * تعطيل مؤقت لقيد "حجز نشط واحد" وقت اختبار QA تابي مع Egor — بيختبر بأرقام
+ * جوال مختلفة فالاستثناء برقم واحد مش كافٍ. **رجّعها `false` بعد ما يخلّص اختباره.**
+ */
+const BYPASS_ACTIVE_BOOKING_CHECK_FOR_TABBY_QA = true;
+
+/**
  * يرفض الإنشاء إذا كان رقم الجوال لديه حجز نشط (غير مؤرشف وغير منتهٍ).
  * يُستدعى من `createDirectBooking` و`submitBookingRequest`.
  */
 export async function assertNoActiveBookingForPhone(
   phone: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (BYPASS_ACTIVE_BOOKING_CHECK_FOR_TABBY_QA) {
+    return { ok: true };
+  }
   const activeBooking = await prisma.bookingRequest.findFirst({
     where: {
       phone,

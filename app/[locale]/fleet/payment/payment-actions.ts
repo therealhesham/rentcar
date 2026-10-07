@@ -8,9 +8,9 @@ import {
   isGeideaConfigured,
 } from "@/lib/geidea/client";
 import {
-  checkTabbyEligibility,
   createTabbyCheckoutSession,
   isTabbyConfigured,
+  TabbyIneligibleError,
 } from "@/lib/tabby/client";
 import { createAmkanOrder, isAmkanConfigured } from "@/lib/amkan/client";
 import { BOOKING_STATUS_UNDER_REVIEW } from "@/lib/booking-cash-flow";
@@ -220,18 +220,6 @@ export async function confirmMockPayment(
 
     const tabbyBalanceHosted = isTabbyConfigured() && paymentMethod === "TABBY";
     if (tabbyBalanceHosted) {
-      const eligibility = await checkTabbyEligibility({
-        amountSar: balanceDueSar,
-        buyer: {
-          phone: bookingGate.phone,
-          email: bookingGate.contactEmail || bookingGate.customer?.email,
-          name: bookingGate.fullName,
-        },
-      });
-      // لا نمنع عند "unknown" (تعذّر الوصول لتابي) — صفحة تابي ترفض إن لزم.
-      if (eligibility.status === "rejected") {
-        return { ok: false, error: te("tabbyIneligible") };
-      }
       const appUrl = getAppPublicUrl();
       let redirectUrl: string;
       try {
@@ -272,6 +260,9 @@ export async function confirmMockPayment(
         });
         redirectUrl = session.webUrl;
       } catch (e) {
+        if (e instanceof TabbyIneligibleError) {
+          return { ok: false, error: te("tabbyIneligible") };
+        }
         console.error("[tabby] balance session creation failed:", e);
         return { ok: false, error: te("tabbyOpenFailed") };
       }
@@ -402,17 +393,6 @@ export async function confirmMockPayment(
     if (paidTotalSar == null || paidTotalSar <= 0) {
       return { ok: false, error: te("amountFailed") };
     }
-    const eligibility = await checkTabbyEligibility({
-      amountSar: paidTotalSar,
-      buyer: {
-        phone: bookingGate.phone,
-        email: bookingGate.contactEmail || bookingGate.customer?.email,
-        name: bookingGate.fullName,
-      },
-    });
-    if (eligibility.status === "rejected") {
-      return { ok: false, error: te("tabbyIneligible") };
-    }
     const appUrl = getAppPublicUrl();
     let redirectUrl: string;
     try {
@@ -453,6 +433,9 @@ export async function confirmMockPayment(
       });
       redirectUrl = session.webUrl;
     } catch (e) {
+      if (e instanceof TabbyIneligibleError) {
+        return { ok: false, error: te("tabbyIneligible") };
+      }
       console.error("[tabby] session creation failed:", e);
       return { ok: false, error: te("tabbyOpenFailed") };
     }

@@ -1,4 +1,5 @@
 import "server-only";
+import { unstable_cache } from "next/cache";
 
 /**
  * عميل بوابة Tabby (KSA/Global).
@@ -174,6 +175,27 @@ export async function checkTabbyEligibility(args: {
 }
 
 /**
+ * نسخة مخزَّنة مؤقتاً (10 دقائق) من فحص الأهلية — تُستخدم فقط لعرض حالة الخيار في
+ * الواجهة قبل اختيار العميل لتابي. بدون الكاش كان كل تحميل/تحديث لصفحة الدفع
+ * يُنشئ جلسة تابي جديدة فعلياً (الأهلية تُفحص عبر نفس مسار /api/v2/checkout) — ما
+ * رصده Egor كـ"many Session Creation requests coming from one customer's order".
+ * المفتاح يُشتق تلقائياً من amountSar/buyer فتختلف القيمة المخزَّنة لكل عميل/مبلغ.
+ */
+export const cachedCheckTabbyEligibility = unstable_cache(
+  async (amountSar: number, buyer: TabbyBuyerInfo) => checkTabbyEligibility({ amountSar, buyer }),
+  ["tabby-eligibility-display"],
+  { revalidate: 600 },
+);
+
+/** يُرمى حين ترد تابي بجلسة بلا منتج تقسيط متاح (غير مؤهَّل) — يُميَّز عن فشل تقني حقيقي. */
+export class TabbyIneligibleError extends Error {
+  constructor() {
+    super("Tabby: customer not eligible — no installment products in session response.");
+    this.name = "TabbyIneligibleError";
+  }
+}
+
+/**
  * إنشاء جلسة دفع تابي (Checkout Session).
  * المبلغ يُحسب في السيرفر — لا يأتي من العميل.
  */
@@ -290,8 +312,14 @@ export async function createTabbyCheckoutSession(args: {
   const installments = data.configuration?.available_products?.installments;
   const webUrl = installments?.[0]?.web_url;
 
-  if (!sessionId || !webUrl) {
-    throw new Error(`Tabby session creation failed or payment method not available: status ${data.status}`);
+  if (!sessionId) {
+    throw new Error(`Tabby session creation failed: status ${data.status}`);
+  }
+  // الجلسة أُنشئت لكن بلا منتج تقسيط متاح — رفض أهلية، لا فشل تقني. نميّزه هنا
+  // (بدل نداء checkTabbyEligibility منفصل قبل هذا الاستدعاء) حتى لا تُرسَل جلستا
+  // إنشاء لكل محاولة دفع واحدة — وهي الشكوى التي رصدها Egor حرفياً.
+  if (!webUrl) {
+    throw new TabbyIneligibleError();
   }
 
   return {
