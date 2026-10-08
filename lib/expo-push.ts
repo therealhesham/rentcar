@@ -106,7 +106,25 @@ async function tokensForUsers(userIds: number[], channel: PushChannel): Promise<
   const defaultOn = channel === "bookingUpdates";
   const allowed = new Map(prefs.map((p) => [p.userId, channel === "promotions" ? p.promotions : p.bookingUpdates]));
 
-  return devices.filter((d) => allowed.get(d.userId) ?? defaultOn).map((d) => d.token);
+  return devices
+    .filter((d) => d.userId != null && (allowed.get(d.userId) ?? defaultOn))
+    .map((d) => d.token);
+}
+
+/** من نخاطب: أصحاب الحسابات، أم من نزّل التطبيق ولم يسجّل دخولاً، أم الاثنان. */
+export type PushAudience = "registered" | "anonymous" | "all";
+
+/**
+ * أجهزة الزوّار — `userId` فارغ. لا تملك تفضيلات لأن التفضيلات مربوطة بحساب،
+ * فتُخاطَب دائماً. هذا مقصود: الزائر لم يُعرض عليه خيار الإيقاف أصلاً،
+ * والبديل (استبعاده) يجعل خيار «غير المسجلين» لا يصل لأحد.
+ */
+async function anonymousTokens(): Promise<string[]> {
+  const devices = await prisma.pushDevice.findMany({
+    where: { userId: null },
+    select: { token: true },
+  });
+  return devices.map((d) => d.token);
 }
 
 /**
@@ -129,7 +147,28 @@ export async function sendPushToUserSafe(
 
 /** أجهزة كل العملاء المشتركين في قناة ما — تُستخدم لصفحة عروض الجوال. */
 export async function tokensForChannel(channel: PushChannel): Promise<string[]> {
-  const devices = await prisma.pushDevice.findMany({ select: { userId: true } });
-  const userIds = [...new Set(devices.map((d) => d.userId))];
+  const devices = await prisma.pushDevice.findMany({
+    where: { userId: { not: null } },
+    select: { userId: true },
+  });
+  const userIds = [...new Set(devices.map((d) => d.userId!))];
   return tokensForUsers(userIds, channel);
+}
+
+/**
+ * أجهزة جمهور معيّن. الاتحاد عبر `Set` لأن جهازاً واحداً لا يمكن أن يكون في
+ * المجموعتين، لكن التأمين أرخص من إرسال مزدوج لو تغيّر الاستعلام لاحقاً.
+ */
+export async function tokensForAudience(
+  audience: PushAudience,
+  channel: PushChannel,
+): Promise<string[]> {
+  if (audience === "anonymous") return anonymousTokens();
+  if (audience === "registered") return tokensForChannel(channel);
+
+  const [registered, anonymous] = await Promise.all([
+    tokensForChannel(channel),
+    anonymousTokens(),
+  ]);
+  return [...new Set([...registered, ...anonymous])];
 }

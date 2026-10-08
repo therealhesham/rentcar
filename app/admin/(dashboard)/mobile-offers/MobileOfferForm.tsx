@@ -18,16 +18,17 @@ const inputClass =
 
 export function MobileOfferForm({ audience }: { audience: MobileAudience }) {
   const [state, formAction, pending] = useActionState(sendMobileOfferAction, INITIAL);
-  const [target, setTarget] = useState("all-promotions");
+  const [target, setTarget] = useState("all");
   const [title, setTitle] = useState("روائس");
   const [body, setBody] = useState("");
 
-  const recipients =
-    target === "all-promotions"
-      ? audience.promotionsOptedIn
-      : target === "all-booking-updates"
-        ? audience.bookingUpdatesOptedIn
-        : null;
+  const RECIPIENTS: Record<string, number> = {
+    all: audience.allPromotions,
+    registered: audience.promotionsOptedIn,
+    anonymous: audience.anonymousDevices,
+    "registered-booking-updates": audience.bookingUpdatesOptedIn,
+  };
+  const recipients: number | null = RECIPIENTS[target] ?? null;
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
@@ -43,11 +44,15 @@ export function MobileOfferForm({ audience }: { audience: MobileAudience }) {
             onChange={(e) => setTarget(e.target.value)}
             className={inputClass}
           >
-            <option value="all-promotions">
-              كل المشتركين في العروض ({audience.promotionsOptedIn} جهاز)
+            <option value="all">الكل — مسجّلين وغير مسجّلين ({audience.allPromotions} جهاز)</option>
+            <option value="registered">
+              المسجّلون فقط ({audience.promotionsOptedIn} جهاز)
             </option>
-            <option value="all-booking-updates">
-              كل المشتركين في تحديثات الحجز ({audience.bookingUpdatesOptedIn} جهاز)
+            <option value="anonymous">
+              غير المسجّلين فقط ({audience.anonymousDevices} جهاز)
+            </option>
+            <option value="registered-booking-updates">
+              المسجّلون — قناة تحديثات الحجز ({audience.bookingUpdatesOptedIn} جهاز)
             </option>
             <option value="single">عميل واحد برقمه</option>
           </select>
@@ -60,11 +65,20 @@ export function MobileOfferForm({ audience }: { audience: MobileAudience }) {
           </label>
         )}
 
-        {/* العروض قناة اختيارية افتراضها مغلق، فجمهورها أصغر بكثير من تحديثات
-            الحجز. إظهار العدد هنا يمنع إرسالاً يظن صاحبه أنه وصل للجميع. */}
+        {/* «غير مسجّل» = نزّل التطبيق ولم يسجّل دخولاً. من لم يُنزّل التطبيق لا
+            يمكن مخاطبته أصلاً — الإشعار يحتاج جهازاً سجّل رمزه عندنا. */}
+        {(target === "anonymous" || target === "all") && (
+          <p className="rounded-xl bg-surface-container-highest px-4 py-3 text-xs text-on-surface-variant">
+            «غير مسجّل» يعني من نزّل التطبيق ولم يسجّل دخولاً. لا تملك هذه الأجهزة
+            تفضيلات إشعارات (التفضيلات مربوطة بحساب) فتصلها الرسالة دائماً.
+          </p>
+        )}
+
+        {/* إظهار العدد يمنع إرسالاً يظن صاحبه أنه وصل للجميع — قناة العروض
+            افتراضها مغلق، فجمهور المسجّلين فيها أصغر بكثير مما يُتوقَّع. */}
         {recipients === 0 && (
           <p className="rounded-xl bg-error-container px-4 py-3 text-sm font-bold text-on-error-container">
-            لا يوجد أي جهاز مشترك في هذه القناة — لن يصل الإشعار لأحد.
+            لا يوجد أي جهاز في هذه الفئة — لن يصل الإشعار لأحد.
           </p>
         )}
 
@@ -137,8 +151,9 @@ export function MobileOfferForm({ audience }: { audience: MobileAudience }) {
             الجمهور
           </h2>
           <dl className="mt-4 grid gap-2 text-sm">
-            <Stat label="أجهزة مسجَّلة" value={audience.devices} />
-            <Stat label="عملاء" value={audience.customers} />
+            <Stat label="إجمالي الأجهزة" value={audience.devices} />
+            <Stat label="عملاء مسجّلون" value={audience.customers} />
+            <Stat label="أجهزة غير مسجّلة" value={audience.anonymousDevices} />
             <Stat label="مشترك في العروض" value={audience.promotionsOptedIn} />
             <Stat label="مشترك في تحديثات الحجز" value={audience.bookingUpdatesOptedIn} />
           </dl>

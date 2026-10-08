@@ -4,7 +4,9 @@ import { requireSuperAdminForAction } from "@/lib/admin-access";
 import { prisma } from "@/lib/prisma";
 import {
   sendPushToTokens,
+  tokensForAudience,
   tokensForChannel,
+  type PushAudience,
   type PushChannel,
 } from "@/lib/expo-push";
 
@@ -17,18 +19,32 @@ export type MobileOfferSendState = {
 const MAX_TITLE = 80;
 const MAX_BODY = 240;
 
-function readTarget(
-  formData: FormData,
-): { channel: PushChannel; userId: number | null } | null {
+type Target =
+  | { kind: "single"; userId: number }
+  | { kind: "broadcast"; audience: PushAudience; channel: PushChannel };
+
+function readTarget(formData: FormData): Target | null {
   const mode = String(formData.get("target") ?? "");
-  if (mode === "all-promotions") return { channel: "promotions", userId: null };
-  if (mode === "all-booking-updates") return { channel: "bookingUpdates", userId: null };
+
   if (mode === "single") {
     const id = Number(String(formData.get("customerId") ?? "").trim());
     if (!Number.isInteger(id) || id <= 0) return null;
-    return { channel: "promotions", userId: id };
+    return { kind: "single", userId: id };
   }
-  return null;
+
+  // قناة تحديثات الحجز متاحة للمسجّلين وحدهم — الزائر ليس له حجوزات يُخطَر بها.
+  if (mode === "registered-booking-updates") {
+    return { kind: "broadcast", audience: "registered", channel: "bookingUpdates" };
+  }
+
+  const audience: Record<string, PushAudience> = {
+    registered: "registered",
+    anonymous: "anonymous",
+    all: "all",
+  };
+  const a = audience[mode];
+  if (!a) return null;
+  return { kind: "broadcast", audience: a, channel: "promotions" };
 }
 
 export async function sendMobileOfferAction(
@@ -69,7 +85,7 @@ export async function sendMobileOfferAction(
     }
 
     let tokens: string[];
-    if (target.userId != null) {
+    if (target.kind === "single") {
       const devices = await prisma.pushDevice.findMany({
         where: { userId: target.userId },
         select: { token: true },
@@ -82,9 +98,9 @@ export async function sendMobileOfferAction(
       }
       tokens = devices.map((d) => d.token);
     } else {
-      tokens = await tokensForChannel(target.channel);
+      tokens = await tokensForAudience(target.audience, target.channel);
       if (tokens.length === 0) {
-        return { ok: false, message: "لا توجد أجهزة مشتركة في هذه القناة." };
+        return { ok: false, message: "لا توجد أجهزة في هذه الفئة." };
       }
     }
 
@@ -115,6 +131,8 @@ export type MobileAudience = {
   customers: number;
   promotionsOptedIn: number;
   bookingUpdatesOptedIn: number;
+  anonymousDevices: number;
+  allPromotions: number;
 };
 
 const EMPTY_AUDIENCE: MobileAudience = {
@@ -122,6 +140,8 @@ const EMPTY_AUDIENCE: MobileAudience = {
   customers: 0,
   promotionsOptedIn: 0,
   bookingUpdatesOptedIn: 0,
+  anonymousDevices: 0,
+  allPromotions: 0,
 };
 
 /**
@@ -131,17 +151,21 @@ const EMPTY_AUDIENCE: MobileAudience = {
  */
 export async function getMobileAudience(): Promise<MobileAudience> {
   try {
-    const [devices, promoTokens, bookingTokens] = await Promise.all([
+    const [devices, promoTokens, bookingTokens, anonTokens, allPromo] = await Promise.all([
       prisma.pushDevice.findMany({ select: { userId: true } }),
       tokensForChannel("promotions"),
       tokensForChannel("bookingUpdates"),
+      tokensForAudience("anonymous", "promotions"),
+      tokensForAudience("all", "promotions"),
     ]);
 
     return {
       devices: devices.length,
-      customers: new Set(devices.map((d) => d.userId)).size,
+      customers: new Set(devices.filter((d) => d.userId != null).map((d) => d.userId)).size,
       promotionsOptedIn: promoTokens.length,
       bookingUpdatesOptedIn: bookingTokens.length,
+      anonymousDevices: anonTokens.length,
+      allPromotions: allPromo.length,
     };
   } catch (e) {
     console.error("[mobile-offers] تعذّر قراءة جمهور الجوال:", (e as Error).message);
