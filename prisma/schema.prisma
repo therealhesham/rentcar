@@ -1180,3 +1180,27 @@ model AdminPageView {
   @@index([employeeId, createdAt])
   @@index([path, createdAt])
 }
+
+/// جهاز تطبيق موبايل مسجَّل لاستقبال إشعارات Expo. الجدول يملكه تطبيق الجوال
+/// (rawaes-app) ويشاركه الموقع ليبعث إشعارات أحداث الإدارة لصاحب الحجز.
+/// `token` فريد عالمياً لا لكل مستخدم: لو سجّل حساب آخر على نفس الجهاز ينتقل
+/// الصف إليه، وإلا بقي الجهاز مرتبطاً بالحسابين واستقبل إشعارات غير صاحبه.
+model PushDevice {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  token      String   @unique @db.VarChar(255)
+  platform   String   @db.VarChar(16)
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+/// تفضيلات قنوات الإشعار لحساب تطبيق الموبايل. تُحترم قبل أي إرسال.
+model NotificationPreference {
+  id             Int      @id @default(autoincrement())
+  userId         Int      @unique
+  bookingUpdates Boolean  @default(true)
+  promotions     Boolean  @default(false)
+  updatedAt      DateTime @default(now())
+}

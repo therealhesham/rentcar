@@ -35,7 +35,8 @@ export type AdminNavItem = {
     | "credit-card"
     | "file-text"
     | "graduation-cap"
-    | "message-square";
+    | "message-square"
+    | "smartphone";
   external?: boolean;
   /** إخفاء العنصر من القائمة الجانبية (لكن الصفحة لا تزال صالحة) */
   hidden?: boolean;
@@ -147,6 +148,12 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         href: "/admin/mobile-app-settings",
         label: "إعدادات تطبيق الموبايل",
         icon: "sliders",
+        superAdminOnly: true,
+      },
+      {
+        href: "/admin/mobile-offers",
+        label: "عروض الجوال",
+        icon: "smartphone",
         superAdminOnly: true,
       },
       { href: "/admin/payment-icons", label: "أيقونات وسائل الدفع", icon: "image" },

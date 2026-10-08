@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Smartphone,
   Activity,
   Ban,
   BarChart2,
@@ -53,6 +54,7 @@ const ICONS: Record<AdminNavItem["icon"], LucideIcon> = {
   car: Car,
   image: ImageIcon,
   megaphone: Megaphone,
+  smartphone: Smartphone,
   "badge-dollar": BadgeDollarSign,
   "shield-check": ShieldCheck,
   sliders: SlidersHorizontal,

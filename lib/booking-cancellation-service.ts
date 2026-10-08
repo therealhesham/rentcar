@@ -24,6 +24,34 @@ import {
 } from "@/lib/site-settings";
 import { customerOwnsBooking } from "@/lib/customer-booking-access";
 import { recordPaymentTransaction } from "@/lib/payment-transaction";
+import { sendPushToUserSafe } from "@/lib/expo-push";
+
+/**
+ * إشعار إلغاء لصاحب الحجز على تطبيق الجوال. يُستدعى من مسارات الإلغاء الثلاثة
+ * (سياسة الشرائح، استرداد كامل إداري، بلا استرداد إداري) بعد نجاح الإلغاء
+ * واستقرار الحركة المالية — لا قبلها، فلا نُخطر بإلغاء قد يُتراجع عنه.
+ * يبتلع أخطاءه بنفسه (sendPushToUserSafe) فلا يُفشل إلغاءً نُفِّذ ورُدَّ مبلغه.
+ */
+async function notifyCustomerOfCancellation(
+  customerId: number | null,
+  bookingId: number,
+  refundInclTaxSar: number | null,
+  reasonAr?: string | null,
+): Promise<void> {
+  if (customerId == null) return;
+
+  const refundLine =
+    refundInclTaxSar != null && refundInclTaxSar > 0
+      ? `وسيُرد لك ${refundInclTaxSar.toLocaleString("ar-SA")} ر.س.`
+      : "ولم يُستحق مبلغ للرد وفق سياسة الإلغاء.";
+  const reasonLine = reasonAr?.trim() ? ` السبب: ${reasonAr.trim()}` : "";
+
+  await sendPushToUserSafe(customerId, {
+    title: "تم إلغاء حجزك",
+    body: `حجز رقم ${bookingId} أُلغي، ${refundLine}${reasonLine}`,
+    data: { bookingId },
+  });
+}
 
 export type CancelBookingWithPolicyResult =
   | {
@@ -251,6 +279,13 @@ export async function cancelBookingWithPolicy(input: {
     }
   }
 
+  await notifyCustomerOfCancellation(
+    row.customerId,
+    row.id,
+    refundInclTaxSar ?? null,
+    reasonAr,
+  );
+
   return {
     ok: true,
     refundInclTaxSar,
@@ -327,6 +362,9 @@ export async function cancelBookingWithFullRefundByAdmin(input: {
   const paidEligible = row.kind === "DIRECT" && ps === "PAID" && paidAmount > 0;
 
   if (!paidEligible) {
+    // الإلغاء نفسه تم (المطالبة الذرّية نجحت) ولا حركة مالية — العميل يستحق
+    // الإشعار هنا تماماً كما في المسار المدفوع.
+    await notifyCustomerOfCancellation(row.customerId, row.id, 0, reason);
     return { ok: true, refundInclTaxSar: 0, paymentMethod: null };
   }
 
@@ -399,6 +437,8 @@ export async function cancelBookingWithFullRefundByAdmin(input: {
     ip: meta.ip,
     userAgent: meta.userAgent,
   });
+
+  await notifyCustomerOfCancellation(row.customerId, row.id, paidAmount, reason);
 
   return {
     ok: true,
@@ -478,6 +518,8 @@ export async function cancelBookingWithoutRefundByAdmin(input: {
   // لا حركة مالية هنا (لا استرداد) — سجل النشاط المالي (logActivity) مخصص لحركات
   // الدفع/الاسترداد فقط؛ تدقيق هذا الإلغاء يتم عبر logBookingEvent في طبقة الأكشن،
   // بنفس نمط cancelAdminBooking.
+  await notifyCustomerOfCancellation(row.customerId, row.id, 0, reason);
+
   return { ok: true, paymentMethod: paidEligible ? row.paymentMethod : null };
 }
 
