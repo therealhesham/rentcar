@@ -27,12 +27,17 @@ RUN npm run build
 # Pre-compile the Tabby webhook registration script into a self-contained JS bundle.
 # This avoids needing tsx + esbuild + their native binaries in the production image.
 # server-only is a Next.js guard (no-op in a plain Node context) — we stub it out.
+# @opentelemetry/api is external because the script reaches Next internals via
+# next/cache, and Next's tracer requires it inside a try/catch with a fallback to
+# its own bundled copy. esbuild still has to resolve it at bundle time, and the
+# package isn't a dependency — so leaving it unresolved is both correct and safe.
 RUN printf '// server-only shim\n' > /tmp/so-shim.js && \
     ./node_modules/.bin/esbuild \
       --bundle \
       --platform=node \
       --target=node20 \
       --alias:server-only=/tmp/so-shim.js \
+      --external:@opentelemetry/api \
       --outfile=scripts/webhook-bundle.js \
       scripts/register-tabby-webhook.ts
 
