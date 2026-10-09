@@ -9,6 +9,8 @@ import {
   type PushAudience,
   type PushChannel,
 } from "@/lib/expo-push";
+import { isTrustedSpacesImageUrl } from "@/lib/spaces-upload";
+import { resolvePromoSlideImage } from "@/lib/promo-slide-image";
 
 export type MobileOfferSendState = {
   ok: boolean;
@@ -84,6 +86,16 @@ export async function sendMobileOfferAction(
       bookingId = n;
     }
 
+    const imageResolved = await resolvePromoSlideImage({
+      imageFile: formData.get("imageFile"),
+      galleryUrl: String(formData.get("galleryImageUrl") ?? "").trim(),
+      currentImage: "",
+      folderSlug: "push",
+      folderLabel: "إشعارات الموبايل",
+      isAllowedImageUrl: isTrustedSpacesImageUrl,
+    });
+    if (!imageResolved.ok) return { ok: false, message: imageResolved.error };
+
     let tokens: string[];
     if (target.kind === "single") {
       const devices = await prisma.pushDevice.findMany({
@@ -108,6 +120,7 @@ export async function sendMobileOfferAction(
       title,
       body,
       data: bookingId ? { bookingId } : {},
+      imageUrl: imageResolved.imageUrl || undefined,
     });
 
     if (res.accepted === 0) {

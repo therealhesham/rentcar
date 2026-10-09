@@ -12,6 +12,12 @@ export type PushPayload = {
   body: string;
   /** يُسلَّم للتطبيق عند الضغط — `bookingId` يفتح شاشة تفاصيل الحجز. */
   data?: Record<string, string | number>;
+  /**
+   * تظهر على أندرويد تلقائياً (Big Picture) بمجرد وصولها في الحمولة. على
+   * آيفون تُتجاهَل حالياً لأنها تحتاج Notification Service Extension غير
+   * مُعدّ بعد — لا تعتمد عليها إلا لقناة أندرويد.
+   */
+  imageUrl?: string;
 };
 
 export type PushChannel = "bookingUpdates" | "promotions";
@@ -77,6 +83,7 @@ export async function sendPushToTokens(
       data: payload.data ?? {},
       sound: "default",
       channelId: ANDROID_CHANNEL_ID,
+      ...(payload.imageUrl ? { richContent: { image: payload.imageUrl } } : {}),
     }));
 
     const tickets = await postMessages(messages);

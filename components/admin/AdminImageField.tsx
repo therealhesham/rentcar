@@ -18,6 +18,8 @@ type AdminImageFieldProps = {
   galleryFieldName?: string;
   /** اسم حقل رفع الملف */
   fileFieldName?: string;
+  /** يُستدعى برابط صورة المعرض عند اختيارها أو إزالتها (لمعاينة حيّة خارج الحقل) */
+  onImageUrlChange?: (url: string) => void;
 };
 
 export function AdminImageField({
@@ -28,6 +30,7 @@ export function AdminImageField({
   showFileInput = true,
   galleryFieldName = "galleryImageUrl",
   fileFieldName = "imageFile",
+  onImageUrlChange,
 }: AdminImageFieldProps) {
   const id = useId();
   const [galleryOpen, setGalleryOpen] = useState(false);
@@ -68,6 +71,7 @@ export function AdminImageField({
             onClick={() => {
               setGalleryUrl("");
               setFileReset((n) => n + 1);
+              onImageUrlChange?.("");
             }}
             className="text-sm font-bold text-error hover:underline"
           >
@@ -102,6 +106,7 @@ export function AdminImageField({
         onSelect={(url) => {
           setGalleryUrl(url);
           setFileReset((n) => n + 1);
+          onImageUrlChange?.(url);
         }}
       />
     </div>

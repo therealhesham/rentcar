@@ -7,6 +7,7 @@ import {
   type MobileAudience,
   type MobileOfferSendState,
 } from "@/app/admin/mobile-offers-actions";
+import { AdminImageField } from "@/components/admin/AdminImageField";
 
 const INITIAL: MobileOfferSendState = { ok: false, message: "" };
 
@@ -21,6 +22,7 @@ export function MobileOfferForm({ audience }: { audience: MobileAudience }) {
   const [target, setTarget] = useState("all");
   const [title, setTitle] = useState("روائس");
   const [body, setBody] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
 
   const RECIPIENTS: Record<string, number> = {
     all: audience.allPromotions,
@@ -114,6 +116,12 @@ export function MobileOfferForm({ audience }: { audience: MobileAudience }) {
           </span>
         </label>
 
+        <AdminImageField
+          label="صورة الإشعار (اختياري)"
+          fileHelp="تظهر فقط على أندرويد (Big Picture) — بحد أقصى 5 ميجابايت."
+          onImageUrlChange={setImageUrl}
+        />
+
         <label className="text-sm font-medium">
           رقم حجز (اختياري)
           <input name="bookingId" inputMode="numeric" placeholder="297" className={inputClass} />
@@ -171,6 +179,14 @@ export function MobileOfferForm({ audience }: { audience: MobileAudience }) {
             <p className="mt-0.5 text-sm text-on-surface-variant break-words">
               {body || "نص الرسالة يظهر هنا."}
             </p>
+            {imageUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={imageUrl}
+                alt=""
+                className="mt-2 aspect-[2/1] w-full rounded-lg object-cover"
+              />
+            )}
           </div>
         </div>
       </aside>
