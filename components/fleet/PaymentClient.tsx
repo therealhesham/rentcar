@@ -46,6 +46,12 @@ import { ApplePayExpressButton } from "@/components/fleet/ApplePayExpressButton"
 import type { PaymentIconUrls } from "@/lib/site-settings";
 import { TabbyPromoSnippet } from "@/components/fleet/TabbyPromoSnippet";
 import { useLocale, useTranslations } from "next-intl";
+import {
+  trackBeginCheckout,
+  trackPurchaseSuccess,
+  trackSelectPaymentMethod,
+  trackSubmitPayment,
+} from "@/lib/gtm-events";
 
 type Props = {
   booking: BookingPaymentSnapshot;
@@ -378,9 +384,41 @@ export function PaymentClient({
     BRANCH_FALLBACK[booking.branch]?.[locale === "en" ? "en" : "ar"] ||
     booking.branch;
 
+  // GTM Analytics: Track begin_checkout
+  useEffect(() => {
+    if (!checkoutComplete) {
+      trackBeginCheckout({
+        bookingId: booking.id,
+        amountSar: payableAmountSar,
+        carName: booking.car?.fullTitle,
+        paymentMethod: method,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // GTM Analytics: Track purchase / payment success
+  useEffect(() => {
+    if (checkoutComplete) {
+      trackPurchaseSuccess({
+        bookingId: booking.id,
+        paymentMethod: resolvedMethodCode || method,
+        amountSar: payableAmountSar,
+        carName: booking.car?.fullTitle,
+      });
+    }
+  }, [checkoutComplete, resolvedMethodCode, method, booking.id, payableAmountSar, booking.car?.fullTitle]);
+
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     if (checkoutComplete) return;
     setClientError(null);
+
+    trackSubmitPayment({
+      paymentMethod: method,
+      bookingId: booking.id,
+      amountSar: payableAmountSar,
+      carName: booking.car?.fullTitle,
+    });
     if (!usesCardEntryForm(method) || hostedCheckout) return;
 
     const cardClean = card.replace(/\s+/g, "");
@@ -703,6 +741,12 @@ export function PaymentClient({
                         if (ineligible) return;
                         setMethod(opt.id);
                         setClientError(null);
+                        trackSelectPaymentMethod({
+                          paymentMethod: opt.id,
+                          bookingId: booking.id,
+                          amountSar: payableAmountSar,
+                          carName: booking.car?.fullTitle,
+                        });
                       }}
                       className={`relative flex flex-col items-start gap-2 rounded-xl border px-4 py-3 text-start transition-all ${ineligible
                         ? "cursor-not-allowed border-[#ebe4d3] bg-neutral-50 opacity-60"

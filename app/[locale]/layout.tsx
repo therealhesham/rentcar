@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Tajawal } from "next/font/google";
+import { GoogleTagManager } from "@next/third-parties/google";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { PageViewTracker } from "@/components/shared/PageViewTracker";
 import { SiteBrandingProvider } from "@/components/shared/SiteBrandingProvider";
@@ -23,6 +24,8 @@ const tajawal = Tajawal({
   variable: "--font-tajawal",
   display: "swap",
 });
+
+const gtmId = process.env.NEXT_PUBLIC_GTM_ID || "GTM-WML5RJ7C";
 
 export async function generateMetadata(): Promise<Metadata> {
   const [branding, locale] = await Promise.all([getSiteBranding(), getLocale()]);
@@ -63,6 +66,7 @@ export default async function LocaleLayout({
 
   return (
     <html lang={locale} dir={dir} className={`light ${tajawal.variable}`}>
+      {gtmId && <GoogleTagManager gtmId={gtmId} />}
       <head>
         <link
           rel="stylesheet"
