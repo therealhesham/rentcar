@@ -218,6 +218,17 @@ export default async function CarLandingPage({ params }: { params: RouteParams }
     </Link>
   );
 
+  const heroCta = available ? (
+    cta
+  ) : (
+    <Link
+      href="/fleet"
+      className="inline-flex w-full items-center justify-center gap-2.5 rounded-2xl bg-[#003749] px-8 py-4 text-lg font-black text-white transition hover:bg-[#005a6e] sm:w-auto"
+    >
+      {t("browseFleet")}
+    </Link>
+  );
+
   const whyItems = [
     { icon: <Wallet className="h-5 w-5" />, title: tWhy("feature2.title"), text: tWhy("feature2.description") },
     { icon: <Headset className="h-5 w-5" />, title: tWhy("feature3.title"), text: tWhy("feature3.description") },
@@ -231,53 +242,53 @@ export default async function CarLandingPage({ params }: { params: RouteParams }
 
       <main className="flex-1 pb-28 lg:pb-0">
         {/* ────── الهيرو ────── */}
-        <section className="relative overflow-hidden bg-[linear-gradient(135deg,#00222e_0%,#003749_55%,#005a6e_100%)] pt-16 text-white sm:pt-24">
+        <section className="relative overflow-hidden bg-white pt-16 text-[#003749] sm:pt-24">
           <div
-            className="pointer-events-none absolute -top-24 start-1/2 h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(219,184,120,0.28),transparent)]"
+            className="pointer-events-none absolute -top-24 start-1/2 h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(219,184,120,0.18),transparent)]"
             aria-hidden
           />
           <div className="relative mx-auto grid max-w-screen-xl items-center gap-6 px-4 pb-14 pt-10 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:gap-10 lg:pb-20 lg:pt-16">
             <div className="order-2 lg:order-1">
-              <p className="inline-flex items-center gap-2 rounded-full bg-[#dbb878]/15 px-4 py-1.5 text-[13px] font-extrabold text-[#dbb878] ring-1 ring-[#dbb878]/30">
+              <p className="inline-flex items-center gap-2 rounded-full bg-[#dbb878]/20 px-4 py-1.5 text-[13px] font-extrabold text-[#775927] ring-1 ring-[#dbb878]/50">
                 <Tag className="h-3.5 w-3.5" aria-hidden />
                 {t("eyebrow")} · {car.categoryTitle}
               </p>
 
               <h1 className="mt-5 text-4xl font-black leading-tight tracking-tight sm:text-5xl lg:text-6xl">
                 <bdi>{car.brand}</bdi> <bdi>{car.name}</bdi>
-                <span className="ms-3 align-middle text-2xl font-bold text-white/55 sm:text-3xl">
+                <span className="ms-3 align-middle text-2xl font-bold text-neutral-400 sm:text-3xl">
                   <bdi>{car.year}</bdi>
                 </span>
               </h1>
-              <p className="mt-2 text-sm font-semibold text-white/60">{tSimilar("subtitle")}</p>
+              <p className="mt-2 text-sm font-semibold text-neutral-500">{tSimilar("subtitle")}</p>
 
               {available ? (
                 <>
-                  <p className="mt-5 max-w-md text-base leading-relaxed text-white/75">{t("heroSub")}</p>
+                  <p className="mt-5 max-w-md text-base leading-relaxed text-neutral-600">{t("heroSub")}</p>
                   <div className="mt-8">
                     <PriceBlock
                       car={car}
                       locale={locale}
                       startingFromLabel={startingFrom}
                       perDayLabel={perDay}
-                      tone="dark"
+                      tone="light"
                     />
                   </div>
                 </>
               ) : (
-                <div className="mt-6 max-w-md rounded-2xl bg-white/10 p-5 ring-1 ring-white/20">
+                <div className="mt-6 max-w-md rounded-2xl bg-neutral-50 p-5 ring-1 ring-neutral-200">
                   <p className="text-lg font-extrabold">{t("unavailableTitle")}</p>
-                  <p className="mt-1 text-sm leading-relaxed text-white/70">{t("unavailableSub")}</p>
+                  <p className="mt-1 text-sm leading-relaxed text-neutral-600">{t("unavailableSub")}</p>
                 </div>
               )}
 
-              <div className="mt-8 hidden lg:block">{cta}</div>
+              <div className="mt-8 hidden lg:block">{heroCta}</div>
             </div>
 
             <div className="order-1 lg:order-2">
               <div className="relative mx-auto aspect-[16/10] w-full max-w-[720px]">
                 <div
-                  className="absolute inset-x-[8%] bottom-[6%] h-[14%] rounded-[50%] bg-black/45 blur-2xl"
+                  className="absolute inset-x-[8%] bottom-[6%] h-[14%] rounded-[50%] bg-black/15 blur-2xl"
                   aria-hidden
                 />
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -285,10 +296,10 @@ export default async function CarLandingPage({ params }: { params: RouteParams }
                   src={car.image}
                   alt={car.alt}
                   fetchPriority="high"
-                  className="relative h-full w-full object-contain drop-shadow-[0_24px_40px_rgba(0,0,0,0.45)]"
+                  className="relative h-full w-full object-contain drop-shadow-[0_24px_32px_rgba(0,55,73,0.18)]"
                 />
                 {car.badge ? (
-                  <span className="absolute start-2 top-2 rounded-full bg-white/95 px-3 py-1 text-xs font-extrabold text-[#003749] shadow-lg">
+                  <span className="absolute start-2 top-2 rounded-full bg-[#003749] px-3 py-1 text-xs font-extrabold text-white shadow-lg">
                     {car.badge}
                   </span>
                 ) : null}
