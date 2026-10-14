@@ -1,5 +1,4 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import createIntlMiddleware from "next-intl/middleware";
 import { routing } from "./i18n/routing";
 import { isAlwaysAllowedAdminPage } from "@/lib/admin-nav";
@@ -38,8 +37,24 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // زواحف المعاينة (واتساب/فيسبوك/إكس…) ترسل Accept-Language إنجليزياً، فكانت كروت
+  // مشاركة صفحات السيارات تظهر بالإنجليزية لموقع لغته الأساسية العربية. بدون الهيدر
+  // يرجع next-intl للافتراضي (ar) — ما لم يكن هناك كوكي لغة صريح.
+  if (
+    pathname.startsWith("/fleet/car/") &&
+    LINK_PREVIEW_BOT_RE.test(request.headers.get("user-agent") ?? "") &&
+    !request.cookies.has("NEXT_LOCALE")
+  ) {
+    const headers = new Headers(request.headers);
+    headers.delete("accept-language");
+    return handleI18nRouting(new NextRequest(request, { headers }));
+  }
+
   return handleI18nRouting(request);
 }
+
+const LINK_PREVIEW_BOT_RE =
+  /facebookexternalhit|facebot|whatsapp|twitterbot|linkedinbot|telegrambot|slackbot|discordbot|pinterest|snapchat|skypeuripreview|applebot|googlebot|bingbot/i;
 
 export const config = {
   matcher: [

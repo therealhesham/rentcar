@@ -336,6 +336,42 @@
     "monthlyPackagesRental": "باقات شهرية",
     "daysCount": "{days} يوم/أيام"
   },
+  "CarLanding": {
+    "metaTitle": "إيجار {car} {year}",
+    "metaDescription": "احجز {car} {year} من روائس لتأجير السيارات — {category}، {seats} مقاعد، {transmission}، {fuel}.",
+    "metaDescriptionPrice": " يبدأ من {price} ريال في اليوم.",
+    "ogSiteName": "روائس لتأجير السيارات",
+    "eyebrow": "أسطول روائس",
+    "startingFrom": "يبدأ من",
+    "perDay": "/ يوم",
+    "heroSub": "قيادة فاخرة بحجز بسيط وسريع — اختر التواريخ وأكمل حجزك في دقائق.",
+    "unavailableTitle": "غير متاحة للحجز حالياً",
+    "unavailableSub": "هذه السيارة غير متوفرة في الوقت الحالي، تصفح بقية الأسطول لاختيار بديل مناسب.",
+    "browseFleet": "تصفح الأسطول",
+    "specsTitle": "مواصفات السيارة",
+    "specYear": "سنة الصنع",
+    "specSeats": "المقاعد",
+    "specTransmission": "ناقل الحركة",
+    "specFuel": "نوع الوقود",
+    "specEngine": "المحرك",
+    "specCategory": "الفئة",
+    "seatsValue": "{count} مقاعد",
+    "fuel": {
+      "GASOLINE": "بنزين",
+      "DIESEL": "ديزل",
+      "HYBRID": "هجين",
+      "ELECTRIC": "كهرباء"
+    },
+    "transmission": {
+      "MANUAL": "يدوي",
+      "AUTOMATIC": "أوتوماتيك"
+    },
+    "whyTitle": "لماذا تحجز مع روائس؟",
+    "orSimilarNote": "السيارة المعروضة مثال على الفئة التي ستحجزها، وقد تُسلَّم لك سيارة مماثلة أو أرقى.",
+    "ctaTitle": "جاهز للانطلاق؟",
+    "ctaSub": "احجز {car} الآن واختر الاستلام والتسليم المناسبين لك.",
+    "breadcrumbFleet": "الأسطول"
+  },
   "Common": {
     "select": "اختر",
     "selectDate": "اختر التاريخ",

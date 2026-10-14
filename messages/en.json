@@ -336,6 +336,42 @@
     "monthlyPackagesRental": "Monthly Packages",
     "daysCount": "{days} Day(s)"
   },
+  "CarLanding": {
+    "metaTitle": "Rent the {car} {year}",
+    "metaDescription": "Book the {car} {year} with Rawaes Car Rental — {category}, {seats} seats, {transmission}, {fuel}.",
+    "metaDescriptionPrice": " Starting from SAR {price} per day.",
+    "ogSiteName": "Rawaes Car Rental",
+    "eyebrow": "Rawaes Fleet",
+    "startingFrom": "Starting from",
+    "perDay": "/ day",
+    "heroSub": "Drive in style with a simple, fast booking — pick your dates and finish in minutes.",
+    "unavailableTitle": "Currently unavailable",
+    "unavailableSub": "This car isn't available right now. Browse the rest of the fleet to find a great alternative.",
+    "browseFleet": "Browse the fleet",
+    "specsTitle": "Car specifications",
+    "specYear": "Model year",
+    "specSeats": "Seats",
+    "specTransmission": "Transmission",
+    "specFuel": "Fuel type",
+    "specEngine": "Engine",
+    "specCategory": "Category",
+    "seatsValue": "{count} seats",
+    "fuel": {
+      "GASOLINE": "Gasoline",
+      "DIESEL": "Diesel",
+      "HYBRID": "Hybrid",
+      "ELECTRIC": "Electric"
+    },
+    "transmission": {
+      "MANUAL": "Manual",
+      "AUTOMATIC": "Automatic"
+    },
+    "whyTitle": "Why book with Rawaes?",
+    "orSimilarNote": "The car shown is an example of the category you will book — you may receive an equivalent or better model.",
+    "ctaTitle": "Ready to hit the road?",
+    "ctaSub": "Book the {car} now and choose the pickup and return that suit you.",
+    "breadcrumbFleet": "Fleet"
+  },
   "Common": {
     "select": "Select",
     "selectDate": "Select Date",

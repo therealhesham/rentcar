@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { prisma } from "@/lib/prisma";
+import { listBookableModelIds } from "@/lib/car-landing-data";
 import { absoluteUrl, getSiteUrl, PUBLIC_STATIC_PATHS } from "@/lib/seo";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -30,5 +31,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     planEntries = [];
   }
 
-  return [...staticEntries, ...planEntries];
+  let carEntries: MetadataRoute.Sitemap = [];
+  try {
+    const models = await listBookableModelIds();
+    carEntries = models.map((m) => ({
+      url: `${base}/fleet/car/${m.id}`,
+      lastModified: m.updatedAt,
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
+    }));
+  } catch {
+    carEntries = [];
+  }
+
+  return [...staticEntries, ...carEntries, ...planEntries];
 }
