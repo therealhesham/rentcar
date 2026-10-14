@@ -2,6 +2,7 @@
 
 import { useState, useMemo, Fragment } from "react";
 import Link from "next/link";
+import { CopyPromoLinkButton } from "@/components/admin/CopyPromoLinkButton";
 import { Pencil, Fuel, Zap, Leaf, Droplets, ChevronDown, Search, Filter, Ban, HelpCircle, CheckCircle2 } from "lucide-react";
 import { BranchFleetQuantityForm } from "@/components/admin/BranchFleetQuantityForm";
 import { InlineVehicleEditForm } from "@/components/admin/InlineVehicleEditForm";
@@ -347,6 +348,7 @@ export function AdminVehiclesTable({
                                 }`}
                               />
                             </button>
+                            <CopyPromoLinkButton modelId={v.id} />
                             <Link
                               href={`/admin/vehicles/${v.id}/edit`}
                               className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-primary/20 bg-primary/5 text-primary transition-all hover:bg-primary/10"
