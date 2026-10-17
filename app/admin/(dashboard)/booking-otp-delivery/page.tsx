@@ -5,7 +5,9 @@ import { getBookingOtpChannel } from "@/lib/site-settings";
 import { isSmsChannelConfigured } from "@/lib/booking-checkout-otp";
 import { isOutgoingMailTransportConfigured } from "@/lib/booking-invoice-email";
 import { isEvolutionWhatsAppConfigured } from "@/lib/evolution-whatsapp";
+import { getMetaWhatsappOtpConfig } from "@/lib/meta-whatsapp";
 import { BookingOtpDeliveryForm } from "./BookingOtpDeliveryForm";
+import { MetaWhatsappOtpForm } from "./MetaWhatsappOtpForm";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +17,8 @@ export default async function AdminBookingOtpDeliveryPage() {
   }
 
   const currentChannel = await getBookingOtpChannel();
+  // الـ token لا يُرسَل للمتصفح — نمرّر فقط هل هو محفوظ.
+  const { accessToken, ...metaConfig } = await getMetaWhatsappOtpConfig();
 
   return (
     <>
@@ -42,6 +46,8 @@ export default async function AdminBookingOtpDeliveryPage() {
         mailConfigured={isOutgoingMailTransportConfigured()}
         whatsappConfigured={isEvolutionWhatsAppConfigured()}
       />
+
+      <MetaWhatsappOtpForm config={metaConfig} hasAccessToken={Boolean(accessToken)} />
     </>
   );
 }

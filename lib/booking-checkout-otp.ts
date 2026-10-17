@@ -5,11 +5,8 @@ import {
 } from "@/lib/booking-invoice-email";
 import { prisma } from "@/lib/prisma";
 import { saudiLocalNineToE164 } from "@/lib/normalize-saudi-phone";
-import {
-  e164ToEvolutionWhatsAppNumber,
-  isEvolutionWhatsAppConfigured,
-  sendEvolutionWhatsAppText,
-} from "@/lib/evolution-whatsapp";
+import { e164ToEvolutionWhatsAppNumber } from "@/lib/evolution-whatsapp";
+import { isWhatsappOtpDeliverable, sendWhatsappOtp } from "@/lib/meta-whatsapp";
 import {
   isMsegatConfigured,
   msegatRefValue,
@@ -89,7 +86,7 @@ export async function isBookingCheckoutOtpStepRequired(): Promise<boolean> {
   const ch = await getBookingOtpChannel();
   if (ch === "OFF") return false;
   if (ch === "SMS") return isSmsChannelConfigured();
-  if (ch === "WHATSAPP") return isEvolutionWhatsAppConfigured();
+  if (ch === "WHATSAPP") return isWhatsappOtpDeliverable("checkout");
   if (ch === "EMAIL") return isOutgoingMailTransportConfigured();
   return false;
 }
@@ -127,11 +124,11 @@ export async function sendBookingCheckoutOtpFromPublicRequest(body: {
             "خدمة الرسائل النصية غير مضبوطة (MSEGAT_USERNAME و MSEGAT_API_KEY و MSEGAT_SENDER).",
         };
       }
-    } else if (!isEvolutionWhatsAppConfigured()) {
+    } else if (!(await isWhatsappOtpDeliverable("checkout"))) {
       return {
         ok: false,
         error:
-          "إرسال واتساب غير مهيأ (EVOLUTION_API_BASE_URL و EVOLUTION_API_KEY و EVOLUTION_INSTANCE_NAME).",
+          "إرسال واتساب غير مهيأ (فعّل Meta لتأكيد الحجز أو اضبط EVOLUTION_API_BASE_URL و EVOLUTION_API_KEY و EVOLUTION_INSTANCE_NAME).",
       };
     }
 
@@ -258,7 +255,7 @@ export async function sendBookingCheckoutOtpFromPublicRequest(body: {
         return { ok: false, error: "رقم الجوال غير صالح لإرسال واتساب." };
       }
       try {
-        await sendEvolutionWhatsAppText({ number: waNumber, text: message });
+        await sendWhatsappOtp({ flow: "checkout", phoneE164, otp, evolutionText: message });
       } catch (e) {
         console.error("booking checkout OTP WhatsApp failed", e);
         await prisma.bookingCheckoutOtp.delete({ where: { destinationKey: dest } }).catch(() => {});
