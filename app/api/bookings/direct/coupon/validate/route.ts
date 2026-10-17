@@ -99,7 +99,7 @@ export async function POST(request: Request) {
 
   // نفس ترتيب `createDirectBooking`: صلاحية الكود لنوع التأجير أولاً، ثم الخصم،
   // ثم أرضية السعر — وإلا يشوف العميل خصماً أعمق مما سيُطبَّق فعلاً.
-  const resolved = await resolveCouponCode(code, { customerPhone, periodKind });
+  const resolved = await resolveCouponCode(code, { customerPhone, periodKind, channel: "PUBLIC_WEB" });
   if (!resolved.ok) {
     return NextResponse.json({ ok: false, error: resolved.error }, { status: 400 });
   }

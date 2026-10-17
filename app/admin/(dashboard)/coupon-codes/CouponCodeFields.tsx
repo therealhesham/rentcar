@@ -14,6 +14,8 @@ type Defaults = {
   scope?: "RENTAL_ONLY" | "FULL_TOTAL";
   appliesTo?: DiscountAppliesTo;
   canBypassMinPrice?: boolean;
+  isMobileOnly?: boolean;
+  isWebOnly?: boolean;
   startsAt?: string;
   endsAt?: string;
   maxUses?: number | "";
@@ -81,6 +83,25 @@ export function CouponCodeFields({ defaults, lockCode }: Props) {
         </select>
         <span className="mt-1 block text-[11px] font-normal text-on-surface-variant">
           الكود يُرفض لو العميل حاجز من تبويب مختلف عن النوع المحدَّد هنا.
+        </span>
+      </label>
+
+      <label className="text-sm font-medium">
+        القناة المسموح بها
+        <select
+          name="platformRestriction"
+          defaultValue={
+            defaults?.isMobileOnly ? "MOBILE_ONLY" : defaults?.isWebOnly ? "WEB_ONLY" : "ALL"
+          }
+          className={inputCls}
+        >
+          <option value="ALL">الموقع والتطبيق معاً</option>
+          <option value="MOBILE_ONLY">تطبيق الجوال فقط</option>
+          <option value="WEB_ONLY">الموقع الإلكتروني فقط</option>
+        </select>
+        <span className="mt-1 block text-[11px] font-normal text-on-surface-variant">
+          يُرفض الكود تلقائياً على القناة غير المحدَّدة — حجوزات المكتب من لوحة
+          التحكم مُستثناة ولا يسري عليها هذا القيد.
         </span>
       </label>
 

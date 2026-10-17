@@ -53,6 +53,7 @@ export async function createFleetBookingAndLinkCustomerSession(
   const created = await createDirectBooking({
     ...enforced.prepared,
     customerId: cust.userId,
+    channel: "PUBLIC_WEB",
   });
   if (!created.ok) return created;
 

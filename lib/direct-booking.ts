@@ -826,6 +826,12 @@ export type CreateDirectBookingInput = DirectBookingCommon & {
   contactEmail?: string | null;
   /** كود خصم يدخله العميل عند الإتمام — يحل محل الخصم التلقائي (RentalDiscount) عند صلاحيته. */
   couponCode?: string | null;
+  /**
+   * "PUBLIC_WEB" فقط من إتمام الحجز الذاتي على الموقع — يرفض كود `isMobileOnly`.
+   * غير مُمرَّر (undefined) من حجز المكتب اللي ينشئه الموظف ومن استيراد الحجوزات،
+   * فلا قيد قناة هناك.
+   */
+  channel?: "PUBLIC_WEB";
   /** مستندات الهوية والرخصة (واجهة الإتمام) — اختياري لحجز المكتب من الإدارة */
   kyc?: DirectBookingKycInput | null;
   /**
@@ -1554,6 +1560,7 @@ export async function createDirectBooking(
     const resolvedCoupon = await resolveCouponCode(couponCodeRaw, {
       customerPhone: commonNormalized.phone,
       periodKind,
+      channel: prepared.channel,
     });
     if (!resolvedCoupon.ok) {
       return { ok: false, error: resolvedCoupon.error };

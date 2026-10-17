@@ -36,6 +36,8 @@ export function CouponCodeEditForm({ coupon }: { coupon: CouponCodeAdminRow }) {
           scope: coupon.scope,
           appliesTo: coupon.appliesTo,
           canBypassMinPrice: coupon.canBypassMinPrice,
+          isMobileOnly: coupon.isMobileOnly,
+          isWebOnly: coupon.isWebOnly,
           startsAt: dateInputValue(coupon.startsAt),
           endsAt: dateInputValue(coupon.endsAt),
           maxUses: coupon.maxUses ?? "",

@@ -15,6 +15,12 @@ function formatScope(scope: string): string {
   return scope === "RENTAL_ONLY" ? "الإيجار فقط" : "الإجمالي كامل";
 }
 
+function platformLabel(row: Pick<CouponCodeAdminRow, "isMobileOnly" | "isWebOnly">): string {
+  if (row.isMobileOnly) return "تطبيق الجوال فقط";
+  if (row.isWebOnly) return "الموقع فقط";
+  return "الكل";
+}
+
 function formatPeriod(row: Pick<CouponCodeAdminRow, "startsAt" | "endsAt">): string {
   if (!row.startsAt && !row.endsAt) return "بدون تقييد زمني";
   const from = row.startsAt ? row.startsAt.toISOString().slice(0, 10) : "—";
@@ -68,6 +74,7 @@ export default async function AdminCouponCodesPage() {
               <th className="px-4 py-3 font-bold">الكود</th>
               <th className="px-4 py-3 font-bold">الخصم</th>
               <th className="px-4 py-3 font-bold">النطاق</th>
+              <th className="px-4 py-3 font-bold">القناة</th>
               <th className="px-4 py-3 font-bold">الفترة</th>
               <th className="px-4 py-3 font-bold">الاستخدام</th>
               <th className="px-4 py-3 font-bold">الحالة</th>
@@ -77,7 +84,7 @@ export default async function AdminCouponCodesPage() {
           <tbody>
             {coupons.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-on-surface-variant">
+                <td colSpan={8} className="px-4 py-10 text-center text-on-surface-variant">
                   لا توجد أكواد بعد.
                 </td>
               </tr>
@@ -93,6 +100,7 @@ export default async function AdminCouponCodesPage() {
                       {formatValue(c.kind, c.value)}
                     </td>
                     <td className="px-4 py-3 text-xs text-on-surface-variant">{formatScope(c.scope)}</td>
+                    <td className="px-4 py-3 text-xs text-on-surface-variant">{platformLabel(c)}</td>
                     <td className="px-4 py-3 text-xs text-on-surface-variant">{formatPeriod(c)}</td>
                     <td className="px-4 py-3 tabular-nums" dir="ltr">
                       {c.usesCount}

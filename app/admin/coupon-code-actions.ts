@@ -37,6 +37,8 @@ function readCouponFormFields(formData: FormData):
         scope: "RENTAL_ONLY" | "FULL_TOTAL";
         appliesTo: DiscountAppliesTo;
         canBypassMinPrice: boolean;
+        isMobileOnly: boolean;
+        isWebOnly: boolean;
         startsAt: Date | null;
         endsAt: Date | null;
         maxUses: number | null;
@@ -51,6 +53,9 @@ function readCouponFormFields(formData: FormData):
   const appliesToRaw = String(formData.get("appliesTo") ?? "DAILY_ONLY").trim().toUpperCase();
   const canBypassMinPrice =
     formData.get("canBypassMinPrice") === "on" || formData.get("canBypassMinPrice") === "true";
+  const platformRestriction = String(formData.get("platformRestriction") ?? "ALL").trim().toUpperCase();
+  const isMobileOnly = platformRestriction === "MOBILE_ONLY";
+  const isWebOnly = platformRestriction === "WEB_ONLY";
   const value = Number(formData.get("value"));
   const startsAt = parseOptionalDate(formData.get("startsAt"));
   const endsAt = parseOptionalDate(formData.get("endsAt"));
@@ -92,6 +97,8 @@ function readCouponFormFields(formData: FormData):
       scope: scopeRaw,
       appliesTo: appliesToRaw,
       canBypassMinPrice,
+      isMobileOnly,
+      isWebOnly,
       startsAt,
       endsAt,
       maxUses,

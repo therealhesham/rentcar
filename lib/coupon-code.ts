@@ -25,6 +25,7 @@ const ERROR_MAX_USES_REACHED = "نفد الحد الأقصى لاستخدام ه
 const ERROR_CUSTOMER_LIMIT_REACHED = "لقد استخدمت هذا الكود من قبل.";
 const ERROR_DAILY_ONLY = "هذا الكود يسري على التأجير اليومي فقط.";
 const ERROR_MONTHLY_ONLY = "هذا الكود يسري على التأجير الشهري فقط.";
+const ERROR_MOBILE_ONLY = "هذا الكود متاح فقط عبر تطبيق الجوال.";
 
 /**
  * يتحقق من صلاحية كود الخصم: مفعّل، داخل الفترة، مسموح لنوع التأجير المطلوب،
@@ -33,10 +34,20 @@ const ERROR_MONTHLY_ONLY = "هذا الكود يسري على التأجير ا�
  * يفحص أولاً جدول `CustomizedCoupon` (كود مخصَّص لرقم جوال هذا العميل بالذات).
  * لو الكود مطابق لعميل آخر أو غير موجود فيه أصلاً، يكمل البحث في جدول
  * `CouponCode` العام كالمعتاد — بلا أي فرق في السلوك عن السابق.
+ *
+ * `ctx.channel === "PUBLIC_WEB"` يرفض كود `isMobileOnly` — يُمرَّر فقط من
+ * مسار الموقع الإلكتروني الذاتي (معاينة الكوبون + إتمام الحجز العام)، وليس
+ * من حجوزات المكتب التي ينشئها الموظف من لوحة التحكم، ولا من تعديل كوبون حجز
+ * قائم من الأدمن — تلك المسارات تمرّر الكود كما هو بلا قيد قناة.
  */
 export async function resolveCouponCode(
   rawCode: string,
-  ctx: { customerPhone: string; now?: Date; periodKind?: RentalPeriodKind | null },
+  ctx: {
+    customerPhone: string;
+    now?: Date;
+    periodKind?: RentalPeriodKind | null;
+    channel?: "PUBLIC_WEB";
+  },
 ): Promise<{ ok: true; coupon: ResolvedCoupon } | { ok: false; error: string }> {
   const code = rawCode.trim().toUpperCase();
   if (!code) return { ok: false, error: ERROR_NOT_FOUND };
@@ -71,6 +82,9 @@ export async function resolveCouponCode(
   const row = await prisma.couponCode.findUnique({ where: { code } });
   if (!row) return { ok: false, error: ERROR_NOT_FOUND };
   if (!row.isActive) return { ok: false, error: ERROR_INACTIVE };
+  if (ctx.channel === "PUBLIC_WEB" && row.isMobileOnly) {
+    return { ok: false, error: ERROR_MOBILE_ONLY };
+  }
 
   if (row.startsAt && now.getTime() < row.startsAt.getTime()) {
     return { ok: false, error: ERROR_NOT_STARTED };
