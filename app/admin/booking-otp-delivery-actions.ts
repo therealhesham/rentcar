@@ -12,20 +12,20 @@ import { isSmsChannelConfigured } from "@/lib/booking-checkout-otp";
 import { isOutgoingMailTransportConfigured } from "@/lib/booking-invoice-email";
 import { isEvolutionWhatsAppConfigured } from "@/lib/evolution-whatsapp";
 import {
-  SITE_KEY_META_WHATSAPP_OTP_CONFIG,
-  getMetaWhatsappOtpConfig,
-  isMetaConfiguredForFlow,
-  normalizeMetaWhatsappOtpConfig,
+  SITE_KEY_RASAYILY_OTP_CONFIG,
+  getRasayilyOtpConfig,
+  isRasayilyConfigured,
+  normalizeRasayilyOtpConfig,
   whatsappProviderForFlow,
-  type MetaWhatsappOtpConfig,
+  type RasayilyOtpConfig,
   type WhatsappOtpFlow,
-} from "@/lib/meta-whatsapp";
+} from "@/lib/rasayily-whatsapp";
 import { prisma } from "@/lib/prisma";
 
 function validateFlow(
   flow: WhatsappOtpFlow,
   channel: BookingOtpChannel,
-  meta: MetaWhatsappOtpConfig,
+  cfg: RasayilyOtpConfig,
 ): string | null {
   const label = flow === "login" ? "تسجيل الدخول" : "تأكيد الحجز";
   if (channel === "SMS" && !isSmsChannelConfigured()) {
@@ -35,21 +35,18 @@ function validateFlow(
     return `${label}: لإرسال الرمز عبر البريد يجب ضبط SMTP (MAIL_HOST و MAIL_USER و MAIL_PASS) أو Resend (RESEND_API_KEY) في بيئة الخادم.`;
   }
   if (channel === "WHATSAPP") {
-    if (whatsappProviderForFlow(meta, flow) === "meta") {
-      if (!meta.phoneNumberId || !meta.accessToken) {
-        return `${label}: أدخل Phone Number ID و Access Token لاستخدام Meta.`;
-      }
-      if (!isMetaConfiguredForFlow(meta, flow)) {
-        return `${label}: أدخل اسم قالب Meta.`;
+    if (whatsappProviderForFlow(cfg, flow) === "rasayily") {
+      if (!isRasayilyConfigured(cfg)) {
+        return `${label}: أدخل Company ID و API Token لاستخدام رسائلي.`;
       }
     } else if (!isEvolutionWhatsAppConfigured()) {
-      return `${label}: Evolution غير مضبوط في البيئة (EVOLUTION_API_BASE_URL و EVOLUTION_API_KEY و EVOLUTION_INSTANCE_NAME). اختر Meta أو اضبط Evolution.`;
+      return `${label}: Evolution غير مضبوط في البيئة (EVOLUTION_API_BASE_URL و EVOLUTION_API_KEY و EVOLUTION_INSTANCE_NAME). اختر رسائلي أو اضبط Evolution.`;
     }
   }
   return null;
 }
 
-/** يحفظ قناة ومزوّد وقالب كل من تسجيل الدخول وتأكيد الحجز دفعة واحدة. */
+/** يحفظ قناة ومزوّد كل من تسجيل الدخول وتأكيد الحجز دفعة واحدة. */
 export async function updateOtpDeliverySettings(
   _prev: { ok: boolean; error?: string } | null,
   formData: FormData,
@@ -61,23 +58,18 @@ export async function updateOtpDeliverySettings(
   const loginChannel = parseBookingOtpChannel(text("loginChannel").trim().toUpperCase());
   const checkoutChannel = parseBookingOtpChannel(text("checkoutChannel").trim().toUpperCase());
 
-  const current = await getMetaWhatsappOtpConfig();
+  const current = await getRasayilyOtpConfig();
   // الحقل السري لا يُعاد إرساله للمتصفح — تركه فارغاً يعني الإبقاء على القيمة المحفوظة.
-  const newToken = text("accessToken").trim();
-  const meta = normalizeMetaWhatsappOtpConfig({
-    phoneNumberId: text("phoneNumberId"),
-    accessToken: newToken || current.accessToken,
-    apiVersion: text("apiVersion"),
+  const newToken = text("apiToken").trim();
+  const cfg = normalizeRasayilyOtpConfig({
+    apiToken: newToken || current.apiToken,
+    companyId: text("companyId"),
     loginProvider: text("loginProvider"),
-    loginTemplateName: text("loginTemplateName"),
-    loginTemplateLang: text("loginTemplateLang"),
     checkoutProvider: text("checkoutProvider"),
-    checkoutTemplateName: text("checkoutTemplateName"),
-    checkoutTemplateLang: text("checkoutTemplateLang"),
-  } satisfies Record<keyof MetaWhatsappOtpConfig, string>);
+  } satisfies Record<keyof RasayilyOtpConfig, string>);
 
   const error =
-    validateFlow("login", loginChannel, meta) ?? validateFlow("checkout", checkoutChannel, meta);
+    validateFlow("login", loginChannel, cfg) ?? validateFlow("checkout", checkoutChannel, cfg);
   if (error) return { ok: false, error };
 
   try {
@@ -93,9 +85,9 @@ export async function updateOtpDeliverySettings(
         update: { value: checkoutChannel },
       }),
       prisma.siteSetting.upsert({
-        where: { key: SITE_KEY_META_WHATSAPP_OTP_CONFIG },
-        create: { key: SITE_KEY_META_WHATSAPP_OTP_CONFIG, value: JSON.stringify(meta) },
-        update: { value: JSON.stringify(meta) },
+        where: { key: SITE_KEY_RASAYILY_OTP_CONFIG },
+        create: { key: SITE_KEY_RASAYILY_OTP_CONFIG, value: JSON.stringify(cfg) },
+        update: { value: JSON.stringify(cfg) },
       }),
     ]);
   } catch {

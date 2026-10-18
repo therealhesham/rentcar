@@ -3,24 +3,19 @@
 import { useActionState, useState } from "react";
 import { updateOtpDeliverySettings } from "@/app/admin/booking-otp-delivery-actions";
 import type { BookingOtpChannel } from "@/lib/site-settings";
-import type { WhatsappProvider } from "@/lib/meta-whatsapp";
+import type { WhatsappProvider } from "@/lib/rasayily-whatsapp";
 
-type MetaConfigView = {
-  phoneNumberId: string;
-  apiVersion: string;
+type RasayilyConfigView = {
+  companyId: string;
   loginProvider: WhatsappProvider;
-  loginTemplateName: string;
-  loginTemplateLang: string;
   checkoutProvider: WhatsappProvider;
-  checkoutTemplateName: string;
-  checkoutTemplateLang: string;
 };
 
 type Props = {
   loginChannel: BookingOtpChannel;
   checkoutChannel: BookingOtpChannel;
-  meta: MetaConfigView;
-  hasAccessToken: boolean;
+  rasayily: RasayilyConfigView;
+  hasApiToken: boolean;
   smsConfigured: boolean;
   mailConfigured: boolean;
   evolutionConfigured: boolean;
@@ -31,6 +26,11 @@ const CHANNELS: { value: BookingOtpChannel; label: string }[] = [
   { value: "SMS", label: "SMS" },
   { value: "WHATSAPP", label: "واتساب" },
   { value: "EMAIL", label: "بريد إلكتروني" },
+];
+
+const PROVIDERS: { value: WhatsappProvider; label: string }[] = [
+  { value: "evolution", label: "Evolution" },
+  { value: "rasayily", label: "رسائلي" },
 ];
 
 const inputCls =
@@ -81,8 +81,6 @@ function FlowCard({
   setChannel,
   provider,
   setProvider,
-  templateName,
-  templateLang,
   warn,
 }: {
   title: string;
@@ -92,12 +90,8 @@ function FlowCard({
   setChannel: (c: BookingOtpChannel) => void;
   provider: WhatsappProvider;
   setProvider: (p: WhatsappProvider) => void;
-  templateName: string;
-  templateLang: string;
   warn: string | null;
 }) {
-  const isWa = channel === "WHATSAPP";
-  const isMeta = isWa && provider === "meta";
   return (
     <section className="space-y-4 rounded-2xl border border-outline-variant/30 bg-surface-container-low p-6">
       <div>
@@ -110,42 +104,10 @@ function FlowCard({
         <Choice name={`${prefix}Channel`} options={CHANNELS} value={channel} onChange={setChannel} />
       </div>
 
-      {/* الحقول تبقى في الـ DOM دائماً (مخفية فقط) كي لا تُمسح قيمها عند الحفظ. */}
-      <div className={`space-y-2 ${isWa ? "" : "hidden"}`}>
+      {/* يبقى في الـ DOM دائماً (مخفي فقط) كي لا تُمسح قيمته عند الحفظ. */}
+      <div className={`space-y-2 ${channel === "WHATSAPP" ? "" : "hidden"}`}>
         <p className="text-sm font-bold text-on-surface">مزوّد واتساب</p>
-        <Choice
-          name={`${prefix}Provider`}
-          options={[
-            { value: "evolution" as WhatsappProvider, label: "Evolution" },
-            { value: "meta" as WhatsappProvider, label: "Meta (Cloud API)" },
-          ]}
-          value={provider}
-          onChange={setProvider}
-        />
-      </div>
-
-      <div className={`grid grid-cols-3 gap-3 ${isMeta ? "" : "hidden"}`}>
-        <label className="col-span-2 block">
-          <span className="mb-1 block text-xs text-on-surface-variant">اسم القالب (Template)</span>
-          <input
-            type="text"
-            name={`${prefix}TemplateName`}
-            defaultValue={templateName}
-            placeholder={prefix === "login" ? "login_otp" : "booking_otp"}
-            dir="ltr"
-            className={inputCls}
-          />
-        </label>
-        <label className="block">
-          <span className="mb-1 block text-xs text-on-surface-variant">اللغة</span>
-          <input
-            type="text"
-            name={`${prefix}TemplateLang`}
-            defaultValue={templateLang}
-            dir="ltr"
-            className={inputCls}
-          />
-        </label>
+        <Choice name={`${prefix}Provider`} options={PROVIDERS} value={provider} onChange={setProvider} />
       </div>
 
       {warn ? <p className="text-xs font-bold text-error">{warn}</p> : null}
@@ -156,17 +118,17 @@ function FlowCard({
 export function BookingOtpDeliveryForm({
   loginChannel: initialLoginChannel,
   checkoutChannel: initialCheckoutChannel,
-  meta,
-  hasAccessToken,
+  rasayily,
+  hasApiToken,
   smsConfigured,
   mailConfigured,
   evolutionConfigured,
 }: Props) {
   const [state, formAction, pending] = useActionState(updateOtpDeliverySettings, null);
   const [loginChannel, setLoginChannel] = useState(initialLoginChannel);
-  const [loginProvider, setLoginProvider] = useState(meta.loginProvider);
+  const [loginProvider, setLoginProvider] = useState(rasayily.loginProvider);
   const [checkoutChannel, setCheckoutChannel] = useState(initialCheckoutChannel);
-  const [checkoutProvider, setCheckoutProvider] = useState(meta.checkoutProvider);
+  const [checkoutProvider, setCheckoutProvider] = useState(rasayily.checkoutProvider);
 
   const warnFor = (channel: BookingOtpChannel, provider: WhatsappProvider): string | null => {
     if (channel === "SMS" && !smsConfigured) {
@@ -181,79 +143,60 @@ export function BookingOtpDeliveryForm({
     return null;
   };
 
-  const usesMeta =
-    (loginChannel === "WHATSAPP" && loginProvider === "meta") ||
-    (checkoutChannel === "WHATSAPP" && checkoutProvider === "meta");
+  const usesRasayily =
+    (loginChannel === "WHATSAPP" && loginProvider === "rasayily") ||
+    (checkoutChannel === "WHATSAPP" && checkoutProvider === "rasayily");
 
   return (
     <form action={formAction} className="max-w-2xl space-y-6">
       <FlowCard
         title="تسجيل دخول العميل"
-        hint="الرمز اللي يوصل للعميل لما يدخل من صفحة «دخول العميل»."
+        hint="رمز التحقق اللي يوصل للعميل لما يدخل من صفحة «دخول العميل»."
         prefix="login"
         channel={loginChannel}
         setChannel={setLoginChannel}
         provider={loginProvider}
         setProvider={setLoginProvider}
-        templateName={meta.loginTemplateName}
-        templateLang={meta.loginTemplateLang}
         warn={warnFor(loginChannel, loginProvider)}
       />
 
       <FlowCard
         title="تأكيد الحجز"
-        hint="الرمز اللي يوصل للعميل قبل إتمام الحجز المباشر من الموقع."
+        hint="رمز التحقق اللي يوصل للعميل قبل إتمام الحجز المباشر من الموقع."
         prefix="checkout"
         channel={checkoutChannel}
         setChannel={setCheckoutChannel}
         provider={checkoutProvider}
         setProvider={setCheckoutProvider}
-        templateName={meta.checkoutTemplateName}
-        templateLang={meta.checkoutTemplateLang}
         warn={warnFor(checkoutChannel, checkoutProvider)}
       />
 
       <section
         className={`space-y-4 rounded-2xl border border-outline-variant/30 bg-surface-container-low p-6 ${
-          usesMeta ? "" : "hidden"
+          usesRasayily ? "" : "hidden"
         }`}
       >
         <div>
-          <h3 className="text-base font-extrabold text-on-surface">بيانات اتصال Meta (Cloud API)</h3>
+          <h3 className="text-base font-extrabold text-on-surface">بيانات اتصال رسائلي</h3>
           <p className="mt-1 text-sm text-on-surface-variant">
-            مشتركة بين التدفّقين — تظهر لأن واحداً منهما على Meta.
+            مشتركة بين التدفّقين. نص الرسالة هو نفس قالب الواتساب المحفوظ للدخول/الحجز (فيه {"{otp}"}).
+            رسائلي تعالج الطلب في طابور، فنجاح الإرسال يعني القبول وليس تأكيد التسليم.
           </p>
         </div>
         <label className="block">
-          <span className="mb-1 block text-sm font-bold text-on-surface">Phone Number ID</span>
-          <input
-            type="text"
-            name="phoneNumberId"
-            defaultValue={meta.phoneNumberId}
-            dir="ltr"
-            className={inputCls}
-          />
-        </label>
-        <label className="block">
-          <span className="mb-1 block text-sm font-bold text-on-surface">Access Token</span>
+          <span className="mb-1 block text-sm font-bold text-on-surface">API Token</span>
           <input
             type="password"
-            name="accessToken"
+            name="apiToken"
             autoComplete="off"
-            placeholder={hasAccessToken ? "محفوظ — اتركه فارغاً للإبقاء عليه" : "الصق الـ token الدائم"}
+            placeholder={hasApiToken ? "محفوظ — اتركه فارغاً للإبقاء عليه" : "الصق الـ token"}
             dir="ltr"
             className={inputCls}
           />
         </label>
         <label className="block">
-          <span className="mb-1 block text-sm font-bold text-on-surface">إصدار Graph API</span>
-          <input
-            type="text"
-            name="apiVersion"
-            defaultValue={meta.apiVersion}
-            dir="ltr"
-            className={inputCls}
-          />
+          <span className="mb-1 block text-sm font-bold text-on-surface">Company ID</span>
+          <input type="text" name="companyId" defaultValue={rasayily.companyId} dir="ltr" className={inputCls} />
         </label>
       </section>
 

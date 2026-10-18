@@ -6,7 +6,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import { saudiLocalNineToE164 } from "@/lib/normalize-saudi-phone";
 import { e164ToEvolutionWhatsAppNumber } from "@/lib/evolution-whatsapp";
-import { isWhatsappOtpDeliverable, sendWhatsappOtp } from "@/lib/meta-whatsapp";
+import { isWhatsappOtpDeliverable, sendWhatsappOtp } from "@/lib/rasayily-whatsapp";
 import {
   isMsegatConfigured,
   msegatRefValue,
@@ -128,7 +128,7 @@ export async function sendBookingCheckoutOtpFromPublicRequest(body: {
       return {
         ok: false,
         error:
-          "إرسال واتساب غير مهيأ (فعّل Meta لتأكيد الحجز أو اضبط EVOLUTION_API_BASE_URL و EVOLUTION_API_KEY و EVOLUTION_INSTANCE_NAME).",
+          "إرسال واتساب غير مهيأ (اختر رسائلي لتأكيد الحجز أو اضبط EVOLUTION_API_BASE_URL و EVOLUTION_API_KEY و EVOLUTION_INSTANCE_NAME).",
       };
     }
 
@@ -255,7 +255,7 @@ export async function sendBookingCheckoutOtpFromPublicRequest(body: {
         return { ok: false, error: "رقم الجوال غير صالح لإرسال واتساب." };
       }
       try {
-        await sendWhatsappOtp({ flow: "checkout", phoneE164, otp, evolutionText: message });
+        await sendWhatsappOtp({ flow: "checkout", phoneE164, text: message });
       } catch (e) {
         console.error("booking checkout OTP WhatsApp failed", e);
         await prisma.bookingCheckoutOtp.delete({ where: { destinationKey: dest } }).catch(() => {});
