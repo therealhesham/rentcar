@@ -15,6 +15,10 @@ export const dynamic = "force-dynamic";
  * رد الذكاء الاصطناعي بيترجع بشكل منفصل عبر POST /api/n8n-callback (راجع
  * lib/whatsapp-chatbot.ts)، مش في رد هذا الطلب — فبنرجّع 200 بعد المصادقة دايماً
  * منعاً لإعادة محاولات رسائلي على أخطاء داخلية.
+ *
+ * تشخيص: طلب فيه هيدر X-Debug-Rasayily: 1 (وبنفس X-N8n-Secret الصحيح) يرجّع
+ * سبب التوقف الحقيقي في الرد نفسه — مفيد لاختبار يدوي بـ curl من غير وصول للوج
+ * السيرفر. الطلبات العادية من رسائلي من غير الهيدر ده سلوكها نفسه زي الأول.
  */
 export async function POST(req: Request) {
   const expectedSecret = process.env.RASAYILY_WEBHOOK_SECRET?.trim();
@@ -24,6 +28,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
+  const debug = req.headers.get("x-debug-rasayily") === "1";
+
   let raw: unknown;
   try {
     raw = await req.json();
@@ -32,11 +38,14 @@ export async function POST(req: Request) {
   }
   console.info("[rasayily-webhook] raw payload:", JSON.stringify(raw));
 
+  let result: Awaited<ReturnType<typeof handleIncomingRasayilyMessage>> | null = null;
   try {
-    await handleIncomingRasayilyMessage(raw);
+    result = await handleIncomingRasayilyMessage(raw);
+    console.info("[rasayily-webhook] result:", result);
   } catch (e) {
     console.error("[rasayily-webhook] فشل معالجة الرسالة الواردة:", e);
+    result = { ok: false, reason: e instanceof Error ? e.message : String(e) };
   }
 
-  return NextResponse.json({ received: true });
+  return NextResponse.json({ received: true, ...(debug ? { debug: result } : {}) });
 }

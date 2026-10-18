@@ -188,39 +188,65 @@ async function sendRasayilyCallback(opts: {
   }
 }
 
-/** نقطة الدخول الوحيدة من الـ webhook — صامتة عمداً عند أي تعطيل/نقص إعداد. */
-export async function handleIncomingRasayilyMessage(rawPayload: unknown): Promise<void> {
-  if (process.env.WHATSAPP_BOT_ENABLED?.trim().toLowerCase() !== "true") return;
+export type HandleResult =
+  | { ok: true; replyText: string }
+  | { ok: false; reason: string };
+
+/**
+ * نقطة الدخول الوحيدة من الـ webhook. ترجع نتيجة بدل void حتى يقدر الـ route يعرض
+ * سبب التوقف في وضع التشخيص (X-Debug-Rasayily) من غير ما يأثر على الرد العادي
+ * لرسائلي (دايماً 200 {received:true}).
+ */
+export async function handleIncomingRasayilyMessage(rawPayload: unknown): Promise<HandleResult> {
+  if (process.env.WHATSAPP_BOT_ENABLED?.trim().toLowerCase() !== "true") {
+    return { ok: false, reason: "WHATSAPP_BOT_ENABLED مش مضبوط بـ true" };
+  }
 
   const incoming = extractIncomingMessage(rawPayload);
   if (!incoming) {
     console.warn("[whatsapp-chatbot] تعذّر استخراج رسالة نصية من حمولة الـ webhook.");
-    return;
+    return { ok: false, reason: "تعذّر استخراج رقم/نص الرسالة من الحمولة الواردة" };
   }
 
   if (!isOpenRouterConfigured()) {
     console.error("[whatsapp-chatbot] OPENROUTER_API_KEY غير مضبوط — تخطّي الرد.");
-    return;
+    return { ok: false, reason: "OPENROUTER_API_KEY غير مضبوط" };
   }
 
   const otpCfg = await getWhatsappOtpConfig();
   if (!isRasayilyConfigured(otpCfg)) {
     console.error("[whatsapp-chatbot] إعدادات رسائلي (التوكن/معرّف الشركة) غير مكتملة — تخطّي الرد.");
-    return;
+    return { ok: false, reason: "إعدادات رسائلي (التوكن/معرّف الشركة) غير مكتملة" };
   }
 
   const grounding = await buildGroundingContext();
   const systemPrompt = buildSystemPrompt({ language: incoming.language, grounding });
 
-  const rawReply = await getOpenRouterReply({ systemPrompt, userMessage: incoming.text, jsonMode: true });
+  let rawReply: string;
+  try {
+    rawReply = await getOpenRouterReply({ systemPrompt, userMessage: incoming.text, jsonMode: true });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("[whatsapp-chatbot] فشل استدعاء OpenRouter:", e);
+    return { ok: false, reason: `فشل استدعاء OpenRouter: ${msg}` };
+  }
+
   const structured =
     parseStructuredReply(rawReply) ?? { reply_text: rawReply.trim(), intent_tags: [], escalate_to_human: false };
 
-  await sendRasayilyCallback({
-    rasayilyToken: otpCfg.rasayilyToken,
-    rasayilyCompanyId: otpCfg.rasayilyCompanyId,
-    phone: incoming.phone,
-    reply: structured,
-    companyId: incoming.companyId,
-  });
+  try {
+    await sendRasayilyCallback({
+      rasayilyToken: otpCfg.rasayilyToken,
+      rasayilyCompanyId: otpCfg.rasayilyCompanyId,
+      phone: incoming.phone,
+      reply: structured,
+      companyId: incoming.companyId,
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("[whatsapp-chatbot] فشل إرسال n8n-callback:", e);
+    return { ok: false, reason: `فشل إرسال n8n-callback: ${msg}` };
+  }
+
+  return { ok: true, replyText: structured.reply_text };
 }
