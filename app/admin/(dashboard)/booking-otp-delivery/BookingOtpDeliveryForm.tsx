@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import Link from "next/link";
 import { updateOtpDeliverySettings } from "@/app/admin/booking-otp-delivery-actions";
 import type { BookingOtpChannel } from "@/lib/site-settings";
 import type { WhatsappProvider } from "@/lib/whatsapp-otp";
@@ -169,6 +170,16 @@ function FlowCard({
         </p>
       ) : null}
 
+      {isWa && (provider === "evolution" || provider === "rasayily") ? (
+        <p className="text-xs text-on-surface-variant">
+          نص الرسالة (مع المتغيرات) بتاع {provider === "evolution" ? "Evolution" : "رسائلي"} يتعدّل من صفحة{" "}
+          <Link href="/admin/whatsapp-templates" className="font-bold text-primary underline">
+            «قوالب واتساب»
+          </Link>
+          .
+        </p>
+      ) : null}
+
       {warn ? <p className="text-xs font-bold text-error">{warn}</p> : null}
     </section>
   );
@@ -244,9 +255,16 @@ function BookingMessageCard({
         </p>
       ) : null}
 
-      {provider === "rasayily" ? (
+      {provider === "evolution" || provider === "rasayily" ? (
         <p className="text-xs text-on-surface-variant">
-          رسائلي ترسل نص الرسالة المحفوظ في صفحة «قوالب واتساب» كنص حر، وليس القالب المعتمد على Meta.
+          {provider === "rasayily"
+            ? "رسائلي ترسل نص الرسالة كنص حر، وليس القالب المعتمد على Meta — "
+            : "Evolution ترسل نص الرسالة كنص حر — "}
+          النص (مع المتغيرات) يتعدّل من صفحة{" "}
+          <Link href="/admin/whatsapp-templates" className="font-bold text-primary underline">
+            «قوالب واتساب»
+          </Link>
+          .
         </p>
       ) : null}
 
