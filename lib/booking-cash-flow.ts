@@ -47,6 +47,23 @@ export function isInvoiceDeliveryReady(booking: {
   return booking.paymentStatus.trim().toUpperCase() === "PAID";
 }
 
+const CASH_BOOKING_CONFIRMED_OR_BEYOND = new Set(["CONFIRMED", "CONTACTED", "PICKED_UP", "RETURNED"]);
+
+/**
+ * رسالة واتساب «تأكيد الحجز» للعميل — بخلاف الفاتورة، نقدي يبعثها فور تأكيد الحجز
+ * (مش بعد الإرجاع)، وإلكتروني فور نجاح الدفع.
+ */
+export function isBookingCompletionWhatsAppReady(booking: {
+  paymentMethod: string | null;
+  paymentStatus: string;
+  status: string;
+}): boolean {
+  if (isCashPaymentMethod(booking.paymentMethod)) {
+    return CASH_BOOKING_CONFIRMED_OR_BEYOND.has(booking.status.trim().toUpperCase());
+  }
+  return booking.paymentStatus.trim().toUpperCase() === "PAID";
+}
+
 /** «الإجمالي» للنقدي أو غير المدفوع — «الإجمالي المدفوع» بعد دفع إلكتروني/فوري. */
 export function invoiceTotalLabelAr(booking: {
   paymentMethod: string | null;

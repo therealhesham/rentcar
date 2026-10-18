@@ -1,7 +1,7 @@
 import {
   isCashPaymentMethod,
   invoiceTotalLabelAr,
-  isInvoiceDeliveryReady,
+  isBookingCompletionWhatsAppReady,
 } from "@/lib/booking-cash-flow";
 import { formatSarAmount } from "@/lib/booking-checkout-pricing";
 import type { BookingPaymentSnapshot } from "@/lib/booking-payment-data";
@@ -132,7 +132,7 @@ async function postSendText(opts: { number: string; text: string }): Promise<voi
 
 export async function sendBookingCompletionWhatsAppAfterPayment(bookingRequestId: number): Promise<void> {
   const snapshot = await getBookingForPayment(bookingRequestId);
-  if (!snapshot || !isInvoiceDeliveryReady(snapshot)) {
+  if (!snapshot || !isBookingCompletionWhatsAppReady(snapshot)) {
     console.warn(
       `[evolution-whatsapp] لقطة الطلب #${bookingRequestId} غير جاهزة لإشعار الإتمام — تخطّي واتساب.`,
     );
