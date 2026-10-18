@@ -141,9 +141,12 @@ export async function sendBookingCompletionWhatsAppAfterPayment(bookingRequestId
 
   const vars = await buildBookingCompletionVars(snapshot);
   const { getWhatsAppTemplate, expandTemplate } = await import("@/lib/whatsapp-templates");
-  const { getWhatsappOtpConfig, isWhatsappProviderReady, sendWhatsappBookingCompletion } = await import(
-    "@/lib/whatsapp-otp"
-  );
+  const {
+    getWhatsappOtpConfig,
+    isWhatsappProviderReady,
+    sendWhatsappBookingCompletion,
+    sendWhatsappBookingCompletionAdmin,
+  } = await import("@/lib/whatsapp-otp");
 
   const otpCfg = await getWhatsappOtpConfig();
   if (isWhatsappProviderReady(otpCfg, "bookingCompletion")) {
@@ -163,11 +166,11 @@ export async function sendBookingCompletionWhatsAppAfterPayment(bookingRequestId
     );
   }
 
-  if (!isEvolutionWhatsAppConfigured()) {
+  if (!isWhatsappProviderReady(otpCfg, "bookingCompletionAdmin")) {
     return;
   }
 
-  // إشعار أرقام الصيانة/الإدارة — عبر Evolution دوماً.
+  // إشعار أرقام الصيانة/الإدارة.
   const waSetting = await prisma.siteSetting.findUnique({
     where: { key: "maintenance_whatsapp_numbers" }
   });
@@ -179,7 +182,7 @@ export async function sendBookingCompletionWhatsAppAfterPayment(bookingRequestId
 
       for (const num of numbers) {
         try {
-          await postSendText({ number: num, text: maintenanceText });
+          await sendWhatsappBookingCompletionAdmin({ phoneE164: num, text: maintenanceText, vars });
         } catch (err) {
           console.error(`[evolution-whatsapp] Failed to send to maintenance ${num}`, err);
         }

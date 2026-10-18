@@ -35,7 +35,9 @@ function validateFlow(
         ? "رمز تأكيد الحجز"
         : flow === "bookingCompletion"
           ? "رسالة تأكيد الحجز بعد الدفع"
-          : "إشعار تأكيد الحجز المبدئي";
+          : flow === "bookingConfirmed"
+            ? "إشعار تأكيد الحجز المبدئي"
+            : "إشعار حجز مدفوع/مؤكد (الإدارة)";
   if (channel === "SMS" && !isSmsChannelConfigured()) {
     return `${label}: لإرسال الرمز عبر الرسائل النصية يجب ضبط MSEGAT_USERNAME و MSEGAT_API_KEY و MSEGAT_SENDER في بيئة الخادم.`;
   }
@@ -44,7 +46,9 @@ function validateFlow(
   }
   if (channel === "WHATSAPP") {
     const provider = whatsappProviderForFlow(cfg, flow);
-    if (provider === "meta") {
+    if (provider === "none") {
+      // تعطيل عمدي — لا تحقّق مطلوب.
+    } else if (provider === "meta") {
       if (!cfg.phoneNumberId || !cfg.accessToken) {
         return `${label}: أدخل Phone Number ID و Access Token لاستخدام Meta.`;
       }
@@ -89,6 +93,9 @@ export async function updateOtpDeliverySettings(
     bookingConfirmedProvider: text("bookingConfirmedProvider"),
     bookingConfirmedTemplateName: text("bookingConfirmedTemplateName"),
     bookingConfirmedTemplateLang: text("bookingConfirmedTemplateLang"),
+    bookingCompletionAdminProvider: text("bookingCompletionAdminProvider"),
+    bookingCompletionAdminTemplateName: text("bookingCompletionAdminTemplateName"),
+    bookingCompletionAdminTemplateLang: text("bookingCompletionAdminTemplateLang"),
     phoneNumberId: text("phoneNumberId"),
     accessToken: text("accessToken").trim() || current.accessToken,
     apiVersion: text("apiVersion"),
@@ -100,7 +107,8 @@ export async function updateOtpDeliverySettings(
     validateFlow("login", loginChannel, cfg) ??
     validateFlow("checkout", checkoutChannel, cfg) ??
     validateFlow("bookingCompletion", "WHATSAPP", cfg) ??
-    validateFlow("bookingConfirmed", "WHATSAPP", cfg);
+    validateFlow("bookingConfirmed", "WHATSAPP", cfg) ??
+    validateFlow("bookingCompletionAdmin", "WHATSAPP", cfg);
   if (error) return { ok: false, error };
 
   try {

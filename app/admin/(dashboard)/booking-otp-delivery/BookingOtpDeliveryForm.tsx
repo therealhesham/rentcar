@@ -18,6 +18,9 @@ type ConfigView = {
   bookingConfirmedProvider: WhatsappProvider;
   bookingConfirmedTemplateName: string;
   bookingConfirmedTemplateLang: string;
+  bookingCompletionAdminProvider: WhatsappProvider;
+  bookingCompletionAdminTemplateName: string;
+  bookingCompletionAdminTemplateLang: string;
   phoneNumberId: string;
   apiVersion: string;
   rasayilyCompanyId: string;
@@ -45,6 +48,12 @@ const PROVIDERS: { value: WhatsappProvider; label: string }[] = [
   { value: "evolution", label: "Evolution" },
   { value: "meta", label: "Meta (قالب معتمد)" },
   { value: "rasayily", label: "رسائلي" },
+];
+
+/** لكروت رسائل الحجز الجاهزة (مش تدفّقات الـ OTP) — فيها خيار تعطيل الإرسال تماماً. */
+const PROVIDERS_WITH_NONE: { value: WhatsappProvider; label: string }[] = [
+  ...PROVIDERS,
+  { value: "none", label: "بدون إرسال" },
 ];
 
 const inputCls =
@@ -199,7 +208,7 @@ function BookingMessageCard({
         <p className="text-sm font-bold text-on-surface">مزوّد واتساب</p>
         <Choice
           name={`${fieldPrefix}Provider`}
-          options={PROVIDERS}
+          options={PROVIDERS_WITH_NONE}
           value={provider}
           onChange={setProvider}
         />
@@ -241,6 +250,10 @@ function BookingMessageCard({
         </p>
       ) : null}
 
+      {provider === "none" ? (
+        <p className="text-xs text-on-surface-variant">هذه الرسالة معطّلة — مش هتتبعت لحد.</p>
+      ) : null}
+
       {warn ? <p className="text-xs font-bold text-error">{warn}</p> : null}
     </section>
   );
@@ -267,6 +280,9 @@ export function BookingOtpDeliveryForm({
   const [bookingConfirmedProvider, setBookingConfirmedProvider] = useState(
     config.bookingConfirmedProvider,
   );
+  const [bookingCompletionAdminProvider, setBookingCompletionAdminProvider] = useState(
+    config.bookingCompletionAdminProvider,
+  );
 
   const warnFor = (channel: BookingOtpChannel, provider: WhatsappProvider): string | null => {
     if (channel === "SMS" && !smsConfigured) {
@@ -292,7 +308,8 @@ export function BookingOtpDeliveryForm({
     (loginChannel === "WHATSAPP" && loginProvider === p) ||
     (checkoutChannel === "WHATSAPP" && checkoutProvider === p) ||
     bookingCompletionProvider === p ||
-    bookingConfirmedProvider === p;
+    bookingConfirmedProvider === p ||
+    bookingCompletionAdminProvider === p;
 
   return (
     <form action={formAction} className="max-w-2xl space-y-6">
@@ -346,6 +363,19 @@ export function BookingOtpDeliveryForm({
         templateName={config.bookingConfirmedTemplateName}
         templateLang={config.bookingConfirmedTemplateLang}
         warn={warnForProvider(bookingConfirmedProvider)}
+      />
+
+      <BookingMessageCard
+        title="إشعار حجز مدفوع/مؤكد (الإدارة)"
+        hint="تُرسل لأرقام الصيانة/الإدارة (maintenance_whatsapp_numbers) في نفس لحظة رسالة تأكيد الحجز للعميل."
+        fieldPrefix="bookingCompletionAdmin"
+        templateNamePlaceholder="booking_completion_admin"
+        metaNamedParams="bookingid, cartitle, fullname, phone, branchlocation, pickupdate, numberofdays"
+        provider={bookingCompletionAdminProvider}
+        setProvider={setBookingCompletionAdminProvider}
+        templateName={config.bookingCompletionAdminTemplateName}
+        templateLang={config.bookingCompletionAdminTemplateLang}
+        warn={warnForProvider(bookingCompletionAdminProvider)}
       />
 
       <section
