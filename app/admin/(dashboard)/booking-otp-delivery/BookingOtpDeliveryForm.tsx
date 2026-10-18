@@ -15,6 +15,9 @@ type ConfigView = {
   bookingCompletionProvider: WhatsappProvider;
   bookingCompletionTemplateName: string;
   bookingCompletionTemplateLang: string;
+  bookingConfirmedProvider: WhatsappProvider;
+  bookingConfirmedTemplateName: string;
+  bookingConfirmedTemplateLang: string;
   phoneNumberId: string;
   apiVersion: string;
   rasayilyCompanyId: string;
@@ -162,13 +165,23 @@ function FlowCard({
   );
 }
 
-function BookingCompletionCard({
+function BookingMessageCard({
+  title,
+  hint,
+  fieldPrefix,
+  metaNamedParams,
+  templateNamePlaceholder,
   provider,
   setProvider,
   templateName,
   templateLang,
   warn,
 }: {
+  title: string;
+  hint: string;
+  fieldPrefix: string;
+  metaNamedParams: string;
+  templateNamePlaceholder: string;
   provider: WhatsappProvider;
   setProvider: (p: WhatsappProvider) => void;
   templateName: string;
@@ -178,16 +191,14 @@ function BookingCompletionCard({
   return (
     <section className="space-y-4 rounded-2xl border border-outline-variant/30 bg-surface-container-low p-6">
       <div>
-        <h3 className="text-base font-extrabold text-on-surface">تأكيد الحجز (رسالة بعد الدفع)</h3>
-        <p className="mt-1 text-sm text-on-surface-variant">
-          رسالة واتساب كاملة التفاصيل تُرسل للعميل تلقائياً بعد نجاح الدفع أو التأكيد النقدي.
-        </p>
+        <h3 className="text-base font-extrabold text-on-surface">{title}</h3>
+        <p className="mt-1 text-sm text-on-surface-variant">{hint}</p>
       </div>
 
       <div className="space-y-2">
         <p className="text-sm font-bold text-on-surface">مزوّد واتساب</p>
         <Choice
-          name="bookingCompletionProvider"
+          name={`${fieldPrefix}Provider`}
           options={PROVIDERS}
           value={provider}
           onChange={setProvider}
@@ -199,9 +210,9 @@ function BookingCompletionCard({
           <span className="mb-1 block text-xs text-on-surface-variant">اسم القالب (Template)</span>
           <input
             type="text"
-            name="bookingCompletionTemplateName"
+            name={`${fieldPrefix}TemplateName`}
             defaultValue={templateName}
-            placeholder="booking_completion"
+            placeholder={templateNamePlaceholder}
             dir="ltr"
             className={inputCls}
           />
@@ -210,7 +221,7 @@ function BookingCompletionCard({
           <span className="mb-1 block text-xs text-on-surface-variant">اللغة</span>
           <input
             type="text"
-            name="bookingCompletionTemplateLang"
+            name={`${fieldPrefix}TemplateLang`}
             defaultValue={templateLang}
             dir="ltr"
             className={inputCls}
@@ -220,8 +231,7 @@ function BookingCompletionCard({
 
       {provider === "meta" ? (
         <p className="text-xs text-on-surface-variant" dir="ltr">
-          Meta named parameters: fullname, bookingid, cartitle, pickupdate, dropoffdate, pickupdetails,
-          branchlocation, paymentmethod, totalamount — لازم أسماء المتغيرات في القالب المعتمد تطابق دي بالظبط.
+          Meta named parameters: {metaNamedParams} — لازم أسماء المتغيرات في القالب المعتمد تطابق دي بالظبط.
         </p>
       ) : null}
 
@@ -254,6 +264,9 @@ export function BookingOtpDeliveryForm({
   const [bookingCompletionProvider, setBookingCompletionProvider] = useState(
     config.bookingCompletionProvider,
   );
+  const [bookingConfirmedProvider, setBookingConfirmedProvider] = useState(
+    config.bookingConfirmedProvider,
+  );
 
   const warnFor = (channel: BookingOtpChannel, provider: WhatsappProvider): string | null => {
     if (channel === "SMS" && !smsConfigured) {
@@ -278,7 +291,8 @@ export function BookingOtpDeliveryForm({
   const uses = (p: WhatsappProvider) =>
     (loginChannel === "WHATSAPP" && loginProvider === p) ||
     (checkoutChannel === "WHATSAPP" && checkoutProvider === p) ||
-    bookingCompletionProvider === p;
+    bookingCompletionProvider === p ||
+    bookingConfirmedProvider === p;
 
   return (
     <form action={formAction} className="max-w-2xl space-y-6">
@@ -308,12 +322,30 @@ export function BookingOtpDeliveryForm({
         warn={warnFor(checkoutChannel, checkoutProvider)}
       />
 
-      <BookingCompletionCard
+      <BookingMessageCard
+        title="تأكيد الحجز (رسالة بعد الدفع)"
+        hint="رسالة واتساب كاملة التفاصيل تُرسل للعميل تلقائياً بعد نجاح الدفع أو التأكيد النقدي."
+        fieldPrefix="bookingCompletion"
+        templateNamePlaceholder="booking_completion"
+        metaNamedParams="fullname, bookingid, cartitle, pickupdate, dropoffdate, pickupdetails, branchlocation, paymentmethod, totalamount"
         provider={bookingCompletionProvider}
         setProvider={setBookingCompletionProvider}
         templateName={config.bookingCompletionTemplateName}
         templateLang={config.bookingCompletionTemplateLang}
         warn={warnForProvider(bookingCompletionProvider)}
+      />
+
+      <BookingMessageCard
+        title="إشعار تأكيد الحجز المبدئي"
+        hint="رسالة واتساب تُرسل للعميل فور ما الموظف يأكد الحجز غير النقدي، قبل الدفع."
+        fieldPrefix="bookingConfirmed"
+        templateNamePlaceholder="booking_confirmed"
+        metaNamedParams="fullname, bookingid, cartitle, pickupdetails, pickupdate, numberofdays"
+        provider={bookingConfirmedProvider}
+        setProvider={setBookingConfirmedProvider}
+        templateName={config.bookingConfirmedTemplateName}
+        templateLang={config.bookingConfirmedTemplateLang}
+        warn={warnForProvider(bookingConfirmedProvider)}
       />
 
       <section

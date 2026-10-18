@@ -29,7 +29,13 @@ function validateFlow(
   cfg: WhatsappOtpConfig,
 ): string | null {
   const label =
-    flow === "login" ? "تسجيل الدخول" : flow === "checkout" ? "رمز تأكيد الحجز" : "رسالة تأكيد الحجز بعد الدفع";
+    flow === "login"
+      ? "تسجيل الدخول"
+      : flow === "checkout"
+        ? "رمز تأكيد الحجز"
+        : flow === "bookingCompletion"
+          ? "رسالة تأكيد الحجز بعد الدفع"
+          : "إشعار تأكيد الحجز المبدئي";
   if (channel === "SMS" && !isSmsChannelConfigured()) {
     return `${label}: لإرسال الرمز عبر الرسائل النصية يجب ضبط MSEGAT_USERNAME و MSEGAT_API_KEY و MSEGAT_SENDER في بيئة الخادم.`;
   }
@@ -80,6 +86,9 @@ export async function updateOtpDeliverySettings(
     bookingCompletionProvider: text("bookingCompletionProvider"),
     bookingCompletionTemplateName: text("bookingCompletionTemplateName"),
     bookingCompletionTemplateLang: text("bookingCompletionTemplateLang"),
+    bookingConfirmedProvider: text("bookingConfirmedProvider"),
+    bookingConfirmedTemplateName: text("bookingConfirmedTemplateName"),
+    bookingConfirmedTemplateLang: text("bookingConfirmedTemplateLang"),
     phoneNumberId: text("phoneNumberId"),
     accessToken: text("accessToken").trim() || current.accessToken,
     apiVersion: text("apiVersion"),
@@ -90,7 +99,8 @@ export async function updateOtpDeliverySettings(
   const error =
     validateFlow("login", loginChannel, cfg) ??
     validateFlow("checkout", checkoutChannel, cfg) ??
-    validateFlow("bookingCompletion", "WHATSAPP", cfg);
+    validateFlow("bookingCompletion", "WHATSAPP", cfg) ??
+    validateFlow("bookingConfirmed", "WHATSAPP", cfg);
   if (error) return { ok: false, error };
 
   try {

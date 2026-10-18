@@ -189,22 +189,28 @@ export async function sendBookingCompletionWhatsAppAfterPayment(bookingRequestId
 }
 
 export async function sendBookingConfirmedWhatsAppToCustomer(bookingRequestId: number): Promise<void> {
-  if (!isEvolutionWhatsAppConfigured()) return;
-
   const snapshot = await getBookingForPayment(bookingRequestId);
   if (!snapshot) return;
 
-  const number = e164ToEvolutionWhatsAppNumber(snapshot.phone);
-  if (!number) return;
-
   const vars = await buildBookingCompletionVars(snapshot);
   const { getWhatsAppTemplate, expandTemplate } = await import("@/lib/whatsapp-templates");
-  
+  const { getWhatsappOtpConfig, isWhatsappProviderReady, sendWhatsappBookingConfirmed } = await import(
+    "@/lib/whatsapp-otp"
+  );
+
+  const otpCfg = await getWhatsappOtpConfig();
+  if (!isWhatsappProviderReady(otpCfg, "bookingConfirmed")) {
+    console.warn(
+      `[evolution-whatsapp] مزوّد واتساب تأكيد الحجز المبدئي غير جاهز — تخطّي (طلب #${bookingRequestId}).`,
+    );
+    return;
+  }
+
   const template = await getWhatsAppTemplate("whatsapp_template_booking_confirmed_customer");
   const text = expandTemplate(template, vars);
-  
+
   try {
-    await postSendText({ number, text });
+    await sendWhatsappBookingConfirmed({ phoneE164: snapshot.phone, text, vars });
   } catch (err) {
     console.error(`[evolution-whatsapp] Failed to send confirmed whatsapp to customer`, err);
   }
