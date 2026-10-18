@@ -1,13 +1,12 @@
 import { redirect } from "next/navigation";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { verifyAdminSession } from "@/lib/admin-auth";
-import { getBookingOtpChannel } from "@/lib/site-settings";
+import { getBookingOtpChannel, getLoginOtpChannel } from "@/lib/site-settings";
 import { isSmsChannelConfigured } from "@/lib/booking-checkout-otp";
 import { isOutgoingMailTransportConfigured } from "@/lib/booking-invoice-email";
 import { isEvolutionWhatsAppConfigured } from "@/lib/evolution-whatsapp";
 import { getMetaWhatsappOtpConfig } from "@/lib/meta-whatsapp";
 import { BookingOtpDeliveryForm } from "./BookingOtpDeliveryForm";
-import { MetaWhatsappOtpForm } from "./MetaWhatsappOtpForm";
 
 export const dynamic = "force-dynamic";
 
@@ -16,38 +15,30 @@ export default async function AdminBookingOtpDeliveryPage() {
     redirect("/admin/login");
   }
 
-  const currentChannel = await getBookingOtpChannel();
+  const [loginChannel, checkoutChannel] = await Promise.all([
+    getLoginOtpChannel(),
+    getBookingOtpChannel(),
+  ]);
   // الـ token لا يُرسَل للمتصفح — نمرّر فقط هل هو محفوظ.
-  const { accessToken, ...metaConfig } = await getMetaWhatsappOtpConfig();
+  const { accessToken, ...meta } = await getMetaWhatsappOtpConfig();
 
   return (
     <>
       <AdminPageHeader
-        title="رمز التحقق عند إتمام الحجز"
-        description={
-          <>
-            اختر كيف يستلم العميل رمز التحقق قبل تأكيد الحجز المباشر من الموقع: عبر رسالة نصية،
-            واتساب (Evolution API)، أو البريد الإلكتروني الذي يُدخله في بيانات التواصل. الإرسال الفعلي
-            يعتمد على تهيئة الخادم.
-            <br />
-            <span className="mt-2 block font-semibold">
-              يُطبَّق نفس الإعداد تلقائياً على تسجيل دخول العميل من صفحة «دخول العميل» (رمز إلى الجوال
-              أو البريد المسجَّلين في الحساب)، وليس فقط عند إتمام الحجز.
-            </span>
-          </>
-        }
+        title="رموز التحقق (OTP)"
+        description="لكل من تسجيل دخول العميل وتأكيد الحجز: اختر القناة (SMS أو واتساب أو بريد)، وإن اخترت واتساب حدّد المزوّد Evolution أو Meta وقالب Meta الخاص به."
         backHref="/admin"
       />
 
       <BookingOtpDeliveryForm
-        key={currentChannel}
-        currentChannel={currentChannel}
-        smsUrlConfigured={isSmsChannelConfigured()}
+        loginChannel={loginChannel}
+        checkoutChannel={checkoutChannel}
+        meta={meta}
+        hasAccessToken={Boolean(accessToken)}
+        smsConfigured={isSmsChannelConfigured()}
         mailConfigured={isOutgoingMailTransportConfigured()}
-        whatsappConfigured={isEvolutionWhatsAppConfigured()}
+        evolutionConfigured={isEvolutionWhatsAppConfigured()}
       />
-
-      <MetaWhatsappOtpForm config={metaConfig} hasAccessToken={Boolean(accessToken)} />
     </>
   );
 }

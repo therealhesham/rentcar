@@ -487,6 +487,25 @@ export async function getBookingOtpChannel(): Promise<BookingOtpChannel> {
   }
 }
 
+/**
+ * قناة رمز تسجيل دخول العميل. إن لم تُحفظ بعد (قبل فصل الإعدادين) تتبع قناة الحجز
+ * كما كان السلوك السابق، فلا يتغيّر شيء على الإنتاج حتى يحفظها الأدمن.
+ */
+export const SITE_KEY_LOGIN_OTP_CHANNEL = "login_otp_channel";
+
+export async function getLoginOtpChannel(): Promise<BookingOtpChannel> {
+  try {
+    const row = await prisma.siteSetting.findUnique({
+      where: { key: SITE_KEY_LOGIN_OTP_CHANNEL },
+      select: { value: true },
+    });
+    if (row?.value?.trim()) return parseBookingOtpChannel(row.value);
+  } catch (e) {
+    console.error("[getLoginOtpChannel] قراءة إعداد القناة فشلت:", e);
+  }
+  return getBookingOtpChannel();
+}
+
 export const SITE_KEY_BOOKING_WIDGET_TABS = "booking_widget_tabs_v1";
 
 export async function getBookingWidgetTabFlags(): Promise<BookingWidgetTabFlags> {

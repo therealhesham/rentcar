@@ -11,7 +11,7 @@ import { isWhatsappOtpDeliverable, sendWhatsappOtp } from "@/lib/meta-whatsapp";
 import { BOOKING_OTP_LENGTH, BOOKING_OTP_REGEX, bookingOtpLengthLabelAr } from "@/lib/booking-otp-constants";
 import {
   bookingOtpChannelUsesPhone,
-  getBookingOtpChannel,
+  getLoginOtpChannel,
   type BookingOtpChannel,
 } from "@/lib/site-settings";
 
@@ -77,7 +77,7 @@ export async function purgeExpiredCustomerLoginOtps(): Promise<void> {
 
 /** القناة من الإدارة + تهيئة SMS أو البريد أو مزوّد واتساب (Meta/Evolution) لتسجيل الدخول. */
 export async function isCustomerLoginOtpStepRequired(): Promise<boolean> {
-  const ch = await getBookingOtpChannel();
+  const ch = await getLoginOtpChannel();
   if (ch === "OFF") return false;
   if (ch === "SMS") return isSmsChannelConfigured();
   if (ch === "WHATSAPP") return isWhatsappOtpDeliverable("login");
@@ -167,7 +167,7 @@ export async function sendCustomerLoginOtpForIdentifier(
     return { ok: false, error: "أدخل بريداً إلكترونياً صالحاً أو جوالاً سعودياً (9 أرقام تبدأ بـ 5)." };
   }
 
-  const channel = await getBookingOtpChannel();
+  const channel = await getLoginOtpChannel();
   if (channel === "OFF") {
     return { ok: false, error: "خدمة رمز تسجيل الدخول غير مفعّلة من لوحة التحكم." };
   }
@@ -440,7 +440,7 @@ export async function verifyAndConsumeCustomerLoginOtp(opts: {
     return { ok: false, error: "معرّف الدخول غير صالح." };
   }
 
-  const channel = await getBookingOtpChannel();
+  const channel = await getLoginOtpChannel();
   if (channel === "OFF") {
     return { ok: false, error: "خدمة رمز تسجيل الدخول غير مفعّلة." };
   }

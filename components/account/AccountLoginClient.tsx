@@ -43,7 +43,7 @@ export function AccountLoginClient({ returnTo = "/account" }: Props) {
     let cancel = false;
     void (async () => {
       try {
-        const res = await fetch("/api/bookings/direct/otp-config", { cache: "no-store" });
+        const res = await fetch("/api/bookings/direct/otp-config?flow=login", { cache: "no-store" });
         const j = (await res.json()) as { ok?: boolean; channel?: string; required?: boolean };
         if (cancel || j.ok !== true) return;
         const ch = String(j.channel ?? "").trim().toUpperCase();
