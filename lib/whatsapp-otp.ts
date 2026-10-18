@@ -361,6 +361,17 @@ const BOOKING_COMPLETION_PARAM_NAMES: readonly [keyof BookingCompletionVars, str
   ["totalAmount", "totalamount"],
 ];
 
+/**
+ * قيم باراميترات قالب Meta ممنوع يبقى فيها newline/tab أو أكتر من 4 مسافات متتالية
+ * (خطأ 132018) — بعض المتغيرات هنا (زي branchLocation) نص حر متعدد الأسطر أصلاً.
+ */
+function sanitizeMetaParamText(s: string): string {
+  return s
+    .replace(/[\r\n\t]+/g, " - ")
+    .replace(/ {2,}/g, " ")
+    .trim();
+}
+
 async function postMetaBookingCompletionTemplate(opts: {
   cfg: WhatsappOtpConfig;
   to: string;
@@ -374,7 +385,7 @@ async function postMetaBookingCompletionTemplate(opts: {
   const parameters = BOOKING_COMPLETION_PARAM_NAMES.map(([key, parameterName]) => ({
     type: "text",
     parameter_name: parameterName,
-    text: opts.vars[key]?.trim() || "—",
+    text: sanitizeMetaParamText(opts.vars[key]?.trim() || "—"),
   }));
 
   const res = await fetch(url, {
