@@ -345,19 +345,20 @@ export type BookingCompletionVars = {
 };
 
 /**
- * ترتيب معاملات القالب المعتمد على Meta ({{1}}..{{9}}) — يجب أن يطابق هذا الترتيب
- * بالضبط ترتيب المتغيرات في القالب المُوافَق عليه فعلياً.
+ * القالب المعتمد على Meta يستخدم متغيرات بالاسم (Named Parameters، مثل {{fullname}})
+ * وليس بالترتيب الرقمي ({{1}}..) — لذا كل معامل لازم يحمل `parameter_name` مطابقاً
+ * بالضبط لاسم المتغيّر في القالب المُوافَق عليه (أحرف صغيرة بلا شرطات سفلية).
  */
-const BOOKING_COMPLETION_PARAM_ORDER: readonly (keyof BookingCompletionVars)[] = [
-  "fullName",
-  "bookingId",
-  "carTitle",
-  "pickupDate",
-  "dropoffDate",
-  "pickupDetails",
-  "branchLocation",
-  "paymentMethod",
-  "totalAmount",
+const BOOKING_COMPLETION_PARAM_NAMES: readonly [keyof BookingCompletionVars, string][] = [
+  ["fullName", "fullname"],
+  ["bookingId", "bookingid"],
+  ["carTitle", "cartitle"],
+  ["pickupDate", "pickupdate"],
+  ["dropoffDate", "dropoffdate"],
+  ["pickupDetails", "pickupdetails"],
+  ["branchLocation", "branchlocation"],
+  ["paymentMethod", "paymentmethod"],
+  ["totalAmount", "totalamount"],
 ];
 
 async function postMetaBookingCompletionTemplate(opts: {
@@ -370,8 +371,9 @@ async function postMetaBookingCompletionTemplate(opts: {
     cfg.phoneNumberId,
   )}/messages`;
 
-  const parameters = BOOKING_COMPLETION_PARAM_ORDER.map((key) => ({
+  const parameters = BOOKING_COMPLETION_PARAM_NAMES.map(([key, parameterName]) => ({
     type: "text",
+    parameter_name: parameterName,
     text: opts.vars[key]?.trim() || "—",
   }));
 

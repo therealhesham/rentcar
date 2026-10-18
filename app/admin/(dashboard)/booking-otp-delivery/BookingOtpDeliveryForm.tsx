@@ -219,9 +219,9 @@ function BookingCompletionCard({
       </div>
 
       {provider === "meta" ? (
-        <p className="text-xs text-on-surface-variant">
-          ترتيب المتغيرات في القالب المعتمد على Meta يجب أن يكون بالضبط: الاسم، رقم الطلب، المركبة، تاريخ
-          الاستلام، تاريخ التسليم، تفاصيل الاستلام، موقع الفرع، طريقة الدفع، المبلغ الإجمالي.
+        <p className="text-xs text-on-surface-variant" dir="ltr">
+          Meta named parameters: fullname, bookingid, cartitle, pickupdate, dropoffdate, pickupdetails,
+          branchlocation, paymentmethod, totalamount — لازم أسماء المتغيرات في القالب المعتمد تطابق دي بالظبط.
         </p>
       ) : null}
 
