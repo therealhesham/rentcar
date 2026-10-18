@@ -29,16 +29,6 @@ const TEMPLATE_INFO: Record<WhatsAppTemplateKey, { label: string; description: s
     description: "تُرسل لأرقام الصيانة والإدارة عند تأكيد حجز جديد.",
     vars: "{bookingId}, {carTitle}, {fullName}, {phone}, {branchLocation}, {pickupDate}, {numberOfDays}",
   },
-  whatsapp_template_booking_received_customer: {
-    label: "استلام طلب الحجز (للعميل)",
-    description: "تُرسل للعميل فور تسجيل طلبه وقبل المراجعة.",
-    vars: "{fullName}, {bookingId}, {carTitle}",
-  },
-  whatsapp_template_booking_received_admin: {
-    label: "إشعار استلام طلب حجز (للإدارة)",
-    description: "تُرسل للإدارة فور تسجيل طلب حجز جديد.",
-    vars: "{bookingId}, {carTitle}, {fullName}, {phone}, {branchLocation}, {pickupDate}, {numberOfDays}",
-  },
   whatsapp_template_booking_confirmed_customer: {
     label: "إشعار تأكيد الحجز المبدئي (للعميل)",
     description: "تُرسل للعميل بمجرد تأكيد الحجز من الموظف قبل الدفع.",

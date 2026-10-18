@@ -5,11 +5,6 @@ import {
   sendPlainTransactionalEmail,
 } from "@/lib/booking-invoice-email";
 import { prisma } from "@/lib/prisma";
-import {
-  e164ToEvolutionWhatsAppNumber,
-  isEvolutionWhatsAppConfigured,
-  sendEvolutionWhatsAppText,
-} from "@/lib/evolution-whatsapp";
 
 function escapeHtml(s: string): string {
   return s
@@ -191,54 +186,6 @@ export async function sendBookingReceivedNotification(
       }
     } else {
       console.warn(`[booking - received] لا يوجد بريد لطلب #${bookingRequestId}.`);
-    }
-  }
-
-  if (isEvolutionWhatsAppConfigured()) {
-    const number = e164ToEvolutionWhatsAppNumber(snapshot.phone);
-    if (number) {
-      try {
-        const { getWhatsAppTemplate, expandTemplate } = await import("@/lib/whatsapp-templates");
-        const customerTemplate = await getWhatsAppTemplate("whatsapp_template_booking_received_customer");
-        await sendEvolutionWhatsAppText({
-          number,
-          text: expandTemplate(customerTemplate, {
-            fullName: snapshot.fullName,
-            bookingId: snapshot.id,
-            carTitle: snapshot.car.fullTitle,
-          }),
-        });
-      } catch (e) {
-        console.error("[booking-received] فشل واتساب للعميل:", e);
-      }
-    }
-
-    const waSetting = await prisma.siteSetting.findUnique({
-      where: { key: "maintenance_whatsapp_numbers" }
-    });
-    if (waSetting && waSetting.value) {
-      const numbers = waSetting.value.split(",").map(n => n.trim()).filter(Boolean);
-      if (numbers.length > 0) {
-        const { getWhatsAppTemplate, expandTemplate } = await import("@/lib/whatsapp-templates");
-        const adminTemplate = await getWhatsAppTemplate("whatsapp_template_booking_received_admin");
-        const textMaint = expandTemplate(adminTemplate, {
-          bookingId: snapshot.id,
-          carTitle: snapshot.car.fullTitle,
-          fullName: snapshot.fullName,
-          phone: snapshot.phone,
-          branchLocation: snapshot.branch,
-          pickupDate: snapshot.pickupDate.toLocaleString("ar-SA"),
-          numberOfDays: snapshot.numberOfDays,
-        });
-
-        for (const num of numbers) {
-          try {
-            await sendEvolutionWhatsAppText({ number: num, text: textMaint });
-          } catch (err) {
-            console.error(`[booking - received] Failed to send WhatsApp to maintenance ${num} `, err);
-          }
-        }
-      }
     }
   }
 

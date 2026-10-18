@@ -239,6 +239,20 @@ async function postMetaTemplateOnce(opts: {
     }
     throw new MetaHttpError(res.status, metaCode, errBody);
   }
+
+  // قبول Meta للطلب ≠ التسليم: حالة التسليم النهائية (وأكواد الفشل مثل 131026/131042)
+  // تصل لاحقاً عبر webhook أو تظهر في WhatsApp Manager. نسجّل wamid لتتبّع الرسالة.
+  try {
+    const j = (await res.json()) as {
+      messages?: { id?: string }[];
+      contacts?: { wa_id?: string }[];
+    };
+    console.info(
+      `[whatsapp-otp] Meta قبلت الطلب: template=${opts.templateName} to=${j.contacts?.[0]?.wa_id ?? opts.to} wamid=${j.messages?.[0]?.id ?? "?"}`,
+    );
+  } catch {
+    /* الرد ليس JSON — لا يهم */
+  }
 }
 
 async function postMetaTemplate(opts: {
