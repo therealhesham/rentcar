@@ -14,7 +14,8 @@ type Props = {
     loginTemplateLang: string;
     checkoutTemplateName: string;
     checkoutTemplateLang: string;
-    templateHasCopyButton: boolean;
+    loginHasCopyButton: boolean;
+    checkoutHasCopyButton: boolean;
   };
   hasAccessToken: boolean;
 };
@@ -125,10 +126,18 @@ export function MetaWhatsappOtpForm({ config, hasAccessToken }: Props) {
                   type="text"
                   name="loginTemplateLang"
                   defaultValue={config.loginTemplateLang}
-                  
                   dir="ltr"
-                  className={`${inputCls}`}
+                  className={inputCls}
                 />
+              </label>
+              <label className="col-span-3 flex cursor-pointer items-center gap-2">
+                <input
+                  type="checkbox"
+                  name="loginHasCopyButton"
+                  defaultChecked={config.loginHasCopyButton}
+                  className="size-4 accent-primary"
+                />
+                <span className="text-xs text-on-surface">القالب فيه زر نسخ الرمز</span>
               </label>
             </div>
           </div>
@@ -163,29 +172,25 @@ export function MetaWhatsappOtpForm({ config, hasAccessToken }: Props) {
                   type="text"
                   name="checkoutTemplateLang"
                   defaultValue={config.checkoutTemplateLang}
-                  
                   dir="ltr"
-                  className={`${inputCls}`}
+                  className={inputCls}
                 />
+              </label>
+              <label className="col-span-3 flex cursor-pointer items-center gap-2">
+                <input
+                  type="checkbox"
+                  name="checkoutHasCopyButton"
+                  defaultChecked={config.checkoutHasCopyButton}
+                  className="size-4 accent-primary"
+                />
+                <span className="text-xs text-on-surface">القالب فيه زر نسخ الرمز</span>
               </label>
             </div>
           </div>
+          <p className="text-xs text-on-surface-variant">
+            «فيه زر نسخ الرمز» = قالب Authentication في Meta (الرمز يُمرَّر في النص وفي الزر). ألغِ التحديد لو القالب بدون زر.
+          </p>
         </div>
-
-        <label className="flex cursor-pointer items-start gap-3">
-          <input
-            type="checkbox"
-            name="templateHasCopyButton"
-            defaultChecked={config.templateHasCopyButton}
-            className="mt-0.5 size-4 accent-primary"
-          />
-          <span>
-            <span className="block text-sm font-bold text-on-surface">القالب من نوع Authentication (فيه زر نسخ الرمز)</span>
-            <span className="mt-0.5 block text-xs text-on-surface-variant">
-              قوالب المصادقة في Meta تتطلب تمرير الرمز في النص وفي الزر. ألغِ التحديد لو القالب بدون زر.
-            </span>
-          </span>
-        </label>
       </fieldset>
 
       {state?.error ? (

@@ -34,8 +34,9 @@ export type MetaWhatsappOtpConfig = {
   loginTemplateLang: string;
   checkoutTemplateName: string;
   checkoutTemplateLang: string;
-  /** قوالب Authentication تتطلب مكوّن زر (نسخ الرمز) يحمل نفس الرمز. */
-  templateHasCopyButton: boolean;
+  /** قوالب Authentication تتطلب مكوّن زر (نسخ الرمز) يحمل نفس الرمز — لكل قالب على حدة. */
+  loginHasCopyButton: boolean;
+  checkoutHasCopyButton: boolean;
 };
 
 export const DEFAULT_META_WHATSAPP_OTP_CONFIG: MetaWhatsappOtpConfig = {
@@ -49,7 +50,8 @@ export const DEFAULT_META_WHATSAPP_OTP_CONFIG: MetaWhatsappOtpConfig = {
   loginTemplateLang: "ar",
   checkoutTemplateName: "",
   checkoutTemplateLang: "ar",
-  templateHasCopyButton: true,
+  loginHasCopyButton: true,
+  checkoutHasCopyButton: true,
 };
 
 function asBool(v: unknown, fallback: boolean): boolean {
@@ -81,7 +83,8 @@ export function normalizeMetaWhatsappOtpConfig(raw: unknown): MetaWhatsappOtpCon
     checkoutTemplateName: asString(o.checkoutTemplateName, d.checkoutTemplateName),
     checkoutTemplateLang:
       asString(o.checkoutTemplateLang, d.checkoutTemplateLang) || d.checkoutTemplateLang,
-    templateHasCopyButton: asBool(o.templateHasCopyButton, d.templateHasCopyButton),
+    loginHasCopyButton: asBool(o.loginHasCopyButton, d.loginHasCopyButton),
+    checkoutHasCopyButton: asBool(o.checkoutHasCopyButton, d.checkoutHasCopyButton),
   };
 }
 
@@ -117,6 +120,7 @@ async function postMetaTemplate(opts: {
   to: string;
   templateName: string;
   languageCode: string;
+  hasCopyButton: boolean;
   code: string;
 }): Promise<void> {
   const { cfg } = opts;
@@ -127,7 +131,7 @@ async function postMetaTemplate(opts: {
   const components: unknown[] = [
     { type: "body", parameters: [{ type: "text", text: opts.code }] },
   ];
-  if (cfg.templateHasCopyButton) {
+  if (opts.hasCopyButton) {
     components.push({
       type: "button",
       sub_type: "url",
@@ -181,6 +185,7 @@ export async function sendWhatsappOtp(opts: {
       to: number,
       templateName: isLogin ? cfg.loginTemplateName : cfg.checkoutTemplateName,
       languageCode: isLogin ? cfg.loginTemplateLang : cfg.checkoutTemplateLang,
+      hasCopyButton: isLogin ? cfg.loginHasCopyButton : cfg.checkoutHasCopyButton,
       code: opts.otp,
     });
     return;

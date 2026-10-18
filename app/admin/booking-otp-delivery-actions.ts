@@ -107,7 +107,8 @@ export async function updateMetaWhatsappOtpConfig(
     loginTemplateLang: text("loginTemplateLang"),
     checkoutTemplateName: text("checkoutTemplateName"),
     checkoutTemplateLang: text("checkoutTemplateLang"),
-    templateHasCopyButton: checked("templateHasCopyButton"),
+    loginHasCopyButton: checked("loginHasCopyButton"),
+    checkoutHasCopyButton: checked("checkoutHasCopyButton"),
   };
   const config = normalizeMetaWhatsappOtpConfig(raw);
 
