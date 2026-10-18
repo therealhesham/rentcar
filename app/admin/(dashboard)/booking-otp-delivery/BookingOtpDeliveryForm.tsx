@@ -12,6 +12,9 @@ type ConfigView = {
   checkoutProvider: WhatsappProvider;
   checkoutTemplateName: string;
   checkoutTemplateLang: string;
+  bookingCompletionProvider: WhatsappProvider;
+  bookingCompletionTemplateName: string;
+  bookingCompletionTemplateLang: string;
   phoneNumberId: string;
   apiVersion: string;
   rasayilyCompanyId: string;
@@ -159,6 +162,80 @@ function FlowCard({
   );
 }
 
+function BookingCompletionCard({
+  provider,
+  setProvider,
+  templateName,
+  templateLang,
+  warn,
+}: {
+  provider: WhatsappProvider;
+  setProvider: (p: WhatsappProvider) => void;
+  templateName: string;
+  templateLang: string;
+  warn: string | null;
+}) {
+  return (
+    <section className="space-y-4 rounded-2xl border border-outline-variant/30 bg-surface-container-low p-6">
+      <div>
+        <h3 className="text-base font-extrabold text-on-surface">تأكيد الحجز (رسالة بعد الدفع)</h3>
+        <p className="mt-1 text-sm text-on-surface-variant">
+          رسالة واتساب كاملة التفاصيل تُرسل للعميل تلقائياً بعد نجاح الدفع أو التأكيد النقدي.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-sm font-bold text-on-surface">مزوّد واتساب</p>
+        <Choice
+          name="bookingCompletionProvider"
+          options={PROVIDERS}
+          value={provider}
+          onChange={setProvider}
+        />
+      </div>
+
+      <div className={`grid grid-cols-3 gap-3 ${provider === "meta" ? "" : "hidden"}`}>
+        <label className="col-span-2 block">
+          <span className="mb-1 block text-xs text-on-surface-variant">اسم القالب (Template)</span>
+          <input
+            type="text"
+            name="bookingCompletionTemplateName"
+            defaultValue={templateName}
+            placeholder="booking_completion"
+            dir="ltr"
+            className={inputCls}
+          />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-xs text-on-surface-variant">اللغة</span>
+          <input
+            type="text"
+            name="bookingCompletionTemplateLang"
+            defaultValue={templateLang}
+            dir="ltr"
+            className={inputCls}
+          />
+        </label>
+      </div>
+
+      {provider === "meta" ? (
+        <p className="text-xs text-on-surface-variant">
+          ترتيب المتغيرات في القالب المعتمد على Meta يجب أن يكون بالضبط: الاسم، رقم الطلب، المركبة، تاريخ
+          الاستلام، تاريخ التسليم، تفاصيل الاستلام، موقع الفرع، طريقة الدفع، المبلغ الإجمالي.
+        </p>
+      ) : null}
+
+      {provider === "rasayily" ? (
+        <p className="text-xs text-on-surface-variant">
+          رسائلي ترسل نص الرسالة المحفوظ في صفحة «قوالب واتساب» كنص حر، وليس القالب المعتمد على Meta.
+        </p>
+      ) : null}
+
+      {warn ? <p className="text-xs font-bold text-error">{warn}</p> : null}
+    </section>
+  );
+}
+
 export function BookingOtpDeliveryForm({
   loginChannel: initialLoginChannel,
   checkoutChannel: initialCheckoutChannel,
@@ -174,6 +251,9 @@ export function BookingOtpDeliveryForm({
   const [loginProvider, setLoginProvider] = useState(config.loginProvider);
   const [checkoutChannel, setCheckoutChannel] = useState(initialCheckoutChannel);
   const [checkoutProvider, setCheckoutProvider] = useState(config.checkoutProvider);
+  const [bookingCompletionProvider, setBookingCompletionProvider] = useState(
+    config.bookingCompletionProvider,
+  );
 
   const warnFor = (channel: BookingOtpChannel, provider: WhatsappProvider): string | null => {
     if (channel === "SMS" && !smsConfigured) {
@@ -188,9 +268,17 @@ export function BookingOtpDeliveryForm({
     return null;
   };
 
+  const warnForProvider = (provider: WhatsappProvider): string | null => {
+    if (provider === "evolution" && !evolutionConfigured) {
+      return "Evolution غير مضبوط في البيئة (EVOLUTION_API_BASE_URL و EVOLUTION_API_KEY و EVOLUTION_INSTANCE_NAME).";
+    }
+    return null;
+  };
+
   const uses = (p: WhatsappProvider) =>
     (loginChannel === "WHATSAPP" && loginProvider === p) ||
-    (checkoutChannel === "WHATSAPP" && checkoutProvider === p);
+    (checkoutChannel === "WHATSAPP" && checkoutProvider === p) ||
+    bookingCompletionProvider === p;
 
   return (
     <form action={formAction} className="max-w-2xl space-y-6">
@@ -208,7 +296,7 @@ export function BookingOtpDeliveryForm({
       />
 
       <FlowCard
-        title="تأكيد الحجز"
+        title="رمز تأكيد الحجز"
         hint="رمز التحقق اللي يوصل للعميل قبل إتمام الحجز المباشر من الموقع."
         prefix="checkout"
         channel={checkoutChannel}
@@ -218,6 +306,14 @@ export function BookingOtpDeliveryForm({
         templateName={config.checkoutTemplateName}
         templateLang={config.checkoutTemplateLang}
         warn={warnFor(checkoutChannel, checkoutProvider)}
+      />
+
+      <BookingCompletionCard
+        provider={bookingCompletionProvider}
+        setProvider={setBookingCompletionProvider}
+        templateName={config.bookingCompletionTemplateName}
+        templateLang={config.bookingCompletionTemplateLang}
+        warn={warnForProvider(bookingCompletionProvider)}
       />
 
       <section

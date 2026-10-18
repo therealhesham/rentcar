@@ -26,6 +26,8 @@ const LEGACY_RASAYILY_KEY = "rasayily_otp_config_v1";
 const RASAYILY_BASE_URL = "https://rasayily.com";
 
 export type WhatsappOtpFlow = "login" | "checkout";
+/** تدفّقات رسائل واتساب عموماً (رموز تحقق + رسالة تأكيد الحجز بعد الدفع). */
+export type WhatsappMessageFlow = WhatsappOtpFlow | "bookingCompletion";
 export type WhatsappProvider = "evolution" | "meta" | "rasayily";
 
 export type WhatsappOtpConfig = {
@@ -35,6 +37,10 @@ export type WhatsappOtpConfig = {
   checkoutProvider: WhatsappProvider;
   checkoutTemplateName: string;
   checkoutTemplateLang: string;
+  /** رسالة «تأكيد الحجز» الكاملة (بعد الدفع/التأكيد النقدي) — تُرسل للعميل دوماً عبر هذا المزوّد. */
+  bookingCompletionProvider: WhatsappProvider;
+  bookingCompletionTemplateName: string;
+  bookingCompletionTemplateLang: string;
   /** Meta Cloud API */
   phoneNumberId: string;
   accessToken: string;
@@ -51,6 +57,9 @@ export const DEFAULT_WHATSAPP_OTP_CONFIG: WhatsappOtpConfig = {
   checkoutProvider: "evolution",
   checkoutTemplateName: "",
   checkoutTemplateLang: "ar",
+  bookingCompletionProvider: "evolution",
+  bookingCompletionTemplateName: "",
+  bookingCompletionTemplateLang: "ar",
   phoneNumberId: "",
   accessToken: "",
   apiVersion: "v21.0",
@@ -79,6 +88,9 @@ export function normalizeWhatsappOtpConfig(raw: unknown): WhatsappOtpConfig {
     checkoutProvider: asProvider(o.checkoutProvider) ?? d.checkoutProvider,
     checkoutTemplateName: str(o.checkoutTemplateName),
     checkoutTemplateLang: str(o.checkoutTemplateLang) || d.checkoutTemplateLang,
+    bookingCompletionProvider: asProvider(o.bookingCompletionProvider) ?? d.bookingCompletionProvider,
+    bookingCompletionTemplateName: str(o.bookingCompletionTemplateName),
+    bookingCompletionTemplateLang: str(o.bookingCompletionTemplateLang) || d.bookingCompletionTemplateLang,
     phoneNumberId: str(o.phoneNumberId),
     accessToken: str(o.accessToken),
     apiVersion: str(o.apiVersion) || d.apiVersion,
@@ -136,13 +148,21 @@ export async function getWhatsappOtpConfig(): Promise<WhatsappOtpConfig> {
   }
 }
 
-export function whatsappProviderForFlow(cfg: WhatsappOtpConfig, flow: WhatsappOtpFlow): WhatsappProvider {
-  return flow === "login" ? cfg.loginProvider : cfg.checkoutProvider;
+export function whatsappProviderForFlow(cfg: WhatsappOtpConfig, flow: WhatsappMessageFlow): WhatsappProvider {
+  if (flow === "login") return cfg.loginProvider;
+  if (flow === "checkout") return cfg.checkoutProvider;
+  return cfg.bookingCompletionProvider;
 }
 
-export function isMetaConfiguredForFlow(cfg: WhatsappOtpConfig, flow: WhatsappOtpFlow): boolean {
+export function isMetaConfiguredForFlow(cfg: WhatsappOtpConfig, flow: WhatsappMessageFlow): boolean {
   if (!cfg.phoneNumberId || !cfg.accessToken) return false;
-  return Boolean(flow === "login" ? cfg.loginTemplateName : cfg.checkoutTemplateName);
+  const templateName =
+    flow === "login"
+      ? cfg.loginTemplateName
+      : flow === "checkout"
+        ? cfg.checkoutTemplateName
+        : cfg.bookingCompletionTemplateName;
+  return Boolean(templateName);
 }
 
 export function isRasayilyConfigured(cfg: WhatsappOtpConfig): boolean {
@@ -150,7 +170,7 @@ export function isRasayilyConfigured(cfg: WhatsappOtpConfig): boolean {
 }
 
 /** هل المزوّد المختار لهذا التدفّق جاهز فعلاً؟ */
-export function isWhatsappProviderReady(cfg: WhatsappOtpConfig, flow: WhatsappOtpFlow): boolean {
+export function isWhatsappProviderReady(cfg: WhatsappOtpConfig, flow: WhatsappMessageFlow): boolean {
   switch (whatsappProviderForFlow(cfg, flow)) {
     case "meta":
       return isMetaConfiguredForFlow(cfg, flow);
@@ -310,6 +330,87 @@ async function postRasayilyText(opts: {
   }
 }
 
+/* ──────────────────── Meta: قالب «تأكيد الحجز» متعدد المتغيرات ──────────────────── */
+
+export type BookingCompletionVars = {
+  fullName: string;
+  bookingId: string;
+  carTitle: string;
+  pickupDate: string;
+  dropoffDate: string;
+  pickupDetails: string;
+  branchLocation: string;
+  paymentMethod: string;
+  totalAmount: string;
+};
+
+/**
+ * ترتيب معاملات القالب المعتمد على Meta ({{1}}..{{9}}) — يجب أن يطابق هذا الترتيب
+ * بالضبط ترتيب المتغيرات في القالب المُوافَق عليه فعلياً.
+ */
+const BOOKING_COMPLETION_PARAM_ORDER: readonly (keyof BookingCompletionVars)[] = [
+  "fullName",
+  "bookingId",
+  "carTitle",
+  "pickupDate",
+  "dropoffDate",
+  "pickupDetails",
+  "branchLocation",
+  "paymentMethod",
+  "totalAmount",
+];
+
+async function postMetaBookingCompletionTemplate(opts: {
+  cfg: WhatsappOtpConfig;
+  to: string;
+  vars: BookingCompletionVars;
+}): Promise<void> {
+  const { cfg } = opts;
+  const url = `https://graph.facebook.com/${encodeURIComponent(cfg.apiVersion)}/${encodeURIComponent(
+    cfg.phoneNumberId,
+  )}/messages`;
+
+  const parameters = BOOKING_COMPLETION_PARAM_ORDER.map((key) => ({
+    type: "text",
+    text: opts.vars[key]?.trim() || "—",
+  }));
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${cfg.accessToken}`,
+    },
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      to: opts.to,
+      type: "template",
+      template: {
+        name: cfg.bookingCompletionTemplateName,
+        language: { code: cfg.bookingCompletionTemplateLang },
+        components: [{ type: "body", parameters }],
+      },
+    }),
+    signal: AbortSignal.timeout(20_000),
+  });
+  if (!res.ok) {
+    const errBody = await res.text().catch(() => "");
+    throw new Error(`Meta HTTP ${res.status}: ${errBody.slice(0, 500)}`);
+  }
+
+  try {
+    const j = (await res.json()) as {
+      messages?: { id?: string }[];
+      contacts?: { wa_id?: string }[];
+    };
+    console.info(
+      `[whatsapp-otp] Meta قبلت قالب تأكيد الحجز: template=${cfg.bookingCompletionTemplateName} to=${j.contacts?.[0]?.wa_id ?? opts.to} wamid=${j.messages?.[0]?.id ?? "?"}`,
+    );
+  } catch {
+    /* الرد ليس JSON — لا يهم */
+  }
+}
+
 /* ───────────────────────────────── الإرسال ───────────────────────────────── */
 
 /**
@@ -346,6 +447,38 @@ export async function sendWhatsappOtp(opts: {
       languageCode: isLogin ? cfg.loginTemplateLang : cfg.checkoutTemplateLang,
       code: opts.otp,
     });
+    return;
+  }
+
+  await sendEvolutionWhatsAppText({ number, text: opts.text });
+}
+
+/**
+ * يرسل رسالة «تأكيد الحجز» الكاملة للعميل عبر مزوّد واتساب هذا التدفّق.
+ * `text` نص جاهز (Evolution/رسائلي)، و`vars` تُستخدم لبناء معاملات قالب Meta المعتمد.
+ */
+export async function sendWhatsappBookingCompletion(opts: {
+  phoneE164: string;
+  text: string;
+  vars: BookingCompletionVars;
+}): Promise<void> {
+  const cfg = await getWhatsappOtpConfig();
+  const provider = cfg.bookingCompletionProvider;
+
+  if (provider === "rasayily") {
+    if (!isRasayilyConfigured(cfg)) throw new Error("إعدادات رسائلي غير مكتملة.");
+    await postRasayilyText({ cfg, phoneE164: opts.phoneE164, text: opts.text });
+    return;
+  }
+
+  const number = e164ToEvolutionWhatsAppNumber(opts.phoneE164);
+  if (!number) throw new Error("رقم الجوال غير صالح لإرسال واتساب.");
+
+  if (provider === "meta") {
+    if (!isMetaConfiguredForFlow(cfg, "bookingCompletion")) {
+      throw new Error("إعدادات Meta غير مكتملة لتدفّق تأكيد الحجز.");
+    }
+    await postMetaBookingCompletionTemplate({ cfg, to: number, vars: opts.vars });
     return;
   }
 

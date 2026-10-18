@@ -9,6 +9,7 @@ import { getBookingForPayment } from "@/lib/booking-payment-data";
 import { e164ToLocalNine } from "@/lib/normalize-saudi-phone";
 import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
 import { prisma } from "@/lib/prisma";
+import type { BookingCompletionVars } from "@/lib/whatsapp-otp";
 
 /**
  * إرسال إشعار واتساب بعد الدفع عبر Evolution API.
@@ -60,7 +61,9 @@ export async function sendEvolutionWhatsAppText(opts: {
   await postSendText(opts);
 }
 
-async function buildBookingCompletionVars(booking: BookingPaymentSnapshot): Promise<Record<string, string>> {
+async function buildBookingCompletionVars(
+  booking: BookingPaymentSnapshot,
+): Promise<BookingCompletionVars & { phone: string; numberOfDays: string }> {
   const branchLabel = BRANCH_LABEL_AR[booking.branch] ?? booking.branch;
   const pickup = fmtDateTime(booking.pickupDate);
   const dropoffD = new Date(booking.pickupDate);
@@ -128,10 +131,6 @@ async function postSendText(opts: { number: string; text: string }): Promise<voi
 }
 
 export async function sendBookingCompletionWhatsAppAfterPayment(bookingRequestId: number): Promise<void> {
-  if (!isEvolutionWhatsAppConfigured()) {
-    return;
-  }
-
   const snapshot = await getBookingForPayment(bookingRequestId);
   if (!snapshot || !isInvoiceDeliveryReady(snapshot)) {
     console.warn(
@@ -140,22 +139,35 @@ export async function sendBookingCompletionWhatsAppAfterPayment(bookingRequestId
     return;
   }
 
-  const number = e164ToEvolutionWhatsAppNumber(snapshot.phone);
-  if (!number) {
+  const vars = await buildBookingCompletionVars(snapshot);
+  const { getWhatsAppTemplate, expandTemplate } = await import("@/lib/whatsapp-templates");
+  const { getWhatsappOtpConfig, isWhatsappProviderReady, sendWhatsappBookingCompletion } = await import(
+    "@/lib/whatsapp-otp"
+  );
+
+  const otpCfg = await getWhatsappOtpConfig();
+  if (isWhatsappProviderReady(otpCfg, "bookingCompletion")) {
+    const customerTemplate = await getWhatsAppTemplate("whatsapp_template_booking_completion_customer");
+    const text = expandTemplate(customerTemplate, vars);
+    try {
+      await sendWhatsappBookingCompletion({ phoneE164: snapshot.phone, text, vars });
+    } catch (err) {
+      console.error(
+        `[evolution-whatsapp] Failed to send booking completion whatsapp to customer (طلب #${bookingRequestId})`,
+        err,
+      );
+    }
+  } else {
     console.warn(
-      `[evolution-whatsapp] رقم الجوال غير صالح لإرسال واتساب (طلب #${bookingRequestId}): ${snapshot.phone}`,
+      `[evolution-whatsapp] مزوّد واتساب تأكيد الحجز غير جاهز — تخطّي رسالة العميل (طلب #${bookingRequestId}).`,
     );
+  }
+
+  if (!isEvolutionWhatsAppConfigured()) {
     return;
   }
 
-  const vars = await buildBookingCompletionVars(snapshot);
-  const { getWhatsAppTemplate, expandTemplate } = await import("@/lib/whatsapp-templates");
-  
-  const customerTemplate = await getWhatsAppTemplate("whatsapp_template_booking_completion_customer");
-  const text = expandTemplate(customerTemplate, vars);
-  await postSendText({ number, text });
-
-  // Add logic to notify maintenance manager
+  // إشعار أرقام الصيانة/الإدارة — عبر Evolution دوماً.
   const waSetting = await prisma.siteSetting.findUnique({
     where: { key: "maintenance_whatsapp_numbers" }
   });
@@ -164,7 +176,7 @@ export async function sendBookingCompletionWhatsAppAfterPayment(bookingRequestId
     if (numbers.length > 0) {
       const adminTemplate = await getWhatsAppTemplate("whatsapp_template_booking_completion_admin");
       const maintenanceText = expandTemplate(adminTemplate, vars);
-      
+
       for (const num of numbers) {
         try {
           await postSendText({ number: num, text: maintenanceText });
