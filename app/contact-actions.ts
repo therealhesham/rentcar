@@ -10,6 +10,7 @@ import { CONTACT_MESSAGES_EMAILS_KEY } from "@/lib/contact-messages";
 
 export type ContactMessageActionState = { ok: boolean; error?: string };
 
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function normalizeSpaces(s: string): string {
