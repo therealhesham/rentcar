@@ -3,19 +3,26 @@
 import { useActionState, useState } from "react";
 import { updateOtpDeliverySettings } from "@/app/admin/booking-otp-delivery-actions";
 import type { BookingOtpChannel } from "@/lib/site-settings";
-import type { WhatsappProvider } from "@/lib/rasayily-whatsapp";
+import type { WhatsappProvider } from "@/lib/whatsapp-otp";
 
-type RasayilyConfigView = {
-  companyId: string;
+type ConfigView = {
   loginProvider: WhatsappProvider;
+  loginTemplateName: string;
+  loginTemplateLang: string;
   checkoutProvider: WhatsappProvider;
+  checkoutTemplateName: string;
+  checkoutTemplateLang: string;
+  phoneNumberId: string;
+  apiVersion: string;
+  rasayilyCompanyId: string;
 };
 
 type Props = {
   loginChannel: BookingOtpChannel;
   checkoutChannel: BookingOtpChannel;
-  rasayily: RasayilyConfigView;
-  hasApiToken: boolean;
+  config: ConfigView;
+  hasAccessToken: boolean;
+  hasRasayilyToken: boolean;
   smsConfigured: boolean;
   mailConfigured: boolean;
   evolutionConfigured: boolean;
@@ -30,6 +37,7 @@ const CHANNELS: { value: BookingOtpChannel; label: string }[] = [
 
 const PROVIDERS: { value: WhatsappProvider; label: string }[] = [
   { value: "evolution", label: "Evolution" },
+  { value: "meta", label: "Meta (قالب معتمد)" },
   { value: "rasayily", label: "رسائلي" },
 ];
 
@@ -81,6 +89,8 @@ function FlowCard({
   setChannel,
   provider,
   setProvider,
+  templateName,
+  templateLang,
   warn,
 }: {
   title: string;
@@ -90,8 +100,11 @@ function FlowCard({
   setChannel: (c: BookingOtpChannel) => void;
   provider: WhatsappProvider;
   setProvider: (p: WhatsappProvider) => void;
+  templateName: string;
+  templateLang: string;
   warn: string | null;
 }) {
+  const isWa = channel === "WHATSAPP";
   return (
     <section className="space-y-4 rounded-2xl border border-outline-variant/30 bg-surface-container-low p-6">
       <div>
@@ -104,11 +117,42 @@ function FlowCard({
         <Choice name={`${prefix}Channel`} options={CHANNELS} value={channel} onChange={setChannel} />
       </div>
 
-      {/* يبقى في الـ DOM دائماً (مخفي فقط) كي لا تُمسح قيمته عند الحفظ. */}
-      <div className={`space-y-2 ${channel === "WHATSAPP" ? "" : "hidden"}`}>
+      {/* الحقول تبقى في الـ DOM دائماً (مخفية فقط) كي لا تُمسح قيمها عند الحفظ. */}
+      <div className={`space-y-2 ${isWa ? "" : "hidden"}`}>
         <p className="text-sm font-bold text-on-surface">مزوّد واتساب</p>
         <Choice name={`${prefix}Provider`} options={PROVIDERS} value={provider} onChange={setProvider} />
       </div>
+
+      <div className={`grid grid-cols-3 gap-3 ${isWa && provider === "meta" ? "" : "hidden"}`}>
+        <label className="col-span-2 block">
+          <span className="mb-1 block text-xs text-on-surface-variant">اسم القالب (Template)</span>
+          <input
+            type="text"
+            name={`${prefix}TemplateName`}
+            defaultValue={templateName}
+            placeholder={prefix === "login" ? "login_otp" : "booking_otp"}
+            dir="ltr"
+            className={inputCls}
+          />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-xs text-on-surface-variant">اللغة</span>
+          <input
+            type="text"
+            name={`${prefix}TemplateLang`}
+            defaultValue={templateLang}
+            dir="ltr"
+            className={inputCls}
+          />
+        </label>
+      </div>
+
+      {isWa && provider === "rasayily" ? (
+        <p className="text-xs text-on-surface-variant">
+          رسائلي ترسل نصاً حراً فقط — لو الربط عندهم على Meta الرسمي قد لا يصل الرمز لعميل لم يراسل الشركة خلال
+          24 ساعة. في هذه الحالة استخدم Meta.
+        </p>
+      ) : null}
 
       {warn ? <p className="text-xs font-bold text-error">{warn}</p> : null}
     </section>
@@ -118,17 +162,18 @@ function FlowCard({
 export function BookingOtpDeliveryForm({
   loginChannel: initialLoginChannel,
   checkoutChannel: initialCheckoutChannel,
-  rasayily,
-  hasApiToken,
+  config,
+  hasAccessToken,
+  hasRasayilyToken,
   smsConfigured,
   mailConfigured,
   evolutionConfigured,
 }: Props) {
   const [state, formAction, pending] = useActionState(updateOtpDeliverySettings, null);
   const [loginChannel, setLoginChannel] = useState(initialLoginChannel);
-  const [loginProvider, setLoginProvider] = useState(rasayily.loginProvider);
+  const [loginProvider, setLoginProvider] = useState(config.loginProvider);
   const [checkoutChannel, setCheckoutChannel] = useState(initialCheckoutChannel);
-  const [checkoutProvider, setCheckoutProvider] = useState(rasayily.checkoutProvider);
+  const [checkoutProvider, setCheckoutProvider] = useState(config.checkoutProvider);
 
   const warnFor = (channel: BookingOtpChannel, provider: WhatsappProvider): string | null => {
     if (channel === "SMS" && !smsConfigured) {
@@ -143,9 +188,9 @@ export function BookingOtpDeliveryForm({
     return null;
   };
 
-  const usesRasayily =
-    (loginChannel === "WHATSAPP" && loginProvider === "rasayily") ||
-    (checkoutChannel === "WHATSAPP" && checkoutProvider === "rasayily");
+  const uses = (p: WhatsappProvider) =>
+    (loginChannel === "WHATSAPP" && loginProvider === p) ||
+    (checkoutChannel === "WHATSAPP" && checkoutProvider === p);
 
   return (
     <form action={formAction} className="max-w-2xl space-y-6">
@@ -157,6 +202,8 @@ export function BookingOtpDeliveryForm({
         setChannel={setLoginChannel}
         provider={loginProvider}
         setProvider={setLoginProvider}
+        templateName={config.loginTemplateName}
+        templateLang={config.loginTemplateLang}
         warn={warnFor(loginChannel, loginProvider)}
       />
 
@@ -168,42 +215,78 @@ export function BookingOtpDeliveryForm({
         setChannel={setCheckoutChannel}
         provider={checkoutProvider}
         setProvider={setCheckoutProvider}
+        templateName={config.checkoutTemplateName}
+        templateLang={config.checkoutTemplateLang}
         warn={warnFor(checkoutChannel, checkoutProvider)}
       />
 
       <section
         className={`space-y-4 rounded-2xl border border-outline-variant/30 bg-surface-container-low p-6 ${
-          usesRasayily ? "" : "hidden"
+          uses("meta") ? "" : "hidden"
         }`}
       >
         <div>
-          <h3 className="text-base font-extrabold text-on-surface">بيانات اتصال رسائلي</h3>
-          <p className="mt-1 text-sm text-on-surface-variant">
-            مشتركة بين التدفّقين. نص الرسالة هو نفس قالب الواتساب المحفوظ للدخول/الحجز (فيه {"{otp}"}).
-            رسائلي تعالج الطلب في طابور، فنجاح الإرسال يعني القبول وليس تأكيد التسليم.
-          </p>
+          <h3 className="text-base font-extrabold text-on-surface">بيانات اتصال Meta (Cloud API)</h3>
+          <p className="mt-1 text-sm text-on-surface-variant">مشتركة بين التدفّقين.</p>
         </div>
         <label className="block">
-          <span className="mb-1 block text-sm font-bold text-on-surface">API Token</span>
+          <span className="mb-1 block text-sm font-bold text-on-surface">Phone Number ID</span>
+          <input type="text" name="phoneNumberId" defaultValue={config.phoneNumberId} dir="ltr" className={inputCls} />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-sm font-bold text-on-surface">Access Token</span>
           <input
             type="password"
-            name="apiToken"
+            name="accessToken"
             autoComplete="off"
-            placeholder={hasApiToken ? "محفوظ — اتركه فارغاً للإبقاء عليه" : "الصق الـ token"}
+            placeholder={hasAccessToken ? "محفوظ — اتركه فارغاً للإبقاء عليه" : "الصق الـ token الدائم"}
             dir="ltr"
             className={inputCls}
           />
         </label>
         <label className="block">
+          <span className="mb-1 block text-sm font-bold text-on-surface">إصدار Graph API</span>
+          <input type="text" name="apiVersion" defaultValue={config.apiVersion} dir="ltr" className={inputCls} />
+        </label>
+      </section>
+
+      <section
+        className={`space-y-4 rounded-2xl border border-outline-variant/30 bg-surface-container-low p-6 ${
+          uses("rasayily") ? "" : "hidden"
+        }`}
+      >
+        <div>
+          <h3 className="text-base font-extrabold text-on-surface">بيانات اتصال رسائلي</h3>
+          <p className="mt-1 text-sm text-on-surface-variant">
+            نص الرسالة هو نفس قالب الواتساب المحفوظ للدخول/الحجز. رسائلي تعالج الطلب في طابور، فالنجاح يعني القبول
+            وليس تأكيد التسليم.
+          </p>
+        </div>
+        <label className="block">
           <span className="mb-1 block text-sm font-bold text-on-surface">Company ID</span>
-          <input type="text" name="companyId" defaultValue={rasayily.companyId} dir="ltr" className={inputCls} />
+          <input
+            type="text"
+            name="rasayilyCompanyId"
+            defaultValue={config.rasayilyCompanyId}
+            dir="ltr"
+            className={inputCls}
+          />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-sm font-bold text-on-surface">API Token</span>
+          <input
+            type="password"
+            name="rasayilyToken"
+            autoComplete="off"
+            placeholder={hasRasayilyToken ? "محفوظ — اتركه فارغاً للإبقاء عليه" : "الصق الـ token"}
+            dir="ltr"
+            className={inputCls}
+          />
         </label>
       </section>
 
       {state?.error ? (
-        <p className="rounded-lg bg-error-container/30 px-3 py-2 text-sm font-bold text-error">
-          {state.error}
-        </p>
+        <p className="rounded-lg bg-error-container/30 px-3 py-2 text-sm font-bold text-error">{state.error}</p>
       ) : null}
       {state?.ok ? (
         <p className="rounded-lg bg-primary-container/30 px-3 py-2 text-sm font-bold text-on-primary-container">

@@ -7,7 +7,7 @@ import { isSmsChannelConfigured } from "@/lib/booking-checkout-otp";
 import { prisma } from "@/lib/prisma";
 import { e164ToLocalNine, saudiLocalNineToE164 } from "@/lib/normalize-saudi-phone";
 import { e164ToEvolutionWhatsAppNumber } from "@/lib/evolution-whatsapp";
-import { isWhatsappOtpDeliverable, sendWhatsappOtp } from "@/lib/rasayily-whatsapp";
+import { isWhatsappOtpDeliverable, sendWhatsappOtp } from "@/lib/whatsapp-otp";
 import { BOOKING_OTP_LENGTH, BOOKING_OTP_REGEX, bookingOtpLengthLabelAr } from "@/lib/booking-otp-constants";
 import {
   bookingOtpChannelUsesPhone,
@@ -75,7 +75,7 @@ export async function purgeExpiredCustomerLoginOtps(): Promise<void> {
   });
 }
 
-/** القناة من الإدارة + تهيئة SMS أو البريد أو مزوّد واتساب (رسائلي/Evolution) لتسجيل الدخول. */
+/** القناة من الإدارة + تهيئة SMS أو البريد أو مزوّد واتساب (Evolution/Meta/رسائلي) لتسجيل الدخول. */
 export async function isCustomerLoginOtpStepRequired(): Promise<boolean> {
   const ch = await getLoginOtpChannel();
   if (ch === "OFF") return false;
@@ -199,7 +199,7 @@ export async function sendCustomerLoginOtpForIdentifier(
       return {
         ok: false,
         error:
-          "إرسال واتساب غير مهيأ (اختر رسائلي لتسجيل الدخول أو اضبط EVOLUTION_API_BASE_URL و EVOLUTION_API_KEY و EVOLUTION_INSTANCE_NAME).",
+          "إرسال واتساب غير مهيأ (اختر مزوّداً آخر (Meta أو رسائلي) لتسجيل الدخول أو اضبط EVOLUTION_API_BASE_URL و EVOLUTION_API_KEY و EVOLUTION_INSTANCE_NAME).",
       };
     }
 
@@ -331,7 +331,7 @@ export async function sendCustomerLoginOtpForIdentifier(
         return { ok: false, error: "رقم الجوال غير صالح لإرسال واتساب." };
       }
       try {
-        await sendWhatsappOtp({ flow: "login", phoneE164, text: message });
+        await sendWhatsappOtp({ flow: "login", phoneE164, otp, text: message });
       } catch (e) {
         console.error("customer login OTP WhatsApp failed", e);
         await prisma.customerLoginOtp

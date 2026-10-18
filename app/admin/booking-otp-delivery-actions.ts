@@ -12,20 +12,21 @@ import { isSmsChannelConfigured } from "@/lib/booking-checkout-otp";
 import { isOutgoingMailTransportConfigured } from "@/lib/booking-invoice-email";
 import { isEvolutionWhatsAppConfigured } from "@/lib/evolution-whatsapp";
 import {
-  SITE_KEY_RASAYILY_OTP_CONFIG,
-  getRasayilyOtpConfig,
+  SITE_KEY_WHATSAPP_OTP_CONFIG,
+  getWhatsappOtpConfig,
+  isMetaConfiguredForFlow,
   isRasayilyConfigured,
-  normalizeRasayilyOtpConfig,
+  normalizeWhatsappOtpConfig,
   whatsappProviderForFlow,
-  type RasayilyOtpConfig,
+  type WhatsappOtpConfig,
   type WhatsappOtpFlow,
-} from "@/lib/rasayily-whatsapp";
+} from "@/lib/whatsapp-otp";
 import { prisma } from "@/lib/prisma";
 
 function validateFlow(
   flow: WhatsappOtpFlow,
   channel: BookingOtpChannel,
-  cfg: RasayilyOtpConfig,
+  cfg: WhatsappOtpConfig,
 ): string | null {
   const label = flow === "login" ? "تسجيل الدخول" : "تأكيد الحجز";
   if (channel === "SMS" && !isSmsChannelConfigured()) {
@@ -35,12 +36,20 @@ function validateFlow(
     return `${label}: لإرسال الرمز عبر البريد يجب ضبط SMTP (MAIL_HOST و MAIL_USER و MAIL_PASS) أو Resend (RESEND_API_KEY) في بيئة الخادم.`;
   }
   if (channel === "WHATSAPP") {
-    if (whatsappProviderForFlow(cfg, flow) === "rasayily") {
+    const provider = whatsappProviderForFlow(cfg, flow);
+    if (provider === "meta") {
+      if (!cfg.phoneNumberId || !cfg.accessToken) {
+        return `${label}: أدخل Phone Number ID و Access Token لاستخدام Meta.`;
+      }
+      if (!isMetaConfiguredForFlow(cfg, flow)) {
+        return `${label}: أدخل اسم قالب Meta.`;
+      }
+    } else if (provider === "rasayily") {
       if (!isRasayilyConfigured(cfg)) {
         return `${label}: أدخل Company ID و API Token لاستخدام رسائلي.`;
       }
     } else if (!isEvolutionWhatsAppConfigured()) {
-      return `${label}: Evolution غير مضبوط في البيئة (EVOLUTION_API_BASE_URL و EVOLUTION_API_KEY و EVOLUTION_INSTANCE_NAME). اختر رسائلي أو اضبط Evolution.`;
+      return `${label}: Evolution غير مضبوط في البيئة (EVOLUTION_API_BASE_URL و EVOLUTION_API_KEY و EVOLUTION_INSTANCE_NAME). اختر مزوّداً آخر أو اضبط Evolution.`;
     }
   }
   return null;
@@ -58,15 +67,21 @@ export async function updateOtpDeliverySettings(
   const loginChannel = parseBookingOtpChannel(text("loginChannel").trim().toUpperCase());
   const checkoutChannel = parseBookingOtpChannel(text("checkoutChannel").trim().toUpperCase());
 
-  const current = await getRasayilyOtpConfig();
-  // الحقل السري لا يُعاد إرساله للمتصفح — تركه فارغاً يعني الإبقاء على القيمة المحفوظة.
-  const newToken = text("apiToken").trim();
-  const cfg = normalizeRasayilyOtpConfig({
-    apiToken: newToken || current.apiToken,
-    companyId: text("companyId"),
+  const current = await getWhatsappOtpConfig();
+  // الحقول السرية لا تُعاد للمتصفح — تركها فارغة يعني الإبقاء على القيمة المحفوظة.
+  const cfg = normalizeWhatsappOtpConfig({
     loginProvider: text("loginProvider"),
+    loginTemplateName: text("loginTemplateName"),
+    loginTemplateLang: text("loginTemplateLang"),
     checkoutProvider: text("checkoutProvider"),
-  } satisfies Record<keyof RasayilyOtpConfig, string>);
+    checkoutTemplateName: text("checkoutTemplateName"),
+    checkoutTemplateLang: text("checkoutTemplateLang"),
+    phoneNumberId: text("phoneNumberId"),
+    accessToken: text("accessToken").trim() || current.accessToken,
+    apiVersion: text("apiVersion"),
+    rasayilyToken: text("rasayilyToken").trim() || current.rasayilyToken,
+    rasayilyCompanyId: text("rasayilyCompanyId"),
+  } satisfies Record<keyof WhatsappOtpConfig, string>);
 
   const error =
     validateFlow("login", loginChannel, cfg) ?? validateFlow("checkout", checkoutChannel, cfg);
@@ -85,8 +100,8 @@ export async function updateOtpDeliverySettings(
         update: { value: checkoutChannel },
       }),
       prisma.siteSetting.upsert({
-        where: { key: SITE_KEY_RASAYILY_OTP_CONFIG },
-        create: { key: SITE_KEY_RASAYILY_OTP_CONFIG, value: JSON.stringify(cfg) },
+        where: { key: SITE_KEY_WHATSAPP_OTP_CONFIG },
+        create: { key: SITE_KEY_WHATSAPP_OTP_CONFIG, value: JSON.stringify(cfg) },
         update: { value: JSON.stringify(cfg) },
       }),
     ]);
