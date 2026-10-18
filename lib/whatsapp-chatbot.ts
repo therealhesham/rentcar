@@ -1,4 +1,4 @@
-import { getWhatsappOtpConfig, isRasayilyConfigured } from "@/lib/whatsapp-otp";
+import { getWhatsappOtpConfig } from "@/lib/whatsapp-otp";
 import { getOpenRouterReply, isOpenRouterConfigured } from "@/lib/openrouter";
 import { SITE_NAME_AR, absoluteUrl } from "@/lib/seo";
 import { getFleetCategoriesForFilter, getFleetPriceBounds } from "@/lib/fleet-data";
@@ -154,31 +154,27 @@ function parseStructuredReply(raw: string): StructuredReply | null {
   }
 }
 
+/** الـ callback بيتحقق من "رمز التحقق (Secret Token)" المحفوظ في إعدادات n8n عند رسائلي كـ Bearer — مش توكن الـ API العادي (ده بيرجع 401 Invalid token). */
 async function sendRasayilyCallback(opts: {
-  rasayilyToken: string;
-  rasayilyCompanyId: string;
+  secret: string;
   phone: string;
   reply: StructuredReply;
-  companyId: number | string | null;
+  companyId: number | string;
 }): Promise<void> {
-  const fallbackCompanyId = Number(opts.rasayilyCompanyId);
-  const companyId =
-    opts.companyId ?? (Number.isFinite(fallbackCompanyId) ? fallbackCompanyId : opts.rasayilyCompanyId);
-
   const res = await fetch(RASAYILY_CALLBACK_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",
-      Authorization: `Bearer ${opts.rasayilyToken}`,
-      "X-Company-ID": opts.rasayilyCompanyId,
+      Authorization: `Bearer ${opts.secret}`,
+      "X-Company-ID": String(opts.companyId),
     },
     body: JSON.stringify({
       phone: opts.phone,
       reply_text: opts.reply.reply_text,
       intent_tags: opts.reply.intent_tags,
       escalate_to_human: opts.reply.escalate_to_human,
-      company_id: companyId,
+      company_id: opts.companyId,
     }),
     signal: AbortSignal.timeout(20_000),
   });
@@ -213,10 +209,20 @@ export async function handleIncomingRasayilyMessage(rawPayload: unknown): Promis
     return { ok: false, reason: "OPENROUTER_API_KEY غير مضبوط" };
   }
 
-  const otpCfg = await getWhatsappOtpConfig();
-  if (!isRasayilyConfigured(otpCfg)) {
-    console.error("[whatsapp-chatbot] إعدادات رسائلي (التوكن/معرّف الشركة) غير مكتملة — تخطّي الرد.");
-    return { ok: false, reason: "إعدادات رسائلي (التوكن/معرّف الشركة) غير مكتملة" };
+  const secret = process.env.RASAYILY_WEBHOOK_SECRET?.trim();
+  if (!secret) {
+    return { ok: false, reason: "RASAYILY_WEBHOOK_SECRET غير مضبوط" };
+  }
+
+  let companyId: number | string | null = incoming.companyId;
+  if (companyId === null) {
+    const cfgCompanyId = (await getWhatsappOtpConfig()).rasayilyCompanyId;
+    const n = Number(cfgCompanyId);
+    companyId = !cfgCompanyId ? null : Number.isFinite(n) ? n : cfgCompanyId;
+  }
+  if (companyId === null) {
+    console.error("[whatsapp-chatbot] معرّف شركة رسائلي غير متاح (لا في الحمولة ولا في الإعدادات) — تخطّي الرد.");
+    return { ok: false, reason: "معرّف شركة رسائلي غير متاح" };
   }
 
   const grounding = await buildGroundingContext();
@@ -235,13 +241,7 @@ export async function handleIncomingRasayilyMessage(rawPayload: unknown): Promis
     parseStructuredReply(rawReply) ?? { reply_text: rawReply.trim(), intent_tags: [], escalate_to_human: false };
 
   try {
-    await sendRasayilyCallback({
-      rasayilyToken: otpCfg.rasayilyToken,
-      rasayilyCompanyId: otpCfg.rasayilyCompanyId,
-      phone: incoming.phone,
-      reply: structured,
-      companyId: incoming.companyId,
-    });
+    await sendRasayilyCallback({ secret, phone: incoming.phone, reply: structured, companyId });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error("[whatsapp-chatbot] فشل إرسال n8n-callback:", e);
