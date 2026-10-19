@@ -8,6 +8,7 @@ import {
 } from "@/lib/direct-booking";
 import { branchIdsFromReturnSlug } from "@/lib/booking-branches";
 import { assertCustomerNotBlacklisted } from "@/lib/customer-blacklist";
+import { getStoredGclid } from "@/lib/ads-click-id";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/lib/notification-service";
 import { sendNewBookingNotificationEmails } from "@/lib/booking-notification-email";
@@ -62,6 +63,7 @@ export async function submitBookingRequest(
         pickupDate: data.pickupDate,
         numberOfDays: data.numberOfDays,
         termsAccepted: data.termsAccepted,
+        gclid: await getStoredGclid(),
       },
       select: { id: true },
     });
@@ -102,6 +104,7 @@ export async function submitDirectBookingRequest(
   const created = await createDirectBooking({
     carModelId,
     ...parsed.data,
+    gclid: await getStoredGclid(),
   });
   if (!created.ok) {
     return { ok: false, error: created.error };

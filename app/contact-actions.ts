@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getStoredGclid } from "@/lib/ads-click-id";
 import { prisma } from "@/lib/prisma";
 import {
   isOutgoingMailTransportConfigured,
@@ -100,7 +101,7 @@ export async function submitContactMessage(
 
   try {
     await prisma.contactMessage.create({
-      data: { name, email, phone, subject, message, locale },
+      data: { name, email, phone, subject, message, locale, gclid: await getStoredGclid() },
     });
 
     if (isOutgoingMailTransportConfigured()) {

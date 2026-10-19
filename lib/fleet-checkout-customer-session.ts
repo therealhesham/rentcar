@@ -1,4 +1,5 @@
 import type { CreateDirectBookingInput } from "@/lib/direct-booking";
+import { getStoredGclid } from "@/lib/ads-click-id";
 import { createDirectBooking, enforceEditLockedIdentityOnInput } from "@/lib/direct-booking";
 import { setCustomerSessionCookie } from "@/lib/customer-auth";
 import { assertCustomerNotBlacklisted } from "@/lib/customer-blacklist";
@@ -54,6 +55,7 @@ export async function createFleetBookingAndLinkCustomerSession(
     ...enforced.prepared,
     customerId: cust.userId,
     channel: "PUBLIC_WEB",
+    gclid: await getStoredGclid(),
   });
   if (!created.ok) return created;
 

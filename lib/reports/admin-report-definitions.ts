@@ -248,6 +248,7 @@ async function loadRange(session: AdminSession, params: ReportParams): Promise<R
     payment: bookingPaymentStatusLabelAr(b.paymentStatus),
     paid: b.paidAmountSar ?? 0,
     createdAt: formatReportDateTime(b.createdAt),
+    gclid: b.gclid ?? "",
   }));
   return {
     title: "تقرير الحجوزات (مدى تاريخ)",
@@ -264,6 +265,7 @@ async function loadRange(session: AdminSession, params: ReportParams): Promise<R
       { key: "payment", header: "الدفع", width: 12, align: "center" },
       { key: "paid", header: "المدفوع (ر.س)", width: 12, align: "center", numeric: true },
       { key: "createdAt", header: "تاريخ الإنشاء (created at)", width: 20, align: "center" },
+      { key: "gclid", header: "GCLID", width: 40 },
     ],
     rows: data,
   };

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarDays, CalendarPlus, Car, MapPin, Truck } from "lucide-react";
+import { CalendarDays, CalendarPlus, Car, MapPin, Megaphone, Truck } from "lucide-react";
 import {
   AdminCarBookingsList,
   type CarBookingDayGroup,
@@ -114,6 +114,7 @@ export default async function AdminCarBookingsPage({
 
   const todayYmd = dateKey(new Date());
   const deliveryCount = rows.filter((r) => r.pickupMode === "DELIVERY").length;
+  const googleAdsCount = rows.filter((r) => r.gclid).length;
   const todayCount = rows.filter((r) => dateKey(r.pickupDate) === todayYmd).length;
 
   const groupsMap = new Map<string, CarBookingRow[]>();
@@ -124,6 +125,7 @@ export default async function AdminCarBookingsPage({
       id: b.id,
       fullName: b.fullName,
       phone: b.phone,
+      fromGoogleAds: Boolean(b.gclid),
       carLabel: b.carModel ? `${b.carModel.brand.name} ${b.carModel.name}` : "—",
       startYmd,
       endYmd,
@@ -193,7 +195,7 @@ export default async function AdminCarBookingsPage({
         }
       />
 
-      <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <StatTile
           label="حجوزات نشطة"
           value={rows.length}
@@ -214,6 +216,13 @@ export default async function AdminCarBookingsPage({
           hint="استلام من موقع العميل"
           icon={Truck}
           accent="bg-[#f5f3ff] text-[#6d28d9]"
+        />
+        <StatTile
+          label="من إعلانات Google"
+          value={googleAdsCount}
+          hint="حجوزات نشطة لها GCLID"
+          icon={Megaphone}
+          accent="bg-[#fef2f2] text-[#b91c1c]"
         />
         <StatTile
           label="أيام بها حجوزات"

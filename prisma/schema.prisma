@@ -634,6 +634,8 @@ model CorporateBookingLead {
   taxNumber    String   @db.VarChar(64)
   details      String   @db.Text
   phone        String   @db.VarChar(32)
+  /// معرّف نقرة إعلانات Google (GCLID) وقت إرسال الطلب.
+  gclid        String?  @db.VarChar(200)
   status       String   @default("NEW") @db.VarChar(24)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -648,6 +650,8 @@ model ContactMessage {
   name      String   @db.VarChar(255)
   email     String   @db.VarChar(255)
   phone     String   @db.VarChar(32)
+  /// معرّف نقرة إعلانات Google (GCLID) وقت إرسال الرسالة.
+  gclid     String?  @db.VarChar(200)
   subject   String   @db.VarChar(255)
   message   String   @db.Text
   /// NEW = لم تُقرأ بعد، READ = اطّلع عليها الأدمن، ARCHIVED = مؤرشفة.
@@ -675,6 +679,8 @@ model BookingRequest {
   phone                         String
   /// بريد لإرسال الفاتورة بعد إتمام الدفع (يُجمع من صفحة الإتمام).
   contactEmail                  String?      @db.VarChar(255)
+  /// معرّف نقرة إعلانات Google (GCLID) وقت إنشاء الحجز — يُصدَّر لرفع الإحالات دون اتصال.
+  gclid                         String?      @db.VarChar(200)
   /// Legacy fields: نُبقيها للتوافق مع السجلات القديمة؛ البيانات الجديدة تُحفظ في User.
   idDocumentKind                String?      @db.VarChar(24)
   nationalIdNumber              String?      @db.VarChar(16)

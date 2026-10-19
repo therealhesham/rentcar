@@ -832,6 +832,8 @@ export type CreateDirectBookingInput = DirectBookingCommon & {
    * فلا قيد قناة هناك.
    */
   channel?: "PUBLIC_WEB";
+  /** معرّف نقرة إعلانات Google للزائر (من الكوكي) — يُخزَّن مع الحجز العام فقط. */
+  gclid?: string | null;
   /** مستندات الهوية والرخصة (واجهة الإتمام) — اختياري لحجز المكتب من الإدارة */
   kyc?: DirectBookingKycInput | null;
   /**
@@ -1402,6 +1404,7 @@ export async function createDirectBooking(
     kyc: _kyc,
     excludeBlockingBookingRequestId: _excludeIgnored,
     officePayment,
+    gclid,
     ...common
   } = prepared;
 
@@ -1815,6 +1818,7 @@ export async function createDirectBooking(
               typeof contactEmail === "string" && contactEmail.trim()
                 ? contactEmail.trim().toLowerCase()
                 : null,
+            gclid: gclid ?? null,
             ageRange: commonNormalized.ageRange,
             carType,
             branchId: branchIds.pickupBranchId,

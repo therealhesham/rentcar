@@ -405,6 +405,8 @@ export function PaymentClient({
         paymentMethod: resolvedMethodCode || method,
         amountSar: payableAmountSar,
         carName: booking.car?.fullTitle,
+        email: booking.invoiceEmail,
+        phone: booking.phone,
       });
     }
   }, [checkoutComplete, resolvedMethodCode, method, booking.id, payableAmountSar, booking.car?.fullTitle]);

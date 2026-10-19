@@ -13,11 +13,14 @@ import {
 import { AdminStatusBadge } from "@/components/admin/AdminStatusBadge";
 import { BookingListQuickActions } from "@/components/admin/BookingListQuickActions";
 import { AdminQuickPaymentModal } from "@/components/admin/AdminQuickPaymentModal";
+import { GoogleAdsBadge } from "@/components/admin/GoogleAdsBadge";
 
 export type CarBookingRow = {
   id: number;
   fullName: string;
   phone: string;
+  /** الحجز جاء من نقرة إعلان Google (له GCLID). */
+  fromGoogleAds?: boolean;
   carLabel: string;
   startYmd: string;
   endYmd: string;
@@ -186,7 +189,10 @@ export function AdminCarBookingsList({ groups }: Props) {
                         #{row.id}
                       </span>
                     </div>
-                    <p className="mt-2 font-extrabold text-on-surface">{row.fullName}</p>
+                    <p className="mt-2 font-extrabold text-on-surface">
+                      {row.fullName}
+                      {row.fromGoogleAds ? <GoogleAdsBadge /> : null}
+                    </p>
                     <p className="mt-0.5 flex items-center gap-1.5 text-sm text-on-surface-variant">
                       <Phone className="size-3.5 shrink-0" aria-hidden />
                       <span dir="ltr" className="tabular-nums">
@@ -248,6 +254,7 @@ export function AdminCarBookingsList({ groups }: Props) {
                       <span className="flex items-center gap-1.5 font-semibold text-on-surface">
                         <User className="size-3.5 shrink-0 text-on-surface-variant" aria-hidden />
                         {row.fullName}
+                        {row.fromGoogleAds ? <GoogleAdsBadge /> : null}
                       </span>
                       <span className="mt-0.5 block tabular-nums text-xs text-on-surface-variant" dir="ltr">
                         {row.phone}

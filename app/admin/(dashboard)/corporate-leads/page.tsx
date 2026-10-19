@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { GoogleAdsBadge } from "@/components/admin/GoogleAdsBadge";
 import { redirect } from "next/navigation";
 import { verifyAdminSession } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
@@ -140,6 +141,7 @@ export default async function AdminCorporateLeadsPage() {
                     </td>
                     <td className="px-6 py-4 font-bold text-on-surface">
                       {r.companyName}
+                      {r.gclid ? <GoogleAdsBadge /> : null}
                     </td>
                     <td className="px-6 py-4">
                       <a

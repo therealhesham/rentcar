@@ -5,6 +5,8 @@
  * or interrupt the payment / booking flow — whatever happens, the user sees nothing.
  */
 
+import { e164ToLocalNine, saudiLocalNineToE164 } from "@/lib/normalize-saudi-phone";
+
 declare global {
   interface Window {
     dataLayer?: Record<string, any>[];
@@ -100,16 +102,34 @@ export function trackSubmitPayment(params: {
 }
 
 /**
+ * Enhanced Conversions: بيانات العميل بصيغة Google (جوال دولي +966 وبريد صغير الحروف).
+ * تُرسل **خاماً** — Google tag يشفّرها SHA-256 تلقائياً قبل الإرسال لإعلانات Google.
+ */
+function enhancedUserData(email?: string | null, phone?: string | null) {
+  const mail = email?.trim().toLowerCase();
+  const nine = e164ToLocalNine(phone);
+  const e164 = nine ? saudiLocalNineToE164(nine) : null;
+  const user_data: Record<string, string> = {};
+  if (mail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) user_data.email = mail;
+  if (e164) user_data.phone_number = e164;
+  return Object.keys(user_data).length ? user_data : undefined;
+}
+
+/**
  * Tracks a successful payment or confirmed booking purchase.
+ * `email`/`phone` تغذّيان الإحالات المحسّنة (Enhanced Conversions) في Google Ads عبر `user_data`.
  */
 export function trackPurchaseSuccess(params: {
   bookingId: string | number;
   paymentMethod: string;
   amountSar: number;
   carName?: string;
+  email?: string | null;
+  phone?: string | null;
 }) {
   silently(() =>
     pushGtmEvent("purchase", {
+      user_data: enhancedUserData(params?.email, params?.phone),
       transaction_id: idOf(params?.bookingId),
       value: params?.amountSar,
       currency: "SAR",

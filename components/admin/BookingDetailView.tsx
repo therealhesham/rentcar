@@ -500,6 +500,13 @@ export function BookingDetailView({
                 </DetailRow>
               ) : null}
               <DetailRow label="الفئة العمرية">{booking.ageRange}</DetailRow>
+              {booking.gclid ? (
+                <DetailRow label="GCLID" mono>
+                  <span className="break-all" dir="ltr">
+                    {booking.gclid}
+                  </span>
+                </DetailRow>
+              ) : null}
             </dl>
             {customerBlacklist.isBlacklisted ? (
               <div className="mt-4 space-y-1.5 border-t border-outline-variant/20 pt-4">

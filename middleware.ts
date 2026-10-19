@@ -4,6 +4,7 @@ import { routing } from "./i18n/routing";
 import { isAlwaysAllowedAdminPage } from "@/lib/admin-nav";
 import { resolveAdminPagePermissionId } from "@/lib/admin-routes";
 import { parseAdminSessionTokenEdge } from "@/lib/admin-session-edge";
+import { GCLID_COOKIE, GCLID_MAX_AGE_SECONDS, sanitizeGclid } from "@/lib/ads-click-id";
 
 const handleI18nRouting = createIntlMiddleware(routing);
 
@@ -50,7 +51,21 @@ export async function middleware(request: NextRequest) {
     return handleI18nRouting(new NextRequest(request, { headers }));
   }
 
-  return handleI18nRouting(request);
+  return withGclidCookie(request, handleI18nRouting(request));
+}
+
+/** يحفظ `?gclid=` في كوكي 90 يوماً (الأحدث يكتب فوق القديم، كسلوك كوكي Google نفسه). */
+function withGclidCookie(request: NextRequest, response: NextResponse): NextResponse {
+  const gclid = sanitizeGclid(request.nextUrl.searchParams.get("gclid"));
+  if (gclid) {
+    response.cookies.set(GCLID_COOKIE, gclid, {
+      maxAge: GCLID_MAX_AGE_SECONDS,
+      path: "/",
+      sameSite: "lax",
+      secure: request.nextUrl.protocol === "https:",
+    });
+  }
+  return response;
 }
 
 const LINK_PREVIEW_BOT_RE =

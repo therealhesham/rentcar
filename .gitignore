@@ -1,4 +1,4 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+ # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
 /node_modules
@@ -89,3 +89,4 @@ public/test.docx - Files - File Browser_files/theme-chrome.js.download
 tabby-submission/reply-to-egor-2.txt
 tabby-submission/reply-to-egor.txt
 tabby-submission/reply-to-egor-3.txt
+n8n-rasayily-workflow.json
