@@ -507,6 +507,20 @@ export function BookingDetailView({
                   </span>
                 </DetailRow>
               ) : null}
+              {booking.gbraid ? (
+                <DetailRow label="GBRAID (iOS)" mono>
+                  <span className="break-all" dir="ltr">
+                    {booking.gbraid}
+                  </span>
+                </DetailRow>
+              ) : null}
+              {booking.wbraid ? (
+                <DetailRow label="WBRAID (iOS)" mono>
+                  <span className="break-all" dir="ltr">
+                    {booking.wbraid}
+                  </span>
+                </DetailRow>
+              ) : null}
             </dl>
             {customerBlacklist.isBlacklisted ? (
               <div className="mt-4 space-y-1.5 border-t border-outline-variant/20 pt-4">

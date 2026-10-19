@@ -141,7 +141,7 @@ export default async function AdminCorporateLeadsPage() {
                     </td>
                     <td className="px-6 py-4 font-bold text-on-surface">
                       {r.companyName}
-                      {r.gclid ? <GoogleAdsBadge /> : null}
+                      {(r.gclid || r.gbraid || r.wbraid) ? <GoogleAdsBadge /> : null}
                     </td>
                     <td className="px-6 py-4">
                       <a

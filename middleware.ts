@@ -4,7 +4,12 @@ import { routing } from "./i18n/routing";
 import { isAlwaysAllowedAdminPage } from "@/lib/admin-nav";
 import { resolveAdminPagePermissionId } from "@/lib/admin-routes";
 import { parseAdminSessionTokenEdge } from "@/lib/admin-session-edge";
-import { GCLID_COOKIE, GCLID_MAX_AGE_SECONDS, sanitizeGclid } from "@/lib/ads-click-id";
+import {
+  ADS_CLICK_ID_KEYS,
+  ADS_CLICK_ID_MAX_AGE_SECONDS,
+  adsClickIdCookieName,
+  sanitizeClickId,
+} from "@/lib/ads-click-id";
 
 const handleI18nRouting = createIntlMiddleware(routing);
 
@@ -51,19 +56,30 @@ export async function middleware(request: NextRequest) {
     return handleI18nRouting(new NextRequest(request, { headers }));
   }
 
-  return withGclidCookie(request, handleI18nRouting(request));
+  return withAdsClickIdCookies(request, handleI18nRouting(request));
 }
 
-/** يحفظ `?gclid=` في كوكي 90 يوماً (الأحدث يكتب فوق القديم، كسلوك كوكي Google نفسه). */
-function withGclidCookie(request: NextRequest, response: NextResponse): NextResponse {
-  const gclid = sanitizeGclid(request.nextUrl.searchParams.get("gclid"));
-  if (gclid) {
-    response.cookies.set(GCLID_COOKIE, gclid, {
-      maxAge: GCLID_MAX_AGE_SECONDS,
-      path: "/",
-      sameSite: "lax",
-      secure: request.nextUrl.protocol === "https:",
-    });
+/**
+ * يحفظ معرّف نقرة Google (`gclid` أو `gbraid` أو `wbraid`) في كوكي 90 يوماً.
+ * النقرة الأحدث تكتب فوق القديمة وتمسح بقية المعرّفات (النقرة الواحدة تحمل معرّفاً واحداً فقط).
+ */
+function withAdsClickIdCookies(request: NextRequest, response: NextResponse): NextResponse {
+  const found = ADS_CLICK_ID_KEYS.find((key) =>
+    sanitizeClickId(request.nextUrl.searchParams.get(key)),
+  );
+  if (!found) return response;
+  const value = sanitizeClickId(request.nextUrl.searchParams.get(found))!;
+  for (const key of ADS_CLICK_ID_KEYS) {
+    if (key === found) {
+      response.cookies.set(adsClickIdCookieName(key), value, {
+        maxAge: ADS_CLICK_ID_MAX_AGE_SECONDS,
+        path: "/",
+        sameSite: "lax",
+        secure: request.nextUrl.protocol === "https:",
+      });
+    } else {
+      response.cookies.delete(adsClickIdCookieName(key));
+    }
   }
   return response;
 }

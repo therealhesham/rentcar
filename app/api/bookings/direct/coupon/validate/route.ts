@@ -12,6 +12,9 @@ import {
   computeCouponDiscountForPeriod,
   resolveCouponCode,
 } from "@/lib/coupon-code";
+import { parseDateTimeInRiyadh } from "@/lib/branch-opening-hours";
+import { computeDelayPenaltySnap } from "@/lib/booking-delay-penalty";
+import { resolveInterCityShippingSnap } from "@/lib/inter-city-shipping";
 import {
   customizedCouponExtraPrice,
   isUnlimitedKmAddonSlug,
@@ -68,6 +71,12 @@ export async function POST(request: Request) {
 
   const branchSlug = String(obj.branchSlug ?? "").trim().toLowerCase();
   const rentalTab = String(obj.rentalTab ?? "daily").trim().toLowerCase();
+
+  const pickupDateRaw = String(obj.pickupDate ?? "").trim();
+  const pickupDate = pickupDateRaw ? parseDateTimeInRiyadh(pickupDateRaw) : null;
+  const dropoffDateRaw = String(obj.dropoffDate ?? "").trim();
+  const dropoffDate = dropoffDateRaw ? new Date(dropoffDateRaw) : null;
+  const pickupCitySlug = String(obj.pickupCity ?? "").trim().toLowerCase() || null;
 
   const model = await prisma.carModel.findUnique({
     where: { id: carModelId },
@@ -179,7 +188,30 @@ export async function POST(request: Request) {
     where: { isActive: true },
     select: { feeExclVatSar: true },
   });
-  const oneTimeFeesExclTax = checkoutFees.reduce((s, f) => s + f.feeExclVatSar, 0);
+  const checkoutFeesExclTax = checkoutFees.reduce((s, f) => s + f.feeExclVatSar, 0);
+
+  // نفس البنود التي يضمّها `createDirectBooking` إلى الإجمالي الفرعي قبل خصم FULL_TOTAL:
+  // الشحن بين المدن (يخفّضه الكود المخصَّص) وغرامة التأخير بسعر اليوم بعد الخصم التلقائي.
+  const shippingSnap = await resolveInterCityShippingSnap({
+    originCitySlug: pickupCitySlug,
+    returnBranchSlug: branchSlug,
+  });
+  const shippingFeeExclTax = shippingSnap
+    ? isCustomized
+      ? customizedCouponExtraPrice(shippingSnap.feeExclVatSar)
+      : shippingSnap.feeExclVatSar
+    : 0;
+  const delayFeeExclTax =
+    pickupDate && !Number.isNaN(pickupDate.getTime()) && dropoffDate
+      ? (computeDelayPenaltySnap({
+          rentalTab,
+          pricePerDayExclTax: basePricePerDay,
+          pickupDate,
+          numberOfDays,
+          actualDropoffDate: dropoffDate,
+        })?.feeExclVatSar ?? 0)
+      : 0;
+  const oneTimeFeesExclTax = checkoutFeesExclTax + shippingFeeExclTax + delayFeeExclTax;
 
   const preDiscountTotals = computeCheckoutTotals(
     basePricePerDay,

@@ -576,28 +576,6 @@ export function FleetCheckoutClient({
     [checkoutOneTimeFees],
   );
 
-  const delayPenalty = useMemo(() => {
-    if (!trip.pickupIso || !trip.dropoffIso) return null;
-    const pickup = new Date(trip.pickupIso);
-    const dropoff = new Date(trip.dropoffIso);
-    if (Number.isNaN(pickup.getTime()) || Number.isNaN(dropoff.getTime())) return null;
-    return computeDelayPenaltySnap({
-      rentalTab,
-      pricePerDayExclTax: car.pricePerDayExclTax,
-      pickupDate: pickup,
-      numberOfDays: trip.days,
-      actualDropoffDate: dropoff,
-    });
-  }, [
-    rentalTab,
-    car.pricePerDayExclTax,
-    trip.pickupIso,
-    trip.dropoffIso,
-    trip.days,
-  ]);
-
-  const delayPenaltyExclTax = delayPenalty?.feeExclVatSar ?? 0;
-
   const rentalDurationLabel = useMemo(() => {
     if (rentalTab !== "daily" || !trip.pickupIso || !trip.dropoffIso) {
       const d = trip.days;
@@ -625,6 +603,23 @@ export function FleetCheckoutClient({
     appliedCoupon?.scope === "RENTAL_ONLY"
       ? appliedCoupon.discountedPricePerDayExclTax
       : baseRentalPricePerDay;
+
+  // غرامة التأخير تُحسب بسعر اليوم الفعلي بعد كوبون الإيجار — نفس ما يطبّقه الخادم عند الحجز.
+  const delayPenalty = useMemo(() => {
+    if (!trip.pickupIso || !trip.dropoffIso) return null;
+    const pickup = new Date(trip.pickupIso);
+    const dropoff = new Date(trip.dropoffIso);
+    if (Number.isNaN(pickup.getTime()) || Number.isNaN(dropoff.getTime())) return null;
+    return computeDelayPenaltySnap({
+      rentalTab,
+      pricePerDayExclTax: effectiveRentalPricePerDay,
+      pickupDate: pickup,
+      numberOfDays: trip.days,
+      actualDropoffDate: dropoff,
+    });
+  }, [rentalTab, effectiveRentalPricePerDay, trip.pickupIso, trip.dropoffIso, trip.days]);
+
+  const delayPenaltyExclTax = delayPenalty?.feeExclVatSar ?? 0;
 
   const totals = computeCheckoutTotals(
     effectiveRentalPricePerDay,
@@ -787,6 +782,91 @@ export function FleetCheckoutClient({
     }
   }
 
+  function readCouponPhone(): string {
+    // زرّ الكوبون داخل الشريط الجانبي (aside) وليس داخل <form> بيانات الهوية، فلازم نقرأ
+    // الجوال من جلسة العميل المسجَّل أو من حقل الفورم مباشرة بدل الاعتماد على closest("form").
+    const phoneRaw =
+      sessionCustomer?.phoneLocal ??
+      (document.getElementById("phone") as HTMLInputElement | null)?.value ??
+      "";
+    return phoneRaw.replace(/\s+/g, "").trim();
+  }
+
+  async function requestCouponPreview(code: string, phone: string) {
+    const res = await fetch("/api/bookings/direct/coupon/validate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        code,
+        phone,
+        carModelId: car.modelId,
+        branchSlug: trip.branchSlug,
+        numberOfDays: trip.days,
+        addonIds: [...selected],
+        // نوع التأجير يحدّد صلاحية الكود (يومي فقط أم شهري كذلك) وأرضية السعر
+        // المطبَّقة — لازم يطابق ما يحسبه الخادم وقت الحجز.
+        rentalTab,
+        // مواعيد الرحلة والمدينة: تدخل غرامة التأخير والشحن في الإجمالي الفرعي لكود FULL_TOTAL.
+        ...(trip.pickupIso ? { pickupDate: trip.pickupIso } : {}),
+        ...(trip.dropoffIso ? { dropoffDate: trip.dropoffIso } : {}),
+        ...(trip.pickupCitySlug ? { pickupCity: trip.pickupCitySlug } : {}),
+      }),
+    });
+    return (await res.json()) as
+      | { ok: true; scope: "RENTAL_ONLY" | "FULL_TOTAL"; isCustomized?: boolean; discountedPricePerDayExclTax: number; discountExclTax: number; labelAr: string }
+      | { ok: false; error: string };
+  }
+
+  // الخصم المعروض مُجمَّد وقت التطبيق؛ أي تغيير يدخل في حسابه يستلزم إعادة التحقق.
+  const couponTripKey = JSON.stringify([
+    car.modelId,
+    trip.branchSlug,
+    trip.days,
+    trip.pickupIso,
+    trip.dropoffIso,
+    trip.pickupCitySlug,
+    rentalTab,
+    [...selected].sort((a, b) => a - b),
+  ]);
+  const couponValidatedKeyRef = useRef<string | null>(null);
+  const appliedCouponCode = appliedCoupon?.code ?? null;
+
+  useEffect(() => {
+    if (!appliedCouponCode || couponValidatedKeyRef.current === couponTripKey) return;
+    const phone = readCouponPhone();
+    if (!/^5\d{8}$/.test(phone)) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const data = await requestCouponPreview(appliedCouponCode, phone);
+        if (cancelled) return;
+        couponValidatedKeyRef.current = couponTripKey;
+        if (!data.ok) {
+          setAppliedCoupon(null);
+          setCouponError(data.error);
+          return;
+        }
+        setAppliedCoupon({
+          code: appliedCouponCode,
+          scope: data.scope,
+          discountedPricePerDayExclTax: data.discountedPricePerDayExclTax,
+          discountExclTax: data.discountExclTax,
+          labelAr: data.labelAr,
+          isCustomized: data.isCustomized === true,
+        });
+      } catch {
+        if (!cancelled) {
+          setAppliedCoupon(null);
+          setCouponError(t("couponCheckFailed"));
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [appliedCouponCode, couponTripKey]);
+
   /** يتحقق من كود الخصم سيرفر-سايد ويعرض معاينة الخصم — التحقق الملزم يتكرر عند تأكيد الحجز. */
   async function handleApplyCoupon() {
     const code = couponInput.trim();
@@ -797,11 +877,7 @@ export function FleetCheckoutClient({
     }
     // زرّ الكوبون داخل الشريط الجانبي (aside) وليس داخل <form> بيانات الهوية، فلازم نقرأ
     // الجوال من جلسة العميل المسجَّل أو من حقل الفورم مباشرة بدل الاعتماد على closest("form").
-    const phoneRaw =
-      sessionCustomer?.phoneLocal ??
-      (document.getElementById("phone") as HTMLInputElement | null)?.value ??
-      "";
-    const phone = phoneRaw.replace(/\s+/g, "").trim();
+    const phone = readCouponPhone();
     if (!/^5\d{8}$/.test(phone)) {
       setCouponError(t("couponEnterPhone"));
       return;
@@ -809,29 +885,14 @@ export function FleetCheckoutClient({
 
     setCouponChecking(true);
     try {
-      const res = await fetch("/api/bookings/direct/coupon/validate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          code,
-          phone,
-          carModelId: car.modelId,
-          branchSlug: trip.branchSlug,
-          numberOfDays: trip.days,
-          addonIds: [...selected],
-          // نوع التأجير يحدّد صلاحية الكود (يومي فقط أم شهري كذلك) وأرضية السعر
-          // المطبَّقة — لازم يطابق ما يحسبه الخادم وقت الحجز.
-          rentalTab,
-        }),
-      });
-      const data = (await res.json()) as
-        | { ok: true; scope: "RENTAL_ONLY" | "FULL_TOTAL"; isCustomized?: boolean; discountedPricePerDayExclTax: number; discountExclTax: number; labelAr: string }
-        | { ok: false; error: string };
+      const requestedKey = couponTripKey;
+      const data = await requestCouponPreview(code, phone);
       if (!data.ok) {
         setAppliedCoupon(null);
         setCouponError(data.error);
         return;
       }
+      couponValidatedKeyRef.current = requestedKey;
       setAppliedCoupon({
         code: code.toUpperCase(),
         scope: data.scope,

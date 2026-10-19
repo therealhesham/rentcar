@@ -191,21 +191,21 @@ model Branch {
 
 /// موظفو لوحة الإدارة: سوبر أدمن ومديرو/موظفو الفروع — ليسوا في جدول `User`.
 model AdminEmployee {
-  id           Int     @id @default(autoincrement())
-  email        String  @unique @db.VarChar(255)
-  passwordHash String  @db.VarChar(255)
-  name         String? @db.VarChar(255)
+  id           Int           @id @default(autoincrement())
+  email        String        @unique @db.VarChar(255)
+  passwordHash String        @db.VarChar(255)
+  name         String?       @db.VarChar(255)
   /// null للسوبر أدمن أو مشرف مدينة/عمليات؛ مطلوب لموظف الفرع
   branchId     Int?
-  branch       Branch? @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  branch       Branch?       @relation(fields: [branchId], references: [id], onDelete: Restrict)
   /// مشرف مدينة (لا فرع واحد): TO على إيميلات كل فروع هذه المدينة. حصري مع branchId عملياً.
   cityId       Int?
-  city         City?   @relation(fields: [cityId], references: [id], onDelete: SetNull)
+  city         City?         @relation(fields: [cityId], references: [id], onDelete: SetNull)
   /// وظيفة الموظف — قالب الصلاحيات الأساسي، مستقل عن الفرع والمدينة.
   jobRoleId    Int?
   jobRole      AdminJobRole? @relation(fields: [jobRoleId], references: [id], onDelete: SetNull)
-  isSuperAdmin Boolean @default(false)
-  isActive     Boolean @default(true)
+  isSuperAdmin Boolean       @default(false)
+  isActive     Boolean       @default(true)
 
   /// مصفوفة JSON بمفاتيح صلاحيات **إضافية** فوق صلاحيات الوظيفة (الفعلي = اتحاد الاثنين).
   permissionsJson String? @db.Text
@@ -231,9 +231,9 @@ model AdminEmployee {
 /// وظيفة إدارية: قالب صلاحيات صفحات يُطبَّق على الموظفين المرتبطين بها — مستقل عن الفرع والمدينة.
 /// نطاق البيانات (فرع/مدينة/الكل) يظل من AdminEmployee.branchId/cityId.
 model AdminJobRole {
-  id   Int    @id @default(autoincrement())
-  slug String @unique @db.VarChar(64)
-  name String @db.VarChar(255)
+  id              Int      @id @default(autoincrement())
+  slug            String   @unique @db.VarChar(64)
+  name            String   @db.VarChar(255)
   /// نفس صيغة AdminEmployee.permissionsJson — مصفوفة JSON من مفاتيح ADMIN_PAGE_PERMISSIONS
   permissionsJson String?  @db.Text
   isActive        Boolean  @default(true)
@@ -301,25 +301,25 @@ model CarModel {
   fuel         FuelType
 
   /// سعر اليوم بالريال دون ضريبة (يُعرض للزائر كغير شامل للضريبة)
-  price               Float
+  price                  Float
   /// سعر الإيجار الشهري الأساسي دون ضريبة (خصم منفصل عن اليومي×30) — null = لا يوجد عرض شهري لهذا الموديل.
-  priceMonthlyExclTax Float?
+  priceMonthlyExclTax    Float?
   /// نسبة ضريبة القيمة المضافة % المسجّلة لهذا الموديل (مثلاً 15 في السعودية) — للفوترة والأرشفة
-  vatRatePercent      Int     @default(15)
+  vatRatePercent         Int     @default(15)
   /// الحد الأدنى للسعر اليومي دون ضريبة — لا ينزل السعر بعد الخصم تحته. null = بلا حد.
   /// يمكن تجاوزه لكل فرع عبر `Fleet.minPricePerDayExclTax`.
   minPricePerDayExclTax  Float?
   /// الحد الأدنى للسعر الشهري دون ضريبة — لا ينزل السعر الشهري بعد الخصم تحته. null = بلا حد.
   /// يمكن تجاوزه لكل فرع عبر `Fleet.minPriceMonthlyExclTax`.
   minPriceMonthlyExclTax Float?
-  image               String?
-  alt                 String?
-  cta                 String?
-  ctaEn               String?
-  badge               String?
-  badgeEn             String?
+  image                  String?
+  alt                    String?
+  cta                    String?
+  ctaEn                  String?
+  badge                  String?
+  badgeEn                String?
   /// ترتيب العرض في صفحة الأسطول — الأصغر يظهر أولاً. يُطبَّق على العميل والأدمن معاً.
-  displayOrder        Int     @default(0)
+  displayOrder           Int     @default(0)
 
   fleetItems        Fleet[]
   bookingRequests   BookingRequest[]
@@ -336,24 +336,24 @@ model CarModel {
 
 /// كمية متاحة من موديل سيارة في فرع محدّد (التوفر يُحسب لكل فرع على حدة).
 model Fleet {
-  id                  Int      @id @default(autoincrement())
-  modelId             Int
-  model               CarModel @relation(fields: [modelId], references: [id], onDelete: Cascade)
-  branchId            Int
-  branch              Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  quantity            Int      @default(0)
+  id                     Int      @id @default(autoincrement())
+  modelId                Int
+  model                  CarModel @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  branchId               Int
+  branch                 Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  quantity               Int      @default(0)
   /// سعر يومي خاص بالفرع (دون ضريبة) — يتجاوز `CarModel.price` عند تحديده. null = السعر الأساسي للموديل.
-  pricePerDayExclTax  Float?
+  pricePerDayExclTax     Float?
   /// سعر شهري خاص بالفرع (دون ضريبة) — يتجاوز `CarModel.priceMonthlyExclTax` عند تحديده. null = السعر الأساسي للموديل.
-  priceMonthlyExclTax Float?
+  priceMonthlyExclTax    Float?
   /// حد أدنى يومي خاص بالفرع (دون ضريبة) — يتجاوز `CarModel.minPricePerDayExclTax`. null = حد الموديل.
   minPricePerDayExclTax  Float?
   /// حد أدنى شهري خاص بالفرع (دون ضريبة) — يتجاوز `CarModel.minPriceMonthlyExclTax`. null = حد الموديل.
   minPriceMonthlyExclTax Float?
   /// هل تظهر هذه المركبة للعملاء في صفحة الأسطول (يمكن إخفاؤها حتى لو متاحة)
-  isVisible           Boolean  @default(true)
+  isVisible              Boolean  @default(true)
   /// ترتيب العرض في صفحة الأسطول — الأصغر يظهر أولاً (0 = افتراضي)
-  displayOrder        Int      @default(0)
+  displayOrder           Int      @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -636,6 +636,8 @@ model CorporateBookingLead {
   phone        String   @db.VarChar(32)
   /// معرّف نقرة إعلانات Google (GCLID) وقت إرسال الطلب.
   gclid        String?  @db.VarChar(200)
+  gbraid       String?  @db.VarChar(200)
+  wbraid       String?  @db.VarChar(200)
   status       String   @default("NEW") @db.VarChar(24)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -652,6 +654,8 @@ model ContactMessage {
   phone     String   @db.VarChar(32)
   /// معرّف نقرة إعلانات Google (GCLID) وقت إرسال الرسالة.
   gclid     String?  @db.VarChar(200)
+  gbraid    String?  @db.VarChar(200)
+  wbraid    String?  @db.VarChar(200)
   subject   String   @db.VarChar(255)
   message   String   @db.Text
   /// NEW = لم تُقرأ بعد، READ = اطّلع عليها الأدمن، ARCHIVED = مؤرشفة.
@@ -678,26 +682,28 @@ model BookingRequest {
   fullName                      String
   phone                         String
   /// بريد لإرسال الفاتورة بعد إتمام الدفع (يُجمع من صفحة الإتمام).
-  contactEmail                  String?      @db.VarChar(255)
+  contactEmail                  String?   @db.VarChar(255)
   /// معرّف نقرة إعلانات Google (GCLID) وقت إنشاء الحجز — يُصدَّر لرفع الإحالات دون اتصال.
-  gclid                         String?      @db.VarChar(200)
+  gclid                         String?   @db.VarChar(200)
+  gbraid                        String?   @db.VarChar(200)
+  wbraid                        String?   @db.VarChar(200)
   /// Legacy fields: نُبقيها للتوافق مع السجلات القديمة؛ البيانات الجديدة تُحفظ في User.
-  idDocumentKind                String?      @db.VarChar(24)
-  nationalIdNumber              String?      @db.VarChar(16)
-  passportNumber                String?      @db.VarChar(32)
-  licenseNumber                 String?      @db.VarChar(64)
+  idDocumentKind                String?   @db.VarChar(24)
+  nationalIdNumber              String?   @db.VarChar(16)
+  passportNumber                String?   @db.VarChar(32)
+  licenseNumber                 String?   @db.VarChar(64)
   /// Legacy.
-  licenseExpiryDate             DateTime?    @db.Date
-  idCardImageUrl                String?      @db.Text
-  driverLicenseImageUrl         String?      @db.Text
+  licenseExpiryDate             DateTime? @db.Date
+  idCardImageUrl                String?   @db.Text
+  driverLicenseImageUrl         String?   @db.Text
   ageRange                      String
   carType                       String
   /// Pickup branch FK. See docs/booking-request-branch-fields.md (AR: فرع الاستلام).
   branchId                      Int?
-  pickupBranch                  Branch?      @relation("BookingPickupBranch", fields: [branchId], references: [id], onDelete: SetNull)
+  pickupBranch                  Branch?   @relation("BookingPickupBranch", fields: [branchId], references: [id], onDelete: SetNull)
   /// Return branch FK. See docs/booking-request-branch-fields.md (AR: فرع الإرجاع).
   returnBranchId                Int?
-  returnBranch                  Branch?      @relation("BookingReturnBranch", fields: [returnBranchId], references: [id], onDelete: SetNull)
+  returnBranch                  Branch?   @relation("BookingReturnBranch", fields: [returnBranchId], references: [id], onDelete: SetNull)
   /// Inter-branch return confirmed at return branch. See docs/booking-request-branch-fields.md.
   interBranchReturnConfirmedAt  DateTime?
   /// وقت تسجيل استلام العميل للسيارة من الفرع (حالة PICKED_UP).
@@ -705,25 +711,25 @@ model BookingRequest {
   /// وقت تسجيل إرجاع السيارة إلى الفرع (حالة RETURNED).
   vehicleReturnedAt             DateTime?
   /// استلام من فرع الشركة أو توصيل للعميل (حجز مباشر من الموقع).
-  pickupMode                    String?      @db.VarChar(16)
+  pickupMode                    String?   @db.VarChar(16)
   deliveryLat                   Float?
   deliveryLng                   Float?
   /// عنوان نصّي للتوصيل إن لم يُحدَّد بالخريطة (أو لتفاصيل إضافية).
-  deliveryAddress               String?      @db.Text
+  deliveryAddress               String?   @db.Text
   pickupDate                    DateTime
   numberOfDays                  Int
-  termsAccepted                 Boolean      @default(true)
+  termsAccepted                 Boolean   @default(true)
   /// لقطة JSON للإضافات المختارة عند إنشاء الحجز المباشر (عناوين وأسعار وقت الطلب).
-  addonsJson                    String?      @db.Text
+  addonsJson                    String?   @db.Text
   /// حالة الدفع: PENDING | PAID | REFUNDED | PARTIAL_REFUND | NO_REFUND
-  paymentStatus                 String       @default("PENDING") @db.VarChar(24)
+  paymentStatus                 String    @default("PENDING") @db.VarChar(24)
   /// وقت تأكيد الدفع (تجريبي).
   paidAt                        DateTime?
   /// طريقة الدفع المختارة عند الإتمام: TABBY | TAMARA | CARD | POINTS (ربط البوابات لاحقاً).
-  paymentMethod                 String?      @db.VarChar(24)
+  paymentMethod                 String?   @db.VarChar(24)
   /// اسم أو معرّف الموظف/النظام الذي سجل الدفعة
-  paymentReceivedBy             String?      @db.VarChar(128)
-  status                        String       @default("NEW")
+  paymentReceivedBy             String?   @db.VarChar(128)
+  status                        String    @default("NEW")
   /// وقت إلغاء الطلب من الحساب (إن وُجد).
   cancelledAt                   DateTime?
   /// أيام الإيجار المخصومة عند آخر إلغاء ذاتي (حسب سياسة الشرائح في الإعدادات).
@@ -731,73 +737,72 @@ model BookingRequest {
   /// إجمالي المبلغ المسترد للعميل (شامل الضريبة) عند الإلغاء الذاتي بعد دفع ناجح.
   cancellationRefundAmountSar   Float?
   /// مرجع من بوابة الاسترداد (أو محاكاة MOCK-… حتى ربط البوابات).
-  cancellationRefundExternalRef String?      @db.VarChar(128)
+  cancellationRefundExternalRef String?   @db.VarChar(128)
   /// سبب الإلغاء — إلزامي عند إلغاء الإدارة مع استرداد كامل يتجاوز سياسة الشرائح.
-  cancellationReasonAr          String?      @db.VarChar(500)
+  cancellationReasonAr          String?   @db.VarChar(500)
   /// سبب رفض الطلب من قبل الإدارة.
-  rejectionReasonAr             String?      @db.VarChar(500)
+  rejectionReasonAr             String?   @db.VarChar(500)
 
   /// مرجع خارجي لعملية الدفع (رقم عملية الشبكة/التحويل) — يُدخله الموظف عند تسجيل الدفع يدوياً.
-  paymentExternalRef            String?      @db.VarChar(128)
+  paymentExternalRef          String?      @db.VarChar(128)
   /// مرجع عملية الدفع الأصلية من بوابة جيديا (orderId) — لازم لتنفيذ الاسترداد الإلكتروني.
-  paymentGatewayRef             String?      @db.VarChar(128)
+  paymentGatewayRef           String?      @db.VarChar(128)
   /// merchantReferenceId لآخر جلسة دفع جيديا — للمصالحة عند عودة العميل قبل وصول الـ webhook.
-  paymentSessionRef             String?      @db.VarChar(128)
+  paymentSessionRef           String?      @db.VarChar(128)
   /// المبلغ الكامل المدفوع بالريال (شامل الضريبة) — يُحفظ لحظة تأكيد الدفع ولا يتغيّر بعدها.
-  paidAmountSar                 Float?
+  paidAmountSar               Float?
   /// مبلغ مستحق يُحصَّل عند الفرع بعد تعديل/تمديد العميل لحجز مدفوع (فرق السعر). يطالب به الموظف عند تسليم/إرجاع السيارة.
-  balanceDueAtBranchSar         Float?
+  balanceDueAtBranchSar       Float?
   /// مستحقات للعميل (شامل الضريبة): مبلغ يُرَدّ للعميل بعد تعديل قلّص إجمالي حجز مدفوع. يسوّيه الموظف من لوحة الإدارة (قسم مستحقات للعميل).
-  refundDueToCustomerSar        Float?
+  refundDueToCustomerSar      Float?
   /// وقت تسوية مستحقات العميل من الإدارة. null مع وجود مبلغ = مستحقات قائمة.
-  refundDueSettledAt            DateTime?
+  refundDueSettledAt          DateTime?
   /// وسيلة تسوية المستحقات: CASH أو نفس وسيلة الدفع الأصلية (CARD/MADA/APPLE_PAY/...).
-  refundDueSettledMethod        String?      @db.VarChar(24)
+  refundDueSettledMethod      String?      @db.VarChar(24)
   /// مرجع عملية التسوية (مرجع بوابة الاسترداد أو مرجع يدوي للنقدي).
-  refundDueSettledRef           String?      @db.VarChar(128)
+  refundDueSettledRef         String?      @db.VarChar(128)
   /// الموظف الذي نفّذ تسوية المستحقات.
-  refundDueSettledBy            String?      @db.VarChar(128)
+  refundDueSettledBy          String?      @db.VarChar(128)
   /// إجمالي الحجز المستحق (شامل الضريبة) — snapshot مجمَّد عند إنشاء الحجز أو آخر تعديل للمدة.
   /// يُستخدم بدلاً من إعادة الحساب من السعر الحالي حتى لو تغيّر سعر الموديل لاحقاً.
-  snapshotTotalAmountSar        Float?
+  snapshotTotalAmountSar      Float?
   /// نوع فترة التسعير وقت الحجز: DAILY | MONTHLY. لازم لإعادة التسعير الصحيحة عند
   /// تبديل موديل السيارة من الإدارة — الأرضية والسعر يُحسبان بطريقتين مختلفتين.
   /// null = حجوزات أقدم من هذا الحقل (النوع غير معروف) — يُرفض عندها تبديل موديل يغيّر السعر.
-  rentalPeriodKind              String?      @db.VarChar(8)
+  rentalPeriodKind            String?      @db.VarChar(8)
   /// إجمالي ساعات التأخير عن موعد الإرجاع الأساسي عند تسجيل الإرجاع (يُسجَّل فقط عند تجاوز السماحية).
-  lateReturnHours               Float?
+  lateReturnHours             Float?
   /// غرامة الإرجاع المتأخر المطبقة (دون ضريبة) بعد خصم بند الساعات المدفوع مسبقاً. 0 = مغطاة أو معفاة.
-  lateReturnPenaltyExclTaxSar   Float?
+  lateReturnPenaltyExclTaxSar Float?
   /// أعفى الموظف العميل من غرامة الإرجاع المتأخر.
-  lateReturnPenaltyWaived       Boolean      @default(false)
+  lateReturnPenaltyWaived     Boolean      @default(false)
   /// الموظف الذي قرر تطبيق/إعفاء غرامة الإرجاع المتأخر.
-  lateReturnDecidedBy           String?      @db.VarChar(128)
+  lateReturnDecidedBy         String?      @db.VarChar(128)
   /// الوحدة الفعلية المسلّمة للعميل (اختياري)
-  vehicleUnitId                 Int?
-  vehicleUnit                   VehicleUnit? @relation(fields: [vehicleUnitId], references: [id], onDelete: SetNull)
+  vehicleUnitId               Int?
+  vehicleUnit                 VehicleUnit? @relation(fields: [vehicleUnitId], references: [id], onDelete: SetNull)
   /// رقم لوحة السيارة المسلّمة للعميل (مثل: أ ب ج 1234)
-  vehiclePlateNumber            String?      @db.VarChar(64)
+  vehiclePlateNumber          String?      @db.VarChar(64)
   /// قراءة عداد الكيلومترات لحظة تسليم السيارة للعميل (اختياري — يُدخله الموظف).
-  odometerAtPickupKm            Int?
+  odometerAtPickupKm          Int?
   /// قراءة العداد لحظة إرجاع السيارة إلى الفرع. الفرق عن قراءة التسليم = المسافة المقطوعة.
-  odometerAtReturnKm            Int?
+  odometerAtReturnKm          Int?
   /// ملاحظات إدارية خاصة بالطلب (تظهر في أعلى صفحة تفاصيل الحجز للإدارة).
-  adminNotes                    String?      @db.Text
+  adminNotes                  String?      @db.Text
   /// رقم العقد في النظام القديم — يُملأ فقط عند الترحيل الجماعي من Excel، وnull لأي حجز
   /// أنشأه الموقع أو الإدارة. `unique` هو مفتاح منع التكرار عند إعادة رفع نفس الملف
   /// (MySQL يسمح بتعدد صفوف NULL في الفهرس الفريد، فالحجوزات العادية لا تتعارض).
-  legacyRef                     String?      @unique @db.VarChar(64)
+  legacyRef                   String?      @unique @db.VarChar(64)
   /// حجز أُنشئ بالجملة من أداة "تحديث الاتاحة" (Excel) — علامة عرض/فلترة فقط؛ الحجز نفسه
   /// حجز مباشر عادي (kind=DIRECT) بكل ما يترتب على ذلك (يظهر في القوائم، يخضع لتاريخ
   /// تابي إن كان لعميل حقيقي...) عدا استثناءين: تُستبعد من صفحة العمليات المالية، وتظهر
   /// بشارة توضّح مصدرها. راجع lib/availability-block-import.ts.
-  isBulkAvailabilityImport      Boolean      @default(false)
-
+  isBulkAvailabilityImport    Boolean      @default(false)
 
   /// أرشفة: تخفي الحجز عن العميل وعن لوحة الإدارة وكل الأقسام المالية دون حذف أي شيء.
   /// يظهر في تبويب «مؤرشفة» لمدير النظام وحده ويمكن إرجاعه. الغرض استبعاد الحجوزات
   /// التجريبية أو الخاطئة من الأرقام مع بقاء سجلها ودفترها كاملاً.
-  isHidden            Boolean              @default(false)
+  isHidden Boolean @default(false)
 
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
@@ -949,7 +954,6 @@ model MobileAppSetting {
 
   @@index([key])
 }
-
 
 /// رمز تحقق لتسجيل دخول العميل (منفصل عن رمز إتمام الحجز لتجنب التعارض).
 model CustomerLoginOtp {

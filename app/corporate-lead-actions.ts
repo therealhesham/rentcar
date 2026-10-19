@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getStoredGclid } from "@/lib/ads-click-id";
+import { getStoredAdsClickIds } from "@/lib/ads-click-id";
 import { prisma } from "@/lib/prisma";
 import { isOutgoingMailTransportConfigured, sendPlainTransactionalEmail } from "@/lib/booking-invoice-email";
 import { isEvolutionWhatsAppConfigured, sendEvolutionWhatsAppText } from "@/lib/evolution-whatsapp";
@@ -52,7 +52,7 @@ export async function submitCorporateBookingLead(
         taxNumber,
         details,
         phone,
-        gclid: await getStoredGclid(),
+        ...(await getStoredAdsClickIds()),
       },
     });
 

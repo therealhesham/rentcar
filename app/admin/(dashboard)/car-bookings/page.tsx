@@ -114,7 +114,7 @@ export default async function AdminCarBookingsPage({
 
   const todayYmd = dateKey(new Date());
   const deliveryCount = rows.filter((r) => r.pickupMode === "DELIVERY").length;
-  const googleAdsCount = rows.filter((r) => r.gclid).length;
+  const googleAdsCount = rows.filter((r) => r.gclid || r.gbraid || r.wbraid).length;
   const todayCount = rows.filter((r) => dateKey(r.pickupDate) === todayYmd).length;
 
   const groupsMap = new Map<string, CarBookingRow[]>();
@@ -125,7 +125,7 @@ export default async function AdminCarBookingsPage({
       id: b.id,
       fullName: b.fullName,
       phone: b.phone,
-      fromGoogleAds: Boolean(b.gclid),
+      fromGoogleAds: Boolean(b.gclid || b.gbraid || b.wbraid),
       carLabel: b.carModel ? `${b.carModel.brand.name} ${b.carModel.name}` : "—",
       startYmd,
       endYmd,
