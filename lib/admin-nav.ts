@@ -76,6 +76,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         superAdminOnly: true,
       },
       { href: "/admin/logs", label: "سجل النشاط", icon: "activity" },
+      { href: "/admin/ads", label: "الأداء الإعلاني", icon: "megaphone" },
       { href: "/admin/financials", label: "الإدارة المالية", icon: "badge-dollar" },
       { href: "/admin/company-dues", label: "مستحقات للشركة", icon: "receipt" },
       { href: "/admin/customer-dues", label: "مستحقات للعميل", icon: "receipt" },

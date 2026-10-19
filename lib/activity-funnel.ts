@@ -130,6 +130,13 @@ const CLICK_ID_NETWORKS: Array<[param: string, network: string]> = [
 const PAID_MEDIUMS = new Set(["cpc", "ppc", "paid", "paidsearch", "paid_search", "display", "cpm"]);
 
 /**
+ * مساعدات الذكاء الاصطناعي تضيف `utm_source=chatgpt.com` (وأمثالها) تلقائياً لكل رابط تفتحه —
+ * هذا ترافيك عضوي لا إعلان. بدون استثنائه كان يُحسب «UTM فقط» داخل الترافيك الإعلاني ويلوّثه.
+ */
+const AI_REFERRAL_SOURCE_RE =
+  /^(chatgpt\.com|chat\.openai\.com|openai|perplexity(\.ai)?|gemini(\.google\.com)?|copilot(\.microsoft\.com)?|claude(\.ai)?|you\.com|phind\.com)$/i;
+
+/**
  * استخراج بيانات الإعلان من رابط الصفحة. نميّز **المدفوع يقيناً** (معرّف نقرة تضعه
  * الشبكة نفسها ولا يوجد بلا نقرة إعلان) عن **الموسوم بـ UTM فقط** — فالأخير قد يكون
  * نشرة بريدية أو رابطاً وسمته يدوياً، وخلطهما يضخّم أداء الإعلانات الظاهر.
@@ -156,6 +163,7 @@ export function detectAdClick(path: string | null): AdClick | null {
   if (utmMedium && PAID_MEDIUMS.has(utmMedium)) {
     return { network: utmSource || "غير محدد", campaign: utmCampaign || "بلا اسم حملة", paid: true };
   }
+  if (utmSource && AI_REFERRAL_SOURCE_RE.test(utmSource) && !utmCampaign) return null;
   if (utmSource || utmCampaign) {
     return { network: utmSource || "غير محدد", campaign: utmCampaign || "بلا اسم حملة", paid: false };
   }
