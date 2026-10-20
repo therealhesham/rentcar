@@ -391,6 +391,7 @@ export function PaymentClient({
         bookingId: booking.id,
         amountSar: payableAmountSar,
         carName: booking.car?.fullTitle,
+        carId: booking.car?.modelId,
         paymentMethod: method,
       });
     }
@@ -405,6 +406,7 @@ export function PaymentClient({
         paymentMethod: resolvedMethodCode || method,
         amountSar: payableAmountSar,
         carName: booking.car?.fullTitle,
+        carId: booking.car?.modelId,
         email: booking.invoiceEmail,
         phone: booking.phone,
       });
@@ -420,6 +422,7 @@ export function PaymentClient({
       bookingId: booking.id,
       amountSar: payableAmountSar,
       carName: booking.car?.fullTitle,
+      carId: booking.car?.modelId,
     });
     if (!usesCardEntryForm(method) || hostedCheckout) return;
 
@@ -748,6 +751,7 @@ export function PaymentClient({
                           bookingId: booking.id,
                           amountSar: payableAmountSar,
                           carName: booking.car?.fullTitle,
+                          carId: booking.car?.modelId,
                         });
                       }}
                       className={`relative flex flex-col items-start gap-2 rounded-xl border px-4 py-3 text-start transition-all ${ineligible

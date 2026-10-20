@@ -22,8 +22,43 @@ function silently(fn: () => void): void {
   }
 }
 
-function itemsOf(carName?: string) {
-  return carName ? [{ item_name: carName }] : undefined;
+function itemsOf(carName?: string, carId?: string | number | null) {
+  if (!carName) return undefined;
+  return [{ item_id: carId != null ? String(carId) : undefined, item_name: carName, quantity: 1 }];
+}
+
+/**
+ * كائن ecommerce بصيغة GA4 القياسية — يلتقطه خيار «Send Ecommerce data» في علامة GA4
+ * فتظهر المبيعات والعائد تلقائياً. الحقول المسطّحة تبقى كما هي لعلامة Google Ads القائمة.
+ */
+function ecommerceOf(p: {
+  transactionId?: string | number | null;
+  value?: number;
+  paymentType?: string;
+  carName?: string;
+  carId?: string | number | null;
+}) {
+  return {
+    transaction_id: p.transactionId != null ? String(p.transactionId) : undefined,
+    value: p.value,
+    currency: "SAR",
+    payment_type: p.paymentType,
+    items: itemsOf(p.carName, p.carId),
+  };
+}
+
+/** يمسح ecommerce السابق ثم يرسل الحدث (توصية Google كي لا تتسرّب بيانات حدث لآخر). */
+function pushEcommerceEvent(
+  eventName: string,
+  payload: Record<string, any>,
+  ecommerce: Record<string, any>,
+) {
+  silently(() => {
+    if (typeof window === "undefined") return;
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({ ecommerce: null });
+    pushGtmEvent(eventName, { ...payload, ecommerce });
+  });
 }
 
 function idOf(id?: string | number | null) {
@@ -48,16 +83,26 @@ export function trackBeginCheckout(params: {
   bookingId?: string | number;
   amountSar?: number;
   carName?: string;
+  carId?: string | number | null;
   paymentMethod?: string;
 }) {
   silently(() =>
-    pushGtmEvent("begin_checkout", {
-      booking_id: idOf(params?.bookingId),
-      value: params?.amountSar,
-      currency: "SAR",
-      payment_type: params?.paymentMethod,
-      items: itemsOf(params?.carName),
-    }),
+    pushEcommerceEvent(
+      "begin_checkout",
+      {
+        booking_id: idOf(params?.bookingId),
+        value: params?.amountSar,
+        currency: "SAR",
+        payment_type: params?.paymentMethod,
+        items: itemsOf(params?.carName, params?.carId),
+      },
+      ecommerceOf({
+        value: params?.amountSar,
+        paymentType: params?.paymentMethod,
+        carName: params?.carName,
+        carId: params?.carId,
+      }),
+    ),
   );
 }
 
@@ -69,6 +114,7 @@ export function trackSelectPaymentMethod(params: {
   bookingId?: string | number;
   amountSar?: number;
   carName?: string;
+  carId?: string | number | null;
 }) {
   silently(() =>
     pushGtmEvent("select_payment_option", {
@@ -76,7 +122,7 @@ export function trackSelectPaymentMethod(params: {
       booking_id: idOf(params?.bookingId),
       value: params?.amountSar,
       currency: "SAR",
-      items: itemsOf(params?.carName),
+      items: itemsOf(params?.carName, params?.carId),
     }),
   );
 }
@@ -89,15 +135,25 @@ export function trackSubmitPayment(params: {
   bookingId?: string | number;
   amountSar?: number;
   carName?: string;
+  carId?: string | number | null;
 }) {
   silently(() =>
-    pushGtmEvent("add_payment_info", {
-      payment_type: params?.paymentMethod,
-      booking_id: idOf(params?.bookingId),
-      value: params?.amountSar,
-      currency: "SAR",
-      items: itemsOf(params?.carName),
-    }),
+    pushEcommerceEvent(
+      "add_payment_info",
+      {
+        payment_type: params?.paymentMethod,
+        booking_id: idOf(params?.bookingId),
+        value: params?.amountSar,
+        currency: "SAR",
+        items: itemsOf(params?.carName, params?.carId),
+      },
+      ecommerceOf({
+        value: params?.amountSar,
+        paymentType: params?.paymentMethod,
+        carName: params?.carName,
+        carId: params?.carId,
+      }),
+    ),
   );
 }
 
@@ -124,17 +180,43 @@ export function trackPurchaseSuccess(params: {
   paymentMethod: string;
   amountSar: number;
   carName?: string;
+  carId?: string | number | null;
   email?: string | null;
   phone?: string | null;
 }) {
-  silently(() =>
-    pushGtmEvent("purchase", {
-      user_data: enhancedUserData(params?.email, params?.phone),
-      transaction_id: idOf(params?.bookingId),
-      value: params?.amountSar,
-      currency: "SAR",
-      payment_type: params?.paymentMethod,
-      items: itemsOf(params?.carName),
-    }),
-  );
+  silently(() => {
+    // مرة واحدة لكل حجز على هذا المتصفح: صفحة الدفع تُعاد زيارتها (refresh / رجوع من البوابة)
+    // وكل زيارة لحجز مكتمل كانت تُرسل purchase جديداً فتتضخّم الإحالات.
+    const sentKey = "rw_purchase_sent_" + idOf(params?.bookingId);
+    try {
+      if (window.localStorage.getItem(sentKey)) return;
+    } catch {
+      /* التخزين غير متاح — نُرسل ولا نمنع */
+    }
+
+    pushEcommerceEvent(
+      "purchase",
+      {
+        user_data: enhancedUserData(params?.email, params?.phone),
+        transaction_id: idOf(params?.bookingId),
+        value: params?.amountSar,
+        currency: "SAR",
+        payment_type: params?.paymentMethod,
+        items: itemsOf(params?.carName, params?.carId),
+      },
+      ecommerceOf({
+        transactionId: params?.bookingId,
+        value: params?.amountSar,
+        paymentType: params?.paymentMethod,
+        carName: params?.carName,
+        carId: params?.carId,
+      }),
+    );
+
+    try {
+      window.localStorage.setItem(sentKey, String(Date.now()));
+    } catch {
+      /* ignore */
+    }
+  });
 }

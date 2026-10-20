@@ -191,6 +191,29 @@ export default async function AdminCarBookingsPage({
             </div>
             {/* <ReportExportButtons reportId="today-bookings" /> */}
             <ReportExportButtons reportId="all-bookings-range" withDateRange />
+            <form
+              action="/api/admin/google-ads-conversions"
+              method="get"
+              className="flex flex-wrap items-center justify-end gap-2 text-xs"
+            >
+              <span className="font-bold text-on-surface-variant">إحالات Google Ads (CSV):</span>
+              <input type="date" name="from" aria-label="من" className="rounded-lg border border-outline-variant px-2 py-1.5" />
+              <input type="date" name="to" aria-label="إلى" className="rounded-lg border border-outline-variant px-2 py-1.5" />
+              <input
+                type="text"
+                name="name"
+                dir="ltr"
+                placeholder="Conversion Name"
+                aria-label="اسم الإحالة في Google Ads"
+                className="w-36 rounded-lg border border-outline-variant px-2 py-1.5"
+              />
+              <button
+                type="submit"
+                className="rounded-xl border border-outline-variant px-3.5 py-2 font-bold text-primary transition-colors hover:bg-surface-container"
+              >
+                تنزيل
+              </button>
+            </form>
           </div>
         }
       />
