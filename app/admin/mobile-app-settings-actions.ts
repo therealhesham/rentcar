@@ -20,6 +20,11 @@ import {
   normalizeMobileAppWhatsappOtpConfig,
   type MobileAppWhatsappOtpConfig,
 } from "@/lib/mobile-app-whatsapp-otp-config";
+import {
+  MOBILE_KEY_BOOKING_CANCEL_BUTTON,
+  normalizeMobileAppBookingCancelFlag,
+  type MobileAppBookingCancelFlag,
+} from "@/lib/mobile-app-booking-cancel-flag";
 import { prisma } from "@/lib/prisma";
 
 function readCheckbox(formData: FormData, name: string): boolean {
@@ -87,6 +92,30 @@ export async function updateMobileAppWhatsappOtpConfig(
     });
   } catch {
     return { ok: false, error: "تعذّر حفظ إعدادات واتساب." };
+  }
+
+  revalidatePath("/admin/mobile-app-settings");
+  return { ok: true };
+}
+
+export async function updateMobileAppBookingCancelButton(
+  _prev: { ok: boolean; error?: string } | null,
+  formData: FormData,
+): Promise<{ ok: boolean; error?: string }> {
+  const auth = await requireSuperAdminForAction();
+  if (!auth.ok) return { ok: false, error: auth.error };
+
+  const raw: MobileAppBookingCancelFlag = { enabled: readCheckbox(formData, "enabled") };
+  const flag = normalizeMobileAppBookingCancelFlag(raw);
+
+  try {
+    await prisma.mobileAppSetting.upsert({
+      where: { key: MOBILE_KEY_BOOKING_CANCEL_BUTTON },
+      create: { key: MOBILE_KEY_BOOKING_CANCEL_BUTTON, value: JSON.stringify(flag) },
+      update: { value: JSON.stringify(flag) },
+    });
+  } catch {
+    return { ok: false, error: "تعذّر حفظ إعدادات التطبيق." };
   }
 
   revalidatePath("/admin/mobile-app-settings");

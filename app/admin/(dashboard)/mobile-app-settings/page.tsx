@@ -17,9 +17,15 @@ import {
   MOBILE_KEY_WHATSAPP_OTP_CONFIG,
   normalizeMobileAppWhatsappOtpConfig,
 } from "@/lib/mobile-app-whatsapp-otp-config";
+import {
+  DEFAULT_MOBILE_APP_BOOKING_CANCEL_FLAG,
+  MOBILE_KEY_BOOKING_CANCEL_BUTTON,
+  normalizeMobileAppBookingCancelFlag,
+} from "@/lib/mobile-app-booking-cancel-flag";
 import { MobileAppPaymentMethodsForm } from "./MobileAppPaymentMethodsForm";
 import { MobileAppBookingWidgetTabsForm } from "./MobileAppBookingWidgetTabsForm";
 import { MobileAppWhatsappOtpForm } from "./MobileAppWhatsappOtpForm";
+import { MobileAppBookingCancelButtonForm } from "./MobileAppBookingCancelButtonForm";
 
 export const dynamic = "force-dynamic";
 
@@ -80,6 +86,25 @@ async function getMobileAppWhatsappOtpConfig() {
   }
 }
 
+async function getMobileAppBookingCancelFlag() {
+  try {
+    const row = await prisma.mobileAppSetting.findUnique({
+      where: { key: MOBILE_KEY_BOOKING_CANCEL_BUTTON },
+      select: { value: true },
+    });
+    if (!row?.value?.trim()) return DEFAULT_MOBILE_APP_BOOKING_CANCEL_FLAG;
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(row.value) as unknown;
+    } catch {
+      return DEFAULT_MOBILE_APP_BOOKING_CANCEL_FLAG;
+    }
+    return normalizeMobileAppBookingCancelFlag(parsed);
+  } catch {
+    return DEFAULT_MOBILE_APP_BOOKING_CANCEL_FLAG;
+  }
+}
+
 export default async function MobileAppSettingsPage() {
   if (!(await verifyAdminSession())) {
     redirect("/admin/login");
@@ -88,6 +113,7 @@ export default async function MobileAppSettingsPage() {
   const flags = await getMobileAppPaymentFlags();
   const bookingWidgetFlags = await getMobileAppBookingWidgetFlags();
   const whatsappOtpConfig = await getMobileAppWhatsappOtpConfig();
+  const bookingCancelFlag = await getMobileAppBookingCancelFlag();
 
   return (
     <>
@@ -119,6 +145,10 @@ export default async function MobileAppSettingsPage() {
         <MobileAppWhatsappOtpForm
           key={JSON.stringify(whatsappOtpConfig)}
           config={whatsappOtpConfig}
+        />
+        <MobileAppBookingCancelButtonForm
+          key={JSON.stringify(bookingCancelFlag)}
+          flag={bookingCancelFlag}
         />
       </div>
     </>
