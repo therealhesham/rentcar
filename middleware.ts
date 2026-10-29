@@ -33,7 +33,13 @@ async function getUnderConstruction(request: NextRequest): Promise<UnderConstruc
     return underConstructionCache.value;
   }
   try {
-    const base = process.env.INTERNAL_APP_URL?.trim() || request.nextUrl.origin;
+    // في الإنتاج (Docker) نخاطب الخادم نفسه عبر الـ loopback: origin الطلب قد يكون نطاقاً
+    // عاماً خلف proxy لا يصله الكونتينر، أو 0.0.0.0 من HOSTNAME.
+    const base =
+      process.env.INTERNAL_APP_URL?.trim() ||
+      (process.env.NODE_ENV === "production"
+        ? `http://127.0.0.1:${process.env.PORT || 3000}`
+        : request.nextUrl.origin);
     const res = await fetch(new URL("/api/under-construction", base), {
       cache: "no-store",
       signal: AbortSignal.timeout(2000),
@@ -43,8 +49,10 @@ async function getUnderConstruction(request: NextRequest): Promise<UnderConstruc
       underConstructionCache = { at: now, value };
       return value;
     }
-  } catch {
-    /* نعتمد آخر قيمة معروفة */
+    console.error("[under-construction] status check failed:", res.status);
+  } catch (e) {
+    // نعتمد آخر قيمة معروفة، لكن نسجّل السبب كي لا يفشل الحجب بصمت.
+    console.error("[under-construction] status check error:", e);
   }
   const stale = underConstructionCache?.value ?? DEFAULT_UNDER_CONSTRUCTION;
   underConstructionCache = { at: now, value: stale };
