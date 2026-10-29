@@ -134,6 +134,23 @@ async function anonymousTokens(): Promise<string[]> {
   return devices.map((d) => d.token);
 }
 
+/** يبتلع أخطاءه: فشل تسجيل الصندوق لا يُفشل إلغاءً نُفِّذ ورُدَّ مبلغه. */
+async function recordInInbox(userId: number, payload: PushPayload): Promise<void> {
+  try {
+    const bookingId = Number(payload.data?.bookingId);
+    await prisma.customerNotification.create({
+      data: {
+        userId,
+        title: payload.title,
+        body: payload.body,
+        bookingId: Number.isInteger(bookingId) ? bookingId : null,
+      },
+    });
+  } catch (e) {
+    console.error("[expo-push] فشل تسجيل الإشعار في الصندوق:", (e as Error).message);
+  }
+}
+
 /**
  * يبعث لكل أجهزة مستخدم واحد. يبتلع كل الأخطاء عمداً: الإشعار مكمِّل للعملية
  * لا جزء منها، ولا يصح أن يفشل إلغاءٌ نُفِّذ ورُدَّ مبلغُه لأن Expo لم تستجب.
@@ -143,6 +160,11 @@ export async function sendPushToUserSafe(
   payload: PushPayload,
   channel: PushChannel = "bookingUpdates",
 ): Promise<void> {
+  // الصندوق قبل فحص التفضيلات والأجهزة: التفضيل بيتحكم في الـ push (الإزعاج)
+  // فقط، والعميل لازم يجد حالة حجزه في الجرس حتى لو أغلق الإشعارات. العروض
+  // خارج الصندوق — ما زالت تُبعث لجمهور كامل برسالة واحدة لا لكل عميل.
+  if (channel === "bookingUpdates") await recordInInbox(userId, payload);
+
   try {
     const tokens = await tokensForUsers([userId], channel);
     if (tokens.length === 0) return;

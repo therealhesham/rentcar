@@ -1197,6 +1197,21 @@ model AdminPageView {
   @@index([path, createdAt])
 }
 
+/// صندوق إشعارات العميل داخل تطبيق الجوال (أيقونة الجرس). الجدول يملكه تطبيق
+/// الجوال (rawaes-app) ونكتب فيه هنا كل إشعار حجز نبعثه، ليجده العميل بعد أن
+/// يفوّته أو يغلق الإشعارات.
+model CustomerNotification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  title     String   @db.VarChar(255)
+  body      String   @db.Text
+  bookingId Int?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead, createdAt])
+}
+
 /// جهاز تطبيق موبايل مسجَّل لاستقبال إشعارات Expo. الجدول يملكه تطبيق الجوال
 /// (rawaes-app) ويشاركه الموقع ليبعث إشعارات أحداث الإدارة لصاحب الحجز.
 /// `token` فريد عالمياً لا لكل مستخدم: لو سجّل حساب آخر على نفس الجهاز ينتقل
