@@ -111,6 +111,7 @@ const ADMIN_PAGE_LABELS: Array<[RegExp, string]> = [
   [/^\/admin\/checkout-fees/, "رسوم إتمام الحجز"],
   [/^\/admin\/subscription-plans/, "باقات اشتراك"],
   [/^\/admin\/subscriptions/, "اشتراكات العملاء"],
+  [/^\/admin\/under-construction/, "وضع قيد الإنشاء"],
   [/^\/admin\/site-branding/, "شعارات الموقع"],
   [/^\/admin\/social-links/, "روابط التواصل"],
   [/^\/admin\/home/, "هيرو الرئيسية"],

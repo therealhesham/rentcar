@@ -119,6 +119,12 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     label: "المحتوى والموقع",
     collapsible: true,
     items: [
+      {
+        href: "/admin/under-construction",
+        label: "وضع قيد الإنشاء",
+        icon: "ban",
+        superAdminOnly: true,
+      },
       { href: "/admin/site-branding", label: "شعارات الموقع", icon: "image" },
       { href: "/admin/social-links", label: "روابط التواصل الاجتماعي", icon: "megaphone" },
       { href: "/admin/home", label: "هيرو الرئيسية", icon: "image" },

@@ -1,5 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import {
+  DEFAULT_UNDER_CONSTRUCTION,
+  SITE_KEY_UNDER_CONSTRUCTION,
+  normalizeUnderConstruction,
+  type UnderConstructionSettings,
+} from "@/lib/under-construction";
+import {
   DEFAULT_BOOKING_WIDGET_TAB_FLAGS,
   normalizeBookingWidgetTabFlags,
   type BookingWidgetTabFlags,
@@ -572,6 +578,20 @@ export async function getApplePayExpressEnabled(): Promise<boolean> {
     return row?.value?.trim() === "true";
   } catch {
     return false;
+  }
+}
+
+/** وضع «قيد الإنشاء» — عند الفشل يُعاد «معطّل» حتى لا يُحجب الموقع بسبب عطل في القاعدة. */
+export async function getUnderConstructionSettings(): Promise<UnderConstructionSettings> {
+  try {
+    const row = await prisma.siteSetting.findUnique({
+      where: { key: SITE_KEY_UNDER_CONSTRUCTION },
+      select: { value: true },
+    });
+    if (!row?.value) return DEFAULT_UNDER_CONSTRUCTION;
+    return normalizeUnderConstruction(JSON.parse(row.value));
+  } catch {
+    return DEFAULT_UNDER_CONSTRUCTION;
   }
 }
 

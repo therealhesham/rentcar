@@ -11,7 +11,45 @@ import {
   sanitizeClickId,
 } from "@/lib/ads-click-id";
 
+import {
+  DEFAULT_UNDER_CONSTRUCTION,
+  normalizeUnderConstruction,
+  renderUnderConstructionHtml,
+  type UnderConstructionSettings,
+} from "@/lib/under-construction";
+
 const handleI18nRouting = createIntlMiddleware(routing);
+
+const UNDER_CONSTRUCTION_TTL_MS = 5000;
+let underConstructionCache: { at: number; value: UnderConstructionSettings } | null = null;
+
+/**
+ * Edge لا يصل لـ Prisma، فنسأل `/api/under-construction` ونخزّن الجواب 5 ثوانٍ في الذاكرة.
+ * عند فشل الطلب نُبقي آخر قيمة معروفة (أو «معطّل») حتى لا يتوقف الموقع بسبب عطل عابر.
+ */
+async function getUnderConstruction(request: NextRequest): Promise<UnderConstructionSettings> {
+  const now = Date.now();
+  if (underConstructionCache && now - underConstructionCache.at < UNDER_CONSTRUCTION_TTL_MS) {
+    return underConstructionCache.value;
+  }
+  try {
+    const base = process.env.INTERNAL_APP_URL?.trim() || request.nextUrl.origin;
+    const res = await fetch(new URL("/api/under-construction", base), {
+      cache: "no-store",
+      signal: AbortSignal.timeout(2000),
+    });
+    if (res.ok) {
+      const value = normalizeUnderConstruction(await res.json());
+      underConstructionCache = { at: now, value };
+      return value;
+    }
+  } catch {
+    /* نعتمد آخر قيمة معروفة */
+  }
+  const stale = underConstructionCache?.value ?? DEFAULT_UNDER_CONSTRUCTION;
+  underConstructionCache = { at: now, value: stale };
+  return stale;
+}
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -41,6 +79,25 @@ export async function middleware(request: NextRequest) {
     }
 
     return NextResponse.next();
+  }
+
+  const underConstruction = await getUnderConstruction(request);
+  if (underConstruction.enabled) {
+    // المسؤول المسجّل دخوله يتصفح الموقع طبيعياً ليراجع التعديلات.
+    const adminSession = await parseAdminSessionTokenEdge(
+      request.cookies.get("admin_session")?.value,
+    );
+    if (!adminSession) {
+      // 200 + noindex عمداً: جوجل لا يقرأ noindex من ردود 5xx فتبقى الصفحات المفهرسة.
+      return new NextResponse(renderUnderConstructionHtml(underConstruction.message), {
+        status: 200,
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          "X-Robots-Tag": "noindex, nofollow, noarchive, nosnippet",
+          "Cache-Control": "no-store",
+        },
+      });
+    }
   }
 
   // زواحف المعاينة (واتساب/فيسبوك/إكس…) ترسل Accept-Language إنجليزياً، فكانت كروت
