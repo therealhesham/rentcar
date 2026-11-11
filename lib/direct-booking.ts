@@ -27,6 +27,8 @@ import {
   DELIVERY_ADDRESS_MAX_CHARS,
   DELIVERY_ADDRESS_MIN_CHARS,
 } from "@/lib/delivery-address";
+import type { DeliveryFeeSnap } from "@/lib/delivery-fee";
+import { resolveDeliveryFeeSnap } from "@/lib/delivery-fee-server";
 import { formatBranchOutsideHoursError } from "@/lib/direct-booking-user-messages";
 import { validateRentalAddonExclusiveSelection } from "@/lib/rental-addon-exclusive";
 import {
@@ -132,6 +134,11 @@ export type DirectBookingCommon = {
   deliveryLng: number | null;
   /** عنوان توصيل نصّي إن وُجد (بدون إحداثيات أو معها). */
   deliveryAddress: string | null;
+  /** إرجاع السيارة: من عنوان العميل (DELIVERY) أو إلى الفرع (الافتراضي). */
+  returnMode?: "BRANCH" | "DELIVERY";
+  returnLat?: number | null;
+  returnLng?: number | null;
+  returnAddress?: string | null;
 };
 
 const AGE_OPTIONS = new Set(["25-35", "35-50", "50+"]);
@@ -309,6 +316,61 @@ function parseDeliveryPayload(
       deliveryLat: latOpt,
       deliveryLng: lngOpt,
       deliveryAddress: addr.length > 0 ? addr : null,
+    },
+  };
+}
+
+type ReturnParsed =
+  | { returnMode: "BRANCH"; returnLat: null; returnLng: null; returnAddress: null }
+  | {
+    returnMode: "DELIVERY";
+    returnLat: number;
+    returnLng: number;
+    returnAddress: string | null;
+  };
+
+/**
+ * إرجاع السيارة من موقع العميل: الإحداثيات إلزامية لأن الرسوم تُحسب بالكيلومتر منها،
+ * والعنوان النصي تكميلي فقط.
+ */
+function parseReturnPayload(
+  modeRaw: unknown,
+  latRaw: unknown,
+  lngRaw: unknown,
+  addrRaw: unknown,
+): { ok: true; value: ReturnParsed } | { ok: false; error: string } {
+  const m = String(modeRaw ?? "").trim().toUpperCase();
+  if (m !== "DELIVERY") {
+    return {
+      ok: true,
+      value: { returnMode: "BRANCH", returnLat: null, returnLng: null, returnAddress: null },
+    };
+  }
+  const lat = parseOptionalCoord(latRaw);
+  const lng = parseOptionalCoord(lngRaw);
+  if (lat === null || lng === null) {
+    return {
+      ok: false,
+      error: "حدد موقع استلام السيارة عند الإرجاع على الخريطة.",
+    };
+  }
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+    return { ok: false, error: "إحداثيات موقع الإرجاع خارج النطاق المسموح." };
+  }
+  const addr = normalizeDeliveryAddressInput(addrRaw);
+  if (addr.length > DELIVERY_ADDRESS_MAX_CHARS) {
+    return {
+      ok: false,
+      error: `عنوان الإرجاع طويل جداً (بحد أقصى ${DELIVERY_ADDRESS_MAX_CHARS} حرفاً).`,
+    };
+  }
+  return {
+    ok: true,
+    value: {
+      returnMode: "DELIVERY",
+      returnLat: lat,
+      returnLng: lng,
+      returnAddress: addr.length > 0 ? addr : null,
     },
   };
 }
@@ -718,6 +780,15 @@ export function parseCommonBookingFieldsFromFormData(
   if (!delivery.ok) {
     return delivery;
   }
+  const ret = parseReturnPayload(
+    formData.get("returnMode"),
+    formData.get("returnLat"),
+    formData.get("returnLng"),
+    formData.get("returnAddress"),
+  );
+  if (!ret.ok) {
+    return ret;
+  }
 
   return {
     ok: true,
@@ -734,6 +805,7 @@ export function parseCommonBookingFieldsFromFormData(
       deliveryLng: delivery.pickupMode === "BRANCH" ? null : delivery.deliveryLng,
       deliveryAddress:
         delivery.pickupMode === "BRANCH" ? null : delivery.deliveryAddress,
+      ...ret.value,
     },
   };
 }
@@ -792,6 +864,15 @@ export function parseCommonBookingFieldsFromJson(
   if (!delivery.ok) {
     return delivery;
   }
+  const ret = parseReturnPayload(
+    body.returnMode,
+    body.returnLat,
+    body.returnLng,
+    body.returnAddress,
+  );
+  if (!ret.ok) {
+    return ret;
+  }
 
   return {
     ok: true,
@@ -808,6 +889,7 @@ export function parseCommonBookingFieldsFromJson(
       deliveryLng: delivery.pickupMode === "BRANCH" ? null : delivery.deliveryLng,
       deliveryAddress:
         delivery.pickupMode === "BRANCH" ? null : delivery.deliveryAddress,
+      ...ret.value,
     },
   };
 }
@@ -1085,6 +1167,7 @@ async function buildBookingAddonsJsonSnapshot(
   rentalDiscount?: RentalDiscountPriceSnap | null,
   couponCode?: CouponCodeSnap | null,
   rentalFloorPerDayExclTax?: number | null,
+  deliveryFees?: ReadonlyArray<DeliveryFeeSnap> | null,
 ): Promise<{ ok: true; json: string | null } | { ok: false; error: string }> {
   const days = safeBookingDays(numberOfDays);
   let items: Array<{
@@ -1172,6 +1255,7 @@ async function buildBookingAddonsJsonSnapshot(
     items: typeof items;
     interCityShipping?: InterCityShippingSnap;
     checkoutOneTimeFees?: typeof coSnap;
+    deliveryFees?: DeliveryFeeSnap[];
     delayPenalty?: DelayPenaltySnap;
     tripDurationLabelAr?: string;
     rentalDiscount?: RentalDiscountPriceSnap;
@@ -1188,6 +1272,9 @@ async function buildBookingAddonsJsonSnapshot(
   }
   if (hasCheckout) {
     payload.checkoutOneTimeFees = coSnap;
+  }
+  if (deliveryFees && deliveryFees.length > 0) {
+    payload.deliveryFees = [...deliveryFees];
   }
   if (hasDelay && delaySnap) {
     payload.delayPenalty = delaySnap;
@@ -1470,6 +1557,53 @@ export async function createDirectBooking(
 
   const days = commonNormalized.numberOfDays;
 
+  /*
+   * رسوم التوصيل بالكيلو (طريق فعلي من جوجل، حد أدنى 1 كم، اتجاه واحد لكل رحلة).
+   * تُحسب هنا مرة واحدة وتُجمَّد في اللقطة؛ كل التعديلات اللاحقة (مدة، موديل، كوبون)
+   * تقرأ اللقطة ولا تعيد الحساب.
+   */
+  const deliverySnaps: DeliveryFeeSnap[] = [];
+  if (commonNormalized.pickupMode === "DELIVERY") {
+    const dLat = commonNormalized.deliveryLat;
+    const dLng = commonNormalized.deliveryLng;
+    if (dLat != null && dLng != null) {
+      const r = await resolveDeliveryFeeSnap({
+        leg: "PICKUP",
+        branchSlug: returnBranchSlug,
+        lat: dLat,
+        lng: dLng,
+      });
+      if (!r.ok) return { ok: false, error: r.error };
+      if (r.snap) deliverySnaps.push(r.snap);
+    } else if (!officePayment) {
+      // بلا إحداثيات لا يمكن احتساب الكيلومترات — نمنع تجاوز الرسوم بعنوان نصي فقط.
+      const b = await prisma.branch.findFirst({
+        where: { slug: returnBranchSlug, isActive: true },
+        select: { deliveryFeePerKmSar: true },
+      });
+      if ((b?.deliveryFeePerKmSar ?? 0) > 0) {
+        return {
+          ok: false,
+          error: "حدد موقع التوصيل على الخريطة ليُحتسب سعر التوصيل بدقة.",
+        };
+      }
+    }
+  }
+  if (
+    commonNormalized.returnMode === "DELIVERY" &&
+    commonNormalized.returnLat != null &&
+    commonNormalized.returnLng != null
+  ) {
+    const r = await resolveDeliveryFeeSnap({
+      leg: "RETURN",
+      branchSlug: returnBranchSlug,
+      lat: commonNormalized.returnLat,
+      lng: commonNormalized.returnLng,
+    });
+    if (!r.ok) return { ok: false, error: r.error };
+    if (r.snap) deliverySnaps.push(r.snap);
+  }
+
   const checkoutFeeLines = await getActiveCheckoutOneTimeFees();
 
   const returnBranchRow = await prisma.branch.findFirst({
@@ -1657,6 +1791,7 @@ export async function createDirectBooking(
     rentalDiscountSnap,
     couponApplication?.snap ?? null,
     floorOutcome.floorPerDayExclTax,
+    deliverySnaps,
   );
   if (!addonsSnap.ok) {
     return { ok: false, error: addonsSnap.error };
@@ -1834,6 +1969,15 @@ export async function createDirectBooking(
             deliveryLat: commonNormalized.deliveryLat,
             deliveryLng: commonNormalized.deliveryLng,
             deliveryAddress: commonNormalized.deliveryAddress,
+            returnMode: commonNormalized.returnMode === "DELIVERY" ? "DELIVERY" : null,
+            returnLat:
+              commonNormalized.returnMode === "DELIVERY" ? (commonNormalized.returnLat ?? null) : null,
+            returnLng:
+              commonNormalized.returnMode === "DELIVERY" ? (commonNormalized.returnLng ?? null) : null,
+            returnAddress:
+              commonNormalized.returnMode === "DELIVERY"
+                ? (commonNormalized.returnAddress ?? null)
+                : null,
             pickupDate: commonNormalized.pickupDate,
             numberOfDays: days,
             termsAccepted: commonNormalized.termsAccepted,

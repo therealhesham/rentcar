@@ -1,11 +1,15 @@
 "use client";
 
-import "leaflet/dist/leaflet.css";
 import { ChevronDown, LocateFixed, MapPin, Search, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { DELIVERY_ADDRESS_MAX_CHARS } from "@/lib/delivery-address";
 import { createGeocoding, type GeoPlace } from "@/lib/geocoding";
+import {
+  GOOGLE_MAPS_BROWSER_KEY,
+  GOOGLE_MAPS_UNAVAILABLE_MESSAGE,
+  getGoogleMapsImporter,
+} from "@/lib/google-maps-client";
 import { OVERLAY_BACKDROP_Z, OVERLAY_PANEL_Z } from "@/lib/overlay-z-index";
 
 type LatLng = { lat: number; lng: number };
@@ -19,8 +23,6 @@ const ZOOM_COUNTRY = 6;
 
 const SEARCH_DEBOUNCE_MS = 450;
 const REVERSE_DEBOUNCE_MS = 700;
-
-type MapEngine = "google" | "osm";
 
 type Props = {
   open: boolean;
@@ -67,10 +69,9 @@ export function DeliveryMapDialog({
   /** آخر عنوان عبّأناه تلقائياً — لا نكتب فوق ما كتبه العميل بنفسه. */
   const autoAddressRef = useRef("");
 
-  const googleApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?.trim() ?? "";
-  const [mapEngine, setMapEngine] = useState<MapEngine>(
-    googleApiKey ? "google" : "osm",
-  );
+  const googleApiKey = GOOGLE_MAPS_BROWSER_KEY;
+  /** فشل تحميل خرائط جوجل (لا مفتاح، مفتاح خاطئ، أو الفوترة معطّلة). */
+  const [mapFailed, setMapFailed] = useState(!googleApiKey);
 
   /** مركز البدء — قيم أوّلية ثابتة تمنع إعادة بناء الخريطة عند تحريك الدبوس. */
   const initLat = initial?.lat ?? fallbackCenter?.lat ?? SA_CENTER.lat;
@@ -149,7 +150,7 @@ export function DeliveryMapDialog({
 
   /* ── Google Maps ── */
   useEffect(() => {
-    if (!open || !mapElRef.current || mapEngine !== "google" || !googleApiKey) return;
+    if (!open || !mapElRef.current || mapFailed || !googleApiKey) return;
 
     let cancelled = false;
     let interactive = false;
@@ -159,12 +160,11 @@ export function DeliveryMapDialog({
 
     /** جوجل يستدعي هذا عند فشل المصادقة بمفتاح خاطئ. */
     const w = window as unknown as { gm_authFailure?: () => void };
-    w.gm_authFailure = () => setMapEngine("osm");
+    w.gm_authFailure = () => setMapFailed(true);
 
     void (async () => {
       try {
-        const { setOptions, importLibrary } = await import("@googlemaps/js-api-loader");
-        setOptions({ key: googleApiKey, v: "weekly", language: "ar", region: "SA" });
+        const importLibrary = await getGoogleMapsImporter();
         const { Map } = await importLibrary("maps");
         const { Geocoder } = await importLibrary("geocoding");
         if (cancelled || !el.isConnected) return;
@@ -203,18 +203,18 @@ export function DeliveryMapDialog({
         /**
          * عند تعطّل الفوترة لا يرمي جوجل خطأ ولا ينادي gm_authFailure — بل يرسم
          * صورة ثابتة (StaticMapService) بلا `.gm-style` و`idle` لا يقع أبداً.
-         * فننتظر إشارة التفاعل، وإن لم تأتِ ننزل للخريطة المجانية.
+         * فننتظر إشارة التفاعل، وإن لم تأتِ نعرض رسالة خطأ واضحة.
          */
         watchdog = window.setTimeout(() => {
           if (cancelled) return;
           const staticFallback = el.querySelector('img[src*="StaticMapService"]');
           if (!interactive || !el.querySelector(".gm-style") || staticFallback) {
-            setMapEngine("osm");
+            setMapFailed(true);
           }
         }, 3000);
       } catch {
-        // مفتاح غير صالح أو تحميل فاشل — ننزل إلى الخريطة المجانية بدل شاشة فارغة
-        if (!cancelled) setMapEngine("osm");
+        // مفتاح غير صالح أو تحميل فاشل — رسالة خطأ بدل شاشة فارغة
+        if (!cancelled) setMapFailed(true);
       }
     })();
 
@@ -226,70 +226,7 @@ export function DeliveryMapDialog({
       delete w.gm_authFailure;
       el.innerHTML = "";
     };
-  }, [open, mapEngine, googleApiKey, initLat, initLng, initZoom]);
-
-  /* ── Leaflet + OpenStreetMap (مجاني، بلا مفتاح) ── */
-  useEffect(() => {
-    if (!open || !mapElRef.current || mapEngine !== "osm") return;
-
-    const el = mapElRef.current;
-    const state = { map: null as import("leaflet").Map | null, cancelled: false };
-    setMapReady(false);
-
-    void (async () => {
-      try {
-        const L = (await import("leaflet")).default;
-        if (state.cancelled || !el.isConnected) return;
-
-        const map = L.map(el, {
-          center: [initLat, initLng],
-          zoom: initZoom,
-          zoomControl: true,
-          attributionControl: true,
-        });
-        state.map = map;
-
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-          attribution:
-            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-          maxZoom: 19,
-        }).addTo(map);
-
-        panToRef.current = (p, zoom) => {
-          map.setView([p.lat, p.lng], zoom ?? map.getZoom());
-        };
-
-        map.on("movestart", () => setMoving(true));
-        map.on("moveend", () => {
-          setMoving(false);
-          const c = map.getCenter();
-          setInternal({ lat: c.lat, lng: c.lng });
-        });
-        map.on("click", (e: import("leaflet").LeafletMouseEvent) => {
-          map.panTo(e.latlng);
-        });
-
-        map.whenReady(() => {
-          map.invalidateSize();
-          if (!state.cancelled) setMapReady(true);
-        });
-      } catch {
-        if (!state.cancelled) setMapReady(true);
-      }
-    })();
-
-    const onResize = () => state.map?.invalidateSize();
-    window.addEventListener("resize", onResize);
-
-    return () => {
-      window.removeEventListener("resize", onResize);
-      state.cancelled = true;
-      panToRef.current = null;
-      state.map?.remove();
-      state.map = null;
-      el.innerHTML = "";
-    };
-  }, [open, mapEngine, initLat, initLng, initZoom]);
+  }, [open, mapFailed, googleApiKey, initLat, initLng, initZoom]);
 
   useEffect(() => {
     if (!open) return;
@@ -501,7 +438,7 @@ export function DeliveryMapDialog({
           <div className="relative shrink-0">
             <div
               ref={mapElRef}
-              className="z-0 h-[38vh] min-h-[240px] w-full bg-surface-container sm:h-[min(52vh,400px)] [&_.leaflet-container]:z-0 [&_.leaflet-container]:h-full [&_.leaflet-container]:w-full"
+              className="z-0 h-[38vh] min-h-[240px] w-full bg-surface-container sm:h-[min(52vh,400px)]"
             />
 
             {/* الدبوس: ثابت في مركز الخريطة، طرفه السفلي على نقطة التحديد */}
@@ -548,7 +485,15 @@ export function DeliveryMapDialog({
               </button>
             ) : null}
 
-            {!mapReady ? (
+            {mapFailed ? (
+              <div
+                role="alert"
+                className="absolute inset-0 z-[4] flex flex-col items-center justify-center gap-2 bg-white/95 px-6 text-center text-sm font-bold text-red-700"
+              >
+                <MapPin className="size-8" aria-hidden />
+                {GOOGLE_MAPS_UNAVAILABLE_MESSAGE}
+              </div>
+            ) : !mapReady ? (
               <div
                 className="absolute inset-0 z-[4] flex flex-col items-center justify-center gap-2 bg-white/85 text-on-surface-variant"
                 aria-live="polite"

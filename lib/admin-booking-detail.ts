@@ -20,6 +20,8 @@ export async function loadAdminBookingDetail(id: number) {
         },
       },
       ...bookingBranchRelationsSelect,
+      // إحداثيات فرع الإرجاع لخريطة التوصيل في صفحة التفاصيل.
+      returnBranch: { select: { slug: true, name: true, latitude: true, longitude: true } },
     },
   });
 }

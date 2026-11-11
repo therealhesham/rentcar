@@ -31,6 +31,10 @@ export type CarBookingRow = {
   deliveryAddress: string | null;
   deliveryLat: number | null;
   deliveryLng: number | null;
+  /** إرجاع: تستلم الشركة السيارة من عنوان العميل. */
+  returnMode?: string | null;
+  returnLat?: number | null;
+  returnLng?: number | null;
   status: string;
   kind: "INQUIRY" | "DIRECT";
   /** حجز أُنشئ بالجملة من أداة "تحديث الاتاحة" (Excel) — راجع lib/availability-block-import.ts. */
@@ -59,7 +63,37 @@ function ImportBadge() {
   );
 }
 
+function ReturnFromCustomerChip({ row }: { row: CarBookingRow }) {
+  if (row.returnMode !== "DELIVERY") return null;
+  return (
+    <span className="mt-1 inline-flex w-fit items-center gap-1 rounded-full bg-[#ecfdf5] px-2 py-0.5 text-[11px] font-bold text-[#0f7a3d]">
+      <Truck className="size-3" aria-hidden />
+      استلام عند الإرجاع
+      {row.returnLat != null && row.returnLng != null ? (
+        <a
+          href={`https://www.google.com/maps?q=${row.returnLat},${row.returnLng}`}
+          target="_blank"
+          rel="noreferrer"
+          className="ms-1 underline"
+          dir="ltr"
+        >
+          الخريطة
+        </a>
+      ) : null}
+    </span>
+  );
+}
+
 function PickupModeCell({ row }: { row: CarBookingRow }) {
+  return (
+    <span className="inline-flex flex-col">
+      <PickupModeCellInner row={row} />
+      <ReturnFromCustomerChip row={row} />
+    </span>
+  );
+}
+
+function PickupModeCellInner({ row }: { row: CarBookingRow }) {
   if (row.pickupMode === "DELIVERY") {
     return (
       <span className="inline-flex max-w-[min(100%,240px)] flex-col gap-1">

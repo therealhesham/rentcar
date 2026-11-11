@@ -77,7 +77,40 @@ import {
   parseDdMmYyToYmd,
   WEEKLY_TAB_DAYS,
 } from "@/lib/booking-search-shared";
-import { getDistanceKM } from "@/lib/geo-distance";
+import { DeliveryMapDialog } from "@/components/home/DeliveryMapDialog";
+import type { DeliveryFeeSnap, DeliveryLeg } from "@/lib/delivery-fee";
+
+/** عرض سعر توصيل اتجاه واحد من الخادم (طريق جوجل، حد أدنى 1 كم). */
+type DeliveryQuoteState = { loading: boolean; snap: DeliveryFeeSnap | null };
+const NO_DELIVERY_QUOTE: DeliveryQuoteState = { loading: false, snap: null };
+
+/** يطلب عرض السعر ويعيد دالة إلغاء للـ cleanup. */
+function fetchDeliveryQuote(
+  leg: DeliveryLeg,
+  branch: string,
+  lat: number,
+  lng: number,
+  set: (s: DeliveryQuoteState) => void,
+): () => void {
+  const ctrl = new AbortController();
+  set({ loading: true, snap: null });
+  void (async () => {
+    try {
+      const res = await fetch("/api/bookings/direct/delivery-quote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leg, branch, lat, lng }),
+        signal: ctrl.signal,
+      });
+      const data = (await res.json()) as { ok?: boolean; snap?: DeliveryFeeSnap | null };
+      if (ctrl.signal.aborted) return;
+      set({ loading: false, snap: data.ok ? (data.snap ?? null) : null });
+    } catch {
+      if (!ctrl.signal.aborted) set({ loading: false, snap: null });
+    }
+  })();
+  return () => ctrl.abort();
+}
 
 const GOLD = "#dbb878";
 const GOLD_DARK = "#c9a356";
@@ -207,6 +240,16 @@ export function FleetCheckoutClient({
   const [openAddonInfoId, setOpenAddonInfoId] = useState<number | null>(null);
   const [termsOpen, setTermsOpen] = useState(false);
   const [changeCarOpen, setChangeCarOpen] = useState(false);
+
+  /** إرجاع السيارة: استلام الشركة لها من موقع العميل (اختياري، في أي وضع استلام). */
+  const [returnFromMe, setReturnFromMe] = useState<{
+    lat: number;
+    lng: number;
+    address: string;
+  } | null>(null);
+  const [returnMapOpen, setReturnMapOpen] = useState(false);
+  const [pickupQuote, setPickupQuote] = useState<DeliveryQuoteState>(NO_DELIVERY_QUOTE);
+  const [returnQuote, setReturnQuote] = useState<DeliveryQuoteState>(NO_DELIVERY_QUOTE);
 
   const [couponInput, setCouponInput] = useState("");
   const [couponChecking, setCouponChecking] = useState(false);
@@ -543,33 +586,34 @@ export function FleetCheckoutClient({
     return t("interCityFee", { from: a, to: b });
   }, [interCityShippingFeeSar, trip.pickupCitySlug, trip.returnCitySlug, bookingCities]);
 
-  const deliveryDistanceKm = useMemo(() => {
-    if (
-      trip.mode !== "delivery" ||
-      trip.deliveryLat == null ||
-      trip.deliveryLng == null ||
-      !trip.pickupBranchSlugForHours
-    ) {
-      return null;
-    }
-    const branch = bookingCities
-      .flatMap((c) => c.branches)
-      .find((b) => b.slug === trip.pickupBranchSlugForHours);
+  /*
+   * رسوم التوصيل تأتي من الخادم (/api/bookings/direct/delivery-quote): طريق فعلي من
+   * جوجل، حد أدنى 1 كم، اتجاه واحد لكل رحلة. الفرع المرجعي = فرع الإرجاع (`trip.branchSlug`)
+   * — نفس ما يعتمده الخادم عند إنشاء الحجز، فالرقم المعروض هو المحفوظ.
+   */
+  const pickupDeliveryActive =
+    trip.mode === "delivery" && trip.deliveryLat != null && trip.deliveryLng != null;
 
-    if (branch && branch.lat != null && branch.lng != null) {
-      return getDistanceKM(branch.lat, branch.lng, trip.deliveryLat, trip.deliveryLng);
+  useEffect(() => {
+    if (!pickupDeliveryActive || trip.deliveryLat == null || trip.deliveryLng == null) {
+      setPickupQuote(NO_DELIVERY_QUOTE);
+      return;
     }
-    return null;
-  }, [trip, bookingCities]);
+    return fetchDeliveryQuote("PICKUP", trip.branchSlug, trip.deliveryLat, trip.deliveryLng, setPickupQuote);
+  }, [pickupDeliveryActive, trip.deliveryLat, trip.deliveryLng, trip.branchSlug]);
 
-  const deliveryFeeSar = useMemo(() => {
-    if (deliveryDistanceKm == null) return 0;
-    const branch = bookingCities
-      .flatMap((c) => c.branches)
-      .find((b) => b.slug === trip.pickupBranchSlugForHours);
-    if (!branch || !branch.deliveryFeePerKmSar) return 0;
-    return Math.round(deliveryDistanceKm * branch.deliveryFeePerKmSar);
-  }, [deliveryDistanceKm, trip.pickupBranchSlugForHours, bookingCities]);
+  useEffect(() => {
+    if (!returnFromMe) {
+      setReturnQuote(NO_DELIVERY_QUOTE);
+      return;
+    }
+    return fetchDeliveryQuote("RETURN", trip.branchSlug, returnFromMe.lat, returnFromMe.lng, setReturnQuote);
+  }, [returnFromMe, trip.branchSlug]);
+
+  const deliveryDistanceKm = pickupQuote.snap?.distanceKm ?? null;
+  const deliveryFeeSar =
+    (pickupQuote.snap?.feeExclVatSar ?? 0) + (returnQuote.snap?.feeExclVatSar ?? 0);
+  const deliveryQuoteLoading = pickupQuote.loading || returnQuote.loading;
 
   const checkoutFeesSumExclTax = useMemo(
     () => sumCheckoutOneTimeFees(checkoutOneTimeFees),
@@ -1147,6 +1191,12 @@ export function FleetCheckoutClient({
       if (addr) {
         body.deliveryAddress = addr;
       }
+    }
+    if (returnFromMe) {
+      body.returnMode = "DELIVERY";
+      body.returnLat = returnFromMe.lat;
+      body.returnLng = returnFromMe.lng;
+      if (returnFromMe.address) body.returnAddress = returnFromMe.address;
     }
     if (trip.pickupCitySlug) {
       body.pickupCity = trip.pickupCitySlug;
@@ -2349,10 +2399,40 @@ export function FleetCheckoutClient({
                       <div className="relative">
                         <div className="absolute -start-[23px] top-1 size-2.5 rounded-full border-2 border-[#003749] bg-white ring-4 ring-white" />
                         <p className="text-[11px] font-bold uppercase text-[#aaa08e]">{t("dropoff")}</p>
-                        <p className="font-extrabold text-[#003749]">{trip.returnLabel}</p>
+                        <p className="font-extrabold text-[#003749]">
+                          {returnFromMe
+                            ? returnFromMe.address
+                              ? t("returnFromMeTo", { address: returnFromMe.address })
+                              : t("returnFromMePinned")
+                            : trip.returnLabel}
+                          {returnQuote.snap ? (
+                            <span className="block mt-0.5 text-[11px] font-bold text-[#c9a356]">
+                              {t("distanceFromBranch", { km: returnQuote.snap.distanceKm.toFixed(1) })}
+                            </span>
+                          ) : null}
+                        </p>
                         <p className="text-[12px] font-semibold text-[#8a7752]" dir="ltr">
                           {du.date} {du.time ? `• ${du.time}` : ""}
                         </p>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setReturnMapOpen(true)}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-[#dbb878]/60 bg-[#fdfbf6] px-2.5 py-1.5 text-[11px] font-extrabold text-[#003749] transition hover:bg-[#f6efdc]"
+                          >
+                            <MapPin className="size-3.5" aria-hidden />
+                            {returnFromMe ? t("returnFromMeChange") : t("returnFromMeAction")}
+                          </button>
+                          {returnFromMe ? (
+                            <button
+                              type="button"
+                              onClick={() => setReturnFromMe(null)}
+                              className="text-[11px] font-bold text-[#8a7752] underline"
+                            >
+                              {t("returnFromMeRemove")}
+                            </button>
+                          ) : null}
+                        </div>
                       </div>
                     </div>
 
@@ -2415,15 +2495,22 @@ export function FleetCheckoutClient({
                         </div>
                       ) : null}
 
-                      {deliveryFeeSar > 0 && deliveryDistanceKm != null ? (
-                        <div className="flex justify-between text-[13px]">
-                          <span className="font-semibold text-[#6b5a3b]">
-                            {t("deliveryFee", { km: deliveryDistanceKm.toFixed(1) })}
-                          </span>
-                          <span className="font-bold text-[#003749] tabular-nums" dir="ltr">
-                            {formatSarAmount(deliveryFeeSar)} <SarCurrencyGlyph />
-                          </span>
-                        </div>
+                      {[pickupQuote.snap, returnQuote.snap].map((s) =>
+                        s ? (
+                          <div key={s.leg} className="flex justify-between text-[13px]">
+                            <span className="max-w-[60%] text-end text-[12px] font-semibold leading-snug text-[#6b5a3b]">
+                              {s.leg === "PICKUP"
+                                ? t("deliveryFee", { km: s.billedKm.toFixed(1) })
+                                : t("returnPickupFee", { km: s.billedKm.toFixed(1) })}
+                            </span>
+                            <span className="shrink-0 font-bold text-[#003749] tabular-nums" dir="ltr">
+                              {formatSarAmount(s.feeExclVatSar)} <SarCurrencyGlyph />
+                            </span>
+                          </div>
+                        ) : null,
+                      )}
+                      {deliveryQuoteLoading ? (
+                        <p className="text-[11px] font-semibold text-[#8a7752]">{t("deliveryFeeCalculating")}</p>
                       ) : null}
 
                       {checkoutOneTimeFees.map((f) => (
@@ -2613,6 +2700,23 @@ export function FleetCheckoutClient({
         onPickAlternative={(nextModelId) => {
           setChangeCarOpen(false);
           goToAlternativeCar(nextModelId);
+        }}
+      />
+      <DeliveryMapDialog
+        open={returnMapOpen}
+        onClose={() => setReturnMapOpen(false)}
+        initial={returnFromMe ? { lat: returnFromMe.lat, lng: returnFromMe.lng } : null}
+        fallbackCenter={(() => {
+          const b = bookingCities
+            .flatMap((c) => c.branches)
+            .find((x) => x.slug === trip.branchSlug);
+          return b && b.lat != null && b.lng != null ? { lat: b.lat, lng: b.lng } : null;
+        })()}
+        addressField
+        initialAddress={returnFromMe?.address ?? ""}
+        onConfirm={(lat, lng, address) => {
+          setReturnFromMe({ lat, lng, address });
+          setReturnMapOpen(false);
         }}
       />
       <BranchOutsideHoursModal

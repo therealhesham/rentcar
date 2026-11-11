@@ -38,6 +38,7 @@ import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { SarAmountWithSymbol } from "@/components/ui/SarAmountWithSymbol";
 import { computeCheckoutTotals, formatSarAmount } from "@/lib/booking-checkout-pricing";
 import { BookingAttachmentsPanel } from "@/components/admin/BookingAttachmentsPanel";
+import { DeliveryMapPanel } from "@/components/admin/DeliveryMapPanel";
 import { BookingCancelPanel } from "@/components/admin/BookingCancelPanel";
 import { BookingConfirmPanel } from "@/components/admin/BookingConfirmPanel";
 import {
@@ -190,6 +191,7 @@ export function BookingDetailView({
     addons,
     interCityShipping,
     checkoutOneTimeFees,
+    deliveryFees,
     delayPenalty,
     tripDurationLabelAr,
     couponCode,
@@ -539,33 +541,61 @@ export function BookingDetailView({
             ) : null}
           </BookingDetailSection>
 
-          {booking.pickupMode === "DELIVERY" &&
+          {(booking.pickupMode === "DELIVERY" &&
             (booking.deliveryAddress?.trim() ||
-              (booking.deliveryLat != null && booking.deliveryLng != null)) ? (
+              (booking.deliveryLat != null && booking.deliveryLng != null))) ||
+          booking.returnMode === "DELIVERY" ? (
             <BookingDetailSection
               icon={MapPin}
               title="التوصيل"
-              description="عنوان وموقع استلام العميل"
+              description="مواقع تسليم السيارة للعميل واستلامها منه، ورسومها بالكيلومتر"
             >
-              {booking.deliveryAddress?.trim() ? (
-                <p className="whitespace-pre-wrap rounded-xl bg-surface-container-low/60 px-4 py-3 text-sm leading-relaxed">
-                  {booking.deliveryAddress.trim()}
-                </p>
+              {booking.pickupMode === "DELIVERY" && booking.deliveryAddress?.trim() ? (
+                <div className="rounded-xl bg-surface-container-low/60 px-4 py-3 text-sm leading-relaxed">
+                  <p className="text-xs font-bold text-on-surface-variant">عنوان التسليم</p>
+                  <p className="mt-1 whitespace-pre-wrap">{booking.deliveryAddress.trim()}</p>
+                </div>
               ) : null}
-              {booking.deliveryLat != null && booking.deliveryLng != null ? (
-                <a
-                  href={`https://www.google.com/maps?q=${booking.deliveryLat},${booking.deliveryLng}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-3 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-on-primary hover:opacity-95"
-                >
-                  <MapPin className="h-4 w-4" aria-hidden />
-                  فتح على الخريطة
-                  <span className="font-mono text-xs opacity-90" dir="ltr">
-                    {booking.deliveryLat.toFixed(5)}, {booking.deliveryLng.toFixed(5)}
-                  </span>
-                </a>
+              {booking.returnMode === "DELIVERY" && booking.returnAddress?.trim() ? (
+                <div className="mt-2 rounded-xl bg-surface-container-low/60 px-4 py-3 text-sm leading-relaxed">
+                  <p className="text-xs font-bold text-on-surface-variant">عنوان الاستلام عند الإرجاع</p>
+                  <p className="mt-1 whitespace-pre-wrap">{booking.returnAddress.trim()}</p>
+                </div>
               ) : null}
+              <DeliveryMapPanel
+                branch={
+                  booking.returnBranch
+                    ? {
+                        name: booking.returnBranch.name,
+                        lat: booking.returnBranch.latitude,
+                        lng: booking.returnBranch.longitude,
+                      }
+                    : null
+                }
+                pickup={
+                  booking.pickupMode === "DELIVERY" &&
+                  booking.deliveryLat != null &&
+                  booking.deliveryLng != null
+                    ? {
+                        lat: booking.deliveryLat,
+                        lng: booking.deliveryLng,
+                        address: booking.deliveryAddress?.trim() || null,
+                      }
+                    : null
+                }
+                ret={
+                  booking.returnMode === "DELIVERY" &&
+                  booking.returnLat != null &&
+                  booking.returnLng != null
+                    ? {
+                        lat: booking.returnLat,
+                        lng: booking.returnLng,
+                        address: booking.returnAddress?.trim() || null,
+                      }
+                    : null
+                }
+                fees={deliveryFees}
+              />
             </BookingDetailSection>
           ) : null}
 

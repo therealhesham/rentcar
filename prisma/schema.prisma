@@ -716,6 +716,11 @@ model BookingRequest {
   deliveryLng                   Float?
   /// عنوان نصّي للتوصيل إن لم يُحدَّد بالخريطة (أو لتفاصيل إضافية).
   deliveryAddress               String?   @db.Text
+  /// إرجاع السيارة: BRANCH (افتراضي/null) أو DELIVERY = تستلمها الشركة من عنوان العميل.
+  returnMode                    String?   @db.VarChar(16)
+  returnLat                     Float?
+  returnLng                     Float?
+  returnAddress                 String?   @db.Text
   pickupDate                    DateTime
   numberOfDays                  Int
   termsAccepted                 Boolean   @default(true)

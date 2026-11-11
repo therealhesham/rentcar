@@ -298,6 +298,7 @@ export function rebuildAddonsJsonForDays(
     items?: Array<{ pricePerDayExclTax?: unknown; [k: string]: unknown }>;
     interCityShipping?: unknown;
     checkoutOneTimeFees?: unknown;
+    deliveryFees?: unknown;
     rentalDiscount?: unknown;
     rentalPricePerDayExclTax?: unknown;
     rentalFloorPerDayExclTax?: unknown;
@@ -322,6 +323,7 @@ export function rebuildAddonsJsonForDays(
     items: typeof items;
     interCityShipping?: unknown;
     checkoutOneTimeFees?: unknown;
+    deliveryFees?: unknown;
     rentalDiscount?: unknown;
     rentalPricePerDayExclTax?: unknown;
     rentalFloorPerDayExclTax?: unknown;
@@ -331,6 +333,10 @@ export function rebuildAddonsJsonForDays(
   } = { items };
 
   if (data.interCityShipping) payload.interCityShipping = data.interCityShipping;
+  // رسوم التوصيل مجمَّدة: تعديل المدة لا يعيد حسابها أبداً.
+  if (Array.isArray(data.deliveryFees) && data.deliveryFees.length) {
+    payload.deliveryFees = data.deliveryFees;
+  }
   if (Array.isArray(data.checkoutOneTimeFees) && data.checkoutOneTimeFees.length) {
     payload.checkoutOneTimeFees = data.checkoutOneTimeFees;
   }
@@ -377,6 +383,7 @@ export function rebuildAddonsJsonForDays(
     items.length > 0 ||
     payload.interCityShipping != null ||
     payload.checkoutOneTimeFees != null ||
+    payload.deliveryFees != null ||
     payload.rentalDiscount != null ||
     payload.rentalPricePerDayExclTax != null ||
     payload.rentalFloorPerDayExclTax != null ||

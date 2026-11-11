@@ -1,8 +1,5 @@
 /**
- * بحث عن العناوين وتحويل الإحداثيات إلى عنوان نصّي.
- *
- * يُفضَّل Google عند توفّر مفتاح خرائط صالح، ويُستخدم Nominatim (OSM) كبديل
- * مجاني بلا مفتاح — وأيضاً كخطة احتياطية عند فشل Google.
+ * بحث عن العناوين وتحويل الإحداثيات إلى عنوان نصّي عبر Google Geocoder فقط.
  */
 
 export type GeoPlace = {
@@ -11,7 +8,6 @@ export type GeoPlace = {
   lng: number;
 };
 
-const NOMINATIM_BASE = "https://nominatim.openstreetmap.org";
 const COUNTRY_CODE = "sa";
 const MAX_RESULTS = 5;
 
@@ -25,56 +21,6 @@ function isValidCoord(lat: number, lng: number): boolean {
     lng <= 180
   );
 }
-
-/* ─────────── OpenStreetMap / Nominatim ─────────── */
-
-type NominatimItem = { display_name?: string; lat?: string; lon?: string };
-
-async function searchPlacesOsm(
-  query: string,
-  lang: string,
-  signal?: AbortSignal,
-): Promise<GeoPlace[]> {
-  const url = new URL(`${NOMINATIM_BASE}/search`);
-  url.searchParams.set("format", "jsonv2");
-  url.searchParams.set("q", query);
-  url.searchParams.set("countrycodes", COUNTRY_CODE);
-  url.searchParams.set("limit", String(MAX_RESULTS));
-  url.searchParams.set("accept-language", lang);
-
-  const res = await fetch(url, { signal });
-  if (!res.ok) throw new Error(`nominatim search ${res.status}`);
-
-  const items = (await res.json()) as NominatimItem[];
-  return items
-    .map((it) => ({
-      label: it.display_name?.trim() ?? "",
-      lat: Number(it.lat),
-      lng: Number(it.lon),
-    }))
-    .filter((p) => p.label.length > 0 && isValidCoord(p.lat, p.lng));
-}
-
-async function reverseGeocodeOsm(
-  lat: number,
-  lng: number,
-  lang: string,
-  signal?: AbortSignal,
-): Promise<string> {
-  const url = new URL(`${NOMINATIM_BASE}/reverse`);
-  url.searchParams.set("format", "jsonv2");
-  url.searchParams.set("lat", String(lat));
-  url.searchParams.set("lon", String(lng));
-  url.searchParams.set("accept-language", lang);
-
-  const res = await fetch(url, { signal });
-  if (!res.ok) throw new Error(`nominatim reverse ${res.status}`);
-
-  const data = (await res.json()) as NominatimItem;
-  return data.display_name?.trim() ?? "";
-}
-
-/* ─────────── Google Geocoder ─────────── */
 
 async function searchPlacesGoogle(
   geocoder: google.maps.Geocoder,
@@ -108,17 +54,12 @@ async function reverseGeocodeGoogle(
   return results[0]?.formatted_address?.trim() ?? "";
 }
 
-/* ─────────── الواجهة الموحّدة ─────────── */
-
 export type Geocoding = {
   search: (query: string, signal?: AbortSignal) => Promise<GeoPlace[]>;
   reverse: (lat: number, lng: number, signal?: AbortSignal) => Promise<string>;
 };
 
-/**
- * يبني واجهة بحث موحّدة. عند تمرير `googleGeocoder` تُجرَّب خدمة Google أولاً
- * ويُسقَط تلقائياً إلى Nominatim عند أي خطأ (مفتاح غير مفعّل، حصة منتهية…).
- */
+/** واجهة بحث موحّدة فوق Google Geocoder؛ بدون geocoder جاهز تعيد نتائج فارغة. */
 export function createGeocoding(options: {
   googleGeocoder?: google.maps.Geocoder | null;
   lang?: string;
@@ -127,32 +68,20 @@ export function createGeocoding(options: {
   const g = options.googleGeocoder ?? null;
 
   return {
-    async search(query, signal) {
+    async search(query) {
       const q = query.trim();
-      if (q.length < 2) return [];
-      if (g) {
-        try {
-          const hits = await searchPlacesGoogle(g, q, lang);
-          if (hits.length > 0) return hits;
-        } catch {
-          /* نُكمل بـ Nominatim */
-        }
+      if (q.length < 2 || !g) return [];
+      try {
+        return await searchPlacesGoogle(g, q, lang);
+      } catch {
+        return [];
       }
-      return searchPlacesOsm(q, lang, signal);
     },
 
-    async reverse(lat, lng, signal) {
-      if (!isValidCoord(lat, lng)) return "";
-      if (g) {
-        try {
-          const label = await reverseGeocodeGoogle(g, lat, lng, lang);
-          if (label) return label;
-        } catch {
-          /* نُكمل بـ Nominatim */
-        }
-      }
+    async reverse(lat, lng) {
+      if (!g || !isValidCoord(lat, lng)) return "";
       try {
-        return await reverseGeocodeOsm(lat, lng, lang, signal);
+        return await reverseGeocodeGoogle(g, lat, lng, lang);
       } catch {
         return "";
       }

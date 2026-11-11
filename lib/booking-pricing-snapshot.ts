@@ -2,6 +2,11 @@ import {
   DELAY_PENALTY_FREE_HOURS,
   type DelayPenaltySnap,
 } from "@/lib/booking-delay-penalty";
+import {
+  deliveryFeeSlug,
+  parseDeliveryFeeSnaps,
+  type DeliveryFeeSnap,
+} from "@/lib/delivery-fee";
 import type { InterCityShippingSnap } from "@/lib/inter-city-shipping";
 import type { RentalDiscountPriceSnap } from "@/lib/rental-discount";
 
@@ -36,6 +41,12 @@ export type BookingPricingSnapshotV1 = {
   items: AddonSnapItem[];
   interCityShipping?: InterCityShippingSnap | null;
   checkoutOneTimeFees?: CheckoutOneTimeFeeSnap[] | null;
+  /**
+   * رسوم التوصيل بالكيلو (استلام و/أو إرجاع من موقع العميل) — مجمَّدة وقت الحجز ولا يُعاد
+   * حسابها. تظهر في ناتج `parseBookingPricingSnapshot` ضمن `checkoutOneTimeFees`
+   * فتدخل تلقائياً في كل الإجماليات والفواتير والاستردادات.
+   */
+  deliveryFees?: DeliveryFeeSnap[] | null;
   delayPenalty?: DelayPenaltySnap | null;
   /** مدة الحجز اليومي للعرض (مثل «يومين + 3 ساعات»). */
   tripDurationLabelAr?: string | null;
@@ -94,7 +105,10 @@ export function parseBookingPricingSnapshot(raw: string | null): {
     lineTotalExclTax: number;
   }>;
   interCityShipping: InterCityShippingSnap | null;
+  /** رسوم الإتمام + رسوم التوصيل بالكيلو (مدموجة) — كل ما يُجمع كرسوم لمرة واحدة. */
   checkoutOneTimeFees: CheckoutOneTimeFeeSnap[];
+  /** رسوم التوصيل وحدها (للعرض التفصيلي والخريطة). */
+  deliveryFees: DeliveryFeeSnap[];
   delayPenalty: DelayPenaltySnap | null;
   tripDurationLabelAr: string | null;
   rentalDiscount: RentalDiscountPriceSnap | null;
@@ -107,6 +121,7 @@ export function parseBookingPricingSnapshot(raw: string | null): {
       addons: [],
       interCityShipping: null,
       checkoutOneTimeFees: [],
+      deliveryFees: [],
       delayPenalty: null,
       tripDurationLabelAr: null,
       rentalDiscount: null,
@@ -162,6 +177,15 @@ export function parseBookingPricingSnapshot(raw: string | null): {
           });
         }
       }
+    }
+
+    const deliveryFees = parseDeliveryFeeSnaps(data.deliveryFees);
+    for (const d of deliveryFees) {
+      checkoutOneTimeFees.push({
+        slug: deliveryFeeSlug(d.leg),
+        labelAr: d.labelAr,
+        feeExclVatSar: d.feeExclVatSar,
+      });
     }
 
     const delayPenalty = parseDelayPenaltySnap(data.delayPenalty);
@@ -226,6 +250,7 @@ export function parseBookingPricingSnapshot(raw: string | null): {
       addons,
       interCityShipping,
       checkoutOneTimeFees,
+      deliveryFees,
       delayPenalty,
       tripDurationLabelAr,
       rentalDiscount,
@@ -238,6 +263,7 @@ export function parseBookingPricingSnapshot(raw: string | null): {
       addons: [],
       interCityShipping: null,
       checkoutOneTimeFees: [],
+      deliveryFees: [],
       delayPenalty: null,
       tripDurationLabelAr: null,
       rentalDiscount: null,
