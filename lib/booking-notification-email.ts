@@ -145,11 +145,10 @@ ${EMAIL_RESPONSIVE_CSS}
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
           ${rowsHtml}
         </table>
-        ${
-          row.kind === "DIRECT"
-            ? `<p style="margin-top:24px;text-align:center;"><a href="${escapeHtml(absoluteUrl(`/admin/bookings/${row.id}`))}" style="display:inline-block;background:#003749;color:#dfb163;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:700;font-size:14px;">فتح الحجز في لوحة التحكم</a></p>`
-            : ""
-        }
+        ${row.kind === "DIRECT"
+      ? `<p style="margin-top:24px;text-align:center;"><a href="${escapeHtml(absoluteUrl(`/admin/bookings/${row.id}`))}" style="display:inline-block;background:#003749;color:#dfb163;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:700;font-size:14px;">فتح الحجز في لوحة التحكم</a></p>`
+      : ""
+    }
       </td></tr>
     </table>
   </td></tr></table>
