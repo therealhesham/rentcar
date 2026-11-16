@@ -721,6 +721,14 @@ model BookingRequest {
   returnLat                     Float?
   returnLng                     Float?
   returnAddress                 String?   @db.Text
+  /// سواق تسليم السيارة للعميل (رحلة التوصيل). null = لم يُعيَّن بعد.
+  deliveryDriverId              Int?
+  deliveryDriver                DeliveryDriver? @relation("BookingDeliveryDriver", fields: [deliveryDriverId], references: [id], onDelete: SetNull)
+  deliveryDriverAssignedAt      DateTime?
+  /// سواق استلام السيارة من العميل (رحلة الإرجاع عند returnMode = DELIVERY).
+  returnDriverId                Int?
+  returnDriver                  DeliveryDriver? @relation("BookingReturnDriver", fields: [returnDriverId], references: [id], onDelete: SetNull)
+  returnDriverAssignedAt        DateTime?
   pickupDate                    DateTime
   numberOfDays                  Int
   termsAccepted                 Boolean   @default(true)
@@ -825,6 +833,26 @@ model BookingRequest {
   @@index([customerId])
   @@index([vehicleUnitId])
   @@index([vehiclePlateNumber])
+  @@index([deliveryDriverId])
+  @@index([returnDriverId])
+}
+
+/// سواقو التوصيل — يسجّلون دخول تطبيق السواق (NestJS) برقم الجوال وكلمة المرور.
+/// لوحة الإدارة تنشئهم وتعيّنهم على الحجوزات فقط؛ المصادقة تتم في الـ API.
+model DeliveryDriver {
+  id           Int      @id @default(autoincrement())
+  name         String   @db.VarChar(255)
+  /// صيغة التخزين +9665XXXXXXXX (فريد).
+  phone        String   @unique @db.VarChar(20)
+  passwordHash String   @db.VarChar(255)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  deliveryBookings BookingRequest[] @relation("BookingDeliveryDriver")
+  returnBookings   BookingRequest[] @relation("BookingReturnDriver")
+
+  @@index([isActive])
 }
 
 /// عملية مالية مرتبطة بحجز — كل دفعة أو استرداد يُسجَّل هنا بدلاً من الكتابة المباشرة على BookingRequest.

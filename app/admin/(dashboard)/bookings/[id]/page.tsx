@@ -61,8 +61,12 @@ export default async function AdminBookingDetailPage({
     );
   }
 
-  const [booking, logs] = await Promise.all([
+  const [booking, drivers, logs] = await Promise.all([
     loadAdminBookingDetail(id),
+    prisma.deliveryDriver.findMany({
+      orderBy: [{ isActive: "desc" }, { name: "asc" }],
+      select: { id: true, name: true, phone: true, isActive: true },
+    }),
     prisma.bookingLog.findMany({
       where: { bookingId: id },
       orderBy: { createdAt: "desc" },
@@ -137,6 +141,7 @@ export default async function AdminBookingDetailPage({
         canOverrideCancelPolicy={canOverrideCancelPolicy}
         latePenaltyDecisionPerms={latePenaltyDecisionPerms}
         canEditBooking={canEditBooking}
+        drivers={drivers}
         customerBlacklist={customerBlacklist}
       />
       <section className="mx-auto mt-8 max-w-screen-xl px-4 sm:px-6 lg:px-8">

@@ -39,6 +39,11 @@ import { SarAmountWithSymbol } from "@/components/ui/SarAmountWithSymbol";
 import { computeCheckoutTotals, formatSarAmount } from "@/lib/booking-checkout-pricing";
 import { BookingAttachmentsPanel } from "@/components/admin/BookingAttachmentsPanel";
 import { DeliveryMapPanel } from "@/components/admin/DeliveryMapPanel";
+import {
+  DriverAssignPanel,
+  type DriverLegAssignment,
+  type DriverOption,
+} from "@/components/admin/DriverAssignPanel";
 import { BookingCancelPanel } from "@/components/admin/BookingCancelPanel";
 import { BookingConfirmPanel } from "@/components/admin/BookingConfirmPanel";
 import {
@@ -134,6 +139,8 @@ type Props = {
   /** يتحكم بظهور أزرار قرار غرامة التأخير — يُحسب كذلك من الجلسة على السيرفر. */
   latePenaltyDecisionPerms: LatePenaltyDecisionPerms;
   canEditBooking: boolean;
+  /** سواقو التوصيل المتاحون للتعيين (يُحمَّلون على السيرفر). */
+  drivers: DriverOption[];
   customerBlacklist: {
     isBlacklisted: boolean;
     reason: string | null;
@@ -150,6 +157,7 @@ export function BookingDetailView({
   canOverrideCancelPolicy,
   latePenaltyDecisionPerms,
   canEditBooking,
+  drivers,
   customerBlacklist,
 }: Props) {
   const [updatePlateModalOpen, setUpdatePlateModalOpen] = useState(false);
@@ -216,6 +224,23 @@ export function BookingDetailView({
   const pickupName =
     booking.pickupBranch?.name ?? (booking.pickupMode === "DELIVERY" ? "توصيل للعميل" : "—");
   const returnName = booking.returnBranch?.name ?? "—";
+  const driverLegs: DriverLegAssignment[] = [];
+  if (booking.pickupMode === "DELIVERY") {
+    driverLegs.push({
+      leg: "DELIVERY",
+      label: "تسليم السيارة للعميل",
+      driverId: booking.deliveryDriverId,
+      assignedAt: booking.deliveryDriverAssignedAt?.toISOString() ?? null,
+    });
+  }
+  if (booking.returnMode === "DELIVERY") {
+    driverLegs.push({
+      leg: "RETURN",
+      label: "استلام السيارة من العميل",
+      driverId: booking.returnDriverId,
+      assignedAt: booking.returnDriverAssignedAt?.toISOString() ?? null,
+    });
+  }
   const statusKeyUpper = booking.status.trim().toUpperCase();
   const isTerminalStatus =
     statusKeyUpper === "CANCELLED" || statusKeyUpper === "REJECTED";
@@ -562,6 +587,12 @@ export function BookingDetailView({
                   <p className="mt-1 whitespace-pre-wrap">{booking.returnAddress.trim()}</p>
                 </div>
               ) : null}
+              <DriverAssignPanel
+                bookingId={booking.id}
+                drivers={drivers}
+                canAssign={!booking.cancelledAt && booking.status !== "CANCELLED" && booking.status !== "REJECTED"}
+                legs={driverLegs}
+              />
               <DeliveryMapPanel
                 branch={
                   booking.returnBranch

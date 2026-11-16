@@ -106,6 +106,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/admin/cancelled-bookings", label: "الحجوزات الملغاة", icon: "ban", hidden: true },
       { href: "/admin/branch-returns", label: "التسليم الى الفرع", icon: "corner-down-left" },
       { href: "/admin/late-returns", label: "الاستلامات المتأخرة", icon: "calendar-x" },
+      { href: "/admin/delivery-drivers", label: "سواقو التوصيل", icon: "truck" },
       { href: "/admin/customers", label: "العملاء", icon: "users" },
       { href: "/admin/direct-booking", label: "حجز مباشر (مكتب)", icon: "calendar-plus", hidden: true },
       { href: "/admin/corporate-leads", label: "حجز الشركات", icon: "briefcase" },

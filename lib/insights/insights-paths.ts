@@ -107,6 +107,7 @@ const ADMIN_PAGE_LABELS: Array<[RegExp, string]> = [
   [/^\/admin\/branches/, "الفروع"],
   [/^\/admin\/employees/, "موظفو الفروع"],
   [/^\/admin\/job-roles/, "الوظائف والصلاحيات"],
+  [/^\/admin\/delivery-drivers/, "سواقو التوصيل"],
   [/^\/admin\/inter-city-shipping/, "شحن بين المدن"],
   [/^\/admin\/checkout-fees/, "رسوم إتمام الحجز"],
   [/^\/admin\/subscription-plans/, "باقات اشتراك"],
