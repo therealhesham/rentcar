@@ -207,7 +207,12 @@ export default async function AdminDashboardPage(props: {
           returnBranch: { select: { slug: true, name: true } },
         },
       })
-      .catch(() => []),
+      .catch((err: unknown) => {
+        // قائمة فاضية مع عدّادات ظاهرة = هذا الاستعلام فشل (غالباً migration ناقص في القاعدة).
+        // نسجّل السبب بدل ابتلاعه، وإلا يبدو الأمر كأن الحجوزات «مخفية».
+        console.error("[admin-dashboard] تعذّر تحميل قائمة آخر الحجوزات:", err);
+        return [];
+      }),
     prisma.carModel
       .findMany({
         where: { fleetItems: { some: { quantity: { gt: 0 } } } },
