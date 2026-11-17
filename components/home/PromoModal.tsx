@@ -10,7 +10,7 @@ import type { PromoModalSlide } from "@/lib/site-settings";
  *
  * قاعدتان تحكمانها وتُخزَّنان في `localStorage`:
  *  1) لا تظهر للزائر نفسه قبل انقضاء فترة التهدئة (٣٠ دقيقة افتراضياً).
- *  2) تعرض الآن **كاروزال** بكل الصور بدل صورة واحدة متناوبة.
+ *  2) تعرض **كاروزال** بكل الصور وتنتقل بينها عشوائياً (بدون أسهم تنقل).
  */
 
 const STORAGE_KEY = "rawaes:promo-modal:v1";
@@ -64,8 +64,6 @@ export function PromoModal({ slides, cooldownMinutes, locale }: Props) {
 
   const isAr = locale === "ar";
   const closeLabel = isAr ? "إغلاق" : "Close";
-  const prevLabel = isAr ? "السابق" : "Previous";
-  const nextLabel = isAr ? "التالي" : "Next";
 
   const dismiss = useCallback(() => setOpen(false), []);
 
@@ -75,9 +73,6 @@ export function PromoModal({ slides, cooldownMinutes, locale }: Props) {
     },
     [slides.length],
   );
-
-  const goPrev = useCallback(() => goTo(activeIndex - 1), [activeIndex, goTo]);
-  const goNext = useCallback(() => goTo(activeIndex + 1), [activeIndex, goTo]);
 
   /* ── فتح المودال بعد التأخير إن انتهت فترة التهدئة ── */
   useEffect(() => {
@@ -91,7 +86,7 @@ export function PromoModal({ slides, cooldownMinutes, locale }: Props) {
 
     const timer = window.setTimeout(() => {
       setOpen(true);
-      setActiveIndex(0);
+      setActiveIndex(Math.floor(Math.random() * slides.length));
       writeState({ lastShownAt: Date.now(), nextIndex: 0 });
     }, OPEN_DELAY_MS);
 
@@ -103,8 +98,6 @@ export function PromoModal({ slides, cooldownMinutes, locale }: Props) {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") dismiss();
-      if (e.key === "ArrowLeft") isAr ? goNext() : goPrev();
-      if (e.key === "ArrowRight") isAr ? goPrev() : goNext();
     };
     window.addEventListener("keydown", onKey);
     document.documentElement.style.overflow = "hidden";
@@ -112,14 +105,18 @@ export function PromoModal({ slides, cooldownMinutes, locale }: Props) {
       window.removeEventListener("keydown", onKey);
       document.documentElement.style.overflow = "";
     };
-  }, [open, dismiss, goNext, goPrev, isAr]);
+  }, [open, dismiss]);
 
   /* ── تقدم تلقائي ── */
   useEffect(() => {
     if (!open || slides.length <= 1) return;
     if (autoTimer.current) clearTimeout(autoTimer.current);
     autoTimer.current = setTimeout(() => {
-      setActiveIndex((i) => (i + 1) % slides.length);
+      // انتقال عشوائي إلى صورة مختلفة عن الحالية
+      setActiveIndex((i) => {
+        const offset = 1 + Math.floor(Math.random() * (slides.length - 1));
+        return (i + offset) % slides.length;
+      });
     }, AUTO_SLIDE_MS);
     return () => {
       if (autoTimer.current) clearTimeout(autoTimer.current);
@@ -180,32 +177,6 @@ export function PromoModal({ slides, cooldownMinutes, locale }: Props) {
                   )}
                 </motion.div>
               </AnimatePresence>
-
-              {/* ── أسهم التنقل (تظهر فقط إن كان هناك أكثر من شريحة) ── */}
-              {slides.length > 1 && (
-                <>
-                  <button
-                    type="button"
-                    onClick={goPrev}
-                    aria-label={prevLabel}
-                    className="absolute start-2 top-1/2 -translate-y-1/2 rounded-full bg-black/40 p-2 text-white backdrop-blur-sm transition hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-                  >
-                    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                      <path d="M15 18l-6-6 6-6" />
-                    </svg>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={goNext}
-                    aria-label={nextLabel}
-                    className="absolute end-2 top-1/2 -translate-y-1/2 rounded-full bg-black/40 p-2 text-white backdrop-blur-sm transition hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-                  >
-                    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                      <path d="M9 18l6-6-6-6" />
-                    </svg>
-                  </button>
-                </>
-              )}
 
               {/* ── نقاط المؤشر (dots) ── */}
               {slides.length > 1 && (
