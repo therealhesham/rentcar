@@ -16,6 +16,7 @@ import {
   bookingTotalInclTaxForDays,
 } from "@/lib/booking-edit";
 import type { BookingEditModalData } from "@/components/account/BookingEditModal";
+import { CUSTOMER_BOOKING_EDIT_ENABLED } from "@/lib/customer-booking-edit";
 import { bookingPaymentMethodLabelAr } from "@/lib/booking-payment-method-label";
 import { getTranslations } from "next-intl/server";
 import {
@@ -219,6 +220,7 @@ export default async function AccountDashboardPage({
     const nowMs = Date.now();
     const bookingNotStarted = nowMs < b.pickupDate.getTime();
     if (
+      CUSTOMER_BOOKING_EDIT_ENABLED &&
       b.kind === "DIRECT" &&
       b.carModel &&
       !isTerminalCard &&

@@ -25,6 +25,7 @@ import {
   rebuildAddonsJsonForDays,
 } from "@/lib/booking-edit";
 import { lastInclusiveBookingDayYmd } from "@/lib/booking-calendar-ymd";
+import { CUSTOMER_BOOKING_EDIT_ENABLED } from "@/lib/customer-booking-edit";
 
 export type AuthFormState = { error?: string } | null;
 
@@ -90,6 +91,13 @@ export type UpdateBookingDatesResult =
 export async function updateCustomerBookingDates(
   formData: FormData,
 ): Promise<UpdateBookingDatesResult> {
+  // التعديل الذاتي موقوف — يُرفض حتى لو وصل الطلب من صفحة مفتوحة قديماً.
+  if (!CUSTOMER_BOOKING_EDIT_ENABLED) {
+    return {
+      ok: false,
+      error: "تعديل الحجز من الحساب غير متاح حالياً. للتعديل تواصل مع خدمة العملاء.",
+    };
+  }
   const profile = await getCustomerProfile();
   if (!profile) {
     return { ok: false, error: "يجب تسجيل الدخول." };
