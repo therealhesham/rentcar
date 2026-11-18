@@ -90,6 +90,39 @@ export async function recordPaymentTransaction(
   });
 }
 
+/**
+ * هل طلب البوابة هذا (orderId جيديا / payment.id تابي / orderId إمكان) مسجَّل
+ * سابقاً كدفعة على الحجز؟
+ *
+ * مفتاح الـ idempotency الحقيقي للدفعات: طلب بوابة واحد = دفعة واحدة فقط.
+ * بدونه، حجز مدفوع ثم أُضيف عليه رصيد (تعديل/تمديد/رسوم) وما زال
+ * `paymentSessionRef` يشير لجلسة الدفعة الأولى، فإشعار مكرر أو مصالحة صفحة
+ * الدفع تجلب الطلب القديم «Paid» وتسجّله مرة ثانية كـ «سداد فرق».
+ *
+ * `legacyGatewayRef` = `BookingRequest.paymentGatewayRef` — يغطي حجوزات ما قبل
+ * دفتر الأستاذ التي لا سطر لها.
+ */
+export async function isGatewayPaymentAlreadyRecorded(
+  bookingId: number,
+  gatewayRef: string | null | undefined,
+  legacyGatewayRef: string | null | undefined,
+  client: Prisma.TransactionClient = prisma,
+): Promise<boolean> {
+  const ref = (gatewayRef ?? "").trim();
+  if (!ref) return false;
+  if ((legacyGatewayRef ?? "").trim() === ref) return true;
+  const existing = await client.paymentTransaction.findFirst({
+    where: {
+      bookingId,
+      gatewayRef: ref,
+      direction: "CREDIT",
+      status: { notIn: ["FAILED", "REVERSED"] },
+    },
+    select: { id: true },
+  });
+  return existing != null;
+}
+
 // ─── القراءة (لصفحة دفتر الحركات في لوحة الإدارة) ──────────────────────────────
 
 /** النطاق يحدّ النتائج بفرع الموظف أو مدينته (استلام أو إرجاع)؛ سوبر أدمن يرى الكل. */

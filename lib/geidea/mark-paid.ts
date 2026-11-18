@@ -1,7 +1,10 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
-import { recordPaymentTransaction } from "@/lib/payment-transaction";
+import {
+  isGatewayPaymentAlreadyRecorded,
+  recordPaymentTransaction,
+} from "@/lib/payment-transaction";
 import { sendAdminEmailForNewBooking } from "@/lib/booking-received-notification";
 import { sendBookingInvoiceEmailAfterPayment } from "@/lib/booking-invoice-email";
 import { sendNewBookingNotificationEmails } from "@/lib/booking-notification-email";
@@ -139,6 +142,14 @@ export async function markBookingBalancePaidFromGeideaOrder(
   const newBalance = Math.max(0, Math.round((balance - order.amount) * 100) / 100);
   // دفعة الرصيد تُدرَج في الدفتر ذرّياً مع تحديث الرصيد المستحق.
   const applied = await prisma.$transaction(async (tx) => {
+    // جلسة الدفعة الأولى تبقى على الحجز لحد ما يُنشأ رابط سداد الفرق — فلو أُضيف
+    // رصيد بعد الدفع، المصالحة/الإشعار المكرر يرجّع نفس الطلب المدفوع. لا يُحتسب مرتين.
+    if (await isGatewayPaymentAlreadyRecorded(bookingId, order.orderId, row.paymentGatewayRef, tx)) {
+      console.warn(
+        `[geidea-${source}] booking ${bookingId}: order ${order.orderId} already recorded — skipped duplicate balance payment`,
+      );
+      return false;
+    }
     const updated = await tx.bookingRequest.updateMany({
       where: {
         id: bookingId,

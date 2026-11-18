@@ -1,7 +1,10 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
-import { recordPaymentTransaction } from "@/lib/payment-transaction";
+import {
+  isGatewayPaymentAlreadyRecorded,
+  recordPaymentTransaction,
+} from "@/lib/payment-transaction";
 import { sendAdminEmailForNewBooking } from "@/lib/booking-received-notification";
 import { sendBookingInvoiceEmailAfterPayment } from "@/lib/booking-invoice-email";
 import { sendNewBookingNotificationEmails } from "@/lib/booking-notification-email";
@@ -227,6 +230,13 @@ async function markBookingBalancePaidFromAmkanOrder(
   if (row.paymentSessionRef !== ourOrderId) return { updated: false };
 
   const applied = await prisma.$transaction(async (tx) => {
+    // طلب إمكان واحد = دفعة واحدة فقط — لا تُسجَّل الدفعة الأولى مرة ثانية كسداد فرق.
+    if (await isGatewayPaymentAlreadyRecorded(bookingId, gatewayOrderId, row.paymentGatewayRef, tx)) {
+      console.warn(
+        `[amkan-${source}] booking ${bookingId}: order ${gatewayOrderId} already recorded — skipped duplicate balance payment`,
+      );
+      return false;
+    }
     const updated = await tx.bookingRequest.updateMany({
       where: {
         id: bookingId,

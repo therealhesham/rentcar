@@ -38,6 +38,8 @@ function formatScope(row: {
 }
 
 function formatValue(kind: string, value: number): string {
+  // `TO_MIN_PRICE` لا يستخدم `value` (يُخزَّن 0) — الخصم = السعر الأساسي − الحد الأدنى لكل مركبة.
+  if (kind === "TO_MIN_PRICE") return "تنزيل للحد الأدنى";
   return kind === "PERCENT" ? `${value}%` : `${value} ر.س/يوم`;
 }
 

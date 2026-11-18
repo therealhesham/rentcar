@@ -1,7 +1,10 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
-import { recordPaymentTransaction } from "@/lib/payment-transaction";
+import {
+  isGatewayPaymentAlreadyRecorded,
+  recordPaymentTransaction,
+} from "@/lib/payment-transaction";
 import { sendAdminEmailForNewBooking } from "@/lib/booking-received-notification";
 import { sendBookingInvoiceEmailAfterPayment } from "@/lib/booking-invoice-email";
 import { sendNewBookingNotificationEmails } from "@/lib/booking-notification-email";
@@ -124,6 +127,13 @@ export async function markBookingBalancePaidFromTabbyPayment(
 
   const newBalance = Math.max(0, Math.round((balance - payment.amount) * 100) / 100);
   const applied = await prisma.$transaction(async (tx) => {
+    // دفعة تابي واحدة = دفعة واحدة فقط — لا تُسجَّل الدفعة الأولى مرة ثانية كسداد فرق.
+    if (await isGatewayPaymentAlreadyRecorded(bookingId, payment.id, row.paymentGatewayRef, tx)) {
+      console.warn(
+        `[tabby-${source}] booking ${bookingId}: payment ${payment.id} already recorded — skipped duplicate balance payment`,
+      );
+      return false;
+    }
     const updated = await tx.bookingRequest.updateMany({
       where: {
         id: bookingId,
