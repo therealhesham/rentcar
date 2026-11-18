@@ -24,6 +24,7 @@ import {
   StickyNote,
   Plus,
   Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import {
@@ -281,6 +282,13 @@ export function BookingDetailView({
   // رصيد التحصيل من المصدر الموحّد — يُمرَّر للوحة الإرجاع كتنبيه للموظف.
   const { outstandingDueSar } = computeBookingOutstanding(booking);
 
+  // المبلغ المستحق على العميل — يُعرض كتنبيه أعلى الصفحة. الأكبر بين الرصيد المسجّل
+  // (تمديد/تعديل/رسوم) والفرق المحسوب (الإجمالي − المدفوع): الاثنان يمثّلان نفس
+  // الدين فلا يُجمعان، لكن لو أحدهما تصفّر خطأً يبقى الآخر ظاهراً للموظف.
+  const amountDueSar =
+    booking.kind === "DIRECT"
+      ? Math.round(Math.max(balanceDueAtBranch, outstandingDueSar) * 100) / 100
+      : 0;
 
 
   return (
@@ -320,6 +328,35 @@ export function BookingDetailView({
           </div>
         }
       />
+
+      {amountDueSar > 0.005 ? (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center gap-3 rounded-2xl border-2 border-red-300 bg-red-50 p-4 text-red-950 shadow-sm sm:p-5"
+        >
+          <AlertTriangle className="size-7 shrink-0 text-red-600" aria-hidden />
+          <div className="min-w-0 flex-1">
+            <p className="text-base font-black sm:text-lg">يوجد مبلغ مستحق على العميل</p>
+            <p className="mt-0.5 text-xs font-semibold text-red-900/80">
+              يُحصَّل في الفرع عند الاستلام أو الإرجاع، ثم يُسجَّل من صفحة العمليات المالية.
+            </p>
+          </div>
+          <SarAmountWithSymbol
+            bold
+            amountClassName="text-2xl font-black text-red-700 sm:text-3xl"
+            glyphClassName="text-red-600"
+          >
+            {formatSarAmount(amountDueSar)}
+          </SarAmountWithSymbol>
+          <Link
+            href={`/admin/bookings/${booking.id}/finance`}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700"
+          >
+            <CreditCard className="size-4" aria-hidden />
+            تسجيل الدفعة
+          </Link>
+        </div>
+      ) : null}
 
       {/* Hero summary */}
       <div className="rounded-2xl border border-outline-variant/30 bg-surface-container-lowest p-5 shadow-sm sm:p-6">

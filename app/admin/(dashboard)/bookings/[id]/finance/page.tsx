@@ -396,17 +396,28 @@ export default async function BookingFinancePage({
                   const isDebit = t.direction === "DEBIT";
                   const ref = t.externalRef || t.gatewayRef || "—";
                   const actor = TXN_ACTOR_LABEL[t.actorKind] ?? t.actorKind;
+                  // حركة ملغاة/فاشلة لا تُحتسب في الرصيد — تُعرض مشطوبة حتى لا تُقرأ كمبلغ مستلم.
+                  const txnStatus = t.status.trim().toUpperCase();
+                  const voided = txnStatus === "REVERSED" || txnStatus === "FAILED";
                   return (
-                    <tr key={t.id}>
+                    <tr key={t.id} className={voided ? "opacity-60" : undefined}>
                       <td className="py-3">
                         <span
                           className={`inline-block whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-black ring-1 ring-inset ${ui.className}`}
                         >
                           {ui.label}
                         </span>
+                        {voided ? (
+                          <span className="ms-1.5 inline-block whitespace-nowrap rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-black text-zinc-600 ring-1 ring-inset ring-zinc-300">
+                            {txnStatus === "REVERSED" ? "ملغاة" : "فاشلة"}
+                          </span>
+                        ) : null}
+                        {voided && t.notes ? (
+                          <div className="mt-1 max-w-56 text-[10px] text-on-surface-variant">{t.notes}</div>
+                        ) : null}
                       </td>
                       <td
-                        className={`py-3 font-extrabold tabular-nums ${isDebit ? "text-error" : "text-emerald-700"}`}
+                        className={`py-3 font-extrabold tabular-nums ${voided ? "text-on-surface-variant line-through" : isDebit ? "text-error" : "text-emerald-700"}`}
                         dir="ltr"
                       >
                         {isDebit ? "−" : "+"}
