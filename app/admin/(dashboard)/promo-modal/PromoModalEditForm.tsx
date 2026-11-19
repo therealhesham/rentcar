@@ -2,20 +2,21 @@
 
 import { useActionState } from "react";
 import { updatePromoModal } from "@/app/admin/promo-modal-actions";
-import { AdminImageField } from "@/components/admin/AdminImageField";
 import {
   MAX_PROMO_MODAL_COOLDOWN_MINUTES,
   MIN_PROMO_MODAL_COOLDOWN_MINUTES,
   type PromoModalSettings,
 } from "@/lib/site-settings";
+import { PromoModalSlideFields, type PromoModalCarOption } from "./PromoModalSlideFields";
 
 const MAX_SLIDES = 20;
 
 type Props = {
   settings: PromoModalSettings;
+  cars: PromoModalCarOption[];
 };
 
-export function PromoModalEditForm({ settings }: Props) {
+export function PromoModalEditForm({ settings, cars }: Props) {
   const [state, formAction, pending] = useActionState(updatePromoModal, null);
 
   const slots = Array.from(
@@ -76,32 +77,13 @@ export function PromoModalEditForm({ settings }: Props) {
       </div>
 
       {slots.map((slide, i) => (
-        <fieldset key={i} className="rounded-xl border border-outline-variant/40 p-4">
-          <legend className="px-2 text-sm font-extrabold text-[#003749]">
-            الصورة {i + 1}
-          </legend>
-
-          <input type="hidden" name={`currentImage_${i}`} value={slide.imageUrl} />
-
-          <AdminImageField
-            label="الصورة"
-            currentImageUrl={slide.imageUrl || null}
-            galleryFieldName={`galleryImageUrl_${i}`}
-            fileFieldName={`imageFile_${i}`}
-            fileHelp="بحد أقصى 5 ميجابايت — JPEG أو PNG أو WebP أو SVG. يُنصح بصورة رأسية أو مربعة بعرض 800px+"
-          />
-
-          <label className="mt-4 block text-sm font-medium">
-            رابط النقر (اختياري)
-            <input
-              name={`linkUrl_${i}`}
-              type="url"
-              defaultValue={slide.linkUrl}
-              placeholder="https://..."
-              className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-on-surface outline-none ring-primary/30 focus:ring-2"
-            />
-          </label>
-        </fieldset>
+        <PromoModalSlideFields
+          key={`${i}:${slide.imageUrl}:${slide.linkUrl}`}
+          index={i}
+          imageUrl={slide.imageUrl}
+          linkUrl={slide.linkUrl}
+          cars={cars}
+        />
       ))}
 
       <div className="flex flex-wrap gap-3">

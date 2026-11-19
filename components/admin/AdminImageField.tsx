@@ -20,6 +20,11 @@ type AdminImageFieldProps = {
   fileFieldName?: string;
   /** يُستدعى برابط صورة المعرض عند اختيارها أو إزالتها (لمعاينة حيّة خارج الحقل) */
   onImageUrlChange?: (url: string) => void;
+  /**
+   * عند تمريره يظهر زر «إزالة الصورة» الذي يمسح الصورة كلها (الحالية + المعرض + الملف).
+   * المستدعي مسؤول عن تفريغ رابط الصورة الحالية من جهته.
+   */
+  onClear?: () => void;
 };
 
 export function AdminImageField({
@@ -31,11 +36,13 @@ export function AdminImageField({
   galleryFieldName = "galleryImageUrl",
   fileFieldName = "imageFile",
   onImageUrlChange,
+  onClear,
 }: AdminImageFieldProps) {
   const id = useId();
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryUrl, setGalleryUrl] = useState("");
   const [fileReset, setFileReset] = useState(0);
+  const [hasFile, setHasFile] = useState(false);
 
   const preview = galleryUrl || currentImageUrl || null;
 
@@ -65,7 +72,21 @@ export function AdminImageField({
           <ImageIcon className="h-4 w-4" aria-hidden />
           اختيار من المعرض
         </button>
-        {galleryUrl ? (
+        {onClear && (preview || hasFile) ? (
+          <button
+            type="button"
+            onClick={() => {
+              setGalleryUrl("");
+              setHasFile(false);
+              setFileReset((n) => n + 1);
+              onImageUrlChange?.("");
+              onClear();
+            }}
+            className="text-sm font-bold text-error hover:underline"
+          >
+            إزالة الصورة
+          </button>
+        ) : galleryUrl ? (
           <button
             type="button"
             onClick={() => {
@@ -89,8 +110,9 @@ export function AdminImageField({
             type="file"
             accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
             required={Boolean(required && !galleryUrl)}
-            onChange={() => {
+            onChange={(e) => {
               setGalleryUrl("");
+              setHasFile(Boolean(e.currentTarget.files?.length));
             }}
             className="mt-2 block w-full text-sm text-on-surface file:me-4 file:rounded-lg file:border-0 file:bg-primary-container file:px-4 file:py-2 file:text-sm file:font-bold file:text-on-primary-container"
           />
@@ -105,6 +127,7 @@ export function AdminImageField({
         onClose={() => setGalleryOpen(false)}
         onSelect={(url) => {
           setGalleryUrl(url);
+          setHasFile(false);
           setFileReset((n) => n + 1);
           onImageUrlChange?.(url);
         }}
