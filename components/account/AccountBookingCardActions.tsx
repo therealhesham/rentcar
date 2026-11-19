@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { type ReactNode, useMemo, useState, useTransition } from "react";
 import { cancelCustomerBooking } from "@/app/[locale]/account/actions";
 import { SarCurrencyGlyph } from "@/components/ui/SarCurrencyGlyph";
 import { formatSarAmount } from "@/lib/booking-checkout-pricing";
@@ -59,7 +59,45 @@ export type AccountBookingCardActionsProps = {
   } | null;
   /** بيانات تعديل الحجز (تُمرَّر للحجوزات المباشرة القابلة للتعديل) — يفتح مودال التعديل. */
   editData?: BookingEditModalData | null;
+  /**
+   * معاينة للعرض فقط (معاينة حساب العميل في لوحة الإدارة): تظهر نفس الأزرار التي يراها
+   * العميل بنفس شروطها، لكن الروابط لا تنتقل والأزرار معطّلة ولا يُستدعى أي إجراء سيرفر.
+   */
+  readOnly?: boolean;
 };
+
+const READ_ONLY_TITLE = "معاينة فقط — لا يُنفَّذ أي إجراء نيابةً عن العميل";
+
+/** رابط إجراء العميل — في وضع المعاينة يُعرض بنفس الشكل كعنصر غير قابل للنقر. */
+function ActionLink({
+  href,
+  className,
+  readOnly,
+  children,
+}: {
+  href: string;
+  className: string;
+  readOnly: boolean;
+  children: ReactNode;
+}) {
+  if (readOnly) {
+    return (
+      <span
+        role="link"
+        aria-disabled="true"
+        title={READ_ONLY_TITLE}
+        className={`${className} cursor-not-allowed select-none opacity-70`}
+      >
+        {children}
+      </span>
+    );
+  }
+  return (
+    <Link href={href} className={className}>
+      {children}
+    </Link>
+  );
+}
 
 function isSelfCancelPastDeadline(pickupIso: string, minHours: number): boolean {
   if (minHours <= 0) return false;
@@ -86,6 +124,7 @@ export function AccountBookingCardActions({
   cancellationDeductTiers = [],
   cancellationFinancePreview = null,
   editData = null,
+  readOnly = false,
 }: AccountBookingCardActionsProps) {
   const t = useTranslations("Account");
   const router = useRouter();
@@ -242,8 +281,10 @@ export function AccountBookingCardActions({
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <button
               type="button"
-              disabled={pending}
+              disabled={pending || readOnly}
+              title={readOnly ? READ_ONLY_TITLE : undefined}
               onClick={() => {
+                if (readOnly) return;
                 setCancelError(null);
                 startTransition(async () => {
                   const fd = new FormData();
@@ -283,22 +324,24 @@ export function AccountBookingCardActions({
           ) : null}
 
           {showCompletePayment ? (
-            <Link
+            <ActionLink
+              readOnly={readOnly}
               href={`/fleet/payment/${b.id}`}
               className="inline-flex w-full items-center justify-center rounded-xl bg-[#ea580c] px-4 py-2.5 text-center text-sm font-extrabold text-white shadow-sm transition-opacity hover:opacity-95 sm:w-auto sm:flex-1"
             >
               {t("completePayment")}
-            </Link>
+            </ActionLink>
           ) : null}
 
           {showPayBalance ? (
-            <Link
+            <ActionLink
+              readOnly={readOnly}
               href={`/fleet/payment/${b.id}`}
               className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-[#ea580c] px-4 py-2.5 text-center text-sm font-extrabold text-white shadow-sm transition-opacity hover:opacity-95 sm:w-auto sm:flex-1"
             >
               {t("payBalance")}{" "}
               <SarAmountInline amount={b.balanceDueAtBranchSar ?? 0} />
-            </Link>
+            </ActionLink>
           ) : null}
 
           {showDirectLinks ? (
@@ -306,28 +349,34 @@ export function AccountBookingCardActions({
               {!bookingStarted && !isTerminal && editData ? (
                 <button
                   type="button"
-                  onClick={() => setEditOpen(true)}
-                  className="inline-flex w-full items-center justify-center rounded-xl border-2 border-[#003749] bg-white px-4 py-2.5 text-center text-sm font-extrabold text-[#003749] shadow-sm transition-colors hover:bg-[#003749]/5 sm:w-auto sm:flex-1"
+                  disabled={readOnly}
+                  title={readOnly ? READ_ONLY_TITLE : undefined}
+                  onClick={() => {
+                    if (!readOnly) setEditOpen(true);
+                  }}
+                  className="inline-flex w-full items-center justify-center rounded-xl border-2 border-[#003749] bg-white px-4 py-2.5 text-center text-sm font-extrabold text-[#003749] shadow-sm transition-colors hover:bg-[#003749]/5 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto sm:flex-1"
                 >
                   {t("editBooking")}
                 </button>
               ) : null}
               {showRebook ? (
-                <Link
+                <ActionLink
+                  readOnly={readOnly}
                   href={rebookCheckoutHref}
                   className="inline-flex w-full items-center justify-center rounded-xl bg-[#003749] px-4 py-2.5 text-center text-sm font-extrabold text-white shadow-sm transition-opacity hover:opacity-95 sm:w-auto sm:flex-1"
                 >
                   {t("rebook")}
-                </Link>
+                </ActionLink>
               ) : null}
             </>
           ) : b.kind === "INQUIRY" ? (
-            <Link
+            <ActionLink
+              readOnly={readOnly}
               href="/fleet"
               className="inline-flex w-full items-center justify-center rounded-xl border-2 border-[#003749] bg-white px-4 py-2.5 text-center text-sm font-extrabold text-[#003749] shadow-sm transition-colors hover:bg-[#003749]/5 sm:w-auto"
             >
               {t("newBookingRequest")}
-            </Link>
+            </ActionLink>
           ) : null}
 
           {/* {bookingStarted ? null : (
@@ -347,7 +396,7 @@ export function AccountBookingCardActions({
         </div>
       )}
 
-      {editData ? (
+      {editData && !readOnly ? (
         <BookingEditModal
           open={editOpen}
           onClose={() => setEditOpen(false)}

@@ -85,7 +85,7 @@ export async function clearCustomerSessionCookie(): Promise<void> {
   jar.delete(COOKIE_NAME);
 }
 
-export async function getCustomerProfile(): Promise<{
+export type CustomerProfile = {
   id: number;
   email: string;
   name: string | null;
@@ -97,10 +97,20 @@ export async function getCustomerProfile(): Promise<{
   licenseExpiryDate: Date | null;
   idCardImageUrl: string | null;
   driverLicenseImageUrl: string | null;
-} | null> {
+};
+
+export async function getCustomerProfile(): Promise<CustomerProfile | null> {
   const id = await getCustomerSessionUserId();
   if (id == null) return null;
-  const row = (await prisma.user.findUnique({
+  return getCustomerProfileById(id);
+}
+
+/**
+ * ملف العميل بمعرّفه مباشرة — بلا كوكي جلسة. تستعمله `getCustomerProfile` بعد قراءة
+ * الجلسة، ومعاينة حساب العميل في لوحة الإدارة (`/admin/clientaccount/[userId]`).
+ */
+export async function getCustomerProfileById(id: number): Promise<CustomerProfile | null> {
+  const row =(await prisma.user.findUnique({
     where: { id },
     select: {
       id: true,

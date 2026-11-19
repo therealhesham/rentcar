@@ -36,7 +36,8 @@ export type AdminNavItem = {
     | "file-text"
     | "graduation-cap"
     | "message-square"
-    | "smartphone";
+    | "smartphone"
+    | "user-search";
   external?: boolean;
   /** إخفاء العنصر من القائمة الجانبية (لكن الصفحة لا تزال صالحة) */
   hidden?: boolean;
@@ -108,6 +109,8 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/admin/late-returns", label: "الاستلامات المتأخرة", icon: "calendar-x" },
       { href: "/admin/delivery-drivers", label: "سواقو التوصيل", icon: "truck" },
       { href: "/admin/customers", label: "العملاء", icon: "users" },
+      // معاينة حساب العميل كما يراه هو (للعرض فقط) — صلاحية مستقلة تُمنح من شاشة الموظفين.
+      { href: "/admin/clientaccount", label: "معاينة حساب العميل", icon: "user-search" },
       { href: "/admin/direct-booking", label: "حجز مباشر (مكتب)", icon: "calendar-plus", hidden: true },
       { href: "/admin/corporate-leads", label: "حجز الشركات", icon: "briefcase" },
       { href: "/admin/contact-messages", label: "رسائل تواصل معنا", icon: "message-square" },
