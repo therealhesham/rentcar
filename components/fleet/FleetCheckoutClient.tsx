@@ -257,14 +257,14 @@ export function FleetCheckoutClient({
   const [appliedCoupon, setAppliedCoupon] = useState<
     | null
     | {
-        code: string;
-        scope: "RENTAL_ONLY" | "FULL_TOTAL";
-        discountedPricePerDayExclTax: number;
-        discountExclTax: number;
-        labelAr: string;
-        /** كود مخصَّص لرقم العميل — يخفّض الكيلومتر المفتوح والشحن بين المدن أيضاً. */
-        isCustomized: boolean;
-      }
+      code: string;
+      scope: "RENTAL_ONLY" | "FULL_TOTAL";
+      discountedPricePerDayExclTax: number;
+      discountExclTax: number;
+      labelAr: string;
+      /** كود مخصَّص لرقم العميل — يخفّض الكيلومتر المفتوح والشحن بين المدن أيضاً. */
+      isCustomized: boolean;
+    }
   >(null);
 
   /**
@@ -275,11 +275,11 @@ export function FleetCheckoutClient({
   const [monthlyPriceResolved, setMonthlyPriceResolved] = useState<
     | null
     | {
-        days: number;
-        pricePerDayExclTax: number;
-        originalPricePerDayExclTax: number;
-        discountLabelAr: string | null;
-      }
+      days: number;
+      pricePerDayExclTax: number;
+      originalPricePerDayExclTax: number;
+      discountLabelAr: string | null;
+    }
   >(null);
 
   /** واجهة: زرّان فقط (مواطن/مقيم معاً) + زائر؛ القيم المُرسَلة للخادم CITIZEN | RESIDENT تُشتق من أول رقم. */
@@ -742,11 +742,11 @@ export function FleetCheckoutClient({
         });
         const data = (await res.json()) as
           | {
-              ok: true;
-              pricePerDayExclTax: number;
-              originalPricePerDayExclTax: number;
-              discountLabelAr: string | null;
-            }
+            ok: true;
+            pricePerDayExclTax: number;
+            originalPricePerDayExclTax: number;
+            discountLabelAr: string | null;
+          }
           | { ok: false; error: string };
         if (!data.ok) {
           setMonthlyPriceResolved(null);
@@ -1468,9 +1468,8 @@ export function FleetCheckoutClient({
                   )}
                 </span>
                 <ChevronDown
-                  className={`size-4 shrink-0 text-[#8a7752] transition-transform ${
-                    tripEditorOpen ? "rotate-180" : ""
-                  }`}
+                  className={`size-4 shrink-0 text-[#8a7752] transition-transform ${tripEditorOpen ? "rotate-180" : ""
+                    }`}
                   aria-hidden
                 />
               </button>
@@ -1655,9 +1654,8 @@ export function FleetCheckoutClient({
                           }
                         }}
                         id="checkout-license-no"
-                        className={`peer w-full rounded-xl border border-[#ebe4d3] px-4 pb-3 pt-6 text-[14px] font-semibold text-[#003749] outline-none transition-all focus:border-[#dbb878] focus:ring-1 focus:ring-[#dbb878] ${
-                          idDocKind === "SAUDI_ID" ? "cursor-not-allowed bg-[#f4f0ea]" : "bg-transparent"
-                        }`}
+                        className={`peer w-full rounded-xl border border-[#ebe4d3] px-4 pb-3 pt-6 text-[14px] font-semibold text-[#003749] outline-none transition-all focus:border-[#dbb878] focus:ring-1 focus:ring-[#dbb878] ${idDocKind === "SAUDI_ID" ? "cursor-not-allowed bg-[#f4f0ea]" : "bg-transparent"
+                          }`}
                         placeholder=" "
                         dir="ltr"
                       />
@@ -1718,117 +1716,115 @@ export function FleetCheckoutClient({
                   </div>
 
                   <div
-                    className={`mt-6 grid gap-4 ${
-                      kycDocReq.idImage !== "HIDDEN" && kycDocReq.licenseImage !== "HIDDEN"
+                    className={`mt-6 grid gap-4 ${kycDocReq.idImage !== "HIDDEN" && kycDocReq.licenseImage !== "HIDDEN"
                         ? "sm:grid-cols-2"
                         : ""
-                    }`}
+                      }`}
                   >
                     {/* ID Card Upload */}
                     {kycDocReq.idImage === "HIDDEN" ? null : (
-                    <div className="group relative overflow-hidden rounded-2xl border-2 border-dashed border-[#dbb878]/40 bg-gradient-to-br from-[#fffef9] to-[#fdf9f0] p-5 transition-all hover:border-[#dbb878]/70 hover:shadow-[0_4px_16px_-6px_rgba(219,184,120,0.25)]">
-                      <div className="mb-3 flex items-center gap-2">
-                        <div className="flex size-8 items-center justify-center rounded-lg bg-[#f4f0ea] text-[#dbb878]">
-                          <UserRound className="size-4" aria-hidden />
+                      <div className="group relative overflow-hidden rounded-2xl border-2 border-dashed border-[#dbb878]/40 bg-gradient-to-br from-[#fffef9] to-[#fdf9f0] p-5 transition-all hover:border-[#dbb878]/70 hover:shadow-[0_4px_16px_-6px_rgba(219,184,120,0.25)]">
+                        <div className="mb-3 flex items-center gap-2">
+                          <div className="flex size-8 items-center justify-center rounded-lg bg-[#f4f0ea] text-[#dbb878]">
+                            <UserRound className="size-4" aria-hidden />
+                          </div>
+                          <div>
+                            <p className="text-[13px] font-extrabold text-[#003749]">{t("idOrPassportImage")}</p>
+                            <p className="text-[11px] font-semibold text-[#aaa08e]">
+                              {kycDocReq.idImage === "REQUIRED" ? t("required") : t("optional")}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-[13px] font-extrabold text-[#003749]">{t("idOrPassportImage")}</p>
-                          <p className="text-[11px] font-semibold text-[#aaa08e]">
-                            {kycDocReq.idImage === "REQUIRED" ? t("required") : t("optional")}
-                          </p>
-                        </div>
+                        {idCardUrl ? (
+                          <div className="relative mb-3 aspect-[16/10] w-full overflow-hidden rounded-xl border border-[#ebe4d3] bg-white shadow-sm">
+                            <Image src={idCardUrl} alt="" fill className="object-cover" sizes="(max-width:640px) 100vw,280px" unoptimized />
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition-opacity group-hover:opacity-100">
+                              <span className="rounded-lg bg-white/90 px-3 py-1 text-[11px] font-bold text-[#003749]">{t("changeImage")}</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="mb-3 flex h-20 items-center justify-center rounded-xl border border-dashed border-[#dbb878]/30 bg-[#fdfbf6]">
+                            <div className="text-center">
+                              <UserRound className="mx-auto mb-1 size-6 text-[#dbb878]/60" />
+                              <p className="text-[11px] font-semibold text-[#aaa08e]">{t("dragOrClick")}</p>
+                            </div>
+                          </div>
+                        )}
+                        <label className="relative flex cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl bg-[#003749] px-4 py-2.5 text-[12px] font-bold text-white transition-all hover:bg-[#004d63]">
+                          <FileImage className="size-3.5" />
+                          {uploadingKyc === "id" ? t("uploading") : (idCardUrl ? t("change") : t("chooseFile"))}
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
+                            className="absolute inset-0 cursor-pointer opacity-0"
+                            disabled={uploadingKyc !== null}
+                            onClick={() => {
+                              pickerOpenRef.current = true;
+                            }}
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              e.target.value = "";
+                              pickerOpenRef.current = false;
+                              if (f) void uploadKycImage(f, "id");
+                            }}
+                          />
+                        </label>
                       </div>
-                      {idCardUrl ? (
-                        <div className="relative mb-3 aspect-[16/10] w-full overflow-hidden rounded-xl border border-[#ebe4d3] bg-white shadow-sm">
-                          <Image src={idCardUrl} alt="" fill className="object-cover" sizes="(max-width:640px) 100vw,280px" unoptimized />
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition-opacity group-hover:opacity-100">
-                            <span className="rounded-lg bg-white/90 px-3 py-1 text-[11px] font-bold text-[#003749]">{t("changeImage")}</span>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="mb-3 flex h-20 items-center justify-center rounded-xl border border-dashed border-[#dbb878]/30 bg-[#fdfbf6]">
-                          <div className="text-center">
-                            <UserRound className="mx-auto mb-1 size-6 text-[#dbb878]/60" />
-                            <p className="text-[11px] font-semibold text-[#aaa08e]">{t("dragOrClick")}</p>
-                          </div>
-                        </div>
-                      )}
-                      <label className="relative flex cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl bg-[#003749] px-4 py-2.5 text-[12px] font-bold text-white transition-all hover:bg-[#004d63]">
-                        <FileImage className="size-3.5" />
-                        {uploadingKyc === "id" ? t("uploading") : (idCardUrl ? t("change") : t("chooseFile"))}
-                        <input
-                          type="file"
-                          accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
-                          className="absolute inset-0 cursor-pointer opacity-0"
-                          disabled={uploadingKyc !== null}
-                          onClick={() => {
-                            pickerOpenRef.current = true;
-                          }}
-                          onChange={(e) => {
-                            const f = e.target.files?.[0];
-                            e.target.value = "";
-                            pickerOpenRef.current = false;
-                            if (f) void uploadKycImage(f, "id");
-                          }}
-                        />
-                      </label>
-                    </div>
                     )}
 
                     {/* License Upload */}
                     {kycDocReq.licenseImage === "HIDDEN" ? null : (
-                    <div className="group relative overflow-hidden rounded-2xl border-2 border-[#dbb878]/60 bg-gradient-to-br from-[#fffef9] to-[#fdf9f0] p-5 shadow-[0_0_0_1px_rgba(219,184,120,0.15)] transition-all hover:border-[#dbb878] hover:shadow-[0_4px_16px_-6px_rgba(219,184,120,0.35)]">
-                      <div className="mb-3 flex items-center gap-2">
-                        <div className="flex size-8 items-center justify-center rounded-lg bg-[#dbb878]/20 text-[#c9a356]">
-                          <FileImage className="size-4" aria-hidden />
+                      <div className="group relative overflow-hidden rounded-2xl border-2 border-[#dbb878]/60 bg-gradient-to-br from-[#fffef9] to-[#fdf9f0] p-5 shadow-[0_0_0_1px_rgba(219,184,120,0.15)] transition-all hover:border-[#dbb878] hover:shadow-[0_4px_16px_-6px_rgba(219,184,120,0.35)]">
+                        <div className="mb-3 flex items-center gap-2">
+                          <div className="flex size-8 items-center justify-center rounded-lg bg-[#dbb878]/20 text-[#c9a356]">
+                            <FileImage className="size-4" aria-hidden />
+                          </div>
+                          <div>
+                            <p className="text-[13px] font-extrabold text-[#003749]">{t("driverLicenseImage")}</p>
+                            <p
+                              className={`text-[11px] font-extrabold ${kycDocReq.licenseImage === "REQUIRED" ? "text-red-600" : "text-[#aaa08e]"
+                                }`}
+                            >
+                              {kycDocReq.licenseImage === "REQUIRED" ? t("required") : t("optional")}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-[13px] font-extrabold text-[#003749]">{t("driverLicenseImage")}</p>
-                          <p
-                            className={`text-[11px] font-extrabold ${
-                              kycDocReq.licenseImage === "REQUIRED" ? "text-red-600" : "text-[#aaa08e]"
-                            }`}
-                          >
-                            {kycDocReq.licenseImage === "REQUIRED" ? t("required") : t("optional")}
-                          </p>
-                        </div>
+                        {licenseDocUrl ? (
+                          <div className="relative mb-3 aspect-[16/10] w-full overflow-hidden rounded-xl border border-[#dbb878]/30 bg-white shadow-sm">
+                            <Image src={licenseDocUrl} alt="" fill className="object-cover" sizes="(max-width:640px) 100vw,280px" unoptimized />
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition-opacity group-hover:opacity-100">
+                              <span className="rounded-lg bg-white/90 px-3 py-1 text-[11px] font-bold text-[#003749]">{t("changeImage")}</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="mb-3 flex h-20 items-center justify-center rounded-xl border border-dashed border-[#dbb878]/50 bg-[#fffdf9]">
+                            <div className="text-center">
+                              <FileImage className="mx-auto mb-1 size-6 text-[#dbb878]/70" />
+                              <p className="text-[11px] font-semibold text-[#aaa08e]">{t("dragOrClick")}</p>
+                            </div>
+                          </div>
+                        )}
+                        <label className="relative flex cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl px-4 py-2.5 text-[12px] font-bold text-white transition-all"
+                          style={{ background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)`, boxShadow: '0 4px 12px -4px rgba(219,184,120,0.5)' }}>
+                          <FileImage className="size-3.5" />
+                          {uploadingKyc === "license" ? t("uploading") : (licenseDocUrl ? t("changeLicense") : t("uploadLicense"))}
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
+                            className="absolute inset-0 cursor-pointer opacity-0"
+                            disabled={uploadingKyc !== null}
+                            onClick={() => {
+                              pickerOpenRef.current = true;
+                            }}
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              e.target.value = "";
+                              pickerOpenRef.current = false;
+                              if (f) void uploadKycImage(f, "license");
+                            }}
+                          />
+                        </label>
                       </div>
-                      {licenseDocUrl ? (
-                        <div className="relative mb-3 aspect-[16/10] w-full overflow-hidden rounded-xl border border-[#dbb878]/30 bg-white shadow-sm">
-                          <Image src={licenseDocUrl} alt="" fill className="object-cover" sizes="(max-width:640px) 100vw,280px" unoptimized />
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition-opacity group-hover:opacity-100">
-                            <span className="rounded-lg bg-white/90 px-3 py-1 text-[11px] font-bold text-[#003749]">{t("changeImage")}</span>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="mb-3 flex h-20 items-center justify-center rounded-xl border border-dashed border-[#dbb878]/50 bg-[#fffdf9]">
-                          <div className="text-center">
-                            <FileImage className="mx-auto mb-1 size-6 text-[#dbb878]/70" />
-                            <p className="text-[11px] font-semibold text-[#aaa08e]">{t("dragOrClick")}</p>
-                          </div>
-                        </div>
-                      )}
-                      <label className="relative flex cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl px-4 py-2.5 text-[12px] font-bold text-white transition-all"
-                        style={{ background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)`, boxShadow: '0 4px 12px -4px rgba(219,184,120,0.5)' }}>
-                        <FileImage className="size-3.5" />
-                        {uploadingKyc === "license" ? t("uploading") : (licenseDocUrl ? t("changeLicense") : t("uploadLicense"))}
-                        <input
-                          type="file"
-                          accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
-                          className="absolute inset-0 cursor-pointer opacity-0"
-                          disabled={uploadingKyc !== null}
-                          onClick={() => {
-                            pickerOpenRef.current = true;
-                          }}
-                          onChange={(e) => {
-                            const f = e.target.files?.[0];
-                            e.target.value = "";
-                            pickerOpenRef.current = false;
-                            if (f) void uploadKycImage(f, "license");
-                          }}
-                        />
-                      </label>
-                    </div>
                     )}
                   </div>
 
@@ -2349,7 +2345,7 @@ export function FleetCheckoutClient({
                         <p dir="ltr" className="mt-2 border-t border-[#ebe4d3] pt-2 text-end">
                           {t("monthlyPrice")}{" "}
                           {monthlyPriceResolved?.days === trip.days &&
-                          monthlyPriceResolved.pricePerDayExclTax <
+                            monthlyPriceResolved.pricePerDayExclTax <
                             monthlyPriceResolved.originalPricePerDayExclTax ? (
                             <span className="me-2 font-bold text-gray-400 line-through decoration-red-500 decoration-[1.5px] opacity-80">
                               {formatSarAmount(
@@ -2414,7 +2410,7 @@ export function FleetCheckoutClient({
                         <p className="text-[12px] font-semibold text-[#8a7752]" dir="ltr">
                           {du.date} {du.time ? `• ${du.time}` : ""}
                         </p>
-                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                        {/* <div className="mt-2 flex flex-wrap items-center gap-2">
                           <button
                             type="button"
                             onClick={() => setReturnMapOpen(true)}
@@ -2432,7 +2428,7 @@ export function FleetCheckoutClient({
                               {t("returnFromMeRemove")}
                             </button>
                           ) : null}
-                        </div>
+                        </div> */}
                       </div>
                     </div>
 
