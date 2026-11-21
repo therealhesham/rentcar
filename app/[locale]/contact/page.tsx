@@ -31,7 +31,7 @@ export default async function ContactPage({ params }: { params: Promise<{ locale
   const t = await getTranslations("ContactPage");
   const navT = await getTranslations("SiteNav");
 
-  const branchesWithPhone = branches.filter((b) => b.phone?.trim());
+  const branchesWithPhone = branches.filter((b) => b.phone?.trim() || b.tollFreePhone?.trim());
 
   return (
     <div className="flex min-h-screen flex-col bg-surface text-on-surface">
@@ -122,15 +122,32 @@ export default async function ContactPage({ params }: { params: Promise<{ locale
                           {b.address}
                         </p>
                       )}
-                      <a
-                        href={`tel:${b.phone!.replace(/\s/g, "")}`}
-                        className="mt-2 inline-flex items-center gap-2 rounded-lg bg-[#dbb878]/15 px-3 py-1.5 text-xs font-bold tabular-nums transition-colors hover:bg-[#dbb878]/30"
-                        style={{ color: TEAL }}
-                        dir="ltr"
-                      >
-                        <Phone className="h-3.5 w-3.5" />
-                        {b.phone}
-                      </a>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        {b.phone?.trim() && (
+                          <a
+                            href={`tel:${b.phone.replace(/\s/g, "")}`}
+                            className="inline-flex items-center gap-2 rounded-lg bg-[#dbb878]/15 px-3 py-1.5 text-xs font-bold tabular-nums transition-colors hover:bg-[#dbb878]/30"
+                            style={{ color: TEAL }}
+                            dir="ltr"
+                          >
+                            <Phone className="h-3.5 w-3.5" />
+                            {b.phone}
+                          </a>
+                        )}
+                        {b.tollFreePhone?.trim() && (
+                          <a
+                            href={`tel:${b.tollFreePhone.replace(/\s/g, "")}`}
+                            className="inline-flex items-center gap-2 rounded-lg bg-[#dbb878]/15 px-3 py-1.5 text-xs font-bold transition-colors hover:bg-[#dbb878]/30"
+                            style={{ color: TEAL }}
+                          >
+                            <Phone className="h-3.5 w-3.5" />
+                            {/* <span>{t("tollFree")}:</span> */}
+                            <span dir="ltr" className="tabular-nums">
+                              {b.tollFreePhone}
+                            </span>
+                          </a>
+                        )}
+                      </div>
                     </li>
                   ))}
                 </ul>
