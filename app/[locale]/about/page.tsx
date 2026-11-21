@@ -249,6 +249,16 @@ export default async function AboutPage({ params }: { params: Promise<{ locale: 
                     />
                   </div>
 
+
+                  {branch.tollFreePhone?.trim() ? (
+                    <a
+                      href={`tel:${branch.tollFreePhone.trim()}`}
+                      className="inline-flex w-full items-center justify-center gap-2 text-sm font-bold text-[#003749] sm:justify-start"
+                    >
+                      <PhoneIcon className="h-4 w-4 shrink-0 text-[#003749]" />
+                      <span dir="ltr">{branch.tollFreePhone.trim()}</span>
+                    </a>
+                  ) : null}
                   <a
                     href={branch.phone ? `tel:${branch.phone.trim()}` : undefined}
                     className="mt-1 inline-flex w-full items-center justify-center gap-2 text-sm font-bold text-[#003749] sm:justify-start"
@@ -257,17 +267,6 @@ export default async function AboutPage({ params }: { params: Promise<{ locale: 
                     <PhoneIcon className="h-4 w-4 shrink-0 text-[#003749]" />
                     <span>{branch.phone?.trim() || "—"}</span>
                   </a>
-
-                  {branch.tollFreePhone?.trim() ? (
-                    <a
-                      href={`tel:${branch.tollFreePhone.trim()}`}
-                      className="inline-flex w-full items-center justify-center gap-2 text-sm font-bold text-[#003749] sm:justify-start"
-                    >
-                      <PhoneIcon className="h-4 w-4 shrink-0 text-[#003749]" />
-                      <span>{t("tollFree")}:</span>
-                      <span dir="ltr">{branch.tollFreePhone.trim()}</span>
-                    </a>
-                  ) : null}
 
                   <a
                     href={resolveBranchMapUrl(branch.slug, branch.name, branch.mapUrl)}

@@ -32,7 +32,7 @@ function resolveBranchMapUrl(branch: ExplorerBranch) {
 function resolveBranchEmbedUrl(branch: ExplorerBranch, locale: string) {
   // نعتمد على الرابط الذي تم تحليله إذا كان موجوداً
   const mapUrl = branch.resolvedMapUrl?.trim() || branch.mapUrl?.trim();
-  
+
   if (mapUrl) {
     if (mapUrl.includes("output=embed") || mapUrl.includes("/embed")) {
       return mapUrl;
@@ -60,7 +60,7 @@ function resolveBranchEmbedUrl(branch: ExplorerBranch, locale: string) {
       if (qParam && !qParam.startsWith("http")) {
         return `https://maps.google.com/maps?q=${encodeURIComponent(qParam)}&hl=${locale}&z=15&output=embed`;
       }
-    } catch {}
+    } catch { }
   }
 
   const queryParts = [branch.name, branch.address?.trim()].filter(Boolean);
@@ -101,18 +101,16 @@ export function BranchesMapExplorer({ groups }: { groups: ExplorerCityGroup[] })
                     role="option"
                     aria-selected={isActive}
                     onClick={() => setSelectedId(branch.id)}
-                    className={`group flex items-start gap-3 rounded-2xl border p-4 text-start transition-all duration-300 ${
-                      isActive
+                    className={`group flex items-start gap-3 rounded-2xl border p-4 text-start transition-all duration-300 ${isActive
                         ? "border-[#dbb878] bg-white shadow-[0_12px_32px_-12px_rgba(219,184,120,0.35)]"
                         : "border-[#ebe4d3]/70 bg-white/60 hover:border-[#dbb878]/50 hover:bg-white"
-                    }`}
+                      }`}
                   >
                     <span
-                      className={`mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl transition-colors duration-300 ${
-                        isActive
+                      className={`mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl transition-colors duration-300 ${isActive
                           ? "bg-[#003749] text-[#dbb878]"
                           : "bg-[#fdfbf6] text-[#003749] ring-1 ring-[#ebe4d3] group-hover:text-[#dbb878]"
-                      }`}
+                        }`}
                     >
                       <MapPin className="size-4" aria-hidden />
                     </span>
@@ -168,6 +166,15 @@ export function BranchesMapExplorer({ groups }: { groups: ExplorerCityGroup[] })
                 <p className="mt-0.5 truncate text-xs text-[#8a7752]">
                   {selected.address?.trim() || selected.tagline?.trim() || t("defaultAddress")}
                 </p>
+                {selected.tollFreePhone?.trim() ? (
+                  <a
+                    href={`tel:${selected.tollFreePhone.trim()}`}
+                    className="mt-1 flex items-center gap-1.5 text-xs font-extrabold text-[#775927] transition-colors hover:text-[#003749]"
+                  >
+                    <Phone className="size-3.5 shrink-0" aria-hidden />
+                    <span dir="ltr">{selected.tollFreePhone.trim()}</span>
+                  </a>
+                ) : null}
                 {selected.phone?.trim() ? (
                   <a
                     href={`tel:${selected.phone.trim()}`}
@@ -178,16 +185,7 @@ export function BranchesMapExplorer({ groups }: { groups: ExplorerCityGroup[] })
                     {selected.phone.trim()}
                   </a>
                 ) : null}
-                {selected.tollFreePhone?.trim() ? (
-                  <a
-                    href={`tel:${selected.tollFreePhone.trim()}`}
-                    className="mt-1 flex items-center gap-1.5 text-xs font-extrabold text-[#775927] transition-colors hover:text-[#003749]"
-                  >
-                    <Phone className="size-3.5 shrink-0" aria-hidden />
-                    <span>{t("tollFree")}:</span>
-                    <span dir="ltr">{selected.tollFreePhone.trim()}</span>
-                  </a>
-                ) : null}
+
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 {selected.phone?.trim() ? (
