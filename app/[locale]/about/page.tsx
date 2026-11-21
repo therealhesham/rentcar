@@ -215,76 +215,75 @@ export default async function AboutPage({ params }: { params: Promise<{ locale: 
       {/* ─── فروعنا ─── */}
       <section className="overflow-x-clip bg-surface">
         <div className="mx-auto w-full min-w-0 max-w-screen-xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
-        <div className="mb-10 text-center">
-          <h2 className="text-3xl font-extrabold text-[#003749] sm:text-4xl">{t("ourBranches")}</h2>
-          <p className="mt-3 text-sm text-on-surface-variant sm:text-base">
-            {t("branchesSubtitle")}
-          </p>
-        </div>
+          <div className="mb-10 text-center">
+            <h2 className="text-3xl font-extrabold text-[#003749] sm:text-4xl">{t("ourBranches")}</h2>
+            <p className="mt-3 text-sm text-on-surface-variant sm:text-base">
+              {t("branchesSubtitle")}
+            </p>
+          </div>
 
-        {branches.length > 0 ? (
-          <div className="grid min-w-0 grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {branches.map((branch) => (
-              <article
-                key={branch.id}
-                className="flex flex-col gap-3 rounded-2xl border border-[#dbb878]/50 bg-[#fdf3e0] p-5 shadow-[0_8px_24px_rgba(119,89,39,0.08)] transition-shadow hover:shadow-[0_14px_36px_rgba(119,89,39,0.14)]"
-              >
-                <header className="text-center">
-                  <h3 className="text-sm font-extrabold text-[#003749]">{branch.name}</h3>
-                  <p className="mt-1 text-xs leading-relaxed text-on-surface-variant">
-                    {branch.address?.trim() ||
-                      branch.tagline?.trim() ||
-                      t("defaultBranchAddress")}
-                  </p>
-                </header>
-
-                <div className="min-w-0 overflow-hidden rounded-xl border border-black/5 bg-white">
-                  <iframe
-                    title={t("mapLocationOf", { name: branch.name })}
-                    src={resolveBranchEmbedUrl(branch)}
-                    className="block h-36 w-full max-w-full"
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                    allowFullScreen
-                  />
-                </div>
-
-                <a
-                  href={branch.phone ? `tel:${branch.phone.trim()}` : undefined}
-                  className="mt-1 inline-flex w-full items-center justify-center gap-2 text-sm font-bold text-[#003749] sm:justify-start"
-                  dir="ltr"
+          {branches.length > 0 ? (
+            <div className="grid min-w-0 grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {branches.map((branch) => (
+                <article
+                  key={branch.id}
+                  className="flex flex-col gap-3 rounded-2xl border border-[#dbb878]/50 bg-[#fdf3e0] p-5 shadow-[0_8px_24px_rgba(119,89,39,0.08)] transition-shadow hover:shadow-[0_14px_36px_rgba(119,89,39,0.14)]"
                 >
-                  <PhoneIcon className="h-4 w-4 shrink-0 text-[#003749]" />
-                  <span>{branch.phone?.trim() || "—"}</span>
-                </a>
+                  <header className="text-center">
+                    <h3 className="text-sm font-extrabold text-[#003749]">{branch.name}</h3>
+                    <p className="mt-1 text-xs leading-relaxed text-on-surface-variant">
+                      {branch.address?.trim() ||
+                        branch.tagline?.trim() ||
+                        t("defaultBranchAddress")}
+                    </p>
+                  </header>
 
-                {branch.tollFreePhone?.trim() ? (
+                  <div className="min-w-0 overflow-hidden rounded-xl border border-black/5 bg-white">
+                    <iframe
+                      title={t("mapLocationOf", { name: branch.name })}
+                      src={resolveBranchEmbedUrl(branch)}
+                      className="block h-36 w-full max-w-full"
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                      allowFullScreen
+                    />
+                  </div>
+
+
+                  {branch.tollFreePhone?.trim() ? (
+                    <a
+                      href={`tel:${branch.tollFreePhone.trim()}`}
+                      className="inline-flex w-full items-center justify-center gap-2 text-sm font-bold text-[#003749] sm:justify-start"
+                    >
+                      <PhoneIcon className="h-4 w-4 shrink-0 text-[#003749]" />
+                      <span dir="ltr">{branch.tollFreePhone.trim()}</span>
+                    </a>
+                  ) : null}
                   <a
-                    href={`tel:${branch.tollFreePhone.trim()}`}
-                    className="inline-flex w-full items-center justify-center gap-2 text-sm font-bold text-[#003749] sm:justify-start"
+                    href={branch.phone ? `tel:${branch.phone.trim()}` : undefined}
+                    className="mt-1 inline-flex w-full items-center justify-center gap-2 text-sm font-bold text-[#003749] sm:justify-start"
+                    dir="ltr"
                   >
                     <PhoneIcon className="h-4 w-4 shrink-0 text-[#003749]" />
-                    <span>{t("tollFree")}:</span>
-                    <span dir="ltr">{branch.tollFreePhone.trim()}</span>
+                    <span>{branch.phone?.trim() || "—"}</span>
                   </a>
-                ) : null}
 
-                <a
-                  href={resolveBranchMapUrl(branch.slug, branch.name, branch.mapUrl)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-xs font-bold text-[#775927] underline underline-offset-4 transition-opacity hover:opacity-80"
-                >
-                  {t("branchLocation")}
-                </a>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-dashed border-outline bg-white/70 p-8 text-center text-sm text-on-surface-variant">
-            {t("noBranches")}
-          </div>
-        )}
+                  <a
+                    href={resolveBranchMapUrl(branch.slug, branch.name, branch.mapUrl)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs font-bold text-[#775927] underline underline-offset-4 transition-opacity hover:opacity-80"
+                  >
+                    {t("branchLocation")}
+                  </a>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-outline bg-white/70 p-8 text-center text-sm text-on-surface-variant">
+              {t("noBranches")}
+            </div>
+          )}
         </div>
       </section>
 
