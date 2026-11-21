@@ -160,6 +160,8 @@ model Branch {
   detailedAddress     String?  @db.Text
   detailedAddressEn   String?  @db.Text
   phone               String?  @db.VarChar(32)
+  /// الرقم المجاني (الموحّد) — يُعرض بجانب رقم الفرع في «من نحن» وخريطة الفروع.
+  tollFreePhone       String?  @db.VarChar(32)
   mapUrl              String?  @db.Text
   latitude            Float?
   longitude           Float?

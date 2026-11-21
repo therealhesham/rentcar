@@ -13,6 +13,7 @@ export type ExplorerBranch = {
   tagline: string | null;
   address: string | null;
   phone: string | null;
+  tollFreePhone?: string | null;
   mapUrl: string | null;
   resolvedMapUrl?: string | null;
 };
@@ -130,6 +131,15 @@ export function BranchesMapExplorer({ groups }: { groups: ExplorerCityGroup[] })
                           </span>
                         </span>
                       ) : null}
+                      {branch.tollFreePhone?.trim() ? (
+                        <span className="mt-1 flex items-center gap-1.5 text-xs font-bold text-[#775927]">
+                          <Phone className="size-3.5 shrink-0" aria-hidden />
+                          <span className="shrink-0">{t("tollFree")}:</span>
+                          <span dir="ltr" className="truncate">
+                            {branch.tollFreePhone.trim()}
+                          </span>
+                        </span>
+                      ) : null}
                     </span>
                   </button>
                 );
@@ -166,6 +176,16 @@ export function BranchesMapExplorer({ groups }: { groups: ExplorerCityGroup[] })
                   >
                     <Phone className="size-3.5 shrink-0" aria-hidden />
                     {selected.phone.trim()}
+                  </a>
+                ) : null}
+                {selected.tollFreePhone?.trim() ? (
+                  <a
+                    href={`tel:${selected.tollFreePhone.trim()}`}
+                    className="mt-1 flex items-center gap-1.5 text-xs font-extrabold text-[#775927] transition-colors hover:text-[#003749]"
+                  >
+                    <Phone className="size-3.5 shrink-0" aria-hidden />
+                    <span>{t("tollFree")}:</span>
+                    <span dir="ltr">{selected.tollFreePhone.trim()}</span>
                   </a>
                 ) : null}
               </div>

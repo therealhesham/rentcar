@@ -261,6 +261,7 @@
     "title": "Serving you across the Kingdom",
     "subtitle": "Pick the branch nearest to you and view its location on the map",
     "call": "Call",
+    "tollFree": "Toll-free",
     "directions": "Directions",
     "mapTitle": "{name} location on the map",
     "defaultAddress": "Rawaes car rental branch",
@@ -452,6 +453,7 @@
     "branchesSubtitle": "Our locations spread to serve you. Choose the appropriate branch and view its location on the map.",
     "defaultBranchAddress": "Rawaes Car Rental Branch",
     "branchLocation": "Branch Location",
+    "tollFree": "Toll-free",
     "noBranches": "There are currently no active branches. You can add branches from the dashboard.",
     "mapLocationOf": "Map location of {name}"
   },

@@ -38,6 +38,7 @@ async function groupBranchesByCity(branches: BranchWithCity[]): Promise<Explorer
       tagline: b.tagline,
       address: b.address,
       phone: b.phone,
+      tollFreePhone: b.tollFreePhone,
       mapUrl: b.mapUrl,
       resolvedMapUrl: b.resolvedMapUrl,
     });
