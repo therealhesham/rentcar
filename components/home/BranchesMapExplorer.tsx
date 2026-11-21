@@ -125,7 +125,6 @@ export function BranchesMapExplorer({ groups }: { groups: ExplorerCityGroup[] })
                       {branch.tollFreePhone?.trim() ? (
                         <span className="mt-1 flex items-center gap-1.5 text-xs font-bold text-[#775927]">
                           <Phone className="size-3.5 shrink-0" aria-hidden />
-                          <span className="shrink-0">{t("tollFree")}:</span>
                           <span dir="ltr" className="truncate">
                             {branch.tollFreePhone.trim()}
                           </span>
