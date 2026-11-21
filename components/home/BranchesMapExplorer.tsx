@@ -102,14 +102,14 @@ export function BranchesMapExplorer({ groups }: { groups: ExplorerCityGroup[] })
                     aria-selected={isActive}
                     onClick={() => setSelectedId(branch.id)}
                     className={`group flex items-start gap-3 rounded-2xl border p-4 text-start transition-all duration-300 ${isActive
-                        ? "border-[#dbb878] bg-white shadow-[0_12px_32px_-12px_rgba(219,184,120,0.35)]"
-                        : "border-[#ebe4d3]/70 bg-white/60 hover:border-[#dbb878]/50 hover:bg-white"
+                      ? "border-[#dbb878] bg-white shadow-[0_12px_32px_-12px_rgba(219,184,120,0.35)]"
+                      : "border-[#ebe4d3]/70 bg-white/60 hover:border-[#dbb878]/50 hover:bg-white"
                       }`}
                   >
                     <span
                       className={`mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl transition-colors duration-300 ${isActive
-                          ? "bg-[#003749] text-[#dbb878]"
-                          : "bg-[#fdfbf6] text-[#003749] ring-1 ring-[#ebe4d3] group-hover:text-[#dbb878]"
+                        ? "bg-[#003749] text-[#dbb878]"
+                        : "bg-[#fdfbf6] text-[#003749] ring-1 ring-[#ebe4d3] group-hover:text-[#dbb878]"
                         }`}
                     >
                       <MapPin className="size-4" aria-hidden />
@@ -121,20 +121,21 @@ export function BranchesMapExplorer({ groups }: { groups: ExplorerCityGroup[] })
                       <span className="mt-0.5 block truncate text-xs leading-relaxed text-[#8a7752]">
                         {branch.address?.trim() || branch.tagline?.trim() || t("defaultAddress")}
                       </span>
-                      {branch.phone?.trim() ? (
-                        <span className="mt-1.5 flex items-center gap-1.5 text-xs font-bold text-[#775927]">
-                          <Phone className="size-3.5 shrink-0" aria-hidden />
-                          <span dir="ltr" className="truncate">
-                            {branch.phone.trim()}
-                          </span>
-                        </span>
-                      ) : null}
+
                       {branch.tollFreePhone?.trim() ? (
                         <span className="mt-1 flex items-center gap-1.5 text-xs font-bold text-[#775927]">
                           <Phone className="size-3.5 shrink-0" aria-hidden />
                           <span className="shrink-0">{t("tollFree")}:</span>
                           <span dir="ltr" className="truncate">
                             {branch.tollFreePhone.trim()}
+                          </span>
+                        </span>
+                      ) : null}
+                      {branch.phone?.trim() ? (
+                        <span className="mt-1.5 flex items-center gap-1.5 text-xs font-bold text-[#775927]">
+                          <Phone className="size-3.5 shrink-0" aria-hidden />
+                          <span dir="ltr" className="truncate">
+                            {branch.phone.trim()}
                           </span>
                         </span>
                       ) : null}
