@@ -123,17 +123,6 @@ export default async function ContactPage({ params }: { params: Promise<{ locale
                         </p>
                       )}
                       <div className="mt-2 flex flex-wrap items-center gap-2">
-                        {b.phone?.trim() && (
-                          <a
-                            href={`tel:${b.phone.replace(/\s/g, "")}`}
-                            className="inline-flex items-center gap-2 rounded-lg bg-[#dbb878]/15 px-3 py-1.5 text-xs font-bold tabular-nums transition-colors hover:bg-[#dbb878]/30"
-                            style={{ color: TEAL }}
-                            dir="ltr"
-                          >
-                            <Phone className="h-3.5 w-3.5" />
-                            {b.phone}
-                          </a>
-                        )}
                         {b.tollFreePhone?.trim() && (
                           <a
                             href={`tel:${b.tollFreePhone.replace(/\s/g, "")}`}
@@ -147,6 +136,18 @@ export default async function ContactPage({ params }: { params: Promise<{ locale
                             </span>
                           </a>
                         )}
+                        {b.phone?.trim() && (
+                          <a
+                            href={`tel:${b.phone.replace(/\s/g, "")}`}
+                            className="inline-flex items-center gap-2 rounded-lg bg-[#dbb878]/15 px-3 py-1.5 text-xs font-bold tabular-nums transition-colors hover:bg-[#dbb878]/30"
+                            style={{ color: TEAL }}
+                            dir="ltr"
+                          >
+                            <Phone className="h-3.5 w-3.5" />
+                            {b.phone}
+                          </a>
+                        )}
+
                       </div>
                     </li>
                   ))}
