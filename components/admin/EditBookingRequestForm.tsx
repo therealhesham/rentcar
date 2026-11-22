@@ -71,20 +71,30 @@ const MAX_BOOKING_DAYS = 60;
 function pad2(n: number): string {
   return String(n).padStart(2, "0");
 }
-/** التاريخ والوقت بتوقيت متصفح الموظف — نفس ما يفعله مودال تعديل العميل بالضبط. */
-function ymdOfLocal(d: Date): string {
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+/**
+ * التاريخ والوقت بتوقيت الفرع (الرياض، UTC+3 ثابت بلا توقيت صيفي) — لا بتوقيت متصفح
+ * الموظف، وإلا ظهرت المواعيد مزاحة (مثلاً موظف في مصر يرى 8:30 على أنها 7:30).
+ */
+const RIYADH_OFFSET_MS = 3 * 3_600_000;
+function riyadhParts(d: Date): Date {
+  return new Date(d.getTime() + RIYADH_OFFSET_MS);
 }
-function hmOfLocal(d: Date): string {
-  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+function ymdOfRiyadh(d: Date): string {
+  const r = riyadhParts(d);
+  return `${r.getUTCFullYear()}-${pad2(r.getUTCMonth() + 1)}-${pad2(r.getUTCDate())}`;
 }
-function parseLocalDateTime(ymd: string, hm: string): Date | null {
+function hmOfRiyadh(d: Date): string {
+  const r = riyadhParts(d);
+  return `${pad2(r.getUTCHours())}:${pad2(r.getUTCMinutes())}`;
+}
+function parseRiyadhDateTime(ymd: string, hm: string): Date | null {
   if (!ymd) return null;
-  const d = new Date(`${ymd}T${hm || "00:00"}:00`);
+  const d = new Date(`${ymd}T${hm || "00:00"}:00+03:00`);
   return Number.isNaN(d.getTime()) ? null : d;
 }
 function formatDateTimeAr(d: Date): string {
   return d.toLocaleString("ar-SA", {
+    timeZone: "Asia/Riyadh",
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -164,13 +174,13 @@ export function EditBookingModalInner({
       ? new Date(originalPickup.getTime() + request.numberOfDays * DAY_MS)
       : d;
   }, [request.dropoffIso, originalPickup, request.numberOfDays]);
-  const [pickupYmd, setPickupYmd] = useState(() => ymdOfLocal(originalPickup));
-  const [pickupTime, setPickupTime] = useState(() => hmOfLocal(originalPickup));
-  const [dropoffYmd, setDropoffYmd] = useState(() => ymdOfLocal(originalDropoff));
-  const [dropoffTime, setDropoffTime] = useState(() => hmOfLocal(originalDropoff));
+  const [pickupYmd, setPickupYmd] = useState(() => ymdOfRiyadh(originalPickup));
+  const [pickupTime, setPickupTime] = useState(() => hmOfRiyadh(originalPickup));
+  const [dropoffYmd, setDropoffYmd] = useState(() => ymdOfRiyadh(originalDropoff));
+  const [dropoffTime, setDropoffTime] = useState(() => hmOfRiyadh(originalDropoff));
 
   const pickupAt = useMemo(
-    () => parseLocalDateTime(pickupYmd, pickupTime),
+    () => parseRiyadhDateTime(pickupYmd, pickupTime),
     [pickupYmd, pickupTime],
   );
   // الحجز الشهري مدته ثابتة — التسليم يتحرك مع الاستلام ولا يُحرَّر يدوياً.
@@ -178,7 +188,7 @@ export function EditBookingModalInner({
     if (request.fixedDuration) {
       return pickupAt ? new Date(pickupAt.getTime() + request.numberOfDays * DAY_MS) : null;
     }
-    return parseLocalDateTime(dropoffYmd, dropoffTime);
+    return parseRiyadhDateTime(dropoffYmd, dropoffTime);
   }, [request.fixedDuration, request.numberOfDays, pickupAt, dropoffYmd, dropoffTime]);
 
   const rangeValid = Boolean(pickupAt && dropoffAt && isDropoffAfterPickup(pickupAt, dropoffAt));
@@ -225,14 +235,14 @@ export function EditBookingModalInner({
     setPickupTime(nextHm);
     if (request.fixedDuration) return;
     const prev = pickupAt;
-    const next = parseLocalDateTime(nextYmd, nextHm);
-    const drop = parseLocalDateTime(dropoffYmd, dropoffTime);
+    const next = parseRiyadhDateTime(nextYmd, nextHm);
+    const drop = parseRiyadhDateTime(dropoffYmd, dropoffTime);
     if (!prev || !next || !drop || drop.getTime() > next.getTime()) return;
     // التسليم لم يعد بعد الاستلام — يُزاح معه محافظاً على المدة السابقة بدل ترك حالة غير صالحة.
     const keptMs = Math.max(drop.getTime() - prev.getTime(), DAY_MS);
     const shifted = new Date(next.getTime() + keptMs);
-    setDropoffYmd(ymdOfLocal(shifted));
-    setDropoffTime(hmOfLocal(shifted));
+    setDropoffYmd(ymdOfRiyadh(shifted));
+    setDropoffTime(hmOfRiyadh(shifted));
   }
 
   useEffect(() => {
@@ -543,7 +553,7 @@ export function EditBookingModalInner({
                       type="date"
                       required
                       disabled={request.fixedDuration}
-                      value={request.fixedDuration && dropoffAt ? ymdOfLocal(dropoffAt) : dropoffYmd}
+                      value={request.fixedDuration && dropoffAt ? ymdOfRiyadh(dropoffAt) : dropoffYmd}
                       onChange={(e) => setDropoffYmd(e.target.value)}
                       className={`mt-1 w-full rounded-xl border border-outline-variant px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary ${
                         request.fixedDuration
@@ -558,7 +568,7 @@ export function EditBookingModalInner({
                       type="time"
                       required
                       disabled={request.fixedDuration}
-                      value={request.fixedDuration && dropoffAt ? hmOfLocal(dropoffAt) : dropoffTime}
+                      value={request.fixedDuration && dropoffAt ? hmOfRiyadh(dropoffAt) : dropoffTime}
                       onChange={(e) => setDropoffTime(e.target.value)}
                       className={`mt-1 w-full rounded-xl border border-outline-variant px-3 py-2 text-sm tabular-nums outline-none focus:ring-2 focus:ring-primary ${
                         request.fixedDuration
