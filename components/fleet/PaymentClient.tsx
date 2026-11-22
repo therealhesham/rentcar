@@ -95,9 +95,12 @@ function maskEmail(email: string): string {
 /** العربي كما كان بالضبط (`ar-SA`)؛ الإنجليزي `en-GB` ليرى أرقاماً لاتينية لا عربية‑هندية. */
 function fmtWhen(d: Date, locale: string): { date: string; time: string } {
   const tag = locale === "en" ? "en-GB" : "ar-SA";
+  // مواعيد الحجز بتوقيت الفرع (الرياض) دائماً — وإلا تظهر بتوقيت جهاز المتصفح
+  // (مثلاً مصر UTC+2 فتتأخر ساعة: 8:30 تظهر 7:30).
+  const timeZone = "Asia/Riyadh";
   return {
-    date: d.toLocaleDateString(tag, { year: "numeric", month: "numeric", day: "numeric" }),
-    time: d.toLocaleTimeString(tag, { hour: "2-digit", minute: "2-digit" }),
+    date: d.toLocaleDateString(tag, { year: "numeric", month: "numeric", day: "numeric", timeZone }),
+    time: d.toLocaleTimeString(tag, { hour: "2-digit", minute: "2-digit", timeZone }),
   };
 }
 
@@ -376,7 +379,7 @@ export function PaymentClient({
       if (!Number.isNaN(exact.getTime())) return fmtWhen(exact, locale);
     }
     const d = new Date(booking.pickupDate);
-    d.setDate(d.getDate() + booking.numberOfDays);
+    d.setUTCDate(d.getUTCDate() + booking.numberOfDays);
     return fmtWhen(d, locale);
   }, [booking.pickupDate, booking.numberOfDays, booking.delayPenalty, locale]);
   const branchLabel =
