@@ -167,7 +167,9 @@ export function parseDropoffDateFromJson(
   if (!raw) {
     return { ok: true, dropoffDate: null };
   }
-  const dropoffDate = new Date(raw);
+  // نفس معالجة وقت الاستلام: نص بدون إزاحة (YYYY-MM-DDTHH:mm) يُفسَّر بتوقيت الرياض،
+  // وإلا يُقرأ كـ UTC على الخادم فيظهر تسليم متأخر 3 ساعات (غرامة تأخير غير مقصودة).
+  const dropoffDate = parseDateTimeInRiyadh(raw);
   if (Number.isNaN(dropoffDate.getTime())) {
     return { ok: false, error: "تاريخ التسليم غير صالح." };
   }

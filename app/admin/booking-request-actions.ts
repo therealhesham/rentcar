@@ -16,6 +16,7 @@ import {
   computeBookingDays,
   isDropoffAfterPickup,
 } from "@/lib/booking-days";
+import { parseDateTimeInRiyadh } from "@/lib/branch-opening-hours";
 import { syncLifecycleFromAdminStatusChange } from "@/lib/booking-lifecycle-service";
 import {
   convertDirectBookingToInquiry,
@@ -177,7 +178,7 @@ export async function updateBookingRequest(
   // نفس حساب مسار العميل (computeBookingDays) ولا يُعتمد على رقم أيام من المتصفح.
   const dropoffRaw = String(scopedForm.get("dropoffDate") ?? "").trim();
   if (dropoffRaw) {
-    const dropoffDate = new Date(dropoffRaw);
+    const dropoffDate = parseDateTimeInRiyadh(dropoffRaw);
     if (Number.isNaN(dropoffDate.getTime())) {
       return { ok: false, error: "يرجى اختيار تاريخ ووقت التسليم." };
     }

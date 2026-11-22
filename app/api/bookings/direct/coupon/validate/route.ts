@@ -75,7 +75,7 @@ export async function POST(request: Request) {
   const pickupDateRaw = String(obj.pickupDate ?? "").trim();
   const pickupDate = pickupDateRaw ? parseDateTimeInRiyadh(pickupDateRaw) : null;
   const dropoffDateRaw = String(obj.dropoffDate ?? "").trim();
-  const dropoffDate = dropoffDateRaw ? new Date(dropoffDateRaw) : null;
+  const dropoffDate = dropoffDateRaw ? parseDateTimeInRiyadh(dropoffDateRaw) : null;
   const pickupCitySlug = String(obj.pickupCity ?? "").trim().toLowerCase() || null;
 
   const model = await prisma.carModel.findUnique({
