@@ -12,7 +12,7 @@ import {
   SiteFooter,
   TopNav,
 } from "@/components/home";
-import { getActiveBookingCitiesWithBranches } from "@/lib/branch-data";
+import { getActiveBookingCitiesWithBranches, getHeroTollFreePhone } from "@/lib/branch-data";
 import { buildPageMetadata } from "@/lib/seo";
 import {
   getBookingWidgetTabFlags,
@@ -46,11 +46,12 @@ export default async function Home({
   // تبويب الإيجار في الويدجت يكتب `?rental=` — لتتحدّث أسعار بطاقات الأسطول تحته
   const rentalRaw = (await searchParams).rental;
   const rentalTab = Array.isArray(rentalRaw) ? rentalRaw[0] : rentalRaw;
-  const [hero, cities, tabFlags, promoModal] = await Promise.all([
+  const [hero, cities, tabFlags, promoModal, tollFreePhone] = await Promise.all([
     getHomeHeroSettings(),
     getActiveBookingCitiesWithBranches(locale).catch(() => []),
     getBookingWidgetTabFlags(),
     getPromoModalSettings(),
+    getHeroTollFreePhone(),
   ]);
 
   return (
@@ -65,6 +66,7 @@ export default async function Home({
               cities={cities}
               tabFlags={tabFlags}
               initialRental={rentalTab}
+              tollFreePhone={tollFreePhone}
             />
           }
           fleetCategories={<FleetCategories rentalTab={rentalTab} />}

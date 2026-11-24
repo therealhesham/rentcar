@@ -55,6 +55,23 @@ export async function getActiveBranches(locale: string = "ar") {
   }
 }
 
+/**
+ * الرقم المجاني الموحّد للهيرو — أول فرع مفعّل (بترتيب العرض) له رقم مجاني.
+ * يُخزَّن على مستوى الفرع، لكنه رقم واحد موحّد للشركة.
+ */
+export async function getHeroTollFreePhone(): Promise<string | null> {
+  try {
+    const row = await prisma.branch.findFirst({
+      where: { isActive: true, tollFreePhone: { not: null } },
+      orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+      select: { tollFreePhone: true },
+    });
+    return row?.tollFreePhone?.trim() || null;
+  } catch {
+    return null;
+  }
+}
+
 /** مدن نشطة مع فروعها للحجز من الرئيسية وصفحة إتمام الحجز */
 export async function getActiveBookingCitiesWithBranches(
   locale: string = "ar",
