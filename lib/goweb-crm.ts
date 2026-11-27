@@ -16,6 +16,24 @@ import "server-only";
 const DEFAULT_BASE = "https://api.goweb.llc/api/site";
 const TIMEOUT_MS = 8000;
 
+/**
+ * GoWeb بيقبل الجوال أرقام بس (مع + اختياري في الأول) ولازم يكون رقم سعودي صالح، مثل:
+ * 0500000000 · 500000000 · 966500000000 · +966500000000
+ * بيرفض: مسافات/شرطات، أرقام عربية (٠٥..)، بادئة 00966، أرقام أرضية أو غير سعودية.
+ * هنا بننضّف اللي ينفع تنضيفه (أرقام عربية، مسافات، 00 → +) والباقي السيرفر بيحكم عليه.
+ */
+export function normalizeGowebPhone(raw: string): string {
+  const ascii = raw
+    .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0));
+  const cleaned = ascii.replace(/[^\d+]/g, "");
+  const digits = cleaned.replace(/\+/g, "");
+  if (cleaned.startsWith("+") || digits.startsWith("00")) {
+    return `+${digits.replace(/^00/, "")}`;
+  }
+  return digits;
+}
+
 export type GowebLeadInput = {
   name: string;
   phone: string;
@@ -88,7 +106,7 @@ export async function sendGowebLead(input: GowebLeadInput): Promise<boolean> {
   const buildBody = (withEmail: boolean): FormData => {
     const fd = new FormData();
     fd.set("name", input.name);
-    fd.set("phone", input.phone);
+    fd.set("phone", normalizeGowebPhone(input.phone));
     if (withEmail && input.email) fd.set("email", input.email);
     fd.set("branch_id", cfg.branchId);
     fd.set("source_id", cfg.sourceId);
