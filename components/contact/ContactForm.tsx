@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { CheckCircle2, AlertCircle, Send } from "lucide-react";
 import { submitContactMessage } from "@/app/contact-actions";
@@ -25,6 +25,9 @@ export function ContactForm() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [isPending, startTransition] = useTransition();
+  // لحد ما React يفعّل الفورم، الضغط على «إرسال» كان بيعمل GET عادي من المتصفح (بيانات في الـ URL ومفيش إرسال فعلي).
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(true), []);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -181,7 +184,7 @@ export function ContactForm() {
 
       <button
         type="submit"
-        disabled={isPending}
+        disabled={isPending || !ready}
         className="mt-7 inline-flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-extrabold text-[#003749] shadow-sm transition-all hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
         style={{ backgroundColor: GOLD }}
       >

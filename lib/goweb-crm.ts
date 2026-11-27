@@ -145,6 +145,8 @@ export async function sendGowebLead(input: GowebLeadInput): Promise<boolean> {
       console.error(`[goweb] فشل إنشاء الطلب (${res.status})`, body.slice(0, 500));
       return false;
     }
+    const created = (await res.json().catch(() => null)) as { data?: { id?: number } } | null;
+    console.info(`[goweb] تم إنشاء الطلب #${created?.data?.id ?? "?"}`);
     return true;
   } catch (e) {
     console.error("[goweb] تعذّر الاتصال بـ GoWeb", e);

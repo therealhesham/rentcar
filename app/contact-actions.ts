@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { getStoredAdsClickIds } from "@/lib/ads-click-id";
 import { prisma } from "@/lib/prisma";
 import {
@@ -105,8 +106,8 @@ export async function submitContactMessage(
       data: { name, email, phone, subject, message, locale, ...(await getStoredAdsClickIds()) },
     });
 
-    // إرسال نسخة للـ CRM (GoWeb) — best-effort: فشلها ما بيأثر على حفظ الرسالة ولا على رد المستخدم.
-    await sendGowebLead({ name, phone, email, subject, message, locale });
+    // إرسال نسخة للـ CRM (GoWeb) بعد ما الرد يوصل للمستخدم — best-effort: فشلها ما بيأثر على حفظ الرسالة.
+    after(() => sendGowebLead({ name, phone, email, subject, message, locale }));
 
     if (isOutgoingMailTransportConfigured()) {
       const setting = await prisma.siteSetting.findUnique({
