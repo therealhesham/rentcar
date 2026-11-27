@@ -8,6 +8,7 @@ import {
   sendPlainTransactionalEmail,
 } from "@/lib/booking-invoice-email";
 import { CONTACT_MESSAGES_EMAILS_KEY } from "@/lib/contact-messages";
+import { sendGowebLead } from "@/lib/goweb-crm";
 
 export type ContactMessageActionState = { ok: boolean; error?: string };
 
@@ -103,6 +104,9 @@ export async function submitContactMessage(
     await prisma.contactMessage.create({
       data: { name, email, phone, subject, message, locale, ...(await getStoredAdsClickIds()) },
     });
+
+    // إرسال نسخة للـ CRM (GoWeb) — best-effort: فشلها ما بيأثر على حفظ الرسالة ولا على رد المستخدم.
+    await sendGowebLead({ name, phone, email, subject, message, locale });
 
     if (isOutgoingMailTransportConfigured()) {
       const setting = await prisma.siteSetting.findUnique({
