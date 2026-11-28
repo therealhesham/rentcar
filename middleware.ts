@@ -12,6 +12,12 @@ import {
 } from "@/lib/ads-click-id";
 
 import {
+  GOWEB_SOURCE_COOKIE,
+  GOWEB_SOURCE_MAX_AGE_SECONDS,
+  sanitizeGowebSource,
+} from "@/lib/goweb-source";
+
+import {
   DEFAULT_UNDER_CONSTRUCTION,
   normalizeUnderConstruction,
   renderUnderConstructionHtml,
@@ -121,7 +127,23 @@ export async function middleware(request: NextRequest) {
     return handleI18nRouting(new NextRequest(request, { headers }));
   }
 
-  return withAdsClickIdCookies(request, handleI18nRouting(request));
+  return withGowebSourceCookie(request, withAdsClickIdCookies(request, handleI18nRouting(request)));
+}
+
+/**
+ * يحفظ مصدر الحملة (`?_source=meta` مثلاً) في كوكي 30 يوم. الأحدث يكتب فوق القديم؛
+ * الزيارة بدون `_source` ما بتمسحش المصدر المحفوظ.
+ */
+function withGowebSourceCookie(request: NextRequest, response: NextResponse): NextResponse {
+  const source = sanitizeGowebSource(request.nextUrl.searchParams.get("_source"));
+  if (!source) return response;
+  response.cookies.set(GOWEB_SOURCE_COOKIE, source, {
+    maxAge: GOWEB_SOURCE_MAX_AGE_SECONDS,
+    path: "/",
+    sameSite: "lax",
+    secure: request.nextUrl.protocol === "https:",
+  });
+  return response;
 }
 
 /**

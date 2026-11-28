@@ -10,6 +10,7 @@ import {
 } from "@/lib/booking-invoice-email";
 import { CONTACT_MESSAGES_EMAILS_KEY } from "@/lib/contact-messages";
 import { sendGowebLead } from "@/lib/goweb-crm";
+import { getStoredGowebSource } from "@/lib/goweb-source";
 
 export type ContactMessageActionState = { ok: boolean; error?: string };
 
@@ -107,7 +108,8 @@ export async function submitContactMessage(
     });
 
     // إرسال نسخة للـ CRM (GoWeb) بعد ما الرد يوصل للمستخدم — best-effort: فشلها ما بيأثر على حفظ الرسالة.
-    after(() => sendGowebLead({ name, phone, email, subject, message, locale }));
+    const sourceIdentifier = await getStoredGowebSource(); // لازم قبل after() — الكوكيز مش متاحة بعده
+    after(() => sendGowebLead({ name, phone, email, subject, message, locale, sourceIdentifier }));
 
     if (isOutgoingMailTransportConfigured()) {
       const setting = await prisma.siteSetting.findUnique({

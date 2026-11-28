@@ -1,6 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { getGowebCorporateCategoryId, getGowebTaxFieldId, sendGowebLead } from "@/lib/goweb-crm";
+import { getStoredGowebSource } from "@/lib/goweb-source";
 import { getStoredAdsClickIds } from "@/lib/ads-click-id";
 import { prisma } from "@/lib/prisma";
 import { isOutgoingMailTransportConfigured, sendPlainTransactionalEmail } from "@/lib/booking-invoice-email";
@@ -55,6 +58,24 @@ export async function submitCorporateBookingLead(
         ...(await getStoredAdsClickIds()),
       },
     });
+
+    // نسخة للـ CRM (GoWeb) بتصنيف «تأجير الشركات» بعد رد المستخدم — best-effort ما بيأثر على الحفظ.
+    const taxFieldId = getGowebTaxFieldId();
+    const sourceIdentifier = await getStoredGowebSource(); // لازم قبل after() — الكوكيز مش متاحة بعده
+    after(() =>
+      sendGowebLead({
+        name: companyName,
+        phone,
+        email: companyEmail,
+        // لو مفيش حقل مخصص للرقم الضريبي بنحطه في الموضوع عشان ما يضيعش.
+        subject: taxFieldId ? "طلب حجز شركات" : `طلب حجز شركات — الرقم الضريبي: ${taxNumber}`,
+        message: details,
+        locale: "ar",
+        categoryId: getGowebCorporateCategoryId(),
+        sourceIdentifier,
+        extraFields: [[taxFieldId, taxNumber]],
+      }),
+    );
 
     if (isOutgoingMailTransportConfigured()) {
       const setting = await prisma.siteSetting.findUnique({

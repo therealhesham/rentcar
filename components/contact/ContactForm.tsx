@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { CheckCircle2, AlertCircle, Send } from "lucide-react";
 import { submitContactMessage } from "@/app/contact-actions";
+import { trackGowebClick } from "@/lib/track-goweb-click";
 
 const TEAL = "#003749";
 const GOLD = "#dbb878";
@@ -50,6 +51,7 @@ export function ContactForm() {
         return;
       }
       setSuccess(true);
+      trackGowebClick("form");
       setName("");
       setEmail("");
       setPhone("");

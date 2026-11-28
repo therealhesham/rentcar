@@ -28,6 +28,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { submitCorporateBookingLead } from "@/app/corporate-lead-actions";
+import { trackGowebClick } from "@/lib/track-goweb-click";
 import { BranchOutsideHoursModal } from "@/components/fleet/BranchOutsideHoursModal";
 import { DeliveryMapDialog } from "@/components/home/DeliveryMapDialog";
 import {
@@ -816,6 +817,7 @@ export function BookingSearchWidget({
           return;
         }
         setCorpSuccess(true);
+        trackGowebClick("form");
         setCorpCompanyName("");
         setCorpEmail("");
         setCorpTaxNumber("");

@@ -41,7 +41,25 @@ export type GowebLeadInput = {
   subject?: string;
   message?: string;
   locale: "ar" | "en";
+  /** تصنيف مختلف عن الافتراضي (مثلاً تأجير الشركات). */
+  categoryId?: string;
+  /** حقول مخصصة إضافية: [رقم الحقل، القيمة]. الحقل بدون رقم بيتخطّى. */
+  extraFields?: Array<[string | undefined, string]>;
+  /** identifier مصدر الحملة (من كوكي `_source`) — لو معروف في GoWeb بيتنسب الطلب له بدل المصدر الافتراضي. */
+  sourceIdentifier?: string | null;
 };
+
+/** تصنيف «تأجير الشركات» في GoWeb (من GET /categories) — يتغلّب عليه GOWEB_CORPORATE_CATEGORY_ID. */
+const DEFAULT_CORPORATE_CATEGORY_ID = "12846";
+
+export function getGowebCorporateCategoryId(): string {
+  return process.env.GOWEB_CORPORATE_CATEGORY_ID?.trim() || DEFAULT_CORPORATE_CATEGORY_ID;
+}
+
+/** رقم حقل مخصص للرقم الضريبي (اختياري) — لو مش متضبط الرقم الضريبي بيتحط في الموضوع. */
+export function getGowebTaxFieldId(): string | undefined {
+  return process.env.GOWEB_TAX_FIELD_ID?.trim() || undefined;
+}
 
 type GowebConfig = {
   base: string;
@@ -96,6 +114,55 @@ export function isGowebConfigured(): boolean {
   return readConfig() !== null;
 }
 
+type GowebSource = { id: string; identifier: string };
+
+const SOURCES_TTL_MS = 10 * 60 * 1000;
+let sourcesCache: { at: number; rows: GowebSource[] } | null = null;
+
+function baseAndTenant(): { base: string; tenant: string } {
+  return {
+    base: (process.env.GOWEB_API_BASE?.trim() || DEFAULT_BASE).replace(/\/+$/, ""),
+    tenant: process.env.GOWEB_TENANT?.trim() || DEFAULT_TENANT,
+  };
+}
+
+/** مصادر الـ tenant من GET /sources — بتتخزّن 10 دقايق في الذاكرة. لو فشل الطلب بنرجع آخر نسخة معروفة. */
+async function loadGowebSources(): Promise<GowebSource[]> {
+  const now = Date.now();
+  if (sourcesCache && now - sourcesCache.at < SOURCES_TTL_MS) return sourcesCache.rows;
+  const { base, tenant } = baseAndTenant();
+  try {
+    const res = await fetch(`${base}/sources`, {
+      headers: { "Accept-Language": "ar", Accept: "application/json", "local-host": tenant },
+      cache: "no-store",
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = (await res.json()) as { data?: Array<{ id?: number; identifier?: string }> };
+    const rows = (json.data ?? [])
+      .filter((s): s is { id: number; identifier: string } => s.id != null && !!s.identifier)
+      .map((s) => ({ id: String(s.id), identifier: s.identifier.toLowerCase() }));
+    sourcesCache = { at: now, rows };
+    return rows;
+  } catch (e) {
+    console.error("[goweb] تعذّر تحميل المصادر", e);
+    const stale = sourcesCache?.rows ?? [];
+    // نعيد المحاولة بعد دقيقة مش في كل طلب.
+    sourcesCache = { at: now - SOURCES_TTL_MS + 60_000, rows: stale };
+    return stale;
+  }
+}
+
+/** يحوّل identifier (زي `meta`) إلى مصدر معروف في GoWeb، أو null لو مجهول. */
+export async function resolveGowebSource(
+  identifier: string | null | undefined,
+): Promise<GowebSource | null> {
+  const wanted = identifier?.trim().toLowerCase();
+  if (!wanted) return null;
+  const rows = await loadGowebSources();
+  return rows.find((r) => r.identifier === wanted) ?? null;
+}
+
 /**
  * يبعت الطلب إلى GoWeb. بيرجع true عند النجاح، false لو متخطّى أو فشل (ما بيرميش error).
  */
@@ -103,19 +170,23 @@ export async function sendGowebLead(input: GowebLeadInput): Promise<boolean> {
   const cfg = readConfig();
   if (!cfg) return false;
 
+  const source = await resolveGowebSource(input.sourceIdentifier);
+  const sourceId = source?.id ?? cfg.sourceId;
+
   const buildBody = (withEmail: boolean): FormData => {
     const fd = new FormData();
     fd.set("name", input.name);
     fd.set("phone", normalizeGowebPhone(input.phone));
     if (withEmail && input.email) fd.set("email", input.email);
     fd.set("branch_id", cfg.branchId);
-    fd.set("source_id", cfg.sourceId);
-    fd.set("category_id", cfg.categoryId);
+    fd.set("source_id", sourceId);
+    fd.set("category_id", input.categoryId || cfg.categoryId);
 
-    const customFields: Array<[string, string | undefined]> = [
+    const customFields: Array<[string | undefined, string | undefined]> = [
       [cfg.subjectFieldId, input.subject?.trim()],
       [cfg.messageFieldId, input.message?.trim()],
       [cfg.localeFieldId, input.locale],
+      ...(input.extraFields ?? []),
     ];
     let i = 0;
     for (const [fieldId, value] of customFields) {
@@ -160,14 +231,69 @@ export async function sendGowebLead(input: GowebLeadInput): Promise<boolean> {
 
     if (!res.ok) {
       body ||= await res.text().catch(() => "");
-      console.error(`[goweb] فشل إنشاء الطلب (${res.status})`, body.slice(0, 500));
+      const sent = normalizeGowebPhone(input.phone);
+      const masked = sent.length > 6 ? `${sent.slice(0, 3)}****${sent.slice(-3)}` : "***";
+      console.error(`[goweb] فشل إنشاء الطلب (${res.status}) — الجوال المُرسل: ${masked}`, body.slice(0, 500));
       return false;
     }
-    const created = (await res.json().catch(() => null)) as { data?: { id?: number } } | null;
-    console.info(`[goweb] تم إنشاء الطلب #${created?.data?.id ?? "?"}`);
+    const created = (await res.json().catch(() => null)) as {
+      data?: { id?: number; source?: string | null };
+    } | null;
+    console.info(
+      `[goweb] تم إنشاء الطلب #${created?.data?.id ?? "?"} — المصدر: ${created?.data?.source ?? "?"}`,
+    );
     return true;
   } catch (e) {
     console.error("[goweb] تعذّر الاتصال بـ GoWeb", e);
+    return false;
+  }
+}
+
+/** أنواع الضغطات المعتمدة (الـ API نفسه بيقبل أي نص، فبنحدّدها إحنا). */
+export const GOWEB_CLICK_TYPES = ["whatsapp", "call", "email", "form"] as const;
+export type GowebClickType = (typeof GOWEB_CLICK_TYPES)[number];
+
+export function isGowebClickType(v: unknown): v is GowebClickType {
+  return typeof v === "string" && (GOWEB_CLICK_TYPES as readonly string[]).includes(v);
+}
+
+/** identifier المصدر اللي بتتنسب له الضغطات (من GET /sources) — افتراضي website. */
+const DEFAULT_CLICK_IDENTIFIER = "website";
+
+/**
+ * يسجّل ضغطة على مصدر في GoWeb (POST /add_click). ما بيحتاجش branch_id.
+ * بيرجع true عند النجاح، false عند الفشل (ما بيرميش error).
+ */
+export async function sendGowebClick(
+  type: GowebClickType,
+  sourceIdentifier?: string | null,
+): Promise<boolean> {
+  const { base, tenant } = baseAndTenant();
+  // مصدر الزائر (من كوكي _source) لو معروف في GoWeb، وإلا الافتراضي — identifier مجهول بيرجّع 404.
+  const known = await resolveGowebSource(sourceIdentifier);
+  const identifier =
+    known?.identifier || process.env.GOWEB_CLICK_IDENTIFIER?.trim() || DEFAULT_CLICK_IDENTIFIER;
+
+  const fd = new FormData();
+  fd.set("identifier", identifier);
+  fd.set("type", type);
+
+  try {
+    const res = await fetch(`${base}/add_click`, {
+      method: "POST",
+      headers: { "Accept-Language": "ar", Accept: "application/json", "local-host": tenant },
+      body: fd,
+      cache: "no-store",
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      console.error(`[goweb] فشل تسجيل الضغطة (${res.status})`, body.slice(0, 300));
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error("[goweb] تعذّر تسجيل الضغطة", e);
     return false;
   }
 }

@@ -3,6 +3,7 @@ import { Tajawal } from "next/font/google";
 import { GoogleTagManager } from "@next/third-parties/google";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { PageViewTracker } from "@/components/shared/PageViewTracker";
+import { GowebClickTracker } from "@/components/shared/GowebClickTracker";
 import { SiteBrandingProvider } from "@/components/shared/SiteBrandingProvider";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
@@ -86,6 +87,7 @@ export default async function LocaleLayout({
               ]}
             />
             <PageViewTracker />
+            <GowebClickTracker />
             {children}
           </SiteBrandingProvider>
         </NextIntlClientProvider>
