@@ -135,7 +135,11 @@ export async function middleware(request: NextRequest) {
  * الزيارة بدون `_source` ما بتمسحش المصدر المحفوظ.
  */
 function withGowebSourceCookie(request: NextRequest, response: NextResponse): NextResponse {
-  const source = sanitizeGowebSource(request.nextUrl.searchParams.get("_source"));
+  const params = request.nextUrl.searchParams;
+  // `_source` الصريح أولاً. وإلا: زيارة معاها معرّف نقرة Google (auto-tagging) = مصدر google
+  // من غير ما نعدّل أي حاجة في الحملة.
+  const fromGoogleAds = ADS_CLICK_ID_KEYS.some((key) => sanitizeClickId(params.get(key)));
+  const source = sanitizeGowebSource(params.get("_source")) ?? (fromGoogleAds ? "google" : null);
   if (!source) return response;
   response.cookies.set(GOWEB_SOURCE_COOKIE, source, {
     maxAge: GOWEB_SOURCE_MAX_AGE_SECONDS,

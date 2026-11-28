@@ -297,3 +297,38 @@ export async function sendGowebClick(
     return false;
   }
 }
+
+export type GowebSourceInfo = {
+  id: string;
+  identifier: string;
+  name: string;
+  /** رابط الموقع اللي GoWeb مسجّله للمصدر (غالبًا بالشكل https://domain/?_source=identifier). */
+  url: string | null;
+};
+
+/** قائمة المصادر كاملة لصفحة الأدمن (بدون كاش). بترجع null لو الطلب فشل. */
+export async function listGowebSources(): Promise<GowebSourceInfo[] | null> {
+  const { base, tenant } = baseAndTenant();
+  try {
+    const res = await fetch(`${base}/sources`, {
+      headers: { "Accept-Language": "ar", Accept: "application/json", "local-host": tenant },
+      cache: "no-store",
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as {
+      data?: Array<{ id?: number; identifier?: string; name?: string; url?: string | null }>;
+    };
+    return (json.data ?? [])
+      .filter((s) => s.id != null && !!s.identifier)
+      .map((s) => ({
+        id: String(s.id),
+        identifier: String(s.identifier),
+        name: s.name?.trim() || String(s.identifier),
+        url: s.url ?? null,
+      }));
+  } catch (e) {
+    console.error("[goweb] تعذّر تحميل المصادر للأدمن", e);
+    return null;
+  }
+}

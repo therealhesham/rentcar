@@ -115,6 +115,7 @@ const ADMIN_PAGE_LABELS: Array<[RegExp, string]> = [
   [/^\/admin\/under-construction/, "وضع قيد الإنشاء"],
   [/^\/admin\/site-branding/, "شعارات الموقع"],
   [/^\/admin\/social-links/, "روابط التواصل"],
+  [/^\/admin\/campaign-links/, "روابط الحملات"],
   [/^\/admin\/home/, "هيرو الرئيسية"],
   [/^\/admin\/promo-banner/, "البانر الترويجي"],
   [/^\/admin\/promo-modal/, "النافذة الترويجية"],
